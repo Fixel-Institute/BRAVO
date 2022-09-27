@@ -72,6 +72,7 @@ function BrainSenseStreaming() {
       else setTimeFrequencyPlotHeight(4*200);
       setChannelInfos(ChannelInfos);
       setDataToRender(response.data);
+      console.log(response.data)
       setAlert(null);
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
@@ -129,6 +130,68 @@ function BrainSenseStreaming() {
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
     });
+  };
+
+  const exportCurrentStream = () => {
+    var csvData = "Time"
+    for (var i = 0; i < dataToRender["Channels"].length; i++) {
+      csvData += "," + dataToRender["Channels"][i] + " Raw";
+      csvData += "," + dataToRender["Channels"][i] + " Stimulation";
+    }
+    csvData += "\n";
+  
+    for (var i = 0; i < dataToRender[dataToRender["Channels"][0]]["Time"].length; i++) {
+      csvData += dataToRender[dataToRender["Channels"][0]]["Time"][i] + dataToRender.Timestamp;
+      for (var j = 0; j < dataToRender["Channels"].length; j++) {
+        csvData += "," + dataToRender[dataToRender["Channels"][j]]["RawData"][i];
+        for (var k = 0; k < dataToRender["Stimulation"].length; k++) {
+          if (dataToRender["Stimulation"][k]["Name"] == dataToRender["Channels"][j]) {
+            for (var l = 0; l < dataToRender["Stimulation"][k]["Amplitude"].length; l++) {
+              if (dataToRender["Stimulation"][k]["Time"][l] > dataToRender[dataToRender["Channels"][0]]["Time"][i]) {
+                break;
+              }
+            }
+            csvData += "," + dataToRender["Stimulation"][k]["Amplitude"][l-1];
+          }
+        }
+      }
+      csvData += "\n";
+    }
+    
+    var downloader = document.createElement('a');
+    downloader.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData);
+    downloader.target = '_blank';
+    downloader.download = 'BrainSenseStreamExport.csv';
+    downloader.click();
+  };
+
+  const adaptiveClosedLoopParameters = (therapy) => {
+    var adaptiveState = false;
+    if (therapy.Left) {
+      if (therapy.Left.StreamingAdaptiveMode) {
+        adaptiveState = true;
+      }
+    }
+    if (therapy.Right) {
+      if (therapy.Right.StreamingAdaptiveMode) {
+        adaptiveState = true;
+      }
+    }
+
+    if (!adaptiveState) {
+      return null;
+    }
+
+    return (
+      <MDBox px={3} pb={3}>
+        <MDTypography variant={"h5"} fontSize={24}>
+          {dictionaryLookup(dictionary.BrainSenseStreaming.Table, "AdaptiveMode", language)}
+        </MDTypography>
+        <MDTypography variant={"h5"} fontSize={18}>
+          {dictionaryLookup(dictionary.BrainSenseStreaming.Table, "StreamingTableLeftHemisphere", language)}
+        </MDTypography>
+      </MDBox>
+    );
   }
 
   // Divide all PSDs by day or by channel
@@ -174,9 +237,14 @@ function BrainSenseStreaming() {
                     <Grid container>
                       <Grid item xs={12}>
                         <MDBox display={"flex"} justifyContent={"space-between"} p={3}>
-                          <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
-                            {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
-                          </MDTypography>
+                          <MDBox display={"flex"} flexDirection={"column"}>
+                            <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
+                              {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
+                            </MDTypography>
+                            <MDButton size="large" variant="contained" color="primary" style={{marginBottom: 3}} onClick={() => exportCurrentStream()}>
+                              {dictionaryLookup(dictionary.FigureStandardText, "Export", language)}
+                            </MDButton>
+                          </MDBox>
                           <MDBox display={"flex"} flexDirection={"column"}>
                             <MDButton size="small" variant="contained" color="info" style={{marginBottom: 3}} onClick={() => toggleCardiacFilter()}>
                               {dictionaryLookup(dictionary.BrainSenseStreaming.Figure.CardiacFilter, dataToRender.Info.CardiacFilter ? "Remove" : "Add", language)}
@@ -189,6 +257,9 @@ function BrainSenseStreaming() {
                       </Grid>
                       <Grid item xs={12}>
                         <TimeFrequencyAnalysis dataToRender={dataToRender} channelInfos={channelInfos} figureTitle={"TimeFrequencyAnalysis"} height={timeFrequencyPlotHeight}/>
+                      </Grid>
+                      <Grid item xs={12}>
+                        {adaptiveClosedLoopParameters(dataToRender.Info.Therapy)}
                       </Grid>
                     </Grid>
                   </Card>

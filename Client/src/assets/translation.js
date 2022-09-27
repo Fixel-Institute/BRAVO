@@ -398,6 +398,10 @@ export const dictionary = {
       StimMode: {
         en: "Mode",
         zh: "模式"
+      },
+      AdaptiveMode: {
+        en: "Adaptive Parameters",
+        zh: "Adaptive Parameters"
       }
     },
     Figure: {
@@ -501,6 +505,17 @@ export const dictionary = {
       }
     }
   },
+  AdaptiveStimulation: {
+    Table: {
+
+    },
+    Figure: {
+      ChronicAdaptive: {
+        en: "Adaptive Stimulation Timeline",
+        zh: "闭环治疗时间表"
+      },
+    }
+  },
   TherapeuticPrediction: {
     Table: {
       StreamingTableDate: {
@@ -599,6 +614,10 @@ export const dictionary = {
     "patient-events": {
       en: "Patient Events",
       zh: "标记事件记录"
+    },
+    "adaptive": {
+      en: "Adaptive Stimulation",
+      zh: "闭环功能"
     }
   },
   Routes: {
@@ -645,6 +664,10 @@ export const dictionary = {
     PatientEvents: {
       en: "Patient Events",
       zh: "标记事件记录"
+    },
+    AdaptiveStimulation: {
+      en: "Adaptive Stimulation",
+      zh: "闭环功能"
     }
   },
   Time: {
@@ -773,6 +796,10 @@ export const dictionary = {
     Right: {
       en: "Right",
       zh: "右"
+    },
+    Export: {
+      en: "Export",
+      zh: "导出数据"
     }
   },
   FigureStandardUnit: {

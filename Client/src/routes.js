@@ -46,6 +46,7 @@ import ChronicBrainSense from "views/Reports/ChronicBrainSense";
 
 import TherapeuticPrediction from "views/Reports/TherapeuticPrediction";
 import PatientEvents from "views/Reports/PatientEvents";
+import AdaptiveStimulation from "views/Reports/AdaptiveStimulation";
 
 // Material Dashboard 2 PRO React components
 import MDAvatar from "components/MDAvatar";
@@ -63,6 +64,7 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import PersonIcon from '@mui/icons-material/Person';
 import BiotechIcon from '@mui/icons-material/Biotech';
 import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
+import FlashAutoIcon from '@mui/icons-material/FlashAuto';
 
 const routes = [
   {
@@ -147,6 +149,13 @@ const routes = [
         icon: <TimelineIcon style={{color: "white", margin: 0, padding: 0}}/>,
         route: "/experimental/patient-events",
         component: <PatientEvents />
+      },
+      {
+        name: "AdaptiveStimulation",
+        key: "adaptive",
+        icon: <FlashAutoIcon style={{color: "white", margin: 0, padding: 0}}/>,
+        route: "/experimental/adaptive",
+        component: <AdaptiveStimulation />
       },
     ]
   }

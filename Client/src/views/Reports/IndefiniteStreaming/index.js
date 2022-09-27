@@ -10,6 +10,7 @@ import {
 // core components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import MDButton from "components/MDButton";
 import LoadingProgress from "components/LoadingProgress";
 
 import DatabaseLayout from "layouts/DatabaseLayout";
@@ -20,7 +21,7 @@ import TimeFrequencyFigure from "./TimeFrequencyFigure";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
-import { dictionary } from "assets/translation.js";
+import { dictionary, dictionaryLookup } from "assets/translation.js";
 
 function IndefiniteStreaming() {
   const navigate = useNavigate();
@@ -74,6 +75,30 @@ function IndefiniteStreaming() {
     });
   };
 
+  const exportCurrentStream = () => {
+    var csvData = "Time";
+    for (var i = 0; i < dataToRender.data[0]["Channels"].length; i++) {
+      csvData += "," + dataToRender.data[0]["Channels"][i] + " Raw";
+    }
+    csvData += "\n";
+    
+    for (var section in dataToRender.data) {
+      for (var i = 0; i < dataToRender.data[section]["Time"].length; i++) {
+        csvData += dataToRender.data[section]["Time"][i] + dataToRender.data[section].Timestamp;
+        for (var j = 0; j < dataToRender.data[section]["Channels"].length; j++) {
+          csvData += "," + dataToRender.data[section][dataToRender.data[section]["Channels"][j]][i];
+        }
+        csvData += "\n";
+      }
+    }
+
+    var downloader = document.createElement('a');
+    downloader.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData);
+    downloader.target = '_blank';
+    downloader.download = 'IndefiniteStreamExport.csv';
+    downloader.click();
+  };
+
   return (
     <>
       {alert}
@@ -98,15 +123,27 @@ function IndefiniteStreaming() {
                   </Grid>
                 </Card>
               </Grid>
+              {dataToRender ? (
               <Grid item xs={12}>
                 <Card sx={{width: "100%"}}>
                   <Grid container>
                     <Grid item xs={12}>
+                      <MDBox p={2} display={"flex"} flexDirection={"row"}>
+                        <MDBox display={"flex"} flexDirection={"column"}>
+                          <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
+                            {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
+                          </MDTypography>
+                          <MDButton size="large" variant="contained" color="primary" style={{marginBottom: 3}} onClick={() => exportCurrentStream()}>
+                            {dictionaryLookup(dictionary.FigureStandardText, "Export", language)}
+                          </MDButton>
+                        </MDBox>
+                      </MDBox>
                       <TimeDomainFigure dataToRender={dataToRender} height={figureHeight} figureTitle={"IndefiniteStreamTimeDomain"}/>
                     </Grid>
                   </Grid>
                 </Card>
               </Grid>
+              ) : null}
               <Grid item xs={12}> 
                 <Card sx={{width: "100%"}}>
                   <Grid container>

@@ -24,6 +24,7 @@ import PollIcon from '@mui/icons-material/Poll';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
+import FlashAutoIcon from "@mui/icons-material/FlashAuto";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -133,6 +134,7 @@ export default function PatientOverview() {
   const experimentals = [
     {title: "TherapeuticPrediction", icon: <BatchPredictionIcon/>, route: "/experimental/therapeutic-prediction"},
     {title: "PatientEvents", icon: <TimelineIcon/>, route: "/experimental/patient-events"},
+    {title: "AdaptiveStimulation", icon: <FlashAutoIcon/>, route: "/experimental/adaptive"},
   ];
 
   return (
