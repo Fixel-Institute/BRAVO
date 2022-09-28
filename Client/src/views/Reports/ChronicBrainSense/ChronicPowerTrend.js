@@ -120,7 +120,7 @@ function ChronicPowerTrend({dataToRender, events, height, figureTitle}) {
   // Refresh Left Figure if Data Changed
   React.useEffect(async () => {
     if (dataToRender) handleGraphing(dataToRender.ChronicData);
-  }, [dataToRender, language]);
+  }, [dataToRender, events, language]);
 
   const onResize = useCallback(() => {
     fig.refresh();

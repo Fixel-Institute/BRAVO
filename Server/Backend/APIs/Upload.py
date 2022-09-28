@@ -32,11 +32,20 @@ class SessionUpload(RestViews.APIView):
 
         rawBytes = request.data["file"].read()
         if request.user.is_clinician:
+            
+            randomSalt = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
+            hashedKey = hashlib.sha256(randomSalt.encode("utf-8")).hexdigest()
+
+            processingQueue.put(hashedKey)
+            while processingQueue.queue[0] != hashedKey:
+                pass
+            
             result = "Failed"
             try:
                 result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes)
             except Exception as e:
                 print(e)
+            hashedKey = processingQueue.get()
             
             if result == "Success":
                 data = dict()

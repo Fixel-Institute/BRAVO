@@ -154,7 +154,7 @@ function ChronicBrainSense() {
                       </MDBox>
                     </Grid>
                     <Grid item xs={12} lg={12}>
-                      {eventList.length > 0 ? <ChronicPowerTrend dataToRender={data} height={800} events={eventList} figureTitle={"ChronicPowerTrend"}/> : null}
+                      {data ? <ChronicPowerTrend dataToRender={data} height={800} events={eventList} figureTitle={"ChronicPowerTrend"}/> : null}
                     </Grid>
                   </Grid>
                 </Card>

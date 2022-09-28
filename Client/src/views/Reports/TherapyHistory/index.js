@@ -124,6 +124,29 @@ function TherapyHistory() {
           </MDTypography>
         );
       }
+    } else if (type == "BrainSense") {
+      if (therapy.Mode == "BrainSense") {
+        return (
+        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
+          <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+            {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
+          </MDTypography>
+          <MDBox display={"flex"} flexDirection={"column"} ml={2}>
+            <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+              {"Threshold at: "} {`[${therapy.LFPThresholds[0]} , ${therapy.LFPThresholds[1]}]`}
+            </MDTypography>
+            <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+              {"Stimulation Range at: "} {`[${therapy.CaptureAmplitudes[0]} , ${therapy.CaptureAmplitudes[1]}]`}
+            </MDTypography>
+          </MDBox>
+        </MDBox>
+        );
+      } else {
+        return (<MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+            {"BrainSense Disabled"}
+          </MDTypography>
+        );
+      }
     }
   };
 
@@ -242,6 +265,24 @@ function TherapyHistory() {
                                           <MDBadge badgeContent="R" color={"error"} size={"xs"} container sx={{marginRight: 1}} />
                                           <MDBox>
                                             {formatTherapySettings(therapy.Therapy.RightHemisphere, "Settings", "error")}
+                                          </MDBox>
+                                        </MDBox>
+                                      ) : null}
+                                    </TableCell>
+                                    <TableCell>
+                                      {therapy.Therapy.LeftHemisphere ? (
+                                        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
+                                          <MDBadge badgeContent="L" color={"info"} size={"xs"} container sx={{marginRight: 1}} />
+                                          <MDBox>
+                                            {formatTherapySettings(therapy.Therapy.LeftHemisphere, "BrainSense", "info")}
+                                          </MDBox>
+                                        </MDBox>
+                                      ) : null}
+                                      {therapy.Therapy.RightHemisphere ? (
+                                        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
+                                          <MDBadge badgeContent="R" color={"error"} size={"xs"} container sx={{marginRight: 1}} />
+                                          <MDBox>
+                                            {formatTherapySettings(therapy.Therapy.RightHemisphere, "BrainSense", "error")}
                                           </MDBox>
                                         </MDBox>
                                       ) : null}
