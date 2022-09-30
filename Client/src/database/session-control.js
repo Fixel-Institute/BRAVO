@@ -54,16 +54,14 @@ export const SessionController = (function () {
   }
 
   const syncSession = async () => {
-    if (!synced) {
-      try {
-        const response = await query("/api/querySessions", {});
-        session = response.data.session;
-        user = response.data.user;
-        synced = true;
-        return synced;
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const response = await query("/api/querySessions", {});
+      session = response.data.session;
+      user = response.data.user;
+      synced = true;
+      return synced;
+    } catch (error) {
+      console.log(error);
     }
     return synced;
   };

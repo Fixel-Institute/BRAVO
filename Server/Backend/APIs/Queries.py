@@ -122,6 +122,10 @@ class QueryBrainSenseStreaming(RestViews.APIView):
         if request.user.is_authenticated:
             if not request.session["patient_deidentified_id"] == request.data["id"]:
                 return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+                
+            if not "ProcessingSettings" in request.session:
+                request.session["ProcessingSettings"] = Database.retrieveProcessingSettings(request.session)
+                request.session.modified = True
 
             if "requestOverview" in request.data:
                 Authority = {}
