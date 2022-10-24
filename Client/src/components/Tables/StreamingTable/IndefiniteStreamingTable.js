@@ -48,7 +48,7 @@ function IndefiniteStreamingTable({data, requestDataForRender, children}) {
     width: "40%"
   }];
 
-  React.useEffect(async () => {
+  React.useEffect(() => {
     var uniqueSession = [];
     var existingDates = [];
     for (var i = 0; i < data.length; i++) {

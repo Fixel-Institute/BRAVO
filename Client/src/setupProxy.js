@@ -11,8 +11,13 @@ module.exports = function (app) {
     changeOrigin: true,
   }));
 
+  app.use("/mobile", createProxyMiddleware({
+    target: "http://localhost:5000",
+    changeOrigin: true,
+  }));
+
   app.use(createProxyMiddleware("/socket", {
-    target: "http://localhost:3001",
+    target: "http://localhost:5000",
     changeOrigin: true,
     ws: true
   }));

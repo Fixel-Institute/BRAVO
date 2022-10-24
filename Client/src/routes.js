@@ -44,9 +44,11 @@ import BrainSenseStreaming from "views/Reports/BrainSenseStreaming";
 import IndefiniteStreaming from "views/Reports/IndefiniteStreaming";
 import ChronicBrainSense from "views/Reports/ChronicBrainSense";
 
-import TherapeuticPrediction from "views/Reports/TherapeuticPrediction";
-import PatientEvents from "views/Reports/PatientEvents";
-import AdaptiveStimulation from "views/Reports/AdaptiveStimulation";
+import TherapeuticPrediction from "views/Experimental/TherapeuticPrediction";
+import PatientEvents from "views/Experimental/PatientEvents";
+import AdaptiveStimulation from "views/Experimental/AdaptiveStimulation";
+import ImageVisualization from "views/Experimental/ImageVisualization";
+import WearableStream from "views/Experimental/WearableStream";
 
 // Material Dashboard 2 PRO React components
 import MDAvatar from "components/MDAvatar";
@@ -65,6 +67,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import BiotechIcon from '@mui/icons-material/Biotech';
 import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
 import FlashAutoIcon from '@mui/icons-material/FlashAuto';
+import PhotoIcon from '@mui/icons-material/Photo';
+import WatchIcon from '@mui/icons-material/Watch';
 
 const routes = [
   {
@@ -156,6 +160,20 @@ const routes = [
         icon: <FlashAutoIcon style={{color: "white", margin: 0, padding: 0}}/>,
         route: "/experimental/adaptive",
         component: <AdaptiveStimulation />
+      },
+      {
+        name: "ImageVisualization",
+        key: "visualize",
+        icon: <PhotoIcon style={{color: "white", margin: 0, padding: 0}}/>,
+        route: "/experimental/visualize",
+        component: <ImageVisualization />
+      },
+      {
+        name: "WearableStream",
+        key: "wearable",
+        icon: <WatchIcon style={{color: "white", margin: 0, padding: 0}}/>,
+        route: "/experimental/wearable",
+        component: <WearableStream />
       },
     ]
   }

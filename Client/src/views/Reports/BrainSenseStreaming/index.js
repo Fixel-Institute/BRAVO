@@ -45,11 +45,14 @@ function BrainSenseStreaming() {
   const [timeFrequencyPlotHeight, setTimeFrequencyPlotHeight] = React.useState(600)
   const [alert, setAlert] = React.useState(null);
 
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
-      SessionController.getStreamingOverview().then((response) => {
+      SessionController.query("/api/queryBrainSenseStreaming", {
+        id: patientID,
+        requestOverview: true,
+      }).then((response) => {
         setData(response.data);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -67,7 +70,11 @@ function BrainSenseStreaming() {
     setRecordingId(timestamp);
 
     setAlert(<LoadingProgress/>);
-    SessionController.getStreamingData(timestamp).then((response) => {
+    SessionController.query("/api/queryBrainSenseStreaming", {
+      id: patientID, 
+      recordingId: timestamp, 
+      requestData: true
+    }).then((response) => {
       if (response.data.Channels.length == 2) setTimeFrequencyPlotHeight(7*200);
       else setTimeFrequencyPlotHeight(4*200);
       setChannelInfos(ChannelInfos);
@@ -195,7 +202,7 @@ function BrainSenseStreaming() {
   }
 
   // Divide all PSDs by day or by channel
-  React.useEffect(async () => {
+  React.useEffect(() => {
     for (var i in dataToRender.Channels) {
       if (dataToRender.Channels[i].endsWith("LEFT")) {
         setLeftHemispherePSD(dataToRender[dataToRender.Channels[i]].StimPSD);

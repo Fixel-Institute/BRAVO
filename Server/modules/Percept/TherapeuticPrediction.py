@@ -101,7 +101,7 @@ def extractModelParameters(stream, channel, centerFrequency):
         "ChangesDirection": np.sign(correlationCoe),
         "FittedEffect": correlationCoe*correlationCoe,
         "ChangesInPower": np.percentile(modeled_signal, 85) - np.percentile(modeled_signal, 15),
-        "FinalPower": np.percentile(modeled_signal, 5)}, xdata[modeled_signal < np.percentile(modeled_signal, 10)][0], [xdata[0], xdata[-1]]
+        "FinalPower": np.percentile(modeled_signal, 5)}, xdata[modeled_signal < np.percentile(modeled_signal, 10)][0], [xdata[0], xdata[-1]], modeled_signal.tolist()
 
 def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0):
     for channel in BrainSenseData["Channels"]:
@@ -115,15 +115,18 @@ def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0)
                 pass
             
             if centerFrequency > 0:
-                Features, PredictedAmplitude, AmplitudeRange = extractModelParameters(BrainSenseData, channel, centerFrequency)
+                Features, PredictedAmplitude, AmplitudeRange, ModeledSignal = extractModelParameters(BrainSenseData, channel, centerFrequency)
             else:
                 Features = { "OptimalFrequency": -1, "ChangesDirection": 1, "FittedEffect": 0, "ChangesInPower": 0, "FinalPower": 0 }
                 PredictedAmplitude = 0
                 AmplitudeRange = [0,0]
+                ModeledSignal = np.zeros(100).tolist()
             
             Features["Score"] = applyPredictionModel(Features)
+            Features["CenterFrequency"] = centerFrequency
             Features["PredictedAmplitude"] = PredictedAmplitude
             Features["AmplitudeRange"] = AmplitudeRange
+            Features["ModeledSignal"] = ModeledSignal
             return Features
 
     return dict()

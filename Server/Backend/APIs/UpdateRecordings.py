@@ -16,7 +16,7 @@ from copy import deepcopy
 
 import pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
-with open(RESOURCES + "/codes.json", "r") as file:
+with open(RESOURCES + "/../codes.json", "r") as file:
     CODE = json.load(file)
     ERROR_CODE = CODE["ERROR"]
 

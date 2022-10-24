@@ -38,12 +38,16 @@ function ChronicBrainSense() {
 
   const [alert, setAlert] = useState(null);
 
-  useEffect(async () => {
+  useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
       setAlert(<LoadingProgress/>);
-      SessionController.getChronicData().then((response) => {
+      SessionController.query("/api/queryChronicBrainSense", {
+        id: patientID, 
+        requestData: true, 
+        timezoneOffset: new Date().getTimezoneOffset()*60
+      }).then((response) => {
         setData(response.data);
         setAlert(null);
       }).catch((error) => {
@@ -116,7 +120,7 @@ function ChronicBrainSense() {
     }
   };
   
-  useEffect(async () => {
+  useEffect(() => {
     if (data) {
       const eventNames = [];
       for (var i = 0; i < data.ChronicData.length; i++) {

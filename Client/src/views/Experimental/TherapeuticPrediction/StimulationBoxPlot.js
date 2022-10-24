@@ -3,12 +3,12 @@ import {useResizeDetector} from "react-resize-detector";
 
 import MDBox from "components/MDBox";
 
-import { PlotlyRenderManager } from "graphing-utility";
+import { PlotlyRenderManager } from "graphing-utility/Plotly";
 
 import { usePlatformContext } from "context";
 import { dictionary, dictionaryLookup } from "assets/translation";
 
-function StimulationBoxPlot({dataToRender, channelInfos, height, type, figureTitle}) {
+function StimulationBoxPlot({dataToRender, channelInfos, predictionTrend, height, type, figureTitle}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
@@ -18,19 +18,22 @@ function StimulationBoxPlot({dataToRender, channelInfos, height, type, figureTit
   const handleGraphing = (data) => {
     fig.clearData();
 
+    var modeledSignals = null, modeledRange = null;
     if (fig.fresh) {
       fig.subplots(1, 1, {sharey: false, sharex: false});
 
       fig.setXlim([-0.5, 5.5]);
-      fig.setYlim([0, 2]);
+      fig.setYlim([-20, 15]);
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Stimulation", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)})`, {fontSize: 15});
-      fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)})`, {fontSize: 15});
+      fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "dB", language)})`, {fontSize: 15});
 
       for (var i in channelInfos) {
         const [side, target] = channelInfos[i].Hemisphere.split(" ");
         if (type === side) {
           const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} @ ${data[0].CenterFrequency} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)}`;
           fig.setTitle(`${titleText}`);
+          modeledSignals = predictionTrend[i].ModeledSignal;
+          modeledRange = predictionTrend[i].AmplitudeRange;
         }
       }
     }
@@ -38,16 +41,27 @@ function StimulationBoxPlot({dataToRender, channelInfos, height, type, figureTit
     var maxStimulation = 0;
     var maxSignal = 0;
     for (var j in data) {
-      const xdata = Array(data[j].SpectralFeatures.length).fill(0).map((value, index) => data[j].Stimulation)
-      fig.box(xdata, data[j]["SpectralFeatures"], {
+      const xdata = Array(data[j].SpectralFeatures.length).fill(0).map((value, index) => data[j].Stimulation);
+      const ydata = Array(data[j].SpectralFeatures.length).fill(0).map((value, index) => 10*Math.log10(data[j]["SpectralFeatures"][index]));
+      fig.box(xdata, ydata, {
         width: 0.2,
-        hovertemplate: `${data[j]["Stimulation"].toFixed(1)} mA %{y:.2f} μV<sup>2</sup>/Hz <extra></extra>`,
+        hovertemplate: `${data[j]["Stimulation"].toFixed(1)} mA %{y:.2f} log(μV<sup>2</sup>/Hz) <extra></extra>`,
       });
       if (xdata[0] > maxStimulation) maxStimulation = xdata[0];
       if (Math.max(...data[j]["SpectralFeatures"]) > maxSignal) maxSignal = Math.max(...data[j]["SpectralFeatures"]);
     }
+
+    if (modeledSignals) {
+      const xdata = Array(modeledSignals.length).fill(0).map((value, index) => (modeledRange[1]-modeledRange[0])/modeledSignals.length*index + modeledRange[0])
+      const ydata = Array(modeledSignals.length).fill(0).map((value, index) => 2+modeledSignals[index]);
+      
+      fig.plot(xdata, ydata, {
+        linewidth: 5,
+        color: "#FF0000"
+      });
+    }
+
     fig.setXlim([-0.5, Math.max(maxStimulation,5) + 0.5]);
-    fig.setYlim([0, maxSignal * 1.05]);
 
     if (fig.traces.length == 0) {
       fig.purge();
@@ -59,7 +73,7 @@ function StimulationBoxPlot({dataToRender, channelInfos, height, type, figureTit
   }
 
   // Refresh Left Figure if Data Changed
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (dataToRender) handleGraphing(dataToRender);
   }, [dataToRender, language]);
 

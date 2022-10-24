@@ -34,11 +34,14 @@ function IndefiniteStreaming() {
 
   const [figureHeight, setFigureHeight] = React.useState(0);
 
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
-      SessionController.getMontageOverview().then((response) => {
+      SessionController.query("/api/queryIndefiniteStreaming", {
+        id: patientID, 
+        requestOverview: true
+      }).then((response) => {
         setData(response.data)
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -60,7 +63,12 @@ function IndefiniteStreaming() {
     if (devices.length == 0) return;
 
     setAlert(<LoadingProgress/>);
-    SessionController.getMontageData(devices, timestamps).then((response) => {
+    SessionController.query("/api/queryIndefiniteStreaming", {
+      id: patientID, 
+      requestData: true, 
+      devices: devices, 
+      timestamps: timestamps
+    }).then((response) => {
       var axLength = 0;
       for (var i in response.data) {
         if (response.data[i].Channels.length > axLength) {

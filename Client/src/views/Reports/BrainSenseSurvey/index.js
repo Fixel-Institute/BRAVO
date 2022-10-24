@@ -47,7 +47,9 @@ function BrainSenseSurvey() {
       navigate("/dashboard", {replace: true});
     } else {
       setAlert(<LoadingProgress/>);
-      SessionController.getSurveyData().then((response) => {
+      SessionController.query("/api/queryBrainSenseSurveys", {
+        id: patientID
+      }).then((response) => {
         setData(response.data)
         setAlert(null);
       }).catch((error) => {

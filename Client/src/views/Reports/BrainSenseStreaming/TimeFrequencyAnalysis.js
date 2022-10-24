@@ -3,7 +3,7 @@ import { useResizeDetector } from 'react-resize-detector';
 
 import MDBox from "components/MDBox";
 
-import { PlotlyRenderManager } from "graphing-utility";
+import { PlotlyRenderManager } from "graphing-utility/Plotly";
 
 import { usePlatformContext } from "context";
 import { dictionary, dictionaryLookup } from "assets/translation";
@@ -156,7 +156,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
   }
 
   // Refresh Left Figure if Data Changed
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (dataToRender) handleGraphing(dataToRender);
   }, [dataToRender, language]);
 

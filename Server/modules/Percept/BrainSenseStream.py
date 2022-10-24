@@ -281,7 +281,7 @@ def queryRealtimeStreamData(user, device, timestamp, authority, cardiacFilter=Fa
         RecordingID = recording.recording_id
     return BrainSenseData, RecordingID
 
-def processRealtimeStreamRenderingData(stream, options=dict()):
+def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies=[0,0]):
     stream["Stimulation"] = processRealtimeStreamStimulationAmplitude(stream)
     stream["PowerBand"] = processRealtimeStreamPowerBand(stream)
     data = dict()
@@ -290,6 +290,11 @@ def processRealtimeStreamRenderingData(stream, options=dict()):
     data["PowerBand"] = stream["PowerBand"]
     data["Info"] = stream["Info"]
     data["Timestamp"] = stream["Timestamp"]
+
+    if len(centerFrequencies) < len(stream["Channels"]):
+        centerFrequencies.append(0)
+        
+    counter = 0
     for channel in stream["Channels"]:
         data[channel] = dict()
         data[channel]["Time"] = stream["Time"]
@@ -306,9 +311,11 @@ def processRealtimeStreamRenderingData(stream, options=dict()):
             data[channel]["Spectrogram"]["ColorRange"] = [-10,20]
 
         if options["PSDMethod"]["value"] == "Time-Frequency Analysis":
-            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["SpectrogramMethod"]["value"], stim_label="Ipsilateral")
+            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=centerFrequencies[counter])
         else:
-            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["PSDMethod"]["value"], stim_label="Ipsilateral")
+            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["PSDMethod"]["value"], stim_label="Ipsilateral", centerFrequency=centerFrequencies[counter])
+        counter += 1
+
     return data
 
 def processRealtimeStreamStimulationAmplitude(stream):

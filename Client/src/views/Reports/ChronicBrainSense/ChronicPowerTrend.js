@@ -5,7 +5,7 @@ import MDBox from "components/MDBox";
 
 import colormap from "colormap";
 
-import { PlotlyRenderManager } from "graphing-utility";
+import { PlotlyRenderManager } from "graphing-utility/Plotly";
 
 import { dictionary, dictionaryLookup } from "assets/translation";
 import { usePlatformContext } from "context";
@@ -76,8 +76,10 @@ function ChronicPowerTrend({dataToRender, events, height, figureTitle}) {
         }, ax[i]);
 
         for (var k = 0; k < data[i].EventName[j].length; k++) {
-          eventData[data[i].EventName[j][k]].xdata.push(data[i].EventTime[j][k]*1000);
-          eventData[data[i].EventName[j][k]].ydata.push(data[i].EventPower[j][k]);
+          if (Object.keys(eventData).includes(data[i].EventName[j][k])) {
+            eventData[data[i].EventName[j][k]].xdata.push(data[i].EventTime[j][k]*1000);
+            eventData[data[i].EventName[j][k]].ydata.push(data[i].EventPower[j][k]);
+          }
         }
       }
 
@@ -118,7 +120,7 @@ function ChronicPowerTrend({dataToRender, events, height, figureTitle}) {
   }
 
   // Refresh Left Figure if Data Changed
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (dataToRender) handleGraphing(dataToRender.ChronicData);
   }, [dataToRender, events, language]);
 

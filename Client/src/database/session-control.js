@@ -17,11 +17,11 @@ export const SessionController = (function () {
     return cookie.load("csrftoken");
   };
 
-  const query = async (url, form) => {
+  const query = async (url, form, config) => {
     axios.defaults.headers.post["X-CSRFToken"] = cookie.load("csrftoken");
     axios.defaults.headers.post["Content-Type"] = "application/json";
     axios.defaults.headers.post["Accept"] = "application/json";
-    return axios.post(url, form);
+    return axios.post(url, form, config);
   };
 
   const displayError = (error, setAlert) => {
@@ -145,131 +145,6 @@ export const SessionController = (function () {
     return query("/api/queryPatientInfo", {id: session.patientID});
   };
 
-  const getTherapyHistory = async () => {
-    try {
-      const response = await SessionController.query("/api/queryTherapyHistory", {id: session.patientID});
-      return({state: true, data: response.data});
-
-    } catch (error) {
-      if (error.response.status === 400) {
-        const errorCode = error.response.data.code;
-        if (errorCode === ERRORCODE.IMPROPER_SUBMISSION) {
-          return({state: false, error: "IMPROPER_SUBMISSION"});
-        } else if (errorCode === ERRORCODE.MALFORMATED_REQUEST) {
-          return({state: false, error: "MALFORMATED_REQUEST"});
-        }
-      } else if (error.response.status === 500) {
-        return({state: false, error: "INTERNAL_SERVER_ERROR"});
-      } else if (error.response.status === 403) {
-        return({state: false, error: "PERMISSION DENIED"});
-      } else {
-        return({state: false, error: "UNKNOWN_ERROR"});
-      }
-    }
-  };
-
-  const getSurveyData = async (ssr) => {
-    try {
-      const response = await SessionController.query("/api/queryBrainSenseSurveys", {id: session.patientID});
-      return({state: true, data: response.data});
-
-    } catch (error) {
-      if (error.response.status === 400) {
-        const errorCode = error.response.data.code;
-        if (errorCode === ERRORCODE.IMPROPER_SUBMISSION) {
-          return({state: false, error: "IMPROPER_SUBMISSION"});
-        } else if (errorCode === ERRORCODE.MALFORMATED_REQUEST) {
-          return({state: false, error: "MALFORMATED_REQUEST"});
-        }
-      } else if (error.response.status === 500) {
-        return({state: false, error: "INTERNAL_SERVER_ERROR"});
-      } else if (error.response.status === 403) {
-        return({state: false, error: "PERMISSION DENIED"});
-      } else {
-        return({state: false, error: "UNKNOWN_ERROR"});
-      }
-    }
-  };
-
-  const getStreamingOverview = (ssr) => {
-    return SessionController.query("/api/queryBrainSenseStreaming", {id: session.patientID, requestOverview: true});
-  };
-
-  const getStreamingData = async (recordingId, ssr) => {
-    try {
-      const response = await SessionController.query("/api/queryBrainSenseStreaming", {id: session.patientID, recordingId: recordingId, requestData: true});
-      return({state: true, data: response.data});
-
-    } catch (error) {
-      if (error.response.status === 400) {
-        const errorCode = error.response.data.code;
-        if (errorCode === ERRORCODE.IMPROPER_SUBMISSION) {
-          return({state: false, error: "IMPROPER_SUBMISSION"});
-        } else if (errorCode === ERRORCODE.MALFORMATED_REQUEST) {
-          return({state: false, error: "MALFORMATED_REQUEST"});
-        } else if (errorCode === ERRORCODE.DATA_NOT_FOUND) {
-          return({state: false, error: "DATA_NOT_FOUND"});
-        }
-      } else if (error.response.status === 500) {
-        return({state: false, error: "INTERNAL_SERVER_ERROR"});
-      } else if (error.response.status === 403) {
-        return({state: false, error: "PERMISSION DENIED"});
-      } else {
-        return({state: false, error: "UNKNOWN_ERROR"});
-      }
-    }
-  };
-
-  const getMontageOverview = async (ssr) => {
-    try {
-      const response = await SessionController.query("/api/queryIndefiniteStreaming", {id: session.patientID, requestOverview: true});
-      return({state: true, data: response.data});
-
-    } catch (error) {
-      if (error.response.status === 400) {
-        const errorCode = error.response.data.code;
-        if (errorCode === ERRORCODE.IMPROPER_SUBMISSION) {
-          return({state: false, error: "IMPROPER_SUBMISSION"});
-        } else if (errorCode === ERRORCODE.MALFORMATED_REQUEST) {
-          return({state: false, error: "MALFORMATED_REQUEST"});
-        }
-      } else if (error.response.status === 500) {
-        return({state: false, error: "INTERNAL_SERVER_ERROR"});
-      } else if (error.response.status === 403) {
-        return({state: false, error: "PERMISSION DENIED"});
-      } else {
-        return({state: false, error: "UNKNOWN_ERROR"});
-      }
-    }
-  };
-
-  const getMontageData = async (devices, timestamps, ssr) => {
-    try {
-      const response = await SessionController.query("/api/queryIndefiniteStreaming", {id: session.patientID, requestData: true, devices: devices, timestamps: timestamps});
-      return({state: true, data: response.data});
-
-    } catch (error) {
-      if (error.response.status === 400) {
-        const errorCode = error.response.data.code;
-        if (errorCode === ERRORCODE.IMPROPER_SUBMISSION) {
-          return({state: false, error: "IMPROPER_SUBMISSION"});
-        } else if (errorCode === ERRORCODE.MALFORMATED_REQUEST) {
-          return({state: false, error: "MALFORMATED_REQUEST"});
-        }
-      } else if (error.response.status === 500) {
-        return({state: false, error: "INTERNAL_SERVER_ERROR"});
-      } else if (error.response.status === 403) {
-        return({state: false, error: "PERMISSION DENIED"});
-      } else {
-        return({state: false, error: "UNKNOWN_ERROR"});
-      }
-    }
-  };
-
-  const getChronicData = (ssr) => {
-    return SessionController.query("/api/queryChronicBrainSense", {id: session.patientID, requestData: true, timezoneOffset: new Date().getTimezoneOffset()*60});
-  };
-
   return {
     getCSRFToken: getCSRFToken,
     query: query,
@@ -292,13 +167,6 @@ export const SessionController = (function () {
 
     setPatientID: setPatientID,
     getPatientInfo: getPatientInfo,
-    getTherapyHistory: getTherapyHistory,
-    getSurveyData: getSurveyData,
-    getStreamingOverview: getStreamingOverview,
-    getStreamingData: getStreamingData,
-    getMontageOverview: getMontageOverview,
-    getMontageData: getMontageData,
-    getChronicData: getChronicData,
   }
 
 })();

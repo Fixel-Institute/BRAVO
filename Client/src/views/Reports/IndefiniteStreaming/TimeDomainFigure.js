@@ -5,7 +5,7 @@ import MDBox from "components/MDBox";
 
 import colormap from "colormap";
 
-import { PlotlyRenderManager } from "graphing-utility";
+import { PlotlyRenderManager } from "graphing-utility/Plotly";
 import { formatSegmentString, matchArray } from "database/helper-function";
 
 import { dictionary, dictionaryLookup } from "assets/translation";
@@ -77,7 +77,7 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
   }
 
   // Refresh Left Figure if Data Changed
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (dataToRender) handleGraphing(dataToRender.data, dataToRender.ChannelInfos);
   }, [dataToRender, language]);
 

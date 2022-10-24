@@ -47,12 +47,12 @@ function TherapyHistory() {
   const [activeTab, setActiveTab] = React.useState(null);
   const [activeDevice, setActiveDevice] = React.useState(null);
 
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
       setAlert(<LoadingProgress/>);
-      SessionController.getTherapyHistory().then((response) => {
+      SessionController.query("/api/queryTherapyHistory", {id: patientID}).then((response) => {
         setChangeLogs(response.data.TherapyChangeLogs);
         setData(response.data.TherapyConfigurations);
         setAlert(null);
@@ -62,7 +62,7 @@ function TherapyHistory() {
     }
   }, [patientID]);
 
-  React.useEffect(async () => {
+  React.useEffect(() => {
     var therapyHistory = {};
     var therapyTimestamp = Object.keys(data);
     therapyTimestamp = therapyTimestamp.map((value, index) => therapyTimestamp[therapyTimestamp.length - 1 - index]);

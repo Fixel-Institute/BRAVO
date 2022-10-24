@@ -5,7 +5,7 @@ import MDBox from "components/MDBox";
 
 import colormap from "colormap";
 
-import { PlotlyRenderManager } from "graphing-utility";
+import { PlotlyRenderManager } from "graphing-utility/Plotly";
 
 import { dictionary, dictionaryLookup } from "assets/translation";
 import { usePlatformContext } from "context";
@@ -77,7 +77,7 @@ function AdaptivePowerTrend({dataToRender, events, height, figureTitle}) {
   }
 
   // Refresh Left Figure if Data Changed
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (dataToRender) handleGraphing(dataToRender.ChronicData);
   }, [dataToRender, language]);
 

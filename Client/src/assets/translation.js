@@ -516,6 +516,16 @@ export const dictionary = {
       },
     }
   },
+  ImageVisualization: {
+    Title: {
+      en: "3D Model Renderer",
+      zh: "3D Model Renderer"
+    },
+    AddItem: {
+      en: "Add Item",
+      zh: "Add Item",
+    },
+  },
   TherapeuticPrediction: {
     Table: {
       StreamingTableDate: {
@@ -570,6 +580,16 @@ export const dictionary = {
       }
     }
   },
+  Wearable: {
+    Title: {
+      en: "Pairing External Sensors",
+      zh: "Pairing External Sensors"
+    },
+    NewPair: {
+      en: "Pair New Device",
+      zh: "Pair New Device",
+    },
+  },
   Breadcrumbs: {
     dashboard: {
       en: "Dashboard",
@@ -607,6 +627,10 @@ export const dictionary = {
       en: "Chronic BrainSense Recordings",
       zh: "长期脑电记录"
     },
+    session: {
+      en: "Clinic Session Reports",
+      zh: "Clinic Session Reports"
+    },
     "therapeutic-prediction": {
       en: "Predict Optimal Therapy Settings",
       zh: "计算最佳疗法"
@@ -618,6 +642,14 @@ export const dictionary = {
     "adaptive": {
       en: "Adaptive Stimulation",
       zh: "闭环功能"
+    },
+    visualize: {
+      en: "Image Visualization",
+      zh: "Image Visualization"
+    },
+    wearable: {
+      en: "Wearable Stream",
+      zh: "Wearable Stream"
     }
   },
   Routes: {
@@ -668,6 +700,14 @@ export const dictionary = {
     AdaptiveStimulation: {
       en: "Adaptive Stimulation",
       zh: "闭环功能"
+    },
+    ImageVisualization: {
+      en: "Image Visualization",
+      zh: "Image Visualization"
+    },
+    WearableStream: {
+      en: "Wearable Stream",
+      zh: "Wearable Stream"
     }
   },
   Time: {
@@ -752,11 +792,11 @@ export const dictionary = {
       zh: "丘脑底核"
     },
     GPi: {
-      en: "Globus Palladus Internus",
+      en: "Globus Pallidus Internus",
       zh: "内苍白球"
     },
     GPe: {
-      en: "Globus Palladus Externus",
+      en: "Globus Pallidus Externus",
       zh: "外苍白球"
     },
     VIM: {
@@ -764,7 +804,7 @@ export const dictionary = {
       zh: "丘脑腹中间核"
     },
     GPI: {
-      en: "Globus Palladus Internus",
+      en: "Globus Pallius Internus",
       zh: "内苍白球"
     },
   },

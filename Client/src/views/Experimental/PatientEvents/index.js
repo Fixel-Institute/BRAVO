@@ -32,7 +32,7 @@ import { usePlatformContext, setContextState } from "context.js";
 import { dictionary } from "assets/translation.js";
 import EventPowerSpectrum from "./EventPowerSpectrum";
 
-function ChronicBrainSense() {
+function PatientEvents() {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
   const { patientID, language } = controller;
@@ -197,4 +197,4 @@ function ChronicBrainSense() {
   );
 }
 
-export default ChronicBrainSense;
+export default PatientEvents;

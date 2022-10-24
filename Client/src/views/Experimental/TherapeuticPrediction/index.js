@@ -19,9 +19,9 @@ import LoadingProgress from "components/LoadingProgress";
 
 import DatabaseLayout from "layouts/DatabaseLayout";
 
-import TimeFrequencyAnalysis from "../BrainSenseStreaming/TimeFrequencyAnalysis";
-import StimulationPSD from "../BrainSenseStreaming/StimulationPSD";
-import StimulationBoxPlot from "../BrainSenseStreaming/StimulationBoxPlot";
+import TimeFrequencyAnalysis from "../../Reports/BrainSenseStreaming/TimeFrequencyAnalysis";
+import StimulationPSD from "../../Reports/BrainSenseStreaming/StimulationPSD";
+import StimulationBoxPlot from "./StimulationBoxPlot";
 
 import TherapeuticPredictionTable from "./TherapeuticPredictionTable";
 
@@ -37,6 +37,7 @@ function TherapeuticPrediction() {
 
   const [data, setData] = React.useState([]);
   const [predictionModel, setPredictionModel] = React.useState([]);
+  const [predictionToRender, setPredictionToRender] = React.useState([]);
   const [dataToRender, setDataToRender] = React.useState(false);
   const [channelInfos, setChannelInfos] = React.useState([]);
   const [leftHemispherePSD, setLeftHemispherePSD] = React.useState(false);
@@ -52,11 +53,14 @@ function TherapeuticPrediction() {
 
   const [processingProgress, setProcessingProgress] = React.useState({show: false, currentRecording: "", progress: 0});
 
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
-      SessionController.getStreamingOverview().then((response) => {
+      SessionController.query("/api/queryBrainSenseStreaming", {
+        id: patientID,
+        requestOverview: true
+      }).then((response) => {
         setData(response.data);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -64,7 +68,7 @@ function TherapeuticPrediction() {
     }
   }, [patientID]);
 
-  React.useEffect(async () => {
+  const retrievePredictionModels = async () => {
     setProcessingProgress({progress: 0, currentRecording: "", show: true});
     var predictedModels = [];
     try {
@@ -83,6 +87,10 @@ function TherapeuticPrediction() {
       console.log(error);
     }
     setProcessingProgress({progress: 0, currentRecording: "", show: false});
+  };
+
+  React.useEffect(() => {
+    retrievePredictionModels();
   }, [data])
 
   const getRecordingData = (timestamp) => {
@@ -92,10 +100,25 @@ function TherapeuticPrediction() {
         ChannelInfos = data[i].Channels;
       }
     }
+
+    var centerFrequencies = [];
+    for (var i in predictionModel) {
+      if (predictionModel[i].RecordingID == timestamp) {
+        setPredictionToRender(predictionModel[i].Prediction);
+        for (var j in predictionModel[i].Prediction) {
+          centerFrequencies.push(predictionModel[i].Prediction[j].CenterFrequency ? predictionModel[i].Prediction[j].CenterFrequency : 0);
+        }
+      }
+    }
     setRecordingId(timestamp);
 
     setAlert(<LoadingProgress/>);
-    SessionController.getStreamingData(timestamp).then((response) => {
+    SessionController.query("/api/queryBrainSenseStreaming", {
+      id: patientID, 
+      recordingId: timestamp, 
+      requestFrequency: centerFrequencies,
+      requestData: true
+    }).then((response) => {
       if (response.data.Channels.length == 2) setTimeFrequencyPlotHeight(7*200);
       else setTimeFrequencyPlotHeight(4*200);
       setChannelInfos(ChannelInfos);
@@ -180,7 +203,7 @@ function TherapeuticPrediction() {
   }
 
   // Divide all PSDs by day or by channel
-  React.useEffect(async () => {
+  React.useEffect(() => {
     for (var i in dataToRender.Channels) {
       if (dataToRender.Channels[i].endsWith("LEFT")) {
         setLeftHemispherePSD(dataToRender[dataToRender.Channels[i]].StimPSD);
@@ -276,13 +299,13 @@ function TherapeuticPrediction() {
                         <StimulationPSD dataToRender={leftHemispherePSD} channelInfos={channelInfos} type={"Left"} figureTitle={"LeftStimulationPSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>
                       </Grid>
                       <Grid item xs={12} lg={6}>
-                        <StimulationBoxPlot dataToRender={leftHemisphereBox} channelInfos={channelInfos} type={"Left"} figureTitle={"LeftStimulationBar"} height={600}/>
+                        <StimulationBoxPlot dataToRender={leftHemisphereBox} predictionTrend={predictionToRender} channelInfos={channelInfos} type={"Left"} figureTitle={"LeftStimulationBar"} height={600}/>
                       </Grid>
                       <Grid item xs={12} lg={6}>
                         <StimulationPSD dataToRender={rightHemispherePSD} channelInfos={channelInfos} type={"Right"} figureTitle={"RightStimulationPSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>
                       </Grid>
                       <Grid item xs={12} lg={6}>
-                        <StimulationBoxPlot dataToRender={rightHemisphereBox} channelInfos={channelInfos} type={"Right"} figureTitle={"RightStimulationBar"} height={600}/>
+                        <StimulationBoxPlot dataToRender={rightHemisphereBox} predictionTrend={predictionToRender} channelInfos={channelInfos} type={"Right"} figureTitle={"RightStimulationBar"} height={600}/>
                       </Grid>
                     </Grid>
                   </Card>

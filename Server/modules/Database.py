@@ -290,6 +290,12 @@ def verifyPermission(user, patient_id, authority, access_type):
         TimeRange = DeidentifiedPatientID.authorized_time_range
         return TimeRange[access_type]
 
+    # TODO: Imaging Pipeline for Research Authorization. 
+    elif access_type == "Imaging" and models.ResearchAuthorizedAccess.objects.filter(researcher_id=user.unique_user_id, authorized_patient_id=patient_id, authorized_recording_type="Imaging").exists():
+        recording_ids = models.ResearchAuthorizedAccess.objects.filter(researcher_id=user.unique_user_id, authorized_patient_id=patient_id, authorized_recording_type=access_type).all().values("authorized_recording_id")
+        recording_ids = [id["authorized_recording_id"] for id in recording_ids]
+        return recording_ids
+
     return None
 
 def extractPatientList(user):

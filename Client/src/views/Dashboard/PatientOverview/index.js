@@ -25,6 +25,8 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
 import FlashAutoIcon from "@mui/icons-material/FlashAuto";
+import PhotoIcon from "@mui/icons-material/Photo";
+import WatchIcon from "@mui/icons-material/Watch";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -48,7 +50,7 @@ export default function PatientOverview() {
 
   const [alert, setAlert] = useState(null);
 
-  useEffect(async () => {
+  useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
@@ -135,6 +137,8 @@ export default function PatientOverview() {
     {title: "TherapeuticPrediction", icon: <BatchPredictionIcon/>, route: "/experimental/therapeutic-prediction"},
     {title: "PatientEvents", icon: <TimelineIcon/>, route: "/experimental/patient-events"},
     {title: "AdaptiveStimulation", icon: <FlashAutoIcon/>, route: "/experimental/adaptive"},
+    {title: "ImageVisualization", icon: <PhotoIcon/>, route: "/experimental/visualize"},
+    {title: "WearableStream", icon: <WatchIcon/>, route: "/experimental/wearable"},
   ];
 
   return (
@@ -371,8 +375,6 @@ export default function PatientOverview() {
                   </MDTypography>
                 </MDBox>
                 <DialogContent>
-                  <MDTypography variant="p">
-                  </MDTypography>
                   <Grid container spacing={2}>
                     <Grid item xs={12}>
                       <TextField

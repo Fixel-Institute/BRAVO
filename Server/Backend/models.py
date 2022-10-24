@@ -278,6 +278,7 @@ class ExternalRecording(models.Model):
 class ExternalSensorPairing(models.Model):
     patient_deidentified_id = models.UUIDField(default=uuid.uuid4)
     device_mac = models.CharField(default="", max_length=64)
+    device_name = models.CharField(default="", max_length=64)
     pairing_date = models.DateTimeField(default=timezone.now)
     pairing_code = models.CharField(default="", max_length=10)
     pairing_password = models.CharField(default="", max_length=64)

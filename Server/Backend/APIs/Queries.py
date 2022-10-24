@@ -1,10 +1,11 @@
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
 from rest_framework.response import Response
+from django.http import HttpResponse
 
 from Backend import models
 
-from modules import Database
+from modules import Database, ImageDatabase
 from modules.Percept import Therapy, BrainSenseSurvey, BrainSenseEvent, BrainSenseStream, IndefiniteStream, ChronicBrainSense, TherapeuticPrediction
 from utility.PythonUtility import uniqueList
 import json
@@ -12,7 +13,7 @@ import numpy as np
 
 import os, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
-with open(RESOURCES + "/codes.json", "r") as file:
+with open(RESOURCES + "/../codes.json", "r") as file:
     CODE = json.load(file)
     ERROR_CODE = CODE["ERROR"]
 
@@ -146,12 +147,18 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 if Authority["Level"] == 0:
                     return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
+
+                if "requestFrequency" in request.data:
+                    centerFrequencies = request.data["requestFrequency"]
+                else:
+                    centerFrequencies = [0,0]
+
                 if Authority["Level"] == 1:
                     Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
                     BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                     if BrainSenseData == None:
                         return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
-                    data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.session["ProcessingSettings"]["RealtimeStream"])
+                    data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.session["ProcessingSettings"]["RealtimeStream"], centerFrequencies=centerFrequencies)
                     return Response(status=200, data=data)
 
                 elif Authority["Level"] == 2:
@@ -164,7 +171,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                     BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                     if BrainSenseData == None:
                         return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
-                    data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.session["ProcessingSettings"]["RealtimeStream"])
+                    data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.session["ProcessingSettings"]["RealtimeStream"], centerFrequencies=centerFrequencies)
                     return Response(status=200, data=data)
 
             elif "updateStimulationPSD" in request.data:
@@ -413,5 +420,75 @@ class QueryPatientEvents(RestViews.APIView):
             data = dict()
             data["EventPSDs"] = BrainSenseEvent.getAllPatientEvents(request.user, PatientID, Authority)
             return Response(status=200, data=data)
+
+        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+class QueryImageModelDirectory(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    def post(self, request):
+        if request.user.is_authenticated:
+            if not "patient_deidentified_id" in request.session:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.session["patient_deidentified_id"])
+            if Authority["Level"] == 0:
+                return Response(status=404)
+
+            elif Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.session["patient_deidentified_id"], Authority, "ChronicLFPs")
+                PatientID = request.session["patient_deidentified_id"]
+
+            elif Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.session["patient_deidentified_id"])
+                Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "Imaging")
+                PatientID = PatientInfo.authorized_patient_id
+
+            data = ImageDatabase.extractAvailableModels(PatientID, Authority)
+            return Response(status=200, data=data)
+
+        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+class QueryImageModel(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    def post(self, request):
+        if request.user.is_authenticated:
+            if not "patient_deidentified_id" in request.session:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.session["patient_deidentified_id"])
+            if Authority["Level"] == 0:
+                return Response(status=404)
+
+            elif Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.session["patient_deidentified_id"], Authority, "ChronicLFPs")
+                PatientID = request.session["patient_deidentified_id"]
+
+            elif Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.session["patient_deidentified_id"])
+                Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "Imaging")
+                if not request.data["FileName"] in Authority["Permission"]:
+                    return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                PatientID = PatientInfo.authorized_patient_id
+
+            if request.data["FileMode"] == "single":
+                if request.data["FileType"] == "stl":
+                    file_data = ImageDatabase.stlReader(PatientID, request.data["FileName"])
+                    if not file_data:
+                        return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+                    return HttpResponse(bytes(file_data), status=200, headers={
+                        "Content-Type": "application/octet-stream"
+                    })
+
+                elif request.data["FileType"] == "tracts":
+                    tracts = ImageDatabase.tractReader(PatientID, request.data["FileName"])
+                    if not tracts:
+                        return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+                    return Response(status=200, data={
+                        "points": tracts
+                    })
 
         return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})

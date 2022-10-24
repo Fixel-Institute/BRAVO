@@ -5,7 +5,7 @@ import colormap from "colormap";
 
 import MDBox from "components/MDBox";
 
-import { PlotlyRenderManager } from "graphing-utility";
+import { PlotlyRenderManager } from "graphing-utility/Plotly";
 import { formatSegmentString, matchArray } from "database/helper-function";
 import { usePlatformContext } from "context";
 
@@ -71,7 +71,7 @@ function ChannelCompare({dataToRender, height, figureTitle}) {
   }
 
   // Refresh Left Figure if Data Changed
-  React.useEffect(async () => {
+  React.useEffect(() => {
     if (dataToRender) handleGraphing(dataToRender);
   }, [dataToRender, language]);
 
