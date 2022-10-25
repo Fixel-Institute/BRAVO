@@ -38,6 +38,7 @@ Coded by www.creative-tim.com
 // BRAVO Platform Layouts
 import DashboardOverview from "views/Dashboard/Overview";
 import PatientOverview from "views/Dashboard/PatientOverview";
+import SurveyList from "views/Survey/Overview";
 import TherapyHistory from "views/Reports/TherapyHistory";
 import BrainSenseSurvey from "views/Reports/BrainSenseSurvey";
 import BrainSenseStreaming from "views/Reports/BrainSenseStreaming";
@@ -176,7 +177,16 @@ const routes = [
         component: <WearableStream />
       },
     ]
-  }
+  },
+  {
+    type: "collapse",
+    name: "Surveys",
+    key: "surveys",
+    component: <SurveyList />,
+    route: "/surveys",
+    icon: <DashboardIcon/>,
+    noCollapse: true,
+  },
 ];
 
 export default routes;

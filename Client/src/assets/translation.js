@@ -231,6 +231,40 @@ export const dictionary = {
       zh: "取消"
     }
   },
+  Surveys: {
+    SurveyList: {
+      en: "Available Surveys",
+      zh: "Available Surveys"
+    },
+    AddNewSurvey: {
+      en: "Add New Survey",
+      zh: "Add New Survey"
+    },
+    SearchSurvey: {
+      en: "Search Survey",
+      zh: "Search Survey"
+    },
+    SurveyTableName: {
+      en: "Name",
+      zh: "名字"
+    },
+    SurveyTableURL: {
+      en: "URL",
+      zh: "URL"
+    },
+    SurveyTableDate: {
+      en: "Created Date",
+      zh: "Created Date"
+    },
+    PatientTablePrevious: {
+      en: "PREVIOUS",
+      zh: "上一页"
+    },
+    PatientTableNext: {
+      en: "NEXT",
+      zh: "下一页"
+    }
+  },
   PatientOverview: {
     EditPatientInfo: {
       en: "Edit Patient Information",
@@ -650,6 +684,10 @@ export const dictionary = {
     wearable: {
       en: "Wearable Stream",
       zh: "Wearable Stream"
+    },
+    surveys: {
+      en: "Surveys",
+      zh: "Surveys"
     }
   },
   Routes: {
@@ -708,6 +746,10 @@ export const dictionary = {
     WearableStream: {
       en: "Wearable Stream",
       zh: "Wearable Stream"
+    },
+    Surveys: {
+      en: "Surveys",
+      zh: "Surveys"
     }
   },
   Time: {

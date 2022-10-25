@@ -283,3 +283,19 @@ class ExternalSensorPairing(models.Model):
     pairing_code = models.CharField(default="", max_length=10)
     pairing_password = models.CharField(default="", max_length=64)
     paired = models.BooleanField(default=False)
+
+class CustomizedSurvey(models.Model):
+    survey_id = models.UUIDField(default=uuid.uuid4, unique=True)
+    creator = models.UUIDField(default=uuid.uuid4)
+    authorized_users = models.JSONField(default=list)
+    name = models.CharField(default="", max_length=64)
+    url = models.CharField(default="", max_length=64)
+    version = models.IntegerField(default=1)
+    date = models.DateTimeField(default=timezone.now)
+    contents = models.JSONField(default=list)
+
+class SurveyResults(models.Model):
+    survey_id = models.UUIDField(default=uuid.uuid4)
+    responder = models.CharField(default="", max_length=255)
+    values = models.JSONField(default=list)
+    date = models.DateTimeField(default=timezone.now)

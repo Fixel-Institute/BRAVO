@@ -67,7 +67,7 @@ function Breadcrumbs({ icon, title, route, light }) {
               opacity={light ? 0.8 : 0.5}
               sx={{ lineHeight: 0 }}
             >
-              {dictionary.Breadcrumbs[el][language]}
+              {dictionary.Breadcrumbs[el] ? dictionary.Breadcrumbs[el][language] : el}
             </MDTypography>
           </Link>
         ))}

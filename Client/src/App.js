@@ -20,6 +20,7 @@ import themeDark from "assets/theme-dark";
 import HomePage from "views/HomePage.js";
 import SignIn from "views/Authentication/SignIn";
 import Register from "views/Authentication/Register";
+import SurveyEditor from "views/Survey/Editor";
 
 import { usePlatformContext, setContextState } from "context.js";
 import routes from "routes";
@@ -99,6 +100,7 @@ export default function App() {
         {getRoutes(routes)}
         <Route path="/reports/*" element={<Navigate to="/patient-overview" />} />
         <Route path="/experimental/*" element={<Navigate to="/patient-overview" />} />
+        <Route exact path="/survey/:surveyId/edit" element={<SurveyEditor />} />
         <Route path="*" element={<Navigate to="/index" />} />
       </Routes>
     </ThemeProvider>

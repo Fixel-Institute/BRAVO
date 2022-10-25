@@ -1,7 +1,7 @@
 from django.urls import path
 from django.conf import settings
 
-from . import Auth, Session, Queries, Upload, UpdateRecordings
+from . import Auth, Session, Queries, Upload, UpdateRecordings, Surveys
 
 urlpatterns = [
 	path('handshake', Auth.Handshake.as_view()),
@@ -35,4 +35,10 @@ urlpatterns = [
 
 	path('queryImageDirectory', Queries.QueryImageModelDirectory.as_view()),
 	path('queryImageModel', Queries.QueryImageModel.as_view()),
+
+	path('addNewSurvey', Surveys.AddNewSurvey.as_view()),
+	path('queryAvailableSurveys', Surveys.QueryAvailableSurveys.as_view()),
+	path('querySurveyContent', Surveys.QuerySurveyContent.as_view()),
+	path('updateSurveyContent', Surveys.UpdateSurveyContent.as_view()),
+	
 ]
