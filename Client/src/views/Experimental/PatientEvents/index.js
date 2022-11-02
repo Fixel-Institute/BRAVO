@@ -45,7 +45,7 @@ function PatientEvents() {
 
   const [alert, setAlert] = useState(null);
 
-  useEffect(async () => {
+  useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
