@@ -7,6 +7,17 @@ from modules import Database
 import json
 from copy import deepcopy
 
+from django.middleware.csrf import get_token
+from asgiref.sync import async_to_sync, sync_to_async
+from channels.generic.websocket import AsyncWebsocketConsumer
+
+import rest_framework.views as RestViews
+import rest_framework.parsers as RestParsers
+from rest_framework.response import Response
+
+import numpy as np
+from scipy import signal
+
 from Backend import models
 
 import os, pathlib
@@ -94,3 +105,74 @@ class VerifyPairing(RestViews.APIView):
             })
 
         return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+class StreamRelay(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        pass
+
+    # Receive message from WebSocket
+    async def receive(self, text_data=None, bytes_data=None):
+        if text_data:
+            config = json.loads(text_data)
+            if "streamState" in config.keys():
+                if config["streamState"]:
+                    self.currentConfig = config
+                    self.streamChannel = config["deviceId"].replace(":","-")
+                    await self.channel_layer.group_add(self.streamChannel, self.channel_name)
+                    await self.channel_layer.group_send(self.streamChannel, {
+                        "type": "broadcast_config",
+                        "message": {
+                            "SetConfig": True,
+                            "SamplingRate": config["SamplingRate"],
+                            "DataRange": config["DataRange"]
+                        }
+                    })
+
+                else:
+                    await self.channel_layer.group_discard(self.streamChannel, self.channel_name)
+                    
+            if "joinStream" in config.keys():
+                self.streamChannel = config["joinStream"].replace(":","-")
+                await self.channel_layer.group_add(self.streamChannel, self.channel_name)
+                await self.channel_layer.group_send(self.streamChannel, {
+                    "type": "broadcast_config",
+                    "message": {
+                        "GetConfig": True,
+                    }
+                })
+
+            elif "leaveStream" in config.keys():
+                await self.channel_layer.group_discard(self.streamChannel, self.channel_name)
+
+        elif bytes_data:
+            data = np.frombuffer(bytes_data, dtype="<i2")
+            await self.channel_layer.group_send(self.streamChannel, {
+                "type": "broadcast_stream",
+                "data": data.tobytes()
+            })
+
+    # Broadcast Configurations
+    async def broadcast_config(self, event):
+        if "SetConfig" in event["message"]:
+            await self.send(text_data=json.dumps(event["message"]))
+
+        if "GetConfig" in event["message"]:
+            if hasattr(self, "currentConfig"):
+                await self.channel_layer.group_send(self.streamChannel, {
+                    "type": "broadcast_config",
+                    "message": {
+                        "SetConfig": True,
+                        "SamplingRate": self.currentConfig["SamplingRate"],
+                        "DataRange": self.currentConfig["DataRange"]
+                    }
+                })
+        #data = event["data"]
+        #await self.send(bytes_data=data)
+
+    # Broadcast Streams
+    async def broadcast_stream(self, event):
+        data = event["data"]
+        await self.send(bytes_data=data)

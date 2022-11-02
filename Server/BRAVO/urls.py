@@ -16,6 +16,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from Backend.MobileEndpoints import urls as MobileURLs 
+
 urlpatterns = [
-    path('api/', include('Backend.urls')),
+    path('api/', include('Backend.APIs.urls')),
+    path('mobile/', include('Backend.MobileEndpoints.urls')),
 ]
+
+websocket_urlpatterns = MobileURLs.websocket_urlpatterns

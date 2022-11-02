@@ -40,5 +40,5 @@ urlpatterns = [
 	path('queryAvailableSurveys', Surveys.QueryAvailableSurveys.as_view()),
 	path('querySurveyContent', Surveys.QuerySurveyContent.as_view()),
 	path('updateSurveyContent', Surveys.UpdateSurveyContent.as_view()),
-	
+	path('deleteSurvey', Surveys.ArchiveSurvey.as_view()),
 ]

@@ -53,6 +53,7 @@ else:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
+print(CSRF_TRUSTED_ORIGINS)
 ALLOWED_HOSTS = ['localhost', os.environ.get('SERVER_ADDRESS')]
 
 # Application definition
@@ -63,6 +64,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Backend',
+    'rest_framework',
+    'knox',
+    'channels'
 ]
 
 MIDDLEWARE = [
@@ -94,7 +98,24 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'BRAVO.wsgi.application'
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'knox.auth.TokenAuthentication',
+    ]
+}
+
+ASGI_APPLICATION = 'BRAVO.asgi.application'
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+            "capacity": 1500,  # default 100
+            "expiry": 10,  # default 60
+        },
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases

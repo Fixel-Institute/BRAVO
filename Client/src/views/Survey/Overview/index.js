@@ -35,7 +35,6 @@ export default function SurveyList() {
     SessionController.query("/api/queryAvailableSurveys").then((response) => {
       if (response.status == 200) {
         setSurveys(response.data);
-        console.log(response.data)
       }
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
@@ -44,14 +43,27 @@ export default function SurveyList() {
 
   const handlePatientFilter = (event) => {
     setFilterOptions({value: event.currentTarget.value});
-  }
+  };
 
   const addNewSurvey = () => {
     SessionController.query("/api/addNewSurvey", {
       name: newSurveyDialog.surveyName
     }).then((response) => {
       if (response.status == 200) {
-        console.log(response)
+        setSurveys([...surveys, response.data]);
+      }
+      setNewSurveyDialog({surveyName: "", state: false});
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
+  };
+
+  const deleteSurvey = (id) => {
+    SessionController.query("/api/deleteSurvey", {
+      id: id
+    }).then((response) => {
+      if (response.status == 200) {
+        setSurveys([...surveys.filter((value) => value.url != id)]);
       }
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
@@ -64,8 +76,6 @@ export default function SurveyList() {
     }, 200);
     return () => clearTimeout(filterTimer);
   }, [filterOptions, surveys]);
-
-  const currentDate = new Date();
 
   return (
     <DatabaseLayout>
@@ -90,7 +100,7 @@ export default function SurveyList() {
                 </MDButton>
               </Grid>
               <Grid item xs={12} sx={{marginTop: 2}}>
-                <SurveyTable data={surveys} />
+                <SurveyTable data={surveys} onDelete={deleteSurvey} />
               </Grid>
             </Grid>
           </MDBox>

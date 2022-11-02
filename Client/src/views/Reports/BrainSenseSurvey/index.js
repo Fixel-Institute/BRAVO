@@ -42,7 +42,7 @@ function BrainSenseSurvey() {
 
   const [alert, setAlert] = useState(null);
 
-  useEffect(async () => {
+  useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
@@ -59,7 +59,7 @@ function BrainSenseSurvey() {
   }, [patientID]);
 
   // Divide all PSDs by day or by channel
-  useEffect(async () => {
+  useEffect(() => {
     var uniqueSurveySession = [];
     for (var i = 0; i < data.length; i++) {
       var timestruct = new Date(data[i]["Timestamp"]*1000);

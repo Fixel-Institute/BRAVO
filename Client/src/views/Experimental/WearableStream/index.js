@@ -127,7 +127,7 @@ function WearableStream() {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
-      SessionController.query("/api/wearable/queryPairedDevice", {
+      SessionController.query("/mobile/wearable/queryPairedDevice", {
         PatientID: patientID,
       }).then((response) => {
         setPairedDevices(response.data)

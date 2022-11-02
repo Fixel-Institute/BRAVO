@@ -3,8 +3,10 @@ import { useParams } from "react-router-dom";
 
 import {
   Card,
+  Checkbox,
   Grid,
   FormControl,
+  FormControlLabel,
   InputLabel,
   Select,
   Stack,
@@ -66,7 +68,7 @@ export default function SurveyEditor({match}) {
     const updateTimer = setTimeout(() => {
       SessionController.query("/api/updateSurveyContent", {
         id: surveyId,
-        name: contents.name,
+        title: contents.title,
         contents: contents.contents
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -88,7 +90,8 @@ export default function SurveyEditor({match}) {
     contents.contents[index].questions.push({
       type: "text",
       text: "Edit your question statement here",
-      value: ""
+      value: "",
+      default: ""
     });
     setContents({...contents});
   };
@@ -111,19 +114,24 @@ export default function SurveyEditor({match}) {
         min: 0,
         max: 100,
         step: 1,
-        value: 0
+        value: 0,
+        default: 0
       };
     } else if (type === "text") {
       contents.contents[index].questions[questionId] = {
         text: contents.contents[index].questions[questionId].text,
         type: type,
-        value: ""
+        value: "",
+        default: ""
       };
     } else if (type === "multiple-choice") {
       contents.contents[index].questions[questionId] = {
         text: contents.contents[index].questions[questionId].text,
         type: type,
-        value: ""
+        multiple: false,
+        value: [],
+        options: [],
+        default: [],
       };
     }
     setContents({...contents});
@@ -131,11 +139,18 @@ export default function SurveyEditor({match}) {
 
   const setTextQuestionValue = (index, questionId, value) => {
     contents.contents[index].questions[questionId].value = value;
+    contents.contents[index].questions[questionId].default = value;
     setContents({...contents});
   };
 
   const setScoreQuestionValue = (index, questionId, type, value) => {
     contents.contents[index].questions[questionId][type] = parseFloat(value);
+    if (type === "value") contents.contents[index].questions[questionId].default = value;
+    setContents({...contents});
+  };
+
+  const setChoiceQuestionValue = (index, questionId, type, value) => {
+    contents.contents[index].questions[questionId][type] = value;
     setContents({...contents});
   };
 
@@ -150,11 +165,11 @@ export default function SurveyEditor({match}) {
                   <Grid item xs={12} >
                     <MDBox sx={{display: "flex", flexDirection: "row", justifyContent: "flex-start", alignItem: "center"}}>
                       {editText === "contentName" ? (
-                        <TextField variant={"standard"} value={contents.name} onChange={(event) => setContents({...contents, name: event.target.value})} sx={{marginX: 1}}>
+                        <TextField variant={"standard"} value={contents.title} onChange={(event) => setContents({...contents, title: event.target.value})} sx={{marginX: 1}}>
                         </TextField>
                       ) : (
                         <MDTypography variant="h3">
-                          {contents.name ? contents.name : ""}
+                          {contents.title ? contents.title : ""}
                         </MDTypography>
                       )}
                       <IconButton onClick={() => editText === "contentName" ? setEditText(false) : setEditText("contentName")}>
@@ -211,6 +226,11 @@ export default function SurveyEditor({match}) {
                                   <MenuItem value={"multiple-choice"}>{"Multiple Choice"}</MenuItem>
                                 </Select>
                               </FormControl>
+                              {question.type === "multiple-choice" ? (
+                                <FormControlLabel label={"Allow Multiple"}
+                                  control={<Checkbox checked={question.multiple} onChange={(event) => setChoiceQuestionValue(index, questionId, "multiple", event.target.checked)}/>}
+                                />
+                              ) : null} 
                             </MDBox>
                             {question.type === "text" ? (
                             <MDBox sx={{display: "flex", flexDirection: "row", justifyContent: "flex-start", alignItems: "center", marginY: 1}}>
@@ -232,6 +252,33 @@ export default function SurveyEditor({match}) {
                                     onChange={(event) => setScoreQuestionValue(index, questionId, "value", event.target.value)} />
                                 <AddIcon />
                               </Stack>
+                            </MDBox>
+                            ) : null}
+                            {question.type === "multiple-choice" ? (
+                            <MDBox sx={{display: "flex", flexDirection: "column", justifyContent: "flex-start", marginY: 1}}>
+                              <MDButton variant={"contained"} color={"warning"} onClick={() => setChoiceQuestionValue(index, questionId, "options", [...question.options, "New Choice"])}>
+                                {"Add Option"}
+                              </MDButton>
+                              {question.options.map((option, letter) => {
+                                return <MDBox style={{display: "flex", marginTop: 5}} key={letter}>
+                                  {editText === `page${index}question${questionId}option${letter}` ? (
+                                    <TextField variant={"standard"} value={option} onChange={(event) => {
+                                      question.options[letter] = event.target.value;
+                                      setChoiceQuestionValue(index, questionId, "options", [...question.options])
+                                    }} sx={{marginX: 1}}>
+                                    </TextField>
+                                  ) : (
+                                    <MDButton variant={"outlined"} color={"info"} fullWidth>
+                                      <MDTypography variant="h3">
+                                        {option}
+                                      </MDTypography>
+                                    </MDButton>
+                                  )}
+                                  <IconButton onClick={() => editText === `page${index}question${questionId}option${letter}` ? setEditText(false) : setEditText(`page${index}question${questionId}option${letter}`)}>
+                                    <i className="fa-solid fa-pen"></i>
+                                  </IconButton>
+                                </MDBox>
+                              })}
                             </MDBox>
                             ) : null}
                           </Grid>

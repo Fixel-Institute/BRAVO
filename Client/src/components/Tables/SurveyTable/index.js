@@ -21,7 +21,7 @@ import MDButton from "components/MDButton";
 import MDBox from "components/MDBox";
 import SurveyTablePagination from "./SurveyTablePagination.js";
 
-const SurveyTable = ({data}) => {
+const SurveyTable = ({data, onDelete}) => {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
@@ -35,6 +35,7 @@ const SurveyTable = ({data}) => {
   });
 
   useEffect(() => {
+    console.log(data)
     setPagination({currentPage: 0, totalPages: Math.ceil(data.length / viewPerPage)})
   }, [data]);
 
@@ -44,6 +45,10 @@ const SurveyTable = ({data}) => {
 
   const viewSurvey = (id) => {
     navigate(`/survey/${id}/edit`, {params: {}, replace: false});
+  };
+
+  const deleteSurvey = (id) => {
+    onDelete(id);
   };
 
   return (
@@ -90,8 +95,8 @@ const SurveyTable = ({data}) => {
                     <i className="fa-solid fa-eye"></i>
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="View Survey" placement="top">
-                  <IconButton color="error" size="small" onClick={() => viewSurvey(survey.url)} sx={{paddingX: 1}}>
+                <Tooltip title="Delete Survey" placement="top">
+                  <IconButton color="error" size="small" onClick={() => deleteSurvey(survey.url)} sx={{paddingX: 1}}>
                     <i className="fa-solid fa-xmark"></i>
                   </IconButton>
                 </Tooltip>

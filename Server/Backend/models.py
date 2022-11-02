@@ -42,11 +42,12 @@ class PlatformUser(AbstractBaseUser):
     objects = PlatformUserManager()
 
     is_active = models.BooleanField(default=True)
+    is_mobile = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
     is_clinician = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.name + " (" + self.email + ")"
+        return self.user_name + " (" + self.email + ")"
     
     def has_module_perms(self, app_label):
         return True
@@ -273,7 +274,7 @@ class ExternalRecording(models.Model):
         ordering = ['recording_date']
 
     def __str__(self):
-        return str(self.patient_deidentified_id) + " " + self.recording_type + " " + str(self.recording_id)
+        return str(self.recording_id)
 
 class ExternalSensorPairing(models.Model):
     patient_deidentified_id = models.UUIDField(default=uuid.uuid4)
@@ -286,16 +287,18 @@ class ExternalSensorPairing(models.Model):
 
 class CustomizedSurvey(models.Model):
     survey_id = models.UUIDField(default=uuid.uuid4, unique=True)
+    version = models.IntegerField(default=1)
     creator = models.UUIDField(default=uuid.uuid4)
     authorized_users = models.JSONField(default=list)
     name = models.CharField(default="", max_length=64)
     url = models.CharField(default="", max_length=64)
-    version = models.IntegerField(default=1)
     date = models.DateTimeField(default=timezone.now)
     contents = models.JSONField(default=list)
+    archived = models.BooleanField(default=False)
 
 class SurveyResults(models.Model):
     survey_id = models.UUIDField(default=uuid.uuid4)
+    version = models.IntegerField(default=1)
     responder = models.CharField(default="", max_length=255)
     values = models.JSONField(default=list)
     date = models.DateTimeField(default=timezone.now)

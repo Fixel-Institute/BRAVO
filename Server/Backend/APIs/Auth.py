@@ -55,6 +55,9 @@ class UserAuth(RestViews.APIView):
         if "Email" in request.data and "Password" in request.data:
             user = authenticate(request, username=request.data["Email"], password=request.data["Password"])
             if user is not None:
+                if user.is_mobile:
+                    return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
                 if not models.UserConfigurations.objects.filter(user_id=user.unique_user_id).exists():
                     models.UserConfigurations(user_id=user.unique_user_id).save()
 
