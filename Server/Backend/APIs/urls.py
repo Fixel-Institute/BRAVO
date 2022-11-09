@@ -10,6 +10,7 @@ urlpatterns = [
 	path('logout', Auth.UserSignout.as_view()), 
 	path('authorizedInstitute', Auth.FetchAuthorizedInstitute.as_view()), 
 	
+	path('deidentificationTable', Upload.DeidentificationTable.as_view()),
 	path('uploadSessionFiles', Upload.SessionUpload.as_view()),
 	path('deleteSessionFiles', Upload.SessionRemove.as_view()),
 
@@ -32,6 +33,8 @@ urlpatterns = [
 
 	path('queryPredictionModel', Queries.QueryPredictionModel.as_view()),
 	path('queryPatientEvents', Queries.QueryPatientEvents.as_view()),
+	path('queryAdaptiveGroups', Queries.QueryAdaptiveGroups.as_view()),
+	path('queryCircadianPower', Queries.QueryCircadianPower.as_view()),
 
 	path('queryImageDirectory', Queries.QueryImageModelDirectory.as_view()),
 	path('queryImageModel', Queries.QueryImageModel.as_view()),

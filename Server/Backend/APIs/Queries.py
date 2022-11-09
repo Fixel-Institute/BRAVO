@@ -492,3 +492,61 @@ class QueryImageModel(RestViews.APIView):
                     })
 
         return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+class QueryAdaptiveGroups(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    def post(self, request):
+        if request.user.is_authenticated:
+            if not "id" in request.data:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+            if Authority["Level"] == 0 or Authority["Level"] == 2:
+                return Response(status=404)
+
+            elif Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
+                PatientID = request.session["patient_deidentified_id"]
+
+            data = Therapy.queryAdaptiveGroupForThreshold(request.user, PatientID, Authority)
+            return Response(status=200, data=data)
+
+        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+class QueryCircadianPower(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    def post(self, request):
+        if request.user.is_authenticated:
+            if not "patient_deidentified_id" in request.session:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            if not request.session["patient_deidentified_id"] == request.data["id"]:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            if "id" in request.data and "timezoneOffset" in request.data and "therapyInfo" in request.data:
+                Authority = {}
+                Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+                if Authority["Level"] == 0:
+                    return Response(status=404)
+
+                elif Authority["Level"] == 1:
+                    Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
+                    PatientID = request.data["id"]
+
+                elif Authority["Level"] == 2:
+                    PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                    deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
+                    Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "ChronicLFPs")
+                    PatientID = PatientInfo.authorized_patient_id
+
+                data = dict()
+                TherapyHistory = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
+                data["ChronicData"] = ChronicBrainSense.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)
+                data["EventPSDs"] = BrainSenseEvent.queryPatientEventPSDs(request.user, PatientID, TherapyHistory, Authority)
+                data["CircadianPower"] = ChronicBrainSense.processCircadianPower(data["ChronicData"], request.data["therapyInfo"], int(request.data["timezoneOffset"]))
+                return Response(status=200, data=data["CircadianPower"])
+
+            return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+
+        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})

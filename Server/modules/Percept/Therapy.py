@@ -100,6 +100,32 @@ def queryTherapyHistory(user, patientUniqueID, authority):
 
     return TherapyHistoryContext
 
+def queryAdaptiveGroupForThreshold(user, patientUniqueID, authority):
+    TherapyHistory = list()
+    if not authority["Permission"]:
+        return TherapyHistory
+
+    availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
+    for device in availableDevices:
+        TherapyHistoryObjs = models.TherapyHistory.objects.filter(device_deidentified_id=device.deidentified_id, therapy_type="Post-visit Therapy").order_by("-therapy_date").all()
+        for therapy in TherapyHistoryObjs:
+            if therapy.therapy_date == TherapyHistoryObjs[0].therapy_date:
+                TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location}
+                TherapyInfo["TherapyDate"] = therapy.therapy_date.timestamp()
+                TherapyInfo["TherapyGroup"] = therapy.group_id
+                TherapyInfo["TherapyType"] = therapy.therapy_type
+                TherapyInfo["LogID"] = str(therapy.history_log_id)
+                TherapyInfo["Therapy"] = therapy.therapy_details
+
+                if TherapyInfo["TherapyDate"] > authority["Permission"][0]:
+                    if authority["Permission"][1] > 0 and TherapyInfo["TherapyDate"] < authority["Permission"][1]:
+                        TherapyHistory.append(TherapyInfo)
+                    elif authority["Permission"][1] == 0:
+                        TherapyHistory.append(TherapyInfo)
+                        
+    TherapyHistory = sorted(TherapyHistory, key=lambda x: x["TherapyGroup"])
+    return TherapyHistory
+
 def queryTherapyConfigurations(user, patientUniqueID, authority, therapy_type="Past Therapy"):
     TherapyHistory = list()
     if not authority["Permission"]:

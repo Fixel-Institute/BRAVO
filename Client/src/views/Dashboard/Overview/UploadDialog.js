@@ -23,7 +23,9 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
   const { user, language } = controller;
 
   const [deidentifiedInfo, setDeidentifiedInfo] = useState({patientId: "", studyId: "", diagnosis: "", deviceName: ""});
-
+  const [decryptionKey, setDecryptionKey] = useState("");
+  const [batchUpload, setBatchUpload] = useState(false);
+  
   const uploadSessionsDeidentified = () => {
     SessionController.query("/api/updatePatientInformation", {
       createNewPatientInfo: true,
@@ -62,6 +64,12 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
     myDropzone.on("processing", function() {
       this.options.autoProcessQueue = true;
     });
+
+    if (batchUpload) {
+      myDropzone.on("sending", function(file, xhr, formData) { 
+        formData.append("decryptionKey", decryptionKey);  
+      });
+    }
     myDropzone.on("success", function(file, response) {
       this.removeFile(file);
     });
@@ -84,51 +92,73 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
     </MDBox>
     {deidentified ? (
       <DialogContent>
-        <MDTypography variant="p">
-          To upload data in Research-account (Deidentified), a deidentified patient ID must be created.
-        </MDTypography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <TextField
-              variant="standard"
-              margin="dense" id="name"
-              value={deidentifiedInfo.patientId}
-              onChange={(event) => setDeidentifiedInfo({...deidentifiedInfo, patientId: event.target.value})}
-              label={dictionary.SessionUpload.PatientIdentifier[language]} type="text"
-              fullWidth
-            />
+        {!batchUpload ? (<>
+          <MDTypography variant="p">
+            To upload data in Research-account (Deidentified), a deidentified patient ID must be created, or use {" "}
+          </MDTypography>
+          <MDButton variant={"link"} style={{padding: 0}} onClick={() => setBatchUpload(true)}> {"Batch Upload with Patient Lookup Table"} </MDButton>
+        </>
+        ) : (<>
+          <MDTypography variant="p">
+            Upload Multiple Files with identifier that will automatically deidentified by Lookup Table, or use {" "}
+          </MDTypography>
+          <MDButton variant={"link"} style={{padding: 0}} onClick={() => setBatchUpload(false)}> {"Manual Patient Data Upload"} </MDButton>
+        </>
+        )}
+
+        {batchUpload ? (
+          <TextField
+            variant="standard"
+            margin="dense" id="name"
+            value={decryptionKey}
+            onChange={(event) => setDecryptionKey(event.target.value)}
+            label={"Decryption Key for Lookup Table"} type="password"
+            fullWidth
+          />
+        ) : (
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                variant="standard"
+                margin="dense" id="name"
+                value={deidentifiedInfo.patientId}
+                onChange={(event) => setDeidentifiedInfo({...deidentifiedInfo, patientId: event.target.value})}
+                label={dictionary.SessionUpload.PatientIdentifier[language]} type="text"
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                variant="standard"
+                margin="dense" id="name"
+                value={deidentifiedInfo.studyId}
+                onChange={(event) => setDeidentifiedInfo({...deidentifiedInfo, studyId: event.target.value})}
+                label={dictionary.SessionUpload.StudyIdentifier[language]} type="text"
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                variant="standard"
+                margin="dense" id="name"
+                value={deidentifiedInfo.diagnosis}
+                onChange={(event) => setDeidentifiedInfo({...deidentifiedInfo, diagnosis: event.target.value})}
+                label={dictionary.SessionUpload.Diagnosis[language]} type="text"
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                variant="standard"
+                margin="dense" id="name"
+                value={deidentifiedInfo.deviceName}
+                onChange={(event) => setDeidentifiedInfo({...deidentifiedInfo, deviceName: event.target.value})}
+                label={dictionary.SessionUpload.DeviceName[language]} type="text"
+                fullWidth
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <TextField
-              variant="standard"
-              margin="dense" id="name"
-              value={deidentifiedInfo.studyId}
-              onChange={(event) => setDeidentifiedInfo({...deidentifiedInfo, studyId: event.target.value})}
-              label={dictionary.SessionUpload.StudyIdentifier[language]} type="text"
-              fullWidth
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <TextField
-              variant="standard"
-              margin="dense" id="name"
-              value={deidentifiedInfo.diagnosis}
-              onChange={(event) => setDeidentifiedInfo({...deidentifiedInfo, diagnosis: event.target.value})}
-              label={dictionary.SessionUpload.Diagnosis[language]} type="text"
-              fullWidth
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <TextField
-              variant="standard"
-              margin="dense" id="name"
-              value={deidentifiedInfo.deviceName}
-              onChange={(event) => setDeidentifiedInfo({...deidentifiedInfo, deviceName: event.target.value})}
-              label={dictionary.SessionUpload.DeviceName[language]} type="text"
-              fullWidth
-            />
-          </Grid>
-        </Grid>
+        )}
         <MDBox pt={2}>
           <MDDropzone options={{
             url: window.location.origin + "/api/uploadSessionFiles",
@@ -164,7 +194,7 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
     )}
     <DialogActions>
       <MDButton color="secondary" onClick={() => onCancel()}>Cancel</MDButton>
-      <MDButton color="info" onClick={() => deidentified ? uploadSessionsDeidentified() : uploadSessions()}>Upload</MDButton>
+      <MDButton color="info" onClick={() => (deidentified && !batchUpload) ? uploadSessionsDeidentified() : uploadSessions()}>Upload</MDButton>
     </DialogActions>
   </>
 }

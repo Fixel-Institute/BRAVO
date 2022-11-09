@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 import os, sys, pathlib
 import json
+import base64
 
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
 with open(RESOURCES + "/../codes.json", "r") as file:
@@ -19,6 +20,41 @@ processingQueue = queue.Queue()
 from Backend import models
 from modules import Database
 from modules.Percept import Sessions
+
+class DeidentificationTable(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+        if "UpdateTable" in request.data:
+            if not "passkey" in request.data:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            if len(request.data["passkey"]) < 8:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+            
+            hashedKey = hashlib.sha256(request.data["passkey"].encode("utf-8")).hexdigest()[:32]
+            passkey = base64.b64encode(hashedKey.encode("utf-8"))
+            Database.saveDeidentificationLookupTable(request.user, request.data["UpdateTable"], passkey)
+            return Response(status=200) 
+
+        elif "QueryTable" in request.data:
+            if not "passkey" in request.data:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            hashedKey = hashlib.sha256(request.data["passkey"].encode("utf-8")).hexdigest()[:32]
+            passkey = base64.b64encode(hashedKey.encode("utf-8"))
+            table = Database.getDeidentificationLookupTable(request.user, passkey)
+            if len(table) > 0:
+                return Response(status=200, data=table) 
+            else:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+        else:
+            exists = models.DeidentifiedPatientTable.objects.filter(researcher_id=request.user.unique_user_id).exists()
+            return Response(status=200, data={"Exist": exists})
 
 class SessionUpload(RestViews.APIView):
     parser_classes = [RestParsers.MultiPartParser, RestParsers.FormParser]
@@ -56,9 +92,6 @@ class SessionUpload(RestViews.APIView):
                 print(result)
         
         else:
-            if not "deviceId" in request.data:
-                return Response(status=403, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
-
             randomSalt = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
             hashedKey = hashlib.sha256(randomSalt.encode("utf-8")).hexdigest()
 
@@ -67,10 +100,18 @@ class SessionUpload(RestViews.APIView):
                 pass
             
             result = "Failed"
-            try:
-                result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes, device_deidentified_id=request.data["deviceId"])
-            except Exception as e:
-                print(e)
+            if "deviceId" in request.data:
+                try:
+                    result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes, device_deidentified_id=request.data["deviceId"])
+                except Exception as e:
+                    print(e)
+            else:
+                table = Database.getDeidentificationLookupTable(request.user, request.data["decrpytionKey"])
+                try:
+                    result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes, lookupTable=table)
+                except Exception as e:
+                    print(e)
+
             hashedKey = processingQueue.get()
 
             if result == "Success":

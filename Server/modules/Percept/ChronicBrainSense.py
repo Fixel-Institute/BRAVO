@@ -1,3 +1,4 @@
+from calendar import c
 import os, sys, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.parent.resolve())
 sys.path.append(os.environ.get("PYTHON_UTILITY"))
@@ -330,3 +331,67 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
 
             LFPTrends[i]["CircadianPowers"][-1]["PowerRange"] = [np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],5),np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],95)]
     return LFPTrends
+
+def processCircadianPower(LFPTrends, therapyInfo, timezoneOffset=0):
+    CircadianPowers = {"Power": list(), "Timestamp": list()}
+        
+    for i in range(len(LFPTrends)):
+        if LFPTrends[i]["Hemisphere"].startswith("Left"):
+            Hemisphere = "LeftHemisphere"
+        else:
+            Hemisphere = "RightHemisphere"
+        
+        if not Hemisphere == therapyInfo["Hemisphere"]:
+            continue
+
+        for j in range(len(LFPTrends[i]["Therapy"])):
+            if not Hemisphere in LFPTrends[i]["Therapy"][j].keys():
+                continue
+            Therapy = LFPTrends[i]["Therapy"][j][Hemisphere]
+
+            if "SensingSetup" in Therapy.keys():
+                if Therapy['Frequency'] == therapyInfo["Frequency"] and Therapy['SensingSetup']['FrequencyInHertz'] == therapyInfo["FrequencyInHertz"] and f"E{therapyInfo['Channel']}" in Therapy["Channel"]:
+                    print(Therapy["Channel"])
+                    CircadianPowers["Power"].extend(LFPTrends[i]["Power"][j])
+                    CircadianPowers["Timestamp"].extend(LFPTrends[i]["Timestamp"][j])
+            
+        
+        if len(CircadianPowers["Power"]) > 0:
+            CircadianPowers["Suggestion"] = list()
+            Timestamp = (np.array(CircadianPowers["Timestamp"])-timezoneOffset) % (24*60*60)
+            Power = np.array(CircadianPowers["Power"])
+            for threshold in range(30, 70, 1):
+                HighPower = Timestamp[Power >= np.percentile(Power,threshold)]
+                LowPower = Timestamp[Power < np.percentile(Power,threshold)]
+                if len(HighPower) > 20 and len(LowPower) > 20:
+                    [t, p] = stats.ranksums(HighPower, LowPower)
+                    CircadianPowers["Suggestion"].append({"threshold": np.percentile(Power,threshold), "separation": t})
+
+        """
+            LFPTrends[i]["CircadianPowers"][-1]["Power"] = np.array(LFPTrends[i]["CircadianPowers"][-1]["Power"])
+            LFPTrends[i]["CircadianPowers"][-1]["Timestamp"] = np.array(LFPTrends[i]["CircadianPowers"][-1]["Timestamp"])
+
+            LFPTrends[i]["CircadianPowers"][-1]["Timestamp"] = (np.array(LFPTrends[i]["CircadianPowers"][-1]["Timestamp"])-timezoneOffset) % (24*60*60)
+
+            # Calculate Average Power/Std Power
+            LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"] = np.arange(24*12)*300
+            LFPTrends[i]["CircadianPowers"][-1]["AveragePower"] = np.zeros(LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"].shape)
+            LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"] = np.zeros(LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"].shape)
+            for t in range(len(LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"])):
+                timeSelection = rangeSelection(LFPTrends[i]["CircadianPowers"][-1]["Timestamp"],[LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"][t]-20*60, LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"][t]+20*60])
+                if np.any(timeSelection):
+                    LFPTrends[i]["CircadianPowers"][-1]["AveragePower"][t] = np.median(LFPTrends[i]["CircadianPowers"][-1]["Power"][timeSelection])
+                    LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"][t] = SPU.stderr(LFPTrends[i]["CircadianPowers"][-1]["Power"][timeSelection])*2
+                else:
+                    LFPTrends[i]["CircadianPowers"][-1]["AveragePower"][t] = 0
+                    LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"][t] = 0
+
+            LFPTrends[i]["CircadianPowers"][-1]["Power"] = LFPTrends[i]["CircadianPowers"][-1]["Power"][::1].tolist()
+            LFPTrends[i]["CircadianPowers"][-1]["Timestamp"] = (LFPTrends[i]["CircadianPowers"][-1]["Timestamp"] + timezoneOffset).tolist()
+            LFPTrends[i]["CircadianPowers"][-1]["AveragePower"] = LFPTrends[i]["CircadianPowers"][-1]["AveragePower"].tolist()
+            LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"] = LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"].tolist()
+            LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"] = (LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"] + timezoneOffset).tolist()
+
+            LFPTrends[i]["CircadianPowers"][-1]["PowerRange"] = [np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],5),np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],95)]
+        """
+    return CircadianPowers

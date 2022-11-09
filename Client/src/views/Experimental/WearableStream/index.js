@@ -217,7 +217,7 @@ function WearableStream() {
   }, [streamingDevice]);
 
   const handlePairing = () => {
-    SessionController.query("/api/wearable/verifyDevicePairing", {
+    SessionController.query("/mobile/wearable/verifyDevicePairing", {
       PatientID: patientID,
       PairingCode: pairingState.pairingId
     }).then((response) => {

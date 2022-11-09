@@ -6,6 +6,8 @@ import pickle, joblib
 import dateutil, pytz
 import numpy as np
 import pandas as pd
+from cryptography.fernet import Fernet
+import json
 
 from Backend import models
 
@@ -92,6 +94,43 @@ def getAllResearchUsers():
         ResearchUserList.append({"Username": user.email, "FirstName": user.first_name, "LastName": user.last_name, "ID": user.unique_user_id})
     return ResearchUserList
 
+def getDeidentificationLookupTable(user, key):
+    identifierTable = []
+    table = models.DeidentifiedPatientTable.objects.filter(researcher_id=user.unique_user_id).first()
+    if not table:
+        return identifierTable
+
+    try:
+        secureEncoder = Fernet(key)
+        text = secureEncoder.decrypt(table.lookup_table.encode("utf-8")).decode("utf-8")
+        dictionary = json.loads(text)
+        for key in dictionary.keys():
+            for alias in dictionary[key]["identifier"]:
+                identifierTable.append({"deidentifier": key, "diagnosis": dictionary[key]["diagnosis"], "identifier": alias})
+
+        return identifierTable
+    except Exception as e:
+        print(key)
+        print(e)
+        return identifierTable
+
+def saveDeidentificationLookupTable(user, table, key):
+    existTable = models.DeidentifiedPatientTable.objects.filter(researcher_id=user.unique_user_id).first()
+    secureEncoder = Fernet(key)
+    
+    if not existTable:
+        secureText = secureEncoder.encrypt(json.dumps(table).encode("utf-8")).decode("utf-8")
+        models.DeidentifiedPatientTable(researcher_id=user.unique_user_id, lookup_table=secureText).save()
+    
+    else:
+        try:
+            secureText = secureEncoder.encrypt(json.dumps(table).encode("utf-8")).decode("utf-8")
+            existTable.lookup_table = secureText
+            existTable.save()
+
+        except Exception as e:
+            print(e)
+        
 def AuthorizeResearchAccess(user, researcher_id, patient_id, permission):
     if permission:
         if not models.DeidentifiedPatientID.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id).exists():

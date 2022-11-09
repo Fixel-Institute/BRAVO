@@ -31,9 +31,9 @@ DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 class RequestPairingDevice(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
-        if "DeviceMac" in request.data and "DeviceName" in request.data and "PairingID" in request.data:
-            models.ExternalSensorPairing.objects.filter(device_mac=request.data["DeviceMac"], paired=False).delete()
-            newDevice = models.ExternalSensorPairing(device_mac=request.data["DeviceMac"], device_name=request.data["DeviceName"], pairing_code=request.data["PairingID"])
+        if "deviceMac" in request.data and "deviceName" in request.data and "PairingID" in request.data:
+            models.ExternalSensorPairing.objects.filter(device_mac=request.data["deviceMac"], paired=False).delete()
+            newDevice = models.ExternalSensorPairing(device_mac=request.data["deviceMac"], device_name=request.data["deviceName"], pairing_code=request.data["PairingID"])
             newDevice.save()
 
             return Response(status=200, data={})
@@ -94,6 +94,9 @@ class VerifyPairing(RestViews.APIView):
                 Patient["Devices"] = deidentification["Devices"]
             
             availableDevice = models.ExternalSensorPairing.objects.filter(pairing_code=request.data["PairingCode"], paired=False).order_by("-pairing_date").first()
+            if not availableDevice:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
             availableDevice.patient_deidentified_id = request.session["patient_deidentified_id"]
             availableDevice.paired = True
             availableDevice.save()

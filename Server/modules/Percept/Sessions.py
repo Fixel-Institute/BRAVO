@@ -19,7 +19,7 @@ from decoder import Percept
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 key = os.environ.get('ENCRYPTION_KEY')
 
-def retrievePatientInformation(PatientInformation, Institute, encoder=None):
+def retrievePatientInformation(PatientInformation, Institute, lookupTable=None, encoder=None):
     if not encoder:
         encoder = Fernet(key)
         
@@ -45,7 +45,7 @@ def retrievePatientInformation(PatientInformation, Institute, encoder=None):
 
     return patient, newPatient
 
-def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", process=True):
+def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", lookupTable=None, process=True):
     secureEncoder = Fernet(key)
     with open(DATABASE_PATH + "cache" + os.path.sep + filename, "wb+") as file:
         file.write(secureEncoder.encrypt(rawBytes))
@@ -73,6 +73,8 @@ def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", proc
     SessionDate = datetime.fromtimestamp(Percept.estimateSessionDateTime(JSON),tz=pytz.utc)
     if user.is_clinician or user.is_admin:
         deviceID = models.PerceptDevice.objects.filter(device_identifier_hashfield=deviceHashfield, authority_level="Clinic", authority_user=user.institute).first()
+    elif lookupTable:
+        deviceID = models.PerceptDevice.objects.filter(device_identifier_hashfield=deviceHashfield, authority_level="Research", authority_user=user.email).first()
     else:
         deviceID = models.PerceptDevice.objects.filter(deidentified_id=device_deidentified_id, authority_level="Research", authority_user=user.email).first()
         if deviceID == None:
@@ -81,7 +83,9 @@ def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", proc
     newPatient = None
     if deviceID == None:
         PatientInformation = JSON["PatientInformation"]["Final"]
-        patient, isNewPatient = retrievePatientInformation(PatientInformation, user.institute, secureEncoder)
+        
+        
+        patient, isNewPatient = retrievePatientInformation(PatientInformation, user.institute, encoder=secureEncoder)
         if isNewPatient:
             newPatient = patient
             patient.institute = user.institute

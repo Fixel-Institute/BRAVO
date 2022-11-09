@@ -550,6 +550,18 @@ export const dictionary = {
       },
     }
   },
+  CircadianThreshold: {
+    AdaptiveGroups: {
+      en: "Current Therapy Groups for Adaptive",
+      zh: "Current Therapy Groups for Adaptive"
+    },
+    Figure: {
+      ChronicAdaptive: {
+        en: "Adaptive Stimulation Timeline",
+        zh: "闭环治疗时间表"
+      },
+    }
+  },
   ImageVisualization: {
     Title: {
       en: "3D Model Renderer",
@@ -629,6 +641,10 @@ export const dictionary = {
       en: "Dashboard",
       zh: "主平台"
     },
+    "deidentification-table": {
+      en: "Patient Lookup Table",
+      zh: "Patient Lookup Table"
+    },
     reports: {
       en: "Reports",
       zh: "汇报"
@@ -677,6 +693,10 @@ export const dictionary = {
       en: "Adaptive Stimulation",
       zh: "闭环功能"
     },
+    "circadian": {
+      en: "Circadian Threshold",
+      zh: "Circadian Threshold"
+    },
     visualize: {
       en: "Image Visualization",
       zh: "Image Visualization"
@@ -694,6 +714,10 @@ export const dictionary = {
     Dashboard: {
       en: "Dashboard",
       zh: "主平台"
+    },
+    PatientLookupTable: {
+      en: "Patient Lookup Table",
+      zh: "Patient Lookup Table"
     },
     Reports: {
       en: "Reports",
@@ -738,6 +762,10 @@ export const dictionary = {
     AdaptiveStimulation: {
       en: "Adaptive Stimulation",
       zh: "闭环功能"
+    },
+    CircadianThreshold: {
+      en: "Circadian Threshold",
+      zh: "Circadian Threshold"
     },
     ImageVisualization: {
       en: "Image Visualization",

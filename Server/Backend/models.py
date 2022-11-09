@@ -30,7 +30,7 @@ class PlatformUserManager(BaseUserManager):
 
 class PlatformUser(AbstractBaseUser):
     email = models.EmailField(verbose_name="Email Address", max_length=255, unique=True)
-    user_name = models.CharField(max_length=512, default="")
+    user_name = models.CharField(max_length=255, default="")
     institute = models.CharField(max_length=255, default="Independent")
     unique_user_id = models.UUIDField(default=uuid.uuid1, unique=True, editable=False)
 
@@ -117,14 +117,15 @@ class Patient(models.Model):
             self.device_deidentified_id.remove(deviceID)
             self.save()
 
+class DeidentifiedPatientTable(models.Model):
+    researcher_id = models.UUIDField(default=uuid.uuid1)
+    lookup_table = models.TextField(default="", max_length=999999)
+
 class DeidentifiedPatientID(models.Model):
     researcher_id = models.UUIDField(default=uuid.uuid1)
     authorized_patient_id = models.UUIDField(default=uuid.uuid4)
     deidentified_id = models.UUIDField(default=uuid.uuid4)
     authorized_time_range = models.JSONField(default=PerceptRecordingDefaultAuthorization, null=True)
-
-    def __str__(self):
-        return str(self.study_id) + " " + str(self.deidentified_id) + " is accessible by " + str(self.researcher_id)
 
 class ResearchAuthorizedAccess(models.Model):
     researcher_id = models.UUIDField(default=uuid.uuid1)
@@ -169,8 +170,8 @@ class PerceptDevice(models.Model):
 class PerceptSession(models.Model):
     deidentified_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     device_deidentified_id = models.UUIDField(default=uuid.uuid4)
-    session_file_path = models.CharField(default="", max_length=256)
-    session_source_filename = models.CharField(default="", max_length=256)
+    session_file_path = models.CharField(default="", max_length=255)
+    session_source_filename = models.CharField(default="", max_length=255)
 
     def __str__(self):
         return str(self.deidentified_id)
@@ -187,7 +188,7 @@ class TherapyHistory(models.Model):
     therapy_type = models.CharField(default="", max_length=64)
     therapy_details = models.JSONField(default=dict, null=True)
 
-    source_file = models.CharField(default="", max_length=256)
+    source_file = models.CharField(default="", max_length=255)
 
     def __str__(self):
         return str(self.device_deidentified_id) + " " + str(self.therapy_date)
@@ -208,7 +209,7 @@ class TherapyChangeLog(models.Model):
     previous_group = models.CharField(default="", max_length=32)
     new_group = models.CharField(default="", max_length=32)
 
-    source_file = models.CharField(default="", max_length=256)
+    source_file = models.CharField(default="", max_length=255)
 
     def __str__(self):
         return str(self.device_deidentified_id) + " " + str(self.date_of_change)
@@ -222,7 +223,7 @@ class ChronicSensingLFP(models.Model):
     amplitude = models.FloatField(default=0)
     power = models.FloatField(default=0)
 
-    source_file = models.CharField(default="", max_length=256)
+    source_file = models.CharField(default="", max_length=255)
 
     class Meta:
         ordering = ['-timestamp']
@@ -247,9 +248,9 @@ class BrainSenseRecording(models.Model):
     recording_info = models.JSONField(default=dict, null=True)
     recording_duration = models.FloatField(default=0)
 
-    recording_datapointer = models.CharField(default="", max_length=256)
+    recording_datapointer = models.CharField(default="", max_length=255)
 
-    source_file = models.CharField(default="", max_length=256)
+    source_file = models.CharField(default="", max_length=255)
 
     class Meta:
         ordering = ['recording_date']
@@ -268,7 +269,7 @@ class ExternalRecording(models.Model):
     recording_date = models.DateTimeField(default=timezone.now)
     recording_duration = models.FloatField(default=0)
 
-    recording_datapointer = models.CharField(default="", max_length=256)
+    recording_datapointer = models.CharField(default="", max_length=255)
 
     class Meta:
         ordering = ['recording_date']

@@ -38,6 +38,7 @@ import DatabaseLayout from "layouts/DatabaseLayout";
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
 import { dictionary } from "assets/translation";
+import { AccessAlarm } from "@mui/icons-material";
 
 export default function PatientOverview() {
   const navigate = useNavigate();
@@ -137,6 +138,7 @@ export default function PatientOverview() {
     {title: "TherapeuticPrediction", icon: <BatchPredictionIcon/>, route: "/experimental/therapeutic-prediction"},
     {title: "PatientEvents", icon: <TimelineIcon/>, route: "/experimental/patient-events"},
     {title: "AdaptiveStimulation", icon: <FlashAutoIcon/>, route: "/experimental/adaptive"},
+    {title: "CircadianThreshold", icon: <AccessAlarm/>, route: "/experimental/circadian"},
     {title: "ImageVisualization", icon: <PhotoIcon/>, route: "/experimental/visualize"},
     {title: "WearableStream", icon: <WatchIcon/>, route: "/experimental/wearable"},
   ];
