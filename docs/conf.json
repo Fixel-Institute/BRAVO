@@ -1,0 +1,11 @@
+{
+  "source": {
+      "include": [
+        "../Client/src/graphing-utility/Plotly"
+      ],
+      "exclude": [],
+      "includePattern": ".+\\.js(doc|x)?$",
+      "excludePattern": "(^|\\/|\\\\)_"
+  }
+}
+

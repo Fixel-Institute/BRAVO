@@ -96,6 +96,14 @@ const defaultLayoutOptions = {
 }
 
 class PlotlyRenderManager {
+
+  /**
+   * Create a Plotly Manager object for specific div on HTML.
+   *
+   * @param {string} divName - String Name of the div 
+   * @param {string} locale - String name of the locale (language) for Plotly (``en-US``, or
+   *     ``zh-CN``)
+   */
   constructor(divName, locale) {
     this.traces = [];
     this.ax = [{
@@ -125,10 +133,24 @@ class PlotlyRenderManager {
     }
   }
 
+  /**
+   * Clear all traces
+   */
   clearData() {
     this.traces = [];
   }
 
+  /**
+   * Create subplots within figure field.
+   *
+   * @param {number} row - number of rows in subplot grid
+   * @param {number} col - number of columns in subplot grid
+   * @param {Object} [options] - Axes Configuration Options
+   * @param {bool} [options.sharex=false] - Each column share the same x-axis (default false)
+   * @param {bool} [options.sharey=false] - Each row share the same y-axis (default false)
+   * 
+   * @return {string[]} Array of subplots created, C-ordered. 
+   */
   subplots(row, col, options={sharex: false, sharey: false}) {
     this.ax = [];
 
@@ -176,10 +198,25 @@ class PlotlyRenderManager {
     return this.ax;
   }
 
+  /**
+   * Get the subplot array from Manager Cache.
+   *
+   * @return {string[]} Array of subplots created, C-ordered. 
+   */
   getAxes() {
     return this.ax;
   }
 
+  /**
+   * Add line plot to figure
+   *
+   * @param {number[]} x - x-data array
+   * @param {number[]} y - y-data array
+   * @param {Object} [options] - Line Graph Configuration Options (https://plotly.com/javascript/reference/scatter/)
+   * @param {string} [ax] - Subplot to add line to. Default to last access axes.
+   * 
+   * @return {Object} The line plot object created.
+   */
   plot(x, y, options={}, ax=null) {
     var trace = JSON.parse(JSON.stringify(defaultLineOptions));
     trace.x = x;
@@ -218,6 +255,16 @@ class PlotlyRenderManager {
     return trace;
   }
 
+  /**
+   * Add scatter plot to figure
+   *
+   * @param {number[]} x - x-data array
+   * @param {number[]} y - y-data array
+   * @param {Object} [options] - Scatter Graph Configuration Options (https://plotly.com/javascript/reference/scatter/)
+   * @param {string} [ax] - Subplot to add scatter plot to. Default to last access axes.
+   * 
+   * @return {Object} The line plot object created.
+   */
   scatter(x, y, options={}, ax=null) {
     var trace = JSON.parse(JSON.stringify(defaultScatterOptions));
     trace.x = x;
@@ -252,6 +299,19 @@ class PlotlyRenderManager {
     return trace;
   }
 
+  /**
+   * Add shaded error plot to figure
+   *
+   * @param {number[]} x - x-data array
+   * @param {number[]} y - average y-data array
+   * @param {number[]} errorY - shaded y-data array 
+   * @param {Object} [options] - Scatter Graph Configuration Options (https://plotly.com/javascript/reference/scatter/)
+   * @param {Object} [shadeOptions] - Shaded Area Configuration Options 
+   * @param {string} [shadeOptions.color] - #RRGGBB syntax
+   * @param {number} [shadeOptions.alpha] - fractional alpha value from 0 to 1.
+   * @param {string} [ax] - Subplot to add line to. Default to last access axes.
+   * 
+   */
   shadedErrorBar(x, y, errorY, options={}, shadeOptions={}, ax=null) {
     var trace = JSON.parse(JSON.stringify(defaultLineOptions));
     trace.x = x;
@@ -321,6 +381,17 @@ class PlotlyRenderManager {
     this.traces.push(trace);
   }
 
+  /**
+   * Add heatmap (image) plot to figure
+   *
+   * @param {number[]} x - x-data array
+   * @param {number[]} y - y-data array
+   * @param {number[]} z - z-data array (size x,y)
+   * @param {Object} [options] - Heatmap Graph Configuration Options (https://plotly.com/javascript/reference/heatmap)
+   * @param {string} [ax] - Subplot to add heatmap to. Default to last access axes.
+   * 
+   * @return {Object} The shaded error plot object created.
+   */
   surf(x, y, z, options={}, ax=null) {
     var trace = JSON.parse(JSON.stringify(defaultHeatmapOptions));
     trace.x = x;
@@ -354,6 +425,16 @@ class PlotlyRenderManager {
     return trace;
   }
 
+  /**
+   * Add bar plot to figure
+   *
+   * @param {number[]} x - x-data array
+   * @param {number[]} y - y-data array
+   * @param {Object} [options] - Bar Graph Configuration Options (https://plotly.com/javascript/reference/bar)
+   * @param {string} [ax] - Subplot to add bar to. Default to last access axes.
+   * 
+   * @return {Object} The shaded error plot object created.
+   */
   bar(x, y, options={}, ax=null) {
     var trace = JSON.parse(JSON.stringify(defaultBarOptions));
     trace.x = x;
@@ -385,6 +466,16 @@ class PlotlyRenderManager {
     return trace;
   }
 
+  /**
+   * Add box plot to figure
+   *
+   * @param {number[]} x - x-data array
+   * @param {number[]} y - y-data array
+   * @param {Object} [options] - Box Graph Configuration Options (https://plotly.com/javascript/reference/box)
+   * @param {string} [ax] - Subplot to add box to. Default to last access axes.
+   * 
+   * @return {Object} The shaded error plot object created.
+   */
   box(x, y, options={}, ax=null) {
     var trace = JSON.parse(JSON.stringify(defaultBoxOptions));
     trace.x = x;
@@ -418,6 +509,15 @@ class PlotlyRenderManager {
     return trace;
   }
 
+  /**
+   * Add shaded area to figure
+   *
+   * @param {number[]} x - x-data array
+   * @param {Object} [options] - Scatter Graph Configuration Options (https://plotly.com/javascript/reference/scatter)
+   * @param {string} [ax] - Subplot to add shaded area to. Default to last access axes.
+   * 
+   * @return {Object} The shaded error plot object created.
+   */
   addShadedArea(x, options={}, ax=null) {
     if (!ax) {
       ax = this.gca;
@@ -462,9 +562,16 @@ class PlotlyRenderManager {
     trace.fill = "tonexty";
     this.traces.push(trace);
 
-    return;
+    return trace;
   }
 
+  /**
+   * Add colorbar to figure
+   *
+   * @param {Object} [options] - Color Axis Graph Configuration Options (https://plotly.com/javascript/reference/layout/coloraxis/#layout-coloraxis)
+   * 
+   * @return {string} The colorbar ID 
+   */
   createColorAxis(options={}) {
     var colorAxisID = "";
     var id = this.coloraxis.length + 1;
@@ -489,6 +596,14 @@ class PlotlyRenderManager {
     return colorAxisID;
   }
 
+  /**
+   * Add legend to figure. 
+   * Unlike other language, Plotly legend configuration is to configure appearance. Actual text is added in each plot trace's option.
+   *
+   * @param {Object} [options] - Legend Configuration Options (https://plotly.com/javascript/reference/layout/#layout-legend)
+   * 
+   * @return {string} The colorbar ID 
+   */
   setLegend(options) {
     this.layout.legend = {
       ...this.layout.legend,
@@ -496,10 +611,23 @@ class PlotlyRenderManager {
     };
   }
 
+  /**
+   * Add title to figure. 
+   *
+   * @param {string} title - Title text
+   * 
+   */
   setTitle(title) {
     this.layout.title.text = title;
   }
 
+  /**
+   * Add title to figure. 
+   *
+   * @param {string} subtitle - Title text
+   * @param {string} [ax] - Subplot to add subtitle to. Default to last access axes.
+   * 
+   */
   setSubtitle(subtitle, ax=null) {
     if (!ax) {
       this.setTitle(subtitle);
@@ -531,6 +659,15 @@ class PlotlyRenderManager {
     }
   }
 
+  /**
+   * Add X-axis Label to figure. 
+   *
+   * @param {string} title - Label text
+   * @param {Object} [options] - axis configuration (TODO) (https://plotly.com/javascript/reference/layout/xaxis/)
+   * @param {Object} [options.fontSize] - Text Font Size (default = 15)
+   * @param {string} [ax] - Subplot to add label to. Default to last access axes.
+   * 
+   */
   setXlabel(title, options={fontSize: 15}, ax=null) {
     if (!ax) {
       ax = this.gca;
@@ -546,6 +683,15 @@ class PlotlyRenderManager {
     this.layout[ax["xlayout"]].title = {text: title, font: {size: options.fontSize}};
   }
 
+  /**
+   * Add Y-axis Label to figure. 
+   *
+   * @param {string} title - Label text
+   * @param {Object} [options] - axis configuration (TODO) (https://plotly.com/javascript/reference/layout/yaxis/)
+   * @param {Object} [options.fontSize] - Text Font Size (default = 15)
+   * @param {string} [ax] - Subplot to add label to. Default to last access axes.
+   * 
+   */
   setYlabel(title, options={fontSize: 15}, ax=null) {
     if (!ax) {
       ax = this.gca;
@@ -561,6 +707,13 @@ class PlotlyRenderManager {
     this.layout[ax["ylayout"]].title = {text: title, font: {size: options.fontSize}};
   }
 
+  /**
+   * Change x-axis limits. 
+   *
+   * @param {number[]} xlim - [min max] of x-axis limits.
+   * @param {string} [ax] - Subplot to configure. Default to last access axes.
+   * 
+   */
   setXlim(xlim, ax=null) {
     if (!ax) {
       ax = this.gca;
@@ -576,6 +729,13 @@ class PlotlyRenderManager {
     this.layout[ax["xlayout"]].range = xlim;
   }
 
+  /**
+   * Change y-axis limits. 
+   *
+   * @param {number[]} ylim - [min max] of y-axis limits.
+   * @param {string} [ax] - Subplot to configure. Default to last access axes.
+   * 
+   */
   setYlim(ylim, ax=null) {
     if (!ax) {
       ax = this.gca;
@@ -591,6 +751,14 @@ class PlotlyRenderManager {
     this.layout[ax["ylayout"]].range = ylim;
   }
 
+  /**
+   * Change axis ticks location. 
+   *
+   * @param {number[]} values - array of tick values
+   * @param {string} axis - `x` or `y` axis to be configured. 
+   * @param {string} [ax] - Subplot to configure. Default to last access axes.
+   * 
+   */
   setTickValue(values, axis, ax=null) {
     if (!ax) {
       ax = this.gca;
@@ -607,6 +775,14 @@ class PlotlyRenderManager {
     this.layout[ax[axis+"layout"]].tickvals = values;
   }
 
+  /**
+   * Change axis ticks label. 
+   *
+   * @param {number[]} labels - custom labels of the ticks. Same size as tick values
+   * @param {string} axis - `x` or `y` axis to be configured. 
+   * @param {string} [ax] - Subplot to configure. Default to last access axes.
+   * 
+   */
   setTickLabel(labels, axis, ax=null) {
     if (!ax) {
       ax = this.gca;
@@ -622,6 +798,14 @@ class PlotlyRenderManager {
     this.layout[ax[axis+"layout"]].ticktext = labels;
   }
 
+  /**
+   * Generic wrapper for changing axis Options
+   *
+   * @param {Object} [props] - axis configuration (https://plotly.com/javascript/reference/layout/xaxis/)
+   * @param {string} axis - `x` or `y` axis to be configured. 
+   * @param {string} [ax] - Subplot to configure. Default to last access axes.
+   * 
+   */
   setAxisProps(props, axis, ax=null) {
     if (!ax) {
       ax = this.gca;
@@ -637,6 +821,12 @@ class PlotlyRenderManager {
     this.layout[ax[axis+"layout"]] = {...this.layout[ax[axis+"layout"]], ...props};
   }
 
+  /**
+   * Generic wrapper for changing layout Options
+   *
+   * @param {Object} [props] - axis configuration (https://plotly.com/javascript/reference/layout)
+   * 
+   */
   setLayoutProps(props) {
     for (var key of Object.keys(props)) {
       if (props[key].constructor.name == "Object")  {
@@ -650,6 +840,15 @@ class PlotlyRenderManager {
     }
   }
 
+  /**
+   * Change axis scale. 
+   *
+   * @param {string} type - String name of the scale type for axis (``linear``, or
+   *     ``log``)
+   * @param {string} axis - `x` or `y` axis to be configured. 
+   * @param {string} [ax] - Subplot to configure. Default to last access axes.
+   * 
+   */
   setScaleType(type, axis, ax=null) {
     if (!ax) {
       ax = this.gca;
@@ -669,6 +868,9 @@ class PlotlyRenderManager {
     this.layout[ax[axis+"layout"]].type = type;
   }
 
+  /**
+   * Call to update figure or initial render
+   */
   render() {
     if (this.fresh) {
       Plotly.newPlot(this.divName, this.traces, this.layout, {responsive: true, locale: this.locale});
@@ -678,11 +880,17 @@ class PlotlyRenderManager {
     }
   }
 
+  /**
+   * Call to clear figure
+   */
   purge() {
     Plotly.purge(this.divName);
     this.fresh = true;
   }
 
+  /**
+   * Call to update figure
+   */
   refresh() {
     try {
       Plotly.relayout(this.divName, {});
