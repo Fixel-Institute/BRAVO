@@ -35,7 +35,6 @@ const SurveyTable = ({data, onDelete}) => {
   });
 
   useEffect(() => {
-    console.log(data)
     setPagination({currentPage: 0, totalPages: Math.ceil(data.length / viewPerPage)})
   }, [data]);
 
@@ -44,6 +43,11 @@ const SurveyTable = ({data, onDelete}) => {
   }, [paginationControl]);
 
   const viewSurvey = (id) => {
+    //navigate(`/survey/${id}`, {params: {}, replace: false});
+    window.open(`/survey/${id}`,'_blank');
+  };
+
+  const editSurvey = (id) => {
     navigate(`/survey/${id}/edit`, {params: {}, replace: false});
   };
 
@@ -58,7 +62,7 @@ const SurveyTable = ({data, onDelete}) => {
           <TableRow>
             {["SurveyTableName", "SurveyTableURL", "SurveyTableDate"].map((col) => {
               return (
-                <TableCell key={col} variant="head" style={{width: "33%", minWidth: 200, verticalAlign: "bottom", paddingBottom: 0, paddingTop: 0}}>
+                <TableCell key={col} variant="head" style={{width: "28%", minWidth: 200, verticalAlign: "bottom", paddingBottom: 0, paddingTop: 0}}>
                   <MDTypography variant="span" fontSize={12} fontWeight={"bold"} style={{cursor: "pointer"}} onClick={()=>console.log({col})}>
                     {dictionaryLookup(dictionary.Surveys, col, language)}
                   </MDTypography>
@@ -93,6 +97,11 @@ const SurveyTable = ({data, onDelete}) => {
                 <Tooltip title="View Survey" placement="top">
                   <IconButton color="info" size="small" onClick={() => viewSurvey(survey.url)} sx={{paddingX: 1}}>
                     <i className="fa-solid fa-eye"></i>
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Edit Survey" placement="top">
+                  <IconButton color="secondary" size="small" onClick={() => editSurvey(survey.url)} sx={{paddingX: 1}}>
+                    <i className="fa-solid fa-pen"></i>
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Delete Survey" placement="top">

@@ -17,8 +17,6 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator, OriginValidator
 from django.core.asgi import get_asgi_application
 
-import DatabaseManager
-
 BASE_DIR = Path(__file__).resolve().parent
 if os.path.exists(os.path.join(BASE_DIR, '.env')):
     with open(os.path.join(BASE_DIR, '.env'), "r") as file:

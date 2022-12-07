@@ -21,6 +21,7 @@ import HomePage from "views/HomePage.js";
 import SignIn from "views/Authentication/SignIn";
 import Register from "views/Authentication/Register";
 import SurveyEditor from "views/Survey/Editor";
+import SurveyViewer from "views/Survey/Viewer";
 
 import { usePlatformContext, setContextState } from "context.js";
 import routes from "routes";
@@ -101,6 +102,7 @@ export default function App() {
         <Route path="/reports/*" element={<Navigate to="/patient-overview" />} />
         <Route path="/experimental/*" element={<Navigate to="/patient-overview" />} />
         <Route exact path="/survey/:surveyId/edit" element={<SurveyEditor />} />
+        <Route exact path="/survey/:surveyId" element={<SurveyViewer />} />
         <Route path="*" element={<Navigate to="/index" />} />
       </Routes>
     </ThemeProvider>

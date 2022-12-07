@@ -109,6 +109,34 @@ class VerifyPairing(RestViews.APIView):
 
         return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
+class UploadRecording(RestViews.APIView):
+    parser_classes = [RestParsers.MultiPartParser, RestParsers.FormParser]
+
+    def post(self, request):
+        if request.user.is_authenticated:
+            if not "file" in request.data:
+                return Response(status=403, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+                
+            rawBytes = request.data["file"].read()
+            header = rawBytes[:80].decode("utf-8")
+
+            availableDevice = models.ExternalSensorPairing.objects.filter(device_mac=header[5:].strip(), paired=True).first()
+            if not availableDevice:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            try:
+                os.mkdir(DATABASE_PATH + "recordings" + os.path.sep + str(availableDevice.patient_deidentified_id))
+            except Exception:
+                pass
+
+            filename = str(availableDevice.patient_deidentified_id) + os.path.sep + "ExternalSensor_" + request.data["file"].name
+            with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
+                file.write(rawBytes)
+                
+            return Response(status=200)
+
+        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
 class StreamRelay(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()

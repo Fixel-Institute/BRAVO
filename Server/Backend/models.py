@@ -303,3 +303,30 @@ class SurveyResults(models.Model):
     responder = models.CharField(default="", max_length=255)
     values = models.JSONField(default=list)
     date = models.DateTimeField(default=timezone.now)
+
+class RedcapSurveyLink(models.Model):
+    linkage_id = models.UUIDField(default=uuid.uuid4)
+    survey_id = models.UUIDField(default=uuid.uuid4)
+    redcap_server = models.CharField(default="", max_length=255)
+    redcap_token = models.CharField(default="", max_length=255)
+    redcap_survey_name = models.CharField(default="", max_length=255)
+    redcap_record_id = models.CharField(default="", max_length=255)
+    owner = models.UUIDField(default=uuid.uuid1)
+
+class TwilioService(models.Model):
+    account_id = models.CharField(default="", max_length=255)
+    authToken = models.CharField(default="", max_length=255)
+    service_id = models.CharField(default="", max_length=255)
+    repeat = models.CharField(default="daily", max_length=255)
+    receiver = models.JSONField(default=dict)
+    enabled = models.BooleanField(default=False)
+    timestamps = models.JSONField(default=list)
+
+    linkage_id = models.UUIDField(default=uuid.uuid4)
+    patient_id = models.CharField(default="", max_length=255)
+    report_id = models.UUIDField(default=uuid.uuid4)
+
+class ScheduledSurveys(models.Model):
+    linkage_id = models.UUIDField(default=uuid.uuid4)
+    report_id = models.UUIDField(default=uuid.uuid4)
+    date = models.DateTimeField(default=timezone.now)

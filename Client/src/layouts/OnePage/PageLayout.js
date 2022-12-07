@@ -27,13 +27,12 @@ import MDBox from "components/MDBox";
 // Material Dashboard 2 PRO React context
 import { usePlatformContext, setContextState } from "context";
 
-function PageLayout({ background, children }) {
+function PageLayout({ background, sx, children }) {
   const [, dispatch] = usePlatformContext();
   const { pathname } = useLocation();
 
   useEffect(() => {
     setContextState(dispatch, "layout", "page");
-    document.body.style.overflow = "hidden";
   }, [pathname]);
 
   return (
@@ -42,7 +41,7 @@ function PageLayout({ background, children }) {
       height="100%"
       minHeight="100vh"
       bgColor={background}
-      sx={{ overflowY: "hidden" }}
+      sx={ sx ? sx : { overflowY: "hidden" }}
     >
       {children}
     </MDBox>

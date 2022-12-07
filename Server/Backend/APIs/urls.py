@@ -41,7 +41,13 @@ urlpatterns = [
 
 	path('addNewSurvey', Surveys.AddNewSurvey.as_view()),
 	path('queryAvailableSurveys', Surveys.QueryAvailableSurveys.as_view()),
+	path('queryAvailableRedcapSchedule', Surveys.QueryAvailableRedcapSchedule.as_view()),
 	path('querySurveyContent', Surveys.QuerySurveyContent.as_view()),
 	path('updateSurveyContent', Surveys.UpdateSurveyContent.as_view()),
 	path('deleteSurvey', Surveys.ArchiveSurvey.as_view()),
+	path('submitSurvey', Surveys.SubmitSurveyResults.as_view()),
+
+	path('verifyRedcapLink', Surveys.RedcapVerification.as_view()),
+	path('surveySchedulerSetup', Surveys.SetupSurveyScheduler.as_view()),
+	path('surveySchedulerStatus', Surveys.SurveySchedulerStatus.as_view()),
 ]

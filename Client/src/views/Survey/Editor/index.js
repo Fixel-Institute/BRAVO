@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
+
+import Papa from "papaparse";
 
 import {
   Card,
@@ -17,6 +19,7 @@ import {
   DialogActions,
   TextField,
   IconButton,
+  Input,
   Button
 } from "@mui/material";
 
@@ -46,6 +49,8 @@ export default function SurveyEditor({match}) {
 
   const [editText, setEditText] = useState(false);
 
+  const inputFile = useRef(null) 
+
   const { surveyId } = useParams();
 
   useEffect(() => {
@@ -64,19 +69,109 @@ export default function SurveyEditor({match}) {
     });
   }, []);
 
-  useEffect(() => {
-    const updateTimer = setTimeout(() => {
-      SessionController.query("/api/updateSurveyContent", {
-        id: surveyId,
-        title: contents.title,
-        contents: contents.contents
-      }).catch((error) => {
-        SessionController.displayError(error, setAlert);
-      });
-      console.log(contents.contents)
-    }, 5000);
-    return () => clearTimeout(updateTimer);
-  }, [contents])
+  const parseRedcapInstrument = (content) => {
+    var data = Papa.parse(content, {
+      header: true
+    });
+
+    contents.contents = [];
+    contents.contents.push({
+      header: "",
+      questions: []
+    });
+
+    for (let i in data.data) {
+      if (data.data[i]["Field Type"] === "descriptive") {
+        contents.contents[0].questions.push({
+          variableName: data.data[i]["Variable / Field Name"],
+          type: "description",
+          text: data.data[i]["Field Label"],
+          value: "",
+          default: "",
+          show: data.data[i]["Field Note"] != "hide"
+        });
+      } else if (data.data[i]["Field Type"] === "checkbox") {
+        let options = data.data[i]["Choices, Calculations, OR Slider Labels"].split("|");
+
+        contents.contents[0].questions.push({
+          variableName: data.data[i]["Variable / Field Name"],
+          type: "multiple-choice",
+          text: data.data[i]["Field Label"],
+          multiple: true,
+          value: [],
+          options: options.map((text) => {
+            let position = text.search(",");
+            let textOption = text.slice(position+1);
+            return textOption.trim();
+          }),
+          default: [],
+          show: data.data[i]["Field Note"] != "hide"
+        });
+      } else if (data.data[i]["Field Type"] === "notes") {
+        contents.contents[0].questions.push({
+          variableName: data.data[i]["Variable / Field Name"],
+          type: "text",
+          text: data.data[i]["Field Label"],
+          value: "",
+          default: "",
+          validation: "text",
+          show: data.data[i]["Field Note"] != "hide"
+        });
+      } else if (data.data[i]["Field Type"] === "text") {
+        contents.contents[0].questions.push({
+          variableName: data.data[i]["Variable / Field Name"],
+          type: "text",
+          text: data.data[i]["Field Label"],
+          value: "",
+          default: "",
+          validation: data.data[i]["Text Validation Type OR Show Slider Number"],
+          show: data.data[i]["Field Note"] != "hide"
+        });
+      } else if (data.data[i]["Field Type"] === "radio") {
+        let options = data.data[i]["Choices, Calculations, OR Slider Labels"].split("|");
+        
+        contents.contents[0].questions.push({
+          variableName: data.data[i]["Variable / Field Name"],
+          type: "multiple-choice",
+          text: data.data[i]["Field Label"],
+          multiple: false,
+          value: [],
+          options: options.map((text) => {
+            let position = text.search(",");
+            let textOption = text.slice(position+1);
+            return textOption.trim();
+          }),
+          default: [],
+          show: data.data[i]["Field Note"] != "hide"
+        });
+      } else if (data.data[i]["Field Type"] === "slider") {
+        let options = data.data[i]["Choices, Calculations, OR Slider Labels"].split("|");
+        contents.contents[0].questions.push({
+          variableName: data.data[i]["Variable / Field Name"],
+          type: "score",
+          text: data.data[i]["Field Label"],
+          min: parseInt(options[0].trim()),
+          max: parseInt(options[2].trim()),
+          step: 1,
+          value: parseInt(options[1].trim()),
+          default: parseInt(options[1].trim()),
+          show: data.data[i]["Field Note"] != "hide"
+        });
+      } 
+    }
+
+    setContents({...contents});
+  };
+
+  const saveChanges = () => {
+    SessionController.query("/api/updateSurveyContent", {
+      id: surveyId,
+      title: contents.title,
+      contents: contents.contents
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
+  };
 
   const addPage = () => {
     contents.contents.push({
@@ -91,8 +186,15 @@ export default function SurveyEditor({match}) {
       type: "text",
       text: "Edit your question statement here",
       value: "",
-      default: ""
+      default: "",
+      validation: "text",
+      show: true
     });
+    setContents({...contents});
+  };
+
+  const deleteQuestion = (index, questionId) => {
+    contents.contents[index].questions = contents.contents[index].questions.filter((question, id) => id != questionId)
     setContents({...contents});
   };
 
@@ -115,14 +217,17 @@ export default function SurveyEditor({match}) {
         max: 100,
         step: 1,
         value: 0,
-        default: 0
+        default: 0,
+        show: true
       };
     } else if (type === "text") {
       contents.contents[index].questions[questionId] = {
         text: contents.contents[index].questions[questionId].text,
         type: type,
         value: "",
-        default: ""
+        default: "",
+        validation: "text",
+        show: true
       };
     } else if (type === "multiple-choice") {
       contents.contents[index].questions[questionId] = {
@@ -132,8 +237,22 @@ export default function SurveyEditor({match}) {
         value: [],
         options: [],
         default: [],
+        show: true
+      };
+    } else if (type === "description") {
+      contents.contents[index].questions[questionId] = {
+        text: contents.contents[index].questions[questionId].text,
+        type: type,
+        value: "",
+        default: "",
+        show: true
       };
     }
+    setContents({...contents});
+  };
+
+  const setQuestionDisplay = (index, questionId, value) => {
+    contents.contents[index].questions[questionId]["show"] = value;
     setContents({...contents});
   };
 
@@ -162,7 +281,7 @@ export default function SurveyEditor({match}) {
             <Card sx={{marginTop: 0}}>
               <MDBox p={2}>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} >
+                  <Grid item xs={12} sm={6} >
                     <MDBox sx={{display: "flex", flexDirection: "row", justifyContent: "flex-start", alignItem: "center"}}>
                       {editText === "contentName" ? (
                         <TextField variant={"standard"} value={contents.title} onChange={(event) => setContents({...contents, title: event.target.value})} sx={{marginX: 1}}>
@@ -175,6 +294,27 @@ export default function SurveyEditor({match}) {
                       <IconButton onClick={() => editText === "contentName" ? setEditText(false) : setEditText("contentName")}>
                         <i className="fa-solid fa-pen"></i>
                       </IconButton>
+                    </MDBox>
+                  </Grid>
+                  <Grid item xs={12} sm={6} >
+                    <MDBox sx={{display: "flex", flexDirection: "row", justifyContent: "flex-end", alignItem: "center"}}>
+                      <MDButton variant={"contained"} color={"info"} onClick={() => inputFile.current.click()} sx={{marginRight: 3}}>
+                        <MDTypography variant="p" color={"white"}>
+                          {"Populate with Redcap Instrument"}
+                        </MDTypography>
+                      </MDButton>
+
+                      <Input inputRef={inputFile} type={"file"} inputProps={{accept: ".csv"}} style={{display: "none"}} onChange={(event) => {
+                        const reader = new FileReader();
+                        reader.onload = () => parseRedcapInstrument(reader.result);
+                        reader.readAsBinaryString(event.target.files[0]);
+                      }} />
+
+                      <MDButton variant={"contained"} color={"success"} onClick={() => saveChanges()}>
+                        <MDTypography variant="p" color={"white"}>
+                          {"Save Changes"}
+                        </MDTypography>
+                      </MDButton>
                     </MDBox>
                   </Grid>
                 </Grid>
@@ -211,6 +351,9 @@ export default function SurveyEditor({match}) {
                               </MDTypography>
                               <TextField variant={"standard"} value={question.text} onChange={(event) => setQuestionText(index, questionId, event.target.value)} sx={{marginX: 1}} fullWidth>
                               </TextField>
+                              <IconButton color={"error"} onClick={() => deleteQuestion(index, questionId)}>
+                                <i className="fa-solid fa-xmark"></i>
+                              </IconButton>
                             </MDBox>
                             <MDBox sx={{display: "flex", flexDirection: "row", justifyContent: "flex-start", alignItems: "center", marginY: 1}}>
                               <MDTypography variant="h6" style={{marginRight: 3}}>
@@ -224,6 +367,7 @@ export default function SurveyEditor({match}) {
                                   <MenuItem value={"score"}>{"Score"}</MenuItem>
                                   <MenuItem value={"text"}>{"Text"}</MenuItem>
                                   <MenuItem value={"multiple-choice"}>{"Multiple Choice"}</MenuItem>
+                                  <MenuItem value={"description"}>{"Description"}</MenuItem>
                                 </Select>
                               </FormControl>
                               {question.type === "multiple-choice" ? (
@@ -232,9 +376,18 @@ export default function SurveyEditor({match}) {
                                 />
                               ) : null} 
                             </MDBox>
+                            <FormControlLabel label={"Show to user?"}
+                              control={<Checkbox checked={question.show} onChange={(event) => setQuestionDisplay(index, questionId, event.target.checked)}/>}
+                            />
                             {question.type === "text" ? (
                             <MDBox sx={{display: "flex", flexDirection: "row", justifyContent: "flex-start", alignItems: "center", marginY: 1}}>
                               <TextField variant={"standard"} value={question.value} label={"Default Text Field"} onChange={(event) => setTextQuestionValue(index, questionId, event.target.value)} rows={4} sx={{marginX: 1}} fullWidth multiline>
+                              </TextField>
+                            </MDBox>
+                            ) : null}
+                            {question.type === "description" ? (
+                            <MDBox sx={{display: "flex", flexDirection: "row", justifyContent: "flex-start", alignItems: "center", marginY: 1}}>
+                              <TextField variant={"standard"} value={question.value} label={"Description Text Field"} onChange={(event) => setTextQuestionValue(index, questionId, event.target.value)} rows={4} sx={{marginX: 1}} fullWidth multiline>
                               </TextField>
                             </MDBox>
                             ) : null}
@@ -285,7 +438,7 @@ export default function SurveyEditor({match}) {
                         );
                       })}
                       <Grid item xs={12}>
-                        <MDBox p={2} style={{display: "flex", justifyContent: "center"}}>
+                        <MDBox p={2} style={{display: "flex", justifyContent: "space-around"}}>
                           <MDButton variant={"contained"} color={"info"} onClick={() => addQuestion(index)} >
                             <MDTypography variant="p" color={"white"}>
                               {"New Question"}

@@ -240,6 +240,10 @@ export const dictionary = {
       en: "Add New Survey",
       zh: "Add New Survey"
     },
+    EnterSurveyName: {
+      en: "Enter Survey Name",
+      zh: "Enter Survey Name"
+    },
     SearchSurvey: {
       en: "Search Survey",
       zh: "Search Survey"
@@ -255,6 +259,18 @@ export const dictionary = {
     SurveyTableDate: {
       en: "Created Date",
       zh: "Created Date"
+    },
+    RedcapTableName: {
+      en: "Redcap Survey Name",
+      zh: "Redcap Survey 名字"
+    },
+    TwilioInfo: {
+      en: "Twilio Info",
+      zh: "Twilio Info"
+    },
+    CurrentSchedule: {
+      en: "Current Schedule",
+      zh: "Current Schedule"
     },
     PatientTablePrevious: {
       en: "PREVIOUS",

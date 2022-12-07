@@ -1,7 +1,7 @@
 import os, sys
 from datetime import datetime
 
-from BRAVO import wsgi
+from BRAVO import asgi
 from Backend import models
 from modules.Percept import Sessions
 
