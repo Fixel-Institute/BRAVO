@@ -48,7 +48,7 @@ else:
     DEBUG = False
     BASE_URL = 'https://' + os.environ.get('SERVER_ADDRESS')
     STATIC_URL = BASE_URL + '/static/'
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False
     CSRF_TRUSTED_ORIGINS = [BASE_URL]
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_EXPIRE_AT_BROWSER_CLOSE = True
