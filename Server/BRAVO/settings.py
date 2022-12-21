@@ -56,6 +56,15 @@ else:
 ALLOWED_HOSTS = ['localhost', os.environ.get('SERVER_ADDRESS')]
 CORS_ALLOWED_ORIGINS = ['http://localhost:3000']
 
+CORS_ALLOW_HEADERS = [
+    'x-csrftoken',
+    'csrfmiddlewaretoken',
+    'credentials'
+]
+CORS_ALLOW_CREDENTIALS = True
+CSRF_COOKIE_SECURE = False
+
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.auth',
