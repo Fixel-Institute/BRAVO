@@ -47,8 +47,6 @@ function EventPowerSpectrum({dataToRender, selector, events, height, figureTitle
       return colors[0];
     };
 
-    console.log(data)
-
     for (var k = 0; k < data.length; k++) {
       if (data[k]["Device"] + " " + data[k]["Hemisphere"] == selector.hemisphere) {
         for (var j = 0; j < data[k].Render.length; j++) {

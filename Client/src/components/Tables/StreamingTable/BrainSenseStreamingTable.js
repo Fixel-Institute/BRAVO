@@ -69,6 +69,7 @@ function BrainSenseStreamingTable({data, getRecordingData, children}) {
       }
       if (!found) {
         uniqueDates.push({
+          time: data[i]["Timestamp"]*1000,
           value: timestruct.toLocaleDateString(language),
           label: timestruct.toLocaleDateString(language)
         });
@@ -76,7 +77,7 @@ function BrainSenseStreamingTable({data, getRecordingData, children}) {
     }
 
     if (uniqueDates.length > 0) {
-      setAvailableDates(uniqueDates);
+      setAvailableDates(uniqueDates.sort((a,b) => b.time - a.time));
       setViewDate(uniqueDates[0]);
     }
   }, [data])
@@ -158,7 +159,7 @@ function BrainSenseStreamingTable({data, getRecordingData, children}) {
                       {dictionaryLookup(dictionary.FigureStandardText, side, language)} {dictionaryLookup(dictionary.BrainRegions, target, language)}
                     </MDTypography>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
-                      {formatSegmentString(channel.Contacts)}
+                      {formatSegmentString(channel.Contacts)} {"@ " + recording.Therapy.Left.RateInHertz + " Hz " + recording.Therapy.Left.PulseWidthInMicroSecond + " μS"}
                     </MDTypography>
                   </>
                 } else {
@@ -168,7 +169,7 @@ function BrainSenseStreamingTable({data, getRecordingData, children}) {
                       {dictionaryLookup(dictionary.FigureStandardText, side, language)} {dictionaryLookup(dictionary.BrainRegions, target, language)}
                     </MDTypography>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
-                      {formatSegmentString(channel.Contacts)}
+                      {formatSegmentString(channel.Contacts)} {"@ " + recording.Therapy.Right.RateInHertz + " Hz " + recording.Therapy.Right.PulseWidthInMicroSecond + " μS"}
                     </MDTypography>
                   </>
                 }

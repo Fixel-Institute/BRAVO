@@ -23,20 +23,19 @@ function ChronicPowerTrend({dataToRender, events, height, figureTitle}) {
     var axisTitles = []
     for (var k = 0; k < data.length; k++)
     {
-      var title = data[k]["Device"] + " (" + data[k]["DeviceLocation"] + ") " + data[k]["Hemisphere"]
+      const [side, target] = data[k].Hemisphere.split(" ");
+      const title = data[k]["Device"] + ` (${dictionaryLookup(dictionary.FigureStandardText, side, language)}) ${dictionaryLookup(dictionary.BrainRegions, target, language)}`;
       if (!axisTitles.includes(title)) axisTitles.push(title)
     }
+    console.log(axisTitles)
 
     if (fig.fresh) {
-      var ax = fig.subplots(2, 1, {sharex: true, sharey: true});
+      var ax = fig.subplots(axisTitles.length, 1, {sharex: true, sharey: true});
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15}, ax[ax.length-1]);
        for (var i in ax) {
         fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "AU", language)})`, {fontSize: 15}, ax[i]);
-        fig.setYlim([0, 5000], ax[i]);
-
-        const [side, target] = data[i].Hemisphere.split(" ");
-        const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)}`;
-        fig.setSubtitle(`${titleText}`,ax[i]);
+        fig.setYlim([0, 10000], ax[i]);
+        fig.setSubtitle(`${axisTitles[i]}`,ax[i]);
       }
 
       fig.setAxisProps({
@@ -46,7 +45,6 @@ function ChronicPowerTrend({dataToRender, events, height, figureTitle}) {
           { count: 1, label: '1 Month', step: 'month', stepmode: 'todate' },
           {step: 'all'}
         ]},
-        rangeslider: {thickness: 0.1},
       }, "x");
 
       fig.setLegend({

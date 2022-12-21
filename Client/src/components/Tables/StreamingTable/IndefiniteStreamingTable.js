@@ -67,6 +67,7 @@ function IndefiniteStreamingTable({data, requestDataForRender, children}) {
         uniqueSession.push({
           timestamp: dateString,
           device: data[i]["DeviceName"],
+          time: data[i]["Timestamp"],
           value: "[" + data[i]["DeviceName"] + "] " + dateString,
           label: "[" + data[i]["DeviceName"] + "] " + dateString
         });
@@ -74,7 +75,7 @@ function IndefiniteStreamingTable({data, requestDataForRender, children}) {
     }
 
     if (uniqueSession.length > 0) {
-      setViewSessions(uniqueSession)
+      setViewSessions(uniqueSession.sort((a,b) => b.time - a.time));
       setViewDate(uniqueSession[0])
     }
 

@@ -105,6 +105,10 @@ REST_FRAMEWORK = {
     ]
 }
 
+REST_KNOX = {
+    'TOKEN_TTL': None,
+}
+
 ASGI_APPLICATION = 'BRAVO.asgi.application'
 CHANNEL_LAYERS = {
     "default": {
