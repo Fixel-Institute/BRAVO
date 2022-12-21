@@ -93,7 +93,10 @@ All procedure assume that your working directory is the main directory of the cl
 
   # Install Dependencies with Apt
   sudo apt-get update
-  sudo apt-get install python3-pip libjpeg-dev libjpeg8-dev libpng-dev nginx python3-virtualenv libmysqlclient-dev mysql-server
+  sudo apt-get install python3-pip libjpeg-dev libjpeg8-dev libpng-dev nginx python3-virtualenv libmysqlclient-dev mysql-server docker.io
+  
+  # Setup Redis Server on Docker for Django Channels
+  sudo docker run -p 6379:6379 -d redis:5
 
   # Create Virutal Environment for Python called "venv"
   virtualenv $SCRIPT_DIR/venv
@@ -118,13 +121,13 @@ You can access MySQL Database (the default database used for the installation sc
   # this would prompt you to enter admin password here for superuser privilege.
 
   # Following commands are within mysql command-line-interface
-  # Create database named "PerceptServer"
-  mysql> CREATE DATABASE PerceptServer;
+  # Create database named "BRAVOServer"
+  mysql> CREATE DATABASE BRAVOServer;
 
-  # Create a user that can access the database called "DjangoUser" with an admin password called "AdminPassword"
+  # Create a user that can access the database called "BRAVOAdmin" with an admin password called "AdminPassword"
   # Change these values to what you see fit.
-  mysql> CREATE USER 'DjangoUser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'AdminPassword';
-  mysql> GRANT ALL PRIVILEGES ON PerceptServer.* TO 'DjangoUser'@'localhost';
+  mysql> CREATE USER 'BRAVOAdmin'@'localhost' IDENTIFIED WITH mysql_native_password BY 'AdminPassword';
+  mysql> GRANT ALL PRIVILEGES ON PerceptServer.* TO 'BRAVOAdmin'@'localhost';
   mysql> FLUSH PRIVILEGES;
 
   # exit MySQL Interface 
@@ -145,8 +148,8 @@ An example environment file looks like the following.
     "DATASERVER_PATH": "/home/ubuntu/DataStorage/",
     "PYTHON_UTILITY": "/home/ubuntu/BRAVO/Server/modules/python-scripts",
     "ENCRYPTION_KEY": "4LLHi6IJ0PRdneDJo48kCcBf3tHTLRXQ_tyKfttDIm0=",
-    "SECRET_KEY": "django-insecure-putyourrandomkeyhere-butsaveitsecurely",
-    "SERVER_ADDRESS": "127.0.0.1:3000",
+    "SERVER_ADDRESS": "bravo-server.jcagle.solutions",
+    "CLIENT_ADDRESS": "bravo-client.jcagle.solutions",
     "MODE": "DEBUG"
   }
 
@@ -177,9 +180,11 @@ An example environment file looks like the following.
   This is a web-server specific key for cryptographic signing for session cookies.
   DO NOT let others get your key, otherwise they can modify cookies sent by our server.
 
-.. topic:: SERVER_ADDRESS
+.. topic:: SERVER_ADDRESS and CLIENT_ADDRESS
 
-  The server address to access the Python Server. This can be the same as your React Frontend address if you setup Proxy for it.
+  The server address to access the Python Server. 
+  This can be the same as your React Frontend address (CLIENT_ADDRESS) if you setup Proxy for it.
+  If not, configure both string to the correct path.
 
 .. topic:: MODE
 
@@ -203,8 +208,43 @@ This only need to be run once, unless a change is made to ``Server/Backend/model
   The new BRAVO Server Database has significant difference when compared to the original BRAVO platform v0.1 released in 2021.
   The database are not convertable at the moment, but a migration script is in development to help as much migration as possible. 
 
-Step 4: Deployment
+Step 4: SSL (HTTPS) Certificate (Optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This step is not neccessary for local deployment. However, for people who want additional security to deploy with HTTPS, 
+we will provide guidance for obtaining simple certificates for SSH. 
+
+The most common tool for free SSL certificate is through `CertBot <https://certbot.eff.org/>`_. 
+Refer to CertBot site to install tool on your server computer. 
+First, you can configure your DNS record to have your server address (``$YOUR_SERVER_ADDRESS``) point to your server IP. 
+Then run the following script to obtain your SSL certificate. 
+The output certificates should be saved in a directory at ``/etc/letsencrypt/live/$YOUR_SERVER_ADDRESS/``.
+
+.. code-block:: bash 
+  
+  sudo certbot certonly --standalone --preferred-challenges http -d $YOUR_SERVER_ADDRESS
+
+A bare-minimum sample nginx configuration file ``deployment.conf`` is in Server directory as a reference to create a working reverse proxy server to direct SSL traffic to your server.
+This configuration file should be saved in ``/etc/nginx/sites-enabled/`` directory and you should reload your nginx service whenever a change is made to the configuration.
+
+Step 5: Deployment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Due to the use of Websocket for real-time analysis, the default operating condition is through 
-Asynchronized Server Gateway Interface (ASGI) as opposed to the default Web Server Gateway Interface (WSGI) for Python.
+Asynchronized Server Gateway Interface (ASGI) as opposed to the default Web Server Gateway Interface (WSGI) for Python. 
+To use ASGI, we use ``daphne`` to start our server. A standard startup script ``startServer.sh`` is available in Server folder for reference.
+
+.. code-block:: bash 
+
+  #/bin/bash
+  SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+  # To start with WSGI - Django Channels Disabled
+  $SCRIPT_DIR/venv/bin/python3 $SCRIPT_DIR/manage.py runserver 0:3001
+  
+  # To start with ASGI - Django Channels Enabled. 
+  $SCRIPT_DIR/venv/bin/daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application
+
+.. warning:: 
+
+  Due to how daphne is looking for Python modules, the working directory must be in "Server" folder for the command to work. 

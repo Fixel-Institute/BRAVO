@@ -14,6 +14,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath('../Server/'))
+sys.path.insert(0, os.path.abspath('../Server/Backend'))
 sys.path.insert(0, os.path.abspath('../Server/modules'))
 sys.path.insert(0, os.path.abspath('../Server/modules/python-scripts'))
 
@@ -30,7 +31,8 @@ copyright = '2022, Jackson Cagle'
 author = 'Jackson Cagle'
 
 # The full version, including alpha/beta/rc tags
-release = '1.0'
+version = '2.0.0'
+release = 'beta'
 
 # -- General configuration ---------------------------------------------------
 
