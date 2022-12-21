@@ -200,7 +200,7 @@ def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", look
         deviceID.device_lead_configurations = LeadConfigurations
 
     deviceID.save()
-    session = models.PerceptSession(device_deidentified_id=deviceID.deidentified_id, session_source_filename=filename)
+    session = models.PerceptSession(device_deidentified_id=deviceID.deidentified_id, session_source_filename=filename, session_date=SessionDate)
     session.session_file_path = DATABASE_PATH + "sessions" + os.path.sep + str(session.device_deidentified_id)+"_"+str(session.deidentified_id)+".json"
     sessionUUID = str(session.deidentified_id)
 
@@ -373,17 +373,17 @@ def queryAvailableSessionFiles(user, patient_id, authority):
             if not device.device_name == "":
                 sessionInfo["DeviceName"] = device.device_name
             else:
-                sessionInfo["DeviceName"] = device.serial_number
-            sessionInfo["SessionFilename"] = session.session_source_filename
+                sessionInfo["DeviceName"] = device.getDeviceSerialNumber(key)
+            sessionInfo["SessionFilename"] = session.session_file_path.split(os.path.sep)[-1]
             sessionInfo["SessionID"] = session.deidentified_id
-
-            sessionInfo["AvailableRecording"] = ""
-            sessionInfo["AvailableRecording"] += "Realtime Streaming Data: " + str(models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseStream").count()) + "<br>"
-            sessionInfo["AvailableRecording"] += "Indefinite Streaming Data: " + str(models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="IndefiniteStream").count()) + "<br>"
-            sessionInfo["AvailableRecording"] += "BrainSense Survey Count: " + str(models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseSurvey").count()) + "<br>"
-            sessionInfo["AvailableRecording"] += "Therapy History Info: " + str(models.TherapyHistory.objects.filter(source_file=session.deidentified_id).count()) + "<br>"
-            sessionInfo["AvailableRecording"] += "# of Therapy History Changed: " + str(models.TherapyChangeLog.objects.filter(source_file=session.deidentified_id).count()) + "<br>"
-            sessionInfo["AvailableRecording"] += "# of Chronic Recording Info: " + str(models.ChronicSensingLFP.objects.filter(source_file=session.deidentified_id).count()) + "<br>"
+            sessionInfo["SessionTimestamp"] = session.session_date.timestamp()
+            sessionInfo["AvailableRecording"] = {
+                "BrainSenseStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseStream").count(),
+                "IndefiniteStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="IndefiniteStream").count(),
+                "BrainSenseSurvey": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseSurvey").count(),
+                "TherapyHistory": models.TherapyHistory.objects.filter(source_file=session.deidentified_id).count(),
+                "ChronicRecordings": models.ChronicSensingLFP.objects.filter(source_file=session.deidentified_id).count()
+            }
             sessions.append(sessionInfo)
     return sessions
 

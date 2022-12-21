@@ -172,6 +172,7 @@ class PerceptSession(models.Model):
     device_deidentified_id = models.UUIDField(default=uuid.uuid4)
     session_file_path = models.CharField(default="", max_length=255)
     session_source_filename = models.CharField(default="", max_length=255)
+    session_date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return str(self.deidentified_id)

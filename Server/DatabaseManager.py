@@ -1,5 +1,6 @@
 import os, sys
 from datetime import datetime
+import pytz
 
 from BRAVO import asgi
 from Backend import models
@@ -59,4 +60,21 @@ def processInput(argv):
                   therapy.therapy_details = newTherapy
                   therapy.save()
         
+      elif argv[2] == "Sessions":
+        if argv[3] == "All":
+          SessionFiles = models.PerceptSession.objects.all()
+        else:
+          SessionFiles = models.PerceptSession.objects.filter(device_deidentified_id=argv[3]).all()
+
+        for sessionFile in SessionFiles:
+          try:
+            JSON = Percept.decodeEncryptedJSON(sessionFile.session_file_path, key)
+          except:
+            print(sessionFile.session_file_path)
+            continue
+          
+          SessionDate = datetime.fromtimestamp(Percept.estimateSessionDateTime(JSON),tz=pytz.utc)
+          sessionFile.session_date = SessionDate
+          sessionFile.save()
+          
         return True

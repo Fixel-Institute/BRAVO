@@ -290,6 +290,10 @@ export const dictionary = {
       en: "Edit Device Information",
       zh: "修改脉冲发生器信息"
     },
+    UploadNewSession: {
+      en: "Upload New Sessions",
+      zh: "上传新数据"
+    },
     DeletePatient: {
       en: "Delete Patient Entry",
       zh: "修改病人信息"
@@ -537,6 +541,40 @@ export const dictionary = {
       }
     }
   },
+  SessionOverview: {
+    SessionList: {
+      en: "Session List",
+      zh: "Session List"
+    },
+    SessionDate: {
+      en: "Session Date",
+      zh: "Session Date"
+    },
+    SessionName: {
+      en: "JSON Filename",
+      zh: "JSON Filename"
+    },
+    SessionData: {
+      en: "Available Data",
+      zh: "Available Data"
+    },
+    Select: {
+      Session: {
+        en: "Select Session to View",
+        zh: "选择记录 - 对比频道"
+      },
+      Channel: {
+        en: "Select Channel to View",
+        zh: "查看频道 - 记录变迁"
+      },
+    },
+    Figure: {
+      BetaBand: {
+        en: "Beta Band",
+        zh: "β波段"
+      },
+    }
+  },
   PatientEvents: {
     Select: {
       NormalizeEventCount: {
@@ -693,6 +731,10 @@ export const dictionary = {
       en: "Chronic BrainSense Recordings",
       zh: "长期脑电记录"
     },
+    "session-overview": {
+      en: "Session Overview",
+      zh: "Session Overview"
+    },
     session: {
       en: "Clinic Session Reports",
       zh: "Clinic Session Reports"
@@ -766,6 +808,10 @@ export const dictionary = {
     ChronicRecordings: {
       en: "Chronic LFP Sensing",
       zh: "长期脑电记录"
+    },
+    SessionOverview: {
+      en: "Session Overview",
+      zh: "Session Overview"
     },
     TherapeuticPrediction: {
       en: "Therapy Prediction",

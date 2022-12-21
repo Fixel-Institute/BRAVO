@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from Backend import models
 
 from modules import Database, ImageDatabase
-from modules.Percept import Therapy, BrainSenseSurvey, BrainSenseEvent, BrainSenseStream, IndefiniteStream, ChronicBrainSense, TherapeuticPrediction
+from modules.Percept import Therapy, Sessions, BrainSenseSurvey, BrainSenseEvent, BrainSenseStream, IndefiniteStream, ChronicBrainSense, TherapeuticPrediction
 from utility.PythonUtility import uniqueList
 import json
 import numpy as np
@@ -309,6 +309,42 @@ class QueryChronicBrainSense(RestViews.APIView):
                 return Response(status=200, data=data)
 
             return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+
+        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+class QuerySessionOverview(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    def post(self, request):
+        if request.user.is_authenticated:
+            if not "id" in request.data:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            if not request.session["patient_deidentified_id"] == request.data["id"]:
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+            if Authority["Level"] == 0:
+                return Response(status=404)
+
+            elif Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
+                PatientID = request.data["id"]
+
+            elif Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
+                Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "ChronicLFPs")
+                PatientID = PatientInfo.authorized_patient_id
+
+            if "deleteSession" in request.data:
+                Sessions.deleteSessions(request.user, request.data["id"], [request.data["deleteSession"]], Authority)
+                return Response(status=200)
+
+            else:
+                data = dict()
+                data["AvailableSessions"] = Sessions.queryAvailableSessionFiles(request.user, request.data["id"], Authority)
+                return Response(status=200, data=data)
 
         return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 

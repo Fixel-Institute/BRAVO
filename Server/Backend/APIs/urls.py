@@ -30,6 +30,7 @@ urlpatterns = [
 	path('queryBrainSenseStreaming', Queries.QueryBrainSenseStreaming.as_view()),
 	path('queryIndefiniteStreaming', Queries.QueryIndefiniteStreaming.as_view()),
 	path('queryChronicBrainSense', Queries.QueryChronicBrainSense.as_view()),
+	path('querySessionOverview', Queries.QuerySessionOverview.as_view()),
 
 	path('queryPredictionModel', Queries.QueryPredictionModel.as_view()),
 	path('queryPatientEvents', Queries.QueryPatientEvents.as_view()),

@@ -1,3 +1,9 @@
+"""
+Database.py
+====================================
+The common Database-related queries.
+"""
+
 import os, sys, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.parent.resolve())
 

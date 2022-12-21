@@ -45,6 +45,7 @@ import BrainSenseSurvey from "views/Reports/BrainSenseSurvey";
 import BrainSenseStreaming from "views/Reports/BrainSenseStreaming";
 import IndefiniteStreaming from "views/Reports/IndefiniteStreaming";
 import ChronicBrainSense from "views/Reports/ChronicBrainSense";
+import SessionOverview from "views/Reports/SessionsOverview";
 
 import TherapeuticPrediction from "views/Experimental/TherapeuticPrediction";
 import PatientEvents from "views/Experimental/PatientEvents";
@@ -73,7 +74,7 @@ import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
 import FlashAutoIcon from '@mui/icons-material/FlashAuto';
 import PhotoIcon from '@mui/icons-material/Photo';
 import WatchIcon from '@mui/icons-material/Watch';
-import { AccessAlarm, People } from "@mui/icons-material";
+import { AccessAlarm, People, Article } from "@mui/icons-material";
 
 const routes = [
   {
@@ -161,6 +162,15 @@ const routes = [
         icon: <TimelineIcon style={{color: "white", margin: 0, padding: 0}}/>,
         route: "/reports/chronic-recordings",
         component: <ChronicBrainSense />,
+        identified: true,
+        deidentified: true
+      },
+      {
+        name: "SessionOverview",
+        key: "session-overview",
+        icon: <Article style={{color: "white", margin: 0, padding: 0}}/>,
+        route: "/reports/session-overview",
+        component: <SessionOverview />,
         identified: true,
         deidentified: true
       },
