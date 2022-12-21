@@ -3,6 +3,8 @@ import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
 from rest_framework.response import Response
 
+from django.views.decorators.csrf import ensure_csrf_cookie
+
 from modules import Database
 import json
 from copy import deepcopy
@@ -37,6 +39,8 @@ def formatRequestSession(session):
 
 class QuerySessionConfigs(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
+
+    @ensure_csrf_cookie
     def post(self, request):
         if not "ProcessingSettings" in request.session:
             request.session["ProcessingSettings"] = Database.retrieveProcessingSettings(request.session)
