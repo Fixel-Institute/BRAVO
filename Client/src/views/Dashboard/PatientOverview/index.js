@@ -27,6 +27,7 @@ import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
 import FlashAutoIcon from "@mui/icons-material/FlashAuto";
 import PhotoIcon from "@mui/icons-material/Photo";
 import WatchIcon from "@mui/icons-material/Watch";
+import ArticleIcon from '@mui/icons-material/Article';
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -34,6 +35,7 @@ import MDInput from "components/MDInput";
 import MDButton from "components/MDButton";
 
 import DatabaseLayout from "layouts/DatabaseLayout";
+import UploadDialog from "./UploadDialog";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
@@ -48,6 +50,7 @@ export default function PatientOverview() {
   const [patientInfo, setPatientInfo] = useState(false);
   const [editPatientInfo, setEditPatientInfo] = useState({show: false});
   const [editDeviceInfo, setEditDeviceInfo] = useState({show: false});
+  const [uploadNewJson, setUploadNewJson] = useState({show: false});
 
   const [alert, setAlert] = useState(null);
 
@@ -131,7 +134,8 @@ export default function PatientOverview() {
     {title: "BrainSenseSurvey", icon: <PollIcon/>, route: "/reports/survey"},
     {title: "BrainSenseStreaming", icon: <SensorsIcon/>, route: "/reports/stream"},
     {title: "IndefiniteStreaming", icon: <SensorsIcon/>, route: "/reports/multistream"},
-    {title: "ChronicRecordings", icon: <TimelineIcon/>, route: "/reports/chronic-recordings"}
+    {title: "ChronicRecordings", icon: <TimelineIcon/>, route: "/reports/chronic-recordings"},
+    {title: "SessionOverview", icon: <ArticleIcon/>, route: "/reports/session-overview"}
   ];
 
   const experimentals = [
@@ -205,8 +209,10 @@ export default function PatientOverview() {
                     </Grid>
                     <Grid item xs={6}>
                       <Divider variant="middle" />
-                      <MDButton variant="outlined" color="info">
-                        {dictionary.PatientOverview.EditDeviceInfo[language]}
+                      <MDButton variant="outlined" color="info"
+                        onClick={() => setUploadNewJson({show: true})}
+                      >
+                        {dictionary.PatientOverview.UploadNewSession[language]}
                       </MDButton>
                     </Grid>
                   </Grid>
@@ -220,9 +226,6 @@ export default function PatientOverview() {
                   </MDTypography>
                 </MDBox>
                 <DialogContent>
-                  <MDTypography variant="p">
-                    To upload data in Research-account (Deidentified), a deidentified patient ID must be created.
-                  </MDTypography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                       <TextField
@@ -492,6 +495,10 @@ export default function PatientOverview() {
           </Grid>
         </MDBox>
       </MDBox>
+
+      <Dialog open={Boolean(uploadNewJson.show)} onClose={() => setUploadNewJson({show: false})}>
+        <UploadDialog availableDevices={patientInfo.Devices ? patientInfo.Devices.map((device) => ({label: device.ID, value: device.ID})) : []} onCancel={() => setUploadNewJson({show: false})} />
+      </Dialog>
     </DatabaseLayout>
   );
 };
