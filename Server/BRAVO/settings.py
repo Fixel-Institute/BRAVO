@@ -53,8 +53,8 @@ else:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-print(CSRF_TRUSTED_ORIGINS)
 ALLOWED_HOSTS = ['localhost', os.environ.get('SERVER_ADDRESS')]
+CORS_ALLOWED_ORIGINS = ['http://localhost:3000']
 
 # Application definition
 INSTALLED_APPS = [
@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'Backend',
     'rest_framework',
     'knox',
@@ -70,6 +71,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.gzip.GZipMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
