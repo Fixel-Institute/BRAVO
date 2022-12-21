@@ -37,6 +37,11 @@ def formatRequestSession(session):
 
     return formattedSession
 
+class CSRFToken(RestViews.APIView):
+    @ensure_csrf_cookie
+    def get(self, request):
+        return Response(status=200)
+
 class QuerySessionConfigs(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
 

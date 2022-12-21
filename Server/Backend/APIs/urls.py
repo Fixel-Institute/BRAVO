@@ -14,6 +14,7 @@ urlpatterns = [
 	path('uploadSessionFiles', Upload.SessionUpload.as_view()),
 	path('deleteSessionFiles', Upload.SessionRemove.as_view()),
 
+	path('csrfToken', Session.CSRFToken.as_view()),
 	path('updateSession', Session.UpdateSessionConfig.as_view()),
 	path('querySessions', Session.QuerySessionConfigs.as_view()),
 	path('setPatientID', Session.SetPatientID.as_view()),
