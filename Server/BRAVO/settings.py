@@ -57,12 +57,17 @@ ALLOWED_HOSTS = ['localhost', os.environ.get('SERVER_ADDRESS')]
 CORS_ALLOWED_ORIGINS = ['http://localhost:3000']
 
 CORS_ALLOW_HEADERS = [
+    'content-type',
+    'x-xsrf-token',
     'x-csrftoken',
     'csrfmiddlewaretoken',
     'credentials'
 ]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'None'
 
 
 # Application definition
