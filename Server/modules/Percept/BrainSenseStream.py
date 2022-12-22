@@ -156,7 +156,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
             if data["Timestamp"] in includedRecording:
                 continue
 
-            if data["Duration"] < 5:
+            if data["Duration"] < 30:
                 continue
 
             data["RecordingID"] = recording.recording_id

@@ -1,7 +1,7 @@
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 import json
 from copy import deepcopy

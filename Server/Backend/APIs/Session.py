@@ -1,9 +1,8 @@
 from email.policy import default
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-
-from django.views.decorators.csrf import ensure_csrf_cookie
 
 from modules import Database
 import json
@@ -37,22 +36,15 @@ def formatRequestSession(session):
 
     return formattedSession
 
-class CSRFToken(RestViews.APIView):
-    @ensure_csrf_cookie
-    def get(self, request):
-        return Response(status=200)
-
 class QuerySessionConfigs(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
-    @ensure_csrf_cookie
+    permission_classes = [AllowAny]
     def post(self, request):
-        if not "ProcessingSettings" in request.session:
-            request.session["ProcessingSettings"] = Database.retrieveProcessingSettings(request.session)
-            request.session.modified = True
+        if not "ProcessingSettings" in request.user.configuration:
+            request.user.configuration["ProcessingSettings"] = Database.retrieveProcessingSettings(request.user.configuration)
+            request.user.save()
 
-        userSession = formatRequestSession(request.session)
-
+        userSession = formatRequestSession(request.user.configuration)
         if request.user.is_authenticated:
             user = request.user
             return Response(status=200, data={"session": userSession, "user": Database.extractUserInfo(user)})
@@ -61,15 +53,17 @@ class QuerySessionConfigs(RestViews.APIView):
 
 class UpdateSessionConfig(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         for key in request.data.keys():
             if key in ["language","miniSidenav","darkMode"]:
-                request.session[key] = request.data[key]
-        request.session.modified = True
+                request.user.configuration[key] = request.data[key]
+        request.user.save()
         return Response(status=200)
 
 class SetPatientID(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if request.user.is_authenticated:
             Authority = {}
@@ -78,13 +72,9 @@ class SetPatientID(RestViews.APIView):
                 return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
             if Authority["Level"] == 1:
-                request.session["patient_deidentified_id"] = request.data["id"]
-                request.session.modified = True
                 return Response(status=200)
 
             elif Authority["Level"] == 2:
-                request.session["patient_deidentified_id"] = request.data["id"]
-                request.session.modified = True
                 return Response(status=200)
 
         return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})

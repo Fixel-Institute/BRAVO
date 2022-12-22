@@ -58,7 +58,6 @@ class UserLogin(KnoxLoginView):
     def post(self, request, format=None):
         if request.user.is_mobile:
             return super(UserLogin, self).post(request, format=None)
-
         return Response(status=401)
 
 class UserRefresh(RestViews.APIView):

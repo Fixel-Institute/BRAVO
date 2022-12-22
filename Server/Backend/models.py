@@ -35,6 +35,7 @@ class PlatformUser(AbstractBaseUser):
     unique_user_id = models.UUIDField(default=uuid.uuid1, unique=True, editable=False)
 
     register_date = models.DateTimeField(default=timezone.now)
+    configuration = models.JSONField(default=dict)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["user_name", "institute"]

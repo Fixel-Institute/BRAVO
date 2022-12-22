@@ -55,20 +55,13 @@ else:
 
 ALLOWED_HOSTS = ['localhost', os.environ.get('SERVER_ADDRESS')]
 CORS_ALLOWED_ORIGINS = ['http://localhost:3000']
-
 CORS_ALLOW_HEADERS = [
     'content-type',
-    'x-xsrf-token',
     'x-csrftoken',
     'csrfmiddlewaretoken',
-    'credentials'
+    'credentials',
+    'authorization'
 ]
-CORS_ALLOW_CREDENTIALS = True
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_SAMESITE = 'None'
-
 
 # Application definition
 INSTALLED_APPS = [
@@ -77,11 +70,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders',
-    'Backend',
-    'rest_framework',
     'knox',
-    'channels'
+    'corsheaders',
+    'rest_framework',
+    'channels',
+    'Backend',
 ]
 
 MIDDLEWARE = [
@@ -116,7 +109,6 @@ TEMPLATES = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
         'knox.auth.TokenAuthentication',
     ]
 }

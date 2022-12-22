@@ -3,6 +3,9 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAuthenticated
+
+from knox.views import LoginView as KnoxLoginView
 
 from modules import Database
 from Backend import models
@@ -18,6 +21,7 @@ def validateEmail(email):
     return re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', email)
 
 class UserRegister(RestViews.APIView):
+    permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
         if "Email" in request.data and "Password" in request.data and "UserName" in request.data and "Institute" in request.data:
@@ -49,7 +53,8 @@ class UserRegister(RestViews.APIView):
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
-class UserAuth(RestViews.APIView):
+class UserAuth(KnoxLoginView):
+    permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
         if "Email" in request.data and "Password" in request.data:
@@ -62,30 +67,31 @@ class UserAuth(RestViews.APIView):
                     models.UserConfigurations(user_id=user.unique_user_id).save()
 
                 login(request, user)
-                request.session.set_expiry(36000)
-                return Response(status=200, data={"user": Database.extractUserInfo(user)})
+                authResponse = super(UserAuth, self).post(request, format=None)
+                authResponse.data.update({
+                    "user": Database.extractUserInfo(user)
+                })
+                return Response(status=200, data=authResponse.data)
             else:
                 return Response(status=400, data={"code": ERROR_CODE["INCORRECT_PASSWORD_OR_USERNAME"]})
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class FetchAuthorizedInstitute(RestViews.APIView):
+    permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
         return Response(status=200, data={"institutes": Database.extractInstituteInfo()})
 
 class UserSignout(RestViews.APIView):
+    permission_classes = [IsAuthenticated,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
-        if not request.user.is_authenticated:
-            return Response(status=200)
-
         logout(request)
         return Response(status=200)
 
 class Handshake(RestViews.APIView):
+    permission_classes = [IsAuthenticated,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
-        if not request.user.is_authenticated:
-            return Response(status=403)
         return Response(status=200)
