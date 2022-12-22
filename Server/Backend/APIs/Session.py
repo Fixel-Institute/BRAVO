@@ -40,25 +40,26 @@ class QuerySessionConfigs(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [AllowAny]
     def post(self, request):
-        if not "ProcessingSettings" in request.user.configuration:
-            request.user.configuration["ProcessingSettings"] = Database.retrieveProcessingSettings(request.user.configuration)
-            request.user.save()
-
-        userSession = formatRequestSession(request.user.configuration)
         if request.user.is_authenticated:
-            user = request.user
-            return Response(status=200, data={"session": userSession, "user": Database.extractUserInfo(user)})
+            if not "ProcessingSettings" in request.user.configuration:
+                request.user.configuration["ProcessingSettings"] = Database.retrieveProcessingSettings(request.user.configuration)
+                request.user.save()
 
+            userSession = formatRequestSession(request.user.configuration)
+            return Response(status=200, data={"session": userSession, "user": Database.extractUserInfo(request.user)})
+        
+        userSession = formatRequestSession({})
         return Response(status=200, data={"session": userSession, "user": {}})
 
 class UpdateSessionConfig(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     def post(self, request):
-        for key in request.data.keys():
-            if key in ["language","miniSidenav","darkMode"]:
-                request.user.configuration[key] = request.data[key]
-        request.user.save()
+        if request.user.is_authenticated:
+            for key in request.data.keys():
+                if key in ["language","miniSidenav","darkMode"]:
+                    request.user.configuration[key] = request.data[key]
+            request.user.save()
         return Response(status=200)
 
 class SetPatientID(RestViews.APIView):

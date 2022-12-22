@@ -19,7 +19,7 @@ export const SessionController = (function () {
     authToken = token;
   };
 
-  const query = async (url, form, config) => {
+  const query = (url, form, config) => {
     return axios.post(server + url, form, {
       headers: {
         "Content-Type": "application/json",
