@@ -128,7 +128,7 @@ function WearableStream() {
       navigate("/dashboard", {replace: true});
     } else {
       SessionController.query("/mobile/wearable/queryPairedDevice", {
-        PatientID: patientID,
+        id: patientID,
       }).then((response) => {
         setPairedDevices(response.data)
       }).catch((error) => {
@@ -210,7 +210,6 @@ function WearableStream() {
       });
 
       return () => {
-        console.log("close")
         socketHandler.ws.close();
       }
     }
@@ -218,7 +217,7 @@ function WearableStream() {
 
   const handlePairing = () => {
     SessionController.query("/mobile/wearable/verifyDevicePairing", {
-      PatientID: patientID,
+      id: patientID,
       PairingCode: pairingState.pairingId
     }).then((response) => {
       setPairingState({...pairingState, state: false, pairingId: ""});

@@ -75,8 +75,9 @@ function ImageVisualization() {
       navigate("/dashboard", {replace: true});
     } else {
       setAlert(<LoadingProgress/>);
-      SessionController.query("/api/queryImageDirectory").then((response) => {
-        console.log(response.data)
+      SessionController.query("/api/queryImageDirectory", {
+        id: patientID
+      }).then((response) => {
         setAvailableItems(response.data);
         setAlert(null);
       }).catch((error) => {

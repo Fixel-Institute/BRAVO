@@ -31,7 +31,6 @@ function rgbaToHex (r,g,b,a) {
 export const parseBinarySTL = (data) => {
   const reader = new DataView( data );
   const faces = reader.getUint32( 80, true );
-  console.log(faces)
 
   let r, g, b, hasColors = false, colors;
   let defaultR, defaultG, defaultB, alpha;

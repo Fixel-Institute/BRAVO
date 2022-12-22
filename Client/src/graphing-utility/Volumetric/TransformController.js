@@ -7,7 +7,6 @@ function TransformController({transformMatrix}) {
     scene.matrixAutoUpdate = false;
     scene.matrixWorld = transformMatrix;
     scene.updateWorldMatrix();
-    console.log(scene);
   }, [transformMatrix])
 }
 

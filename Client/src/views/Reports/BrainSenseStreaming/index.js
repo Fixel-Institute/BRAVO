@@ -79,7 +79,6 @@ function BrainSenseStreaming() {
       else setTimeFrequencyPlotHeight(4*200);
       setChannelInfos(ChannelInfos);
       setDataToRender(response.data);
-      console.log(response.data)
       setAlert(null);
     }).catch((error) => {
       SessionController.displayError(error, setAlert);

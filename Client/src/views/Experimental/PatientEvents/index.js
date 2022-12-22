@@ -50,7 +50,9 @@ function PatientEvents() {
       navigate("/dashboard", {replace: true});
     } else {
       setAlert(<LoadingProgress/>);
-      SessionController.query("/api/queryPatientEvents").then((response) => {
+      SessionController.query("/api/queryPatientEvents", {
+        id: patientID
+      }).then((response) => {
         setData(response.data.EventPSDs);
         setAlert(null);
       }).catch((error) => {

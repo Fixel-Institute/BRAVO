@@ -8,20 +8,26 @@ import MuiAlertDialog from "components/MuiAlertDialog"
 //import { Manager } from "socket.io-client"
 
 export const SessionController = (function () {
-  var synced = false;
+  let server = "https://bravo-server.jcagle.solutions";
 
-  var session = {language: "en"};
-  var user = {};
+  let synced = false;
+  let session = {language: "en"};
+  let user = {};
+  let authToken = "";
 
-  const getCSRFToken = () => {
-    return cookie.load("csrftoken");
+  const setAuthToken = (token) => {
+    authToken = token;
   };
 
   const query = async (url, form, config) => {
-    axios.defaults.headers.post["X-CSRFToken"] = cookie.load("csrftoken");
-    axios.defaults.headers.post["Content-Type"] = "application/json";
-    axios.defaults.headers.post["Accept"] = "application/json";
-    return axios.post(url, form, config);
+    return axios.post(server + url, form, {
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": authToken === "" ? null : "Token " + authToken,
+        ...config,
+      }
+    });
   };
 
   const displayError = (error, setAlert) => {
@@ -141,12 +147,15 @@ export const SessionController = (function () {
     }
   };
 
-  const getPatientInfo = async () => {
-    return query("/api/queryPatientInfo", {id: session.patientID});
+  const getPatientInfo = (patientID) => {
+    return query("/api/queryPatientInfo", {
+      id: patientID
+    });
   };
 
   return {
-    getCSRFToken: getCSRFToken,
+    setAuthToken: setAuthToken,
+
     query: query,
     displayError: displayError,
     syncSession: syncSession,

@@ -85,12 +85,6 @@ function getPointerCoordinate(mouse, camera) {
 
   vec.set(mouse.x, mouse.y, 0.5);
   vec.unproject( camera );
-  /*
-  console.log(vec);
-  vec.sub( camera.position ).normalize();
-  var distance = - camera.position.z / vec.z;
-  pos.copy( camera.position ).add( vec.multiplyScalar( distance ) );
-  */
   return vec;
 }
 
@@ -207,8 +201,6 @@ function VolumetricSlice({data, axis, matrix, cameraLock}) {
 }
 
 function VolumetricObject({data, matrix, cameraLock}) {
-  console.log(data)
-
   const coordinateTransformation = new Matrix4();
   coordinateTransformation.set(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
   

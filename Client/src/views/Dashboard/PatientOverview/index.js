@@ -58,7 +58,7 @@ export default function PatientOverview() {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
-      SessionController.getPatientInfo().then((response) => {
+      SessionController.getPatientInfo(patientID).then((response) => {
         setEditPatientInfo({...editPatientInfo, ...response.data});
         setPatientInfo(response.data)
       }).catch((error) => {

@@ -20,8 +20,6 @@ function CircadianRhythm({dataToRender, therapyInfo, height, figureTitle}) {
   const handleGraphing = (data) => {
     fig.clearData();
 
-    console.log(data)
-
     const currentTimestamp = new Date();
     if (fig.fresh) {
       var ax = fig.subplots(1, 1, {sharex: true, sharey: true});

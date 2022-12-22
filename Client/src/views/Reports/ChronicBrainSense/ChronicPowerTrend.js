@@ -27,8 +27,7 @@ function ChronicPowerTrend({dataToRender, events, height, figureTitle}) {
       const title = data[k]["Device"] + ` (${dictionaryLookup(dictionary.FigureStandardText, side, language)}) ${dictionaryLookup(dictionary.BrainRegions, target, language)}`;
       if (!axisTitles.includes(title)) axisTitles.push(title)
     }
-    console.log(axisTitles)
-
+    
     if (fig.fresh) {
       var ax = fig.subplots(axisTitles.length, 1, {sharex: true, sharey: true});
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15}, ax[ax.length-1]);

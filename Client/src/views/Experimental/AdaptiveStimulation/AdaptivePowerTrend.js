@@ -20,8 +20,6 @@ function AdaptivePowerTrend({dataToRender, events, height, figureTitle}) {
   const handleGraphing = (data) => {
     fig.clearData();
 
-    console.log(data)
-
     if (fig.fresh) {
       var ax = fig.subplots(data.length*2, 1, {sharex: true, sharey: true});
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15}, ax[ax.length-1]);

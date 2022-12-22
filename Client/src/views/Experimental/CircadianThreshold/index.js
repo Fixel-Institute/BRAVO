@@ -51,10 +51,6 @@ function CircadianThreshold() {
     }
   }, [patientID]);
 
-  useEffect(() => {
-    console.log(data)
-  }, [data]);
-
   const extractCircadianRhythm = (therapy,side) => {
     setAlert(<LoadingProgress/>);
     const channels = formatStimulationChannel(therapy[side].Channel);
