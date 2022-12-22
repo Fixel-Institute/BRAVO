@@ -96,13 +96,13 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
           <MDTypography variant="p">
             To upload data in Research-account (Deidentified), a deidentified patient ID must be created, or use {" "}
           </MDTypography>
-          <MDButton variant={"link"} style={{padding: 0}} onClick={() => setBatchUpload(true)}> {"Batch Upload with Patient Lookup Table"} </MDButton>
+          <MDButton style={{padding: 0}} onClick={() => setBatchUpload(true)}> {"Batch Upload with Patient Lookup Table"} </MDButton>
         </>
         ) : (<>
           <MDTypography variant="p">
             Upload Multiple Files with identifier that will automatically deidentified by Lookup Table, or use {" "}
           </MDTypography>
-          <MDButton variant={"link"} style={{padding: 0}} onClick={() => setBatchUpload(false)}> {"Manual Patient Data Upload"} </MDButton>
+          <MDButton style={{padding: 0}} onClick={() => setBatchUpload(false)}> {"Manual Patient Data Upload"} </MDButton>
         </>
         )}
 
@@ -161,14 +161,14 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
         )}
         <MDBox pt={2}>
           <MDDropzone options={{
-            url: window.location.origin + "/api/uploadSessionFiles",
+            url: SessionController.getServer() + "/api/uploadSessionFiles",
             paramName: "file",
             addRemoveLinks: true,
             acceptedFiles: ".json",
             autoDiscover: false,
             autoProcessQueue: false,
             uploadMultiple: false,
-            headers: { 'X-CSRFToken': SessionController.getCSRFToken() },
+            headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
             parraleleupload: 1,
           }} ref={dropzoneRef}>
           </MDDropzone>
@@ -178,14 +178,14 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
       <DialogContent>
         <MDBox pt={2}>
           <MDDropzone options={{
-            url: window.location.origin + "/api/uploadSessionFiles",
+            url: SessionController.getServer() + "/api/uploadSessionFiles",
             paramName: "file",
             addRemoveLinks: true,
             acceptedFiles: ".json",
             autoDiscover: false,
             autoProcessQueue: false,
             uploadMultiple: false,
-            headers: { 'X-CSRFToken': SessionController.getCSRFToken() },
+            headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
             parraleleupload: 1,
           }} ref={dropzoneRef}>
           </MDDropzone>

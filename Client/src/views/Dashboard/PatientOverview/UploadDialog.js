@@ -82,7 +82,7 @@ export default function UploadDialog({availableDevices, onCancel}) {
           autoDiscover: false,
           autoProcessQueue: false,
           uploadMultiple: false,
-          headers: { 'X-CSRFToken': SessionController.getCSRFToken() },
+          headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
           parraleleupload: 1,
         }} ref={dropzoneRef}>
         </MDDropzone>
