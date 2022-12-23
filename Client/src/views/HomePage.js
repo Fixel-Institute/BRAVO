@@ -11,7 +11,6 @@ import {
   MuiLink,
 } from "@mui/material";
 
-// Material Dashboard 2 PRO React components
 import MDTypography from "components/MDTypography";
 
 // Layout

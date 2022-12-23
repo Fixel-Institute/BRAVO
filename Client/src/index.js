@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "App";
 
-// Material Dashboard 2 PRO React Context Provider
 import { PlatformContextProvider } from "context.js";
 
 // Session Sync

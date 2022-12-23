@@ -21,7 +21,6 @@ import PropTypes from "prop-types";
 // Custom styles for MDTypography
 import MDTypographyRoot from "components/MDTypography/MDTypographyRoot";
 
-// Material Dashboard 2 PRO React contexts
 import { usePlatformContext } from "context";
 
 const MDTypography = forwardRef(

@@ -38,16 +38,13 @@ import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
 import LoginIcon from '@mui/icons-material/Login';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
 
-// Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 
-// Material Dashboard 2 PRO React TS examples components
 import DefaultNavbarDropdown from "components/Navbars/DefaultNavbar/DefaultNavbarDropdown";
 import DefaultNavbarMobile from "components/Navbars/DefaultNavbar/DefaultNavbarMobile";
 
-// Material Dashboard 2 PRO React TS Base Styles
 import breakpoints from "assets/theme/base/breakpoints";
 
 // BRAVO Context

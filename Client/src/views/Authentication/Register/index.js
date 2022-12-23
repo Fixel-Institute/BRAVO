@@ -9,7 +9,6 @@ import {
   Checkbox
 } from "@mui/material";
 
-// Material Dashboard 2 PRO React components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";

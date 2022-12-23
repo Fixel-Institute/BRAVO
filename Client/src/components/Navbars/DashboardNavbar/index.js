@@ -28,19 +28,17 @@ import {
   Toolbar,
   Icon,
   IconButton,
-  Menu
+  Menu,
+  MenuItem
 } from "@mui/material";
 import TranslateIcon from '@mui/icons-material/Translate';
 import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
 
-// Material Dashboard 2 PRO React components
 import MDBox from "components/MDBox";
 import MDInput from "components/MDInput";
 import MDBadge from "components/MDBadge";
 
-// Material Dashboard 2 PRO React examples
 import Breadcrumbs from "components/Breadcrumbs";
-import NotificationItem from "components/Items/NotificationItem";
 
 // Custom styles for DashboardNavbar
 import {
@@ -55,6 +53,7 @@ import {
 import { usePlatformContext, setContextState } from "context";
 import { dictionary } from "assets/translation";
 import { SessionController } from "database/session-control";
+import MDTypography from "components/MDTypography";
 
 function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
   const navigate = useNavigate();
@@ -123,9 +122,18 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       onClose={handleCloseMenu}
       sx={{ mt: 2 }}
     >
-      <NotificationItem icon={<i className="fa-solid fa-address-card"></i>} title={dictionary.SimplifiedNavbar.Profile[language]} />
-      <NotificationItem icon={<i className="fa-solid fa-arrow-right-from-bracket"></i>} title={dictionary.SimplifiedNavbar.Logout[language]} 
-        onClick={() => logoutUser()}/>
+      <MenuItem >
+        <i className="fa-solid fa-address-card" style={{paddingRight: 15}}></i>
+        <MDTypography variant="button" fontWeight="regular" color="text">
+          {dictionary.SimplifiedNavbar.Profile[language]}
+        </MDTypography>
+      </MenuItem>
+      <MenuItem onClick={() => logoutUser()}>
+        <i className="fa-solid fa-arrow-right-from-bracket" style={{paddingRight: 15}}></i>
+        <MDTypography variant="button" fontWeight="regular" color="text">
+          {dictionary.SimplifiedNavbar.Logout[language]}
+        </MDTypography>
+      </MenuItem>
     </Menu>
   );
 
@@ -152,7 +160,13 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       sx={{ mt: 2 }}
     >
       {["English","中文"].map((lang) => (
-        <NotificationItem key={lang} title={lang} icon={<Icon sx={{ mr: 1 }}><ChangeCircleIcon/></Icon>} onClick={() => setLanguage(lang)}/>
+
+        <MenuItem key={lang} onClick={() => setLanguage(lang)}>
+          <Icon sx={{ mr: 1 }}><ChangeCircleIcon/></Icon>
+          <MDTypography variant="button" fontWeight="regular" color="text">
+            {lang}
+          </MDTypography>
+        </MenuItem>
       ))}
     </Menu>
   );

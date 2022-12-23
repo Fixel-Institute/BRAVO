@@ -1,20 +1,5 @@
-/**
-=========================================================
-* Material Dashboard 2 PRO React - v2.1.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/material-dashboard-pro-react
-* Copyright 2022 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
-
 /** 
-  All of the routes for the Material Dashboard 2 PRO React are added here,
+  All of the routes for the Material Dashboard 2 React are added here,
   You can add a new route, customize the routes and delete the routes here.
 
   Once you add a new route on this file it will be visible automatically on
@@ -55,7 +40,7 @@ import ImageVisualization from "views/Experimental/ImageVisualization";
 import WearableStream from "views/Experimental/WearableStream";
 
 
-// Material Dashboard 2 PRO React components
+// Material Dashboard 2 React components
 import MDAvatar from "components/MDAvatar";
 
 // @mui icons
