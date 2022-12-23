@@ -25,35 +25,41 @@ import Icon from "@mui/material/Icon";
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import MDButton from "components/MDButton";
 
-function DefaultNavbarLink({ icon, name, route, light }) {
+function DefaultNavbarLink({ icon, name, route, light, onClick, collapse }) {
   return (
     <MDBox
-      component={Link}
-      to={route}
+      component={onClick ? null : Link}
+      to={onClick ? null : route}
       mx={1}
       p={1}
       display="flex"
       alignItems="center"
+      justifyContent="space-between"
+      onClick={onClick}
       sx={{ cursor: "pointer", userSelect: "none" }}
     >
-      <Icon
-        sx={{
-          color: ({ palette: { white, secondary } }) => (light ? white.main : secondary.main),
-          verticalAlign: "middle",
-        }}
-      >
-        {icon}
-      </Icon>
-      <MDTypography
-        variant="button"
-        fontWeight="regular"
-        color={light ? "white" : "dark"}
-        textTransform="capitalize"
-        sx={{ width: "100%", lineHeight: 0 }}
-      >
-        &nbsp;{name}
-      </MDTypography>
+      <MDBox>
+        <Icon
+          sx={{
+            color: ({ palette: { white, secondary } }) => (light ? white.main : secondary.main),
+            verticalAlign: "middle",
+          }}
+        >
+          {icon}
+        </Icon>
+        <MDTypography
+          variant="button"
+          fontWeight="regular"
+          color={light ? "white" : "dark"}
+          textTransform="capitalize"
+          sx={{ width: "100%", lineHeight: 0 }}
+        >
+          &nbsp;{name}
+        </MDTypography>
+      </MDBox>
+      {collapse}
     </MDBox>
   );
 }
@@ -62,7 +68,6 @@ function DefaultNavbarLink({ icon, name, route, light }) {
 DefaultNavbarLink.propTypes = {
   icon: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
-  route: PropTypes.string.isRequired,
   light: PropTypes.bool.isRequired,
 };
 
