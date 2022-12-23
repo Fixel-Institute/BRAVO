@@ -1,10 +1,9 @@
-/* eslint-disable no-param-reassign */
 /**
 =========================================================
-* Material Dashboard 2 PRO React TS - v1.0.0
+* Material Dashboard 2 React - v2.1.0
 =========================================================
 
-* Product Page: https://www.creative-tim.com/product/material-dashboard-2-pro-react-ts
+* Product Page: https://www.creative-tim.com/product/material-dashboard-react
 * Copyright 2022 Creative Tim (https://www.creative-tim.com)
 
 Coded by www.creative-tim.com
@@ -118,9 +117,12 @@ function DefaultNavbar({ routes, brand, transparent, light }) {
         borderRadius="lg"
         shadow={transparent ? "none" : "md"}
         color={light ? "white" : "dark"}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
         position="absolute"
         left={0}
-        zIndex={99}
+        zIndex={3}
         sx={({
           palette: { transparent: transparentColor, white, background },
           functions: { rgba },
@@ -288,8 +290,11 @@ function DefaultNavbar({ routes, brand, transparent, light }) {
             <MDButton
               name={"Documentation"}
               size="small"
-              component={Link}
-              to={"/documentation"}
+              href={"https://bravo-documentation.jcagle.solutions"}
+              onClick={(event) => {
+                event.currentTarget.blur();
+              }}
+              target={"_blank"}
               sx={{
                 backgroundColor: "#11111177",
                 color: "white !important",
@@ -358,8 +363,6 @@ DefaultNavbar.propTypes = {
         "error",
         "dark",
         "light",
-        "default",
-        "white",
       ]),
       label: PropTypes.string.isRequired,
     }),
