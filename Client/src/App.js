@@ -8,11 +8,9 @@ import {
   Icon,
 } from "@mui/material";
 
-// Material Dashboard 2 PRO React components
 import MDBox from "components/MDBox";
 import Sidenav from "components/Sidenav";
 
-// Material Dashboard 2 PRO React themes
 import theme from "assets/theme";
 import themeDark from "assets/theme-dark";
 

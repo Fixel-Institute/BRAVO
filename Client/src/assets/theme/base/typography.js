@@ -13,12 +13,6 @@ Coded by www.creative-tim.com
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-/**
- * The base typography styles for the Material Dashboard 2 PRO React.
- * You can add new typography style using this file.
- * You can customized the typography styles for the entire Material Dashboard 2 PRO React using thie file.
- */
-
 // Material Dashboard 2 React Base Styles
 import colors from "assets/theme/base/colors";
 
