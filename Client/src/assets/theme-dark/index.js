@@ -1,9 +1,9 @@
 /**
 =========================================================
-* Material Dashboard 2 PRO React - v2.1.0
+* Material Dashboard 2 React - v2.1.0
 =========================================================
 
-* Product Page: https://www.creative-tim.com/product/material-dashboard-pro-react
+* Product Page: https://www.creative-tim.com/product/material-dashboard-react
 * Copyright 2022 Creative Tim (https://www.creative-tim.com)
 
 Coded by www.creative-tim.com
@@ -17,7 +17,7 @@ Coded by www.creative-tim.com
 import { createTheme } from "@mui/material/styles";
 // import Fade from "@mui/material/Fade";
 
-// Material Dashboard 2 PRO React base styles
+// Material Dashboard 2 React base styles
 import colors from "assets/theme-dark/base/colors";
 import breakpoints from "assets/theme-dark/base/breakpoints";
 import typography from "assets/theme-dark/base/typography";
@@ -25,14 +25,14 @@ import boxShadows from "assets/theme-dark/base/boxShadows";
 import borders from "assets/theme-dark/base/borders";
 import globals from "assets/theme-dark/base/globals";
 
-// Material Dashboard 2 PRO React helper functions
+// Material Dashboard 2 React helper functions
 import boxShadow from "assets/theme-dark/functions/boxShadow";
 import hexToRgb from "assets/theme-dark/functions/hexToRgb";
 import linearGradient from "assets/theme-dark/functions/linearGradient";
 import pxToRem from "assets/theme-dark/functions/pxToRem";
 import rgba from "assets/theme-dark/functions/rgba";
 
-// Material Dashboard 2 PRO React components base styles for @mui material components
+// Material Dashboard 2 React components base styles for @mui material components
 import sidenav from "assets/theme-dark/components/sidenav";
 import list from "assets/theme-dark/components/list";
 import listItem from "assets/theme-dark/components/list/listItem";
