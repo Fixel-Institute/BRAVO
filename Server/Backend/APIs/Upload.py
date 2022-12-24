@@ -1,5 +1,6 @@
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
 import os, sys, pathlib
@@ -23,7 +24,7 @@ from modules.Percept import Sessions
 
 class DeidentificationTable(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if not request.user.is_authenticated:
             return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
@@ -58,11 +59,8 @@ class DeidentificationTable(RestViews.APIView):
 
 class SessionUpload(RestViews.APIView):
     parser_classes = [RestParsers.MultiPartParser, RestParsers.FormParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
-        if not request.user.is_authenticated:
-            return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-
         if not "file" in request.data:
             return Response(status=403, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 

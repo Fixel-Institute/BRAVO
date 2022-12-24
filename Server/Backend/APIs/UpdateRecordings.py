@@ -1,6 +1,7 @@
 from email.policy import default
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
 from Backend import models
@@ -24,11 +25,8 @@ key = os.environ.get('ENCRYPTION_KEY')
 
 class PatientInformationUpdate(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
-        if not request.user.is_authenticated:
-            return Response(status=404)
-
         if "createNewPatientInfo" in request.data:
             if "StudyID" in request.data and "PatientID" in request.data and "Diagnosis" in request.data and "DeviceName" in request.data:
                 if request.data["StudyID"] == "" or request.data["PatientID"] == "":
@@ -55,8 +53,6 @@ class PatientInformationUpdate(RestViews.APIView):
                     device.authority_user = request.user.email
                     device.save()
                     patient.addDevice(str(device.deidentified_id))
-                    request.session["patient_deidentified_id"] = str(patient.deidentified_id)
-                    request.session.modified = True
                     data["deviceID"] = str(device.deidentified_id)
 
                 patient.save()

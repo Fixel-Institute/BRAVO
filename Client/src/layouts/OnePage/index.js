@@ -3,10 +3,8 @@ import PropTypes from "prop-types";
 // @mui material components
 import Grid from "@mui/material/Grid";
 
-// Material Dashboard 2 PRO React components
 import MDBox from "components/MDBox";
 
-// Material Dashboard 2 PRO React examples
 import DefaultNavbar from "components/Navbars/DefaultNavbar";
 import PageLayout from "./PageLayout";
 

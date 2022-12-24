@@ -17,6 +17,15 @@ export const SessionController = (function () {
 
   const setAuthToken = (token) => {
     authToken = token;
+    localStorage.setItem("accessToken", authToken);
+  };
+
+  const getAuthToken = () => {
+    return authToken;
+  };
+
+  const getServer = () => {
+    return server;
   };
 
   const query = (url, form, config) => {
@@ -61,6 +70,10 @@ export const SessionController = (function () {
 
   const syncSession = async () => {
     try {
+      if (localStorage.getItem("accessToken")) {
+        authToken = localStorage.getItem("accessToken");
+      }
+      
       const response = await query("/api/querySessions", {});
       session = response.data.session;
       user = response.data.user;
@@ -127,6 +140,10 @@ export const SessionController = (function () {
 
   const nullifyUser = () => {
     user = {};
+    authToken = "";
+    if (localStorage.getItem("accessToken")) {
+      localStorage.setItem("accessToken", authToken);
+    }
   };
 
   const setUser = (account) => {
@@ -155,6 +172,8 @@ export const SessionController = (function () {
 
   return {
     setAuthToken: setAuthToken,
+    getAuthToken: getAuthToken,
+    getServer: getServer,
 
     query: query,
     displayError: displayError,

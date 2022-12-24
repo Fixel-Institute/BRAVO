@@ -1,9 +1,9 @@
 /**
 =========================================================
-* Material Dashboard 2 PRO React - v2.1.0
+* Material Dashboard 2 React - v2.1.0
 =========================================================
 
-* Product Page: https://www.creative-tim.com/product/material-dashboard-pro-react
+* Product Page: https://www.creative-tim.com/product/material-dashboard-react
 * Copyright 2022 Creative Tim (https://www.creative-tim.com)
 
 Coded by www.creative-tim.com
@@ -28,19 +28,17 @@ import {
   Toolbar,
   Icon,
   IconButton,
-  Menu
+  Menu,
+  MenuItem
 } from "@mui/material";
 import TranslateIcon from '@mui/icons-material/Translate';
 import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
 
-// Material Dashboard 2 PRO React components
 import MDBox from "components/MDBox";
 import MDInput from "components/MDInput";
 import MDBadge from "components/MDBadge";
 
-// Material Dashboard 2 PRO React examples
 import Breadcrumbs from "components/Breadcrumbs";
-import NotificationItem from "components/Items/NotificationItem";
 
 // Custom styles for DashboardNavbar
 import {
@@ -48,7 +46,6 @@ import {
   navbarContainer,
   navbarRow,
   navbarIconButton,
-  navbarDesktopMenu,
   navbarMobileMenu,
 } from "components/Navbars/DashboardNavbar/styles";
 
@@ -56,6 +53,7 @@ import {
 import { usePlatformContext, setContextState } from "context";
 import { dictionary } from "assets/translation";
 import { SessionController } from "database/session-control";
+import MDTypography from "components/MDTypography";
 
 function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
   const navigate = useNavigate();
@@ -124,9 +122,18 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       onClose={handleCloseMenu}
       sx={{ mt: 2 }}
     >
-      <NotificationItem icon={<i className="fa-solid fa-address-card"></i>} title={dictionary.SimplifiedNavbar.Profile[language]} />
-      <NotificationItem icon={<i className="fa-solid fa-arrow-right-from-bracket"></i>} title={dictionary.SimplifiedNavbar.Logout[language]} 
-        onClick={() => logoutUser()}/>
+      <MenuItem >
+        <i className="fa-solid fa-address-card" style={{paddingRight: 15}}></i>
+        <MDTypography variant="button" fontWeight="regular" color="text">
+          {dictionary.SimplifiedNavbar.Profile[language]}
+        </MDTypography>
+      </MenuItem>
+      <MenuItem onClick={() => logoutUser()}>
+        <i className="fa-solid fa-arrow-right-from-bracket" style={{paddingRight: 15}}></i>
+        <MDTypography variant="button" fontWeight="regular" color="text">
+          {dictionary.SimplifiedNavbar.Logout[language]}
+        </MDTypography>
+      </MenuItem>
     </Menu>
   );
 
@@ -153,7 +160,13 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       sx={{ mt: 2 }}
     >
       {["English","中文"].map((lang) => (
-        <NotificationItem key={lang} title={lang} icon={<Icon sx={{ mr: 1 }}><ChangeCircleIcon/></Icon>} onClick={() => setLanguage(lang)}/>
+
+        <MenuItem key={lang} onClick={() => setLanguage(lang)}>
+          <Icon sx={{ mr: 1 }}><ChangeCircleIcon/></Icon>
+          <MDTypography variant="button" fontWeight="regular" color="text">
+            {lang}
+          </MDTypography>
+        </MenuItem>
       ))}
     </Menu>
   );
@@ -180,7 +193,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       <Toolbar sx={(theme) => navbarContainer(theme)}>
         <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
           <Breadcrumbs icon="home" title={route[route.length - 1]} route={route} light={light} />
-          <IconButton sx={navbarDesktopMenu} onClick={handleMiniSidenav} size="small" disableRipple>
+          <IconButton sx={{display: {xs: "none", xl: "block"}}} onClick={handleMiniSidenav} size="small" disableRipple>
             <Icon fontSize="medium" sx={iconsStyle}>
               {!miniSidenav ? "menu_open" : "menu"}
             </Icon>
