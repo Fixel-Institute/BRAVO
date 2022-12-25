@@ -1,0 +1,7 @@
+Version 2.0.1
+===============================================
+
+Overview
+---------------------------------------------
+The Plotly graphing utility contain a series of wrapping function to simplify Plotly.js's syntax. 
+

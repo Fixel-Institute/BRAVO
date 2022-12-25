@@ -1,9 +1,9 @@
 /**
 =========================================================
-* Material Dashboard 2 PRO React - v2.1.0
+* Material Dashboard 2 React - v2.1.0
 =========================================================
 
-* Product Page: https://www.creative-tim.com/product/material-dashboard-pro-react
+* Product Page: https://www.creative-tim.com/product/material-dashboard-react
 * Copyright 2022 Creative Tim (https://www.creative-tim.com)
 
 Coded by www.creative-tim.com
@@ -14,7 +14,7 @@ Coded by www.creative-tim.com
 */
 export default function sidenavLogoLabel(theme, ownerState) {
   const { functions, transitions, typography, breakpoints } = theme;
-  const { miniSidenav, hideSidenav, showSidenav } = ownerState;
+  const { miniSidenav } = ownerState;
 
   const { pxToRem } = functions;
   const { fontWeightMedium } = typography;
@@ -29,8 +29,7 @@ export default function sidenavLogoLabel(theme, ownerState) {
     }),
 
     [breakpoints.up("xl")]: {
-      paddingLeft: 1,
-      opacity: (miniSidenav && !showSidenav) ? 0 : 1,
+      opacity: miniSidenav ? 0 : 1,
     },
   };
 }

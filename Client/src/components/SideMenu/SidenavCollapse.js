@@ -1,9 +1,9 @@
 /**
 =========================================================
-* Material Dashboard 2 PRO React - v2.1.0
+* Material Dashboard 2 React - v2.1.0
 =========================================================
 
-* Product Page: https://www.creative-tim.com/product/material-dashboard-pro-react
+* Product Page: https://www.creative-tim.com/product/material-dashboard-react
 * Copyright 2022 Creative Tim (https://www.creative-tim.com)
 
 Coded by www.creative-tim.com
@@ -17,13 +17,14 @@ Coded by www.creative-tim.com
 import PropTypes from "prop-types";
 
 // @mui material components
-import Collapse from "@mui/material/Collapse";
 import ListItem from "@mui/material/ListItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Icon from "@mui/material/Icon";
 
-// Material Dashboard 2 PRO React components
+import { Collapse } from "@mui/material";
+
+// Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 
 // Custom styles for the SidenavCollapse
@@ -32,13 +33,13 @@ import {
   collapseIconBox,
   collapseIcon,
   collapseText,
-  collapseArrow,
-} from "components/Sidenav/styles/sidenavCollapse";
+} from "./styles/sidenavCollapse";
 
-// Material Dashboard 2 PRO React context
+// Material Dashboard 2 React context
 import { usePlatformContext } from "context";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
 
-function SidenavCollapse({ icon, name, children, active, noCollapse, open, ...rest }) {
+function SidenavCollapse({ icon, name, active, open, children, ...rest }) {
   const [controller] = usePlatformContext();
   const { miniSidenav, showSidenav, transparentSidenav, whiteSidenav, darkMode } = controller;
 
@@ -48,11 +49,18 @@ function SidenavCollapse({ icon, name, children, active, noCollapse, open, ...re
         <MDBox
           {...rest}
           sx={(theme) =>
-            collapseItem(theme, { active, transparentSidenav, whiteSidenav, darkMode })
+            collapseItem(theme, {
+              active,
+              transparentSidenav,
+              whiteSidenav,
+              darkMode,
+            })
           }
         >
           <ListItemIcon
-            sx={(theme) => collapseIconBox(theme, { transparentSidenav, whiteSidenav, darkMode })}
+            sx={(theme) =>
+              collapseIconBox(theme, { transparentSidenav, whiteSidenav, darkMode, active })
+            }
           >
             {typeof icon === "string" ? (
               <Icon sx={(theme) => collapseIcon(theme, { active })}>{icon}</Icon>
@@ -66,30 +74,19 @@ function SidenavCollapse({ icon, name, children, active, noCollapse, open, ...re
             sx={(theme) =>
               collapseText(theme, {
                 miniSidenav,
-                showSidenav,
                 transparentSidenav,
                 whiteSidenav,
                 active,
               })
             }
           />
-
-          <Icon
-            sx={(theme) =>
-              collapseArrow(theme, {
-                noCollapse,
-                transparentSidenav,
-                whiteSidenav,
-                miniSidenav,
-                showSidenav,
-                open,
-                active,
-                darkMode,
-              })
-            }
-          >
-            expand_less
-          </Icon>
+          { children ? (
+            <ListItemIcon
+              sx={(theme) => collapseIconBox(theme, { transparentSidenav, whiteSidenav, darkMode, active })}
+            >
+              {!open ? <ExpandMore/> : <ExpandLess/>}
+            </ListItemIcon>
+          ) : null}
         </MDBox>
       </ListItem>
       {children && (
@@ -104,19 +101,13 @@ function SidenavCollapse({ icon, name, children, active, noCollapse, open, ...re
 // Setting default values for the props of SidenavCollapse
 SidenavCollapse.defaultProps = {
   active: false,
-  noCollapse: false,
-  children: false,
-  open: false,
 };
 
 // Typechecking props for the SidenavCollapse
 SidenavCollapse.propTypes = {
   icon: PropTypes.node.isRequired,
   name: PropTypes.string.isRequired,
-  children: PropTypes.node,
   active: PropTypes.bool,
-  noCollapse: PropTypes.bool,
-  open: PropTypes.bool,
 };
 
 export default SidenavCollapse;

@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 
 import MDBox from "components/MDBox";
-import Sidenav from "components/Sidenav";
+import SideMenu from "components/SideMenu";
 
 import theme from "assets/theme";
 import themeDark from "assets/theme-dark";
@@ -82,7 +82,7 @@ export default function App() {
       <CssBaseline />
       {layout === "dashboard" && (
         <>
-          <Sidenav
+          <SideMenu
             color={sidenavColor}
             brand={"/images/logo.png"}
             brandName="UF BRAVO Platform"

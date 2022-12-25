@@ -1,9 +1,9 @@
 /**
 =========================================================
-* Material Dashboard 2 PRO React - v2.1.0
+* Material Dashboard 2 React - v2.1.0
 =========================================================
 
-* Product Page: https://www.creative-tim.com/product/material-dashboard-pro-react
+* Product Page: https://www.creative-tim.com/product/material-dashboard-react
 * Copyright 2022 Creative Tim (https://www.creative-tim.com)
 
 Coded by www.creative-tim.com
@@ -19,7 +19,7 @@ import { styled } from "@mui/material/styles";
 
 export default styled(Drawer)(({ theme, ownerState }) => {
   const { palette, boxShadows, transitions, breakpoints, functions } = theme;
-  const { transparentSidenav, whiteSidenav, miniSidenav, hideSidenav, showSidenav, darkMode } = ownerState;
+  const { transparentSidenav, whiteSidenav, miniSidenav, darkMode } = ownerState;
 
   const sidebarWidth = 250;
   const { transparent, gradients, white, background } = palette;
@@ -81,22 +81,12 @@ export default styled(Drawer)(({ theme, ownerState }) => {
     },
   });
 
-  // styles for the sidenav when hideSidenav={true}
-  const drawerHideStyles = () => ({
-    background: backgroundValue,
-    transform: `translateX(${pxToRem(-320)})`,
-    transition: transitions.create("transform", {
-      easing: transitions.easing.sharp,
-      duration: transitions.duration.shorter,
-    }),
-  });
-
   return {
     "& .MuiDrawer-paper": {
       boxShadow: xxl,
       border: "none",
 
-      ...(hideSidenav ? drawerHideStyles() : (miniSidenav && !showSidenav ? drawerCloseStyles() : drawerOpenStyles())),
+      ...(miniSidenav ? drawerCloseStyles() : drawerOpenStyles()),
     },
   };
 });

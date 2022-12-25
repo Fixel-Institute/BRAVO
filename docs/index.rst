@@ -18,6 +18,13 @@ sensing-enabled neurostimulators such as Medtronic Percept neurostimulator.
    tutorials.rst 
    usage.rst
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Change Logs
+
+   ChangeLogs/v2.0.1.rst
+   ChangeLogs/v2.0.0.rst
+
 Developer Documentation
 =============================================
 .. toctree::

@@ -13,7 +13,7 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";
 import MDButton from "components/MDButton";
-import MDDropzone from "components/MDDropzone";
+import DropzoneUploader from "components/DropzoneUploader";
 import FormField from "components/MDInput/FormField.js";
 
 import { SessionController } from "database/session-control";
@@ -74,7 +74,7 @@ export default function UploadDialog({availableDevices, onCancel}) {
       </Grid>
         
       <MDBox pt={2}>
-        <MDDropzone options={{
+        <DropzoneUploader options={{
           url: window.location.origin + "/api/uploadSessionFiles",
           paramName: "file",
           addRemoveLinks: true,
@@ -85,7 +85,7 @@ export default function UploadDialog({availableDevices, onCancel}) {
           headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
           parraleleupload: 1,
         }} ref={dropzoneRef}>
-        </MDDropzone>
+        </DropzoneUploader>
       </MDBox>
     </DialogContent>
     <DialogActions>

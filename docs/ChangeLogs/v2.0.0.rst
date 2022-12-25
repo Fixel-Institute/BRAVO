@@ -1,0 +1,30 @@
+Version 2.0.0
+===============================================
+
+Overview
+---------------------------------------------
+UF Brain Recording and Analysis Visualization Online (BRAVO) Platform Version 2.0.0 is a complete revamp of the initial 
+UF BRAVO software published at `BRAVO Demo Site <https://bravo.jcagle.solutions>`_. 
+The initial site, written originally in March 2020, was completely written in Python Django Framework. 
+The site uses both Django Template frontend and Django Server to provide an all-in-one package of the the system. 
+However, there are limitations pertaining to server-side rendering (SSR) system, including loading speed and cache performance. 
+In addition, the Django template files written combined both scripts and html sources in one dynamically rendered pages, 
+leading to difficulty in reading and may not be easy for sharing and reuse.
+
+Below are outlines of all the major changes made to the server since Version 1.0.0. 
+Version 1.0.0 will continue to be hosted on `BRAVO SSR Repository <https://github.com/Fixel-Institute/BRAVO_SSR>`_ because, 
+functionally speaking, it is a properly working software. However, features will not be continuously updated. 
+
+Major Changes 
+---------------------------------------------
+
+.. topic:: 1. Separation of Server and Client - Server-side Rendering (SSR) to Static-site Generator (SSG)
+
+  Client software is now isolated from the django server as a standalone application. 
+  The client software is completely rewritten in **React.js** for better templating and rendering than Django template.
+  The primary HTML template is based on the free `MUI Core <https://mui.com/core/>`_ library with a paid design using
+  `Material Dashboard 2 Premium <https://www.creative-tim.com/product/material-dashboard-pro-react>`_ by *Creative Tim*. 
+  
+  
+
+
