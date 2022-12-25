@@ -8,7 +8,8 @@ import MuiAlertDialog from "components/MuiAlertDialog"
 //import { Manager } from "socket.io-client"
 
 export const SessionController = (function () {
-  let server = "https://bravo-server.jcagle.solutions";
+  //let server = "https://bravo-server.jcagle.solutions";
+  let server = "http://localhost:3001";
 
   let synced = false;
   let session = {language: "en"};
@@ -68,12 +69,20 @@ export const SessionController = (function () {
     }
   }
 
+  const updateServerAddress = async () => {
+    try {
+      const response = await query("/api/handshake", {});
+    } catch (error) {
+      server = "https://bravo-server.jcagle.solutions";
+    }
+  }
+
   const syncSession = async () => {
     try {
       if (localStorage.getItem("accessToken")) {
         authToken = localStorage.getItem("accessToken");
       }
-      
+      await updateServerAddress();
       const response = await query("/api/querySessions", {});
       session = response.data.session;
       user = response.data.user;
