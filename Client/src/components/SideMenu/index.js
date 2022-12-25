@@ -85,34 +85,22 @@ const SideMenu = ({ color, brand, brandName, routes, ...rest }) => {
       }
 
       returnValue = href ? (
-        <Link
-          href={href}
-          key={key}
-          target="_blank"
-          rel="noreferrer"
-          sx={{ textDecoration: "none" }}
-        >
-          <NavLink to={route} key={key}>
-            <SidenavCollapse
-              name={nameString}
-              icon={icon}
-              noCollapse={false}
-              active={key === itemName}
-            >
-            </SidenavCollapse>
-          </NavLink>
-        </Link>
+        <NavLink to={route} key={key}>
+          <SidenavCollapse
+            name={nameString}
+            icon={icon}
+            active={key === itemName}
+          >
+          </SidenavCollapse>
+        </NavLink>
       ) : (
         <NavLink to={route} key={key} sx={{ textDecoration: "none" }}>
-          <NavLink to={route} key={key}>
-            <SidenavCollapse
-              name={nameString}
-              icon={icon}
-              noCollapse={false}
-              active={key === itemName}
-            >
-            </SidenavCollapse>
-          </NavLink>
+          <SidenavCollapse
+            name={nameString}
+            icon={icon}
+            active={key === itemName}
+          >
+          </SidenavCollapse>
         </NavLink>
       );
 
@@ -149,7 +137,6 @@ const SideMenu = ({ color, brand, brandName, routes, ...rest }) => {
             <SidenavCollapse
               name={nameString}
               icon={icon}
-              noCollapse={noCollapse}
               active={key === itemName}
             >
               {collapse ? renderCollapse(collapse) : null}
