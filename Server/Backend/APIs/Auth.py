@@ -91,7 +91,7 @@ class UserSignout(RestViews.APIView):
         return Response(status=200)
 
 class Handshake(RestViews.APIView):
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
         return Response(status=200)
