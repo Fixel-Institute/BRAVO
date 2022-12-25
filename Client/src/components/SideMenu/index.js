@@ -21,7 +21,6 @@ import SidenavCollapse from "components/SideMenu/SidenavCollapse";
 import SidenavRoot from "components/SideMenu/SidenavRoot";
 import sidenavLogoLabel from "components/SideMenu/styles/sidenav";
 
-// Material Dashboard 2 PRO React context
 import {
   usePlatformContext,
   setContextState,

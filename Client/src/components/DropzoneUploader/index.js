@@ -5,8 +5,6 @@ import Dropzone from "dropzone";
 import "dropzone/dist/dropzone.css";
 
 import MDBox from "components/MDBox";
-
-// Material Dashboard 2 PRO React context
 import { usePlatformContext } from "context";
 
 const DropzoneUploader = forwardRef(({ options }, ref) => {

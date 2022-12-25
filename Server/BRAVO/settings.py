@@ -54,7 +54,7 @@ else:
     SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 ALLOWED_HOSTS = ['localhost', os.environ.get('SERVER_ADDRESS')]
-CORS_ALLOWED_ORIGINS = [os.environ.get('CLIENT_ADDRESS')]
+CORS_ALLOWED_ORIGINS = os.environ.get('CLIENT_ADDRESS')
 CORS_ALLOW_HEADERS = [
     'content-type',
     'cache-control',

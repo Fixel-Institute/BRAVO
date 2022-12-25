@@ -22,8 +22,22 @@ Major Changes
 
   Client software is now isolated from the django server as a standalone application. 
   The client software is completely rewritten in **React.js** for better templating and rendering than Django template.
-  The primary HTML template is based on the free `MUI Core <https://mui.com/core/>`_ library with a paid design using
-  `Material Dashboard 2 Premium <https://www.creative-tim.com/product/material-dashboard-pro-react>`_ by *Creative Tim*. 
+  The primary HTML template is based on the free `MUI Core <https://mui.com/core/>`_ library with a free MIT licensed style template.
+
+  One of the primary benefits I see with React.js is the ability to keep different part of the webpage as individual modular components.
+  This also means that each individual graph is its individual file for editing without having to mess with other components in the webpage.
+  This allow easy integration and modular editing. 
+
+.. topic:: 2. User Authentication from Session Authentication to Token Authentication 
+
+  Version 1.0.0 uses Session Authentication with cookies because server and client are the same site. 
+  In Version 2.0.0, the whole authentication system got modified to Token Authentication. 
+
+  Since early 2022, the BRAVO platform has been expanded with multiple side projects, including mobile apps for 
+  wearable devices and speech analysis. These applications cannot use Session Authentication but Token authentication
+  is good choice. By switching to Token authentication, it allows client to be hosted in a completely different state from the server.
+
+
   
   
 
