@@ -25,6 +25,17 @@ from modules import Database
 key = os.environ.get('ENCRYPTION_KEY')
 
 def saveChronicLFP(deviceID, ChronicLFPs, sourceFile):
+    """ Save Chronic BrainSense Data in Database Storage
+
+    Args:
+      deviceID: UUID4 deidentified id for each unique Percept device.
+      ChronicLFPs: Chronic BrainSense (Power-band) structures extracted from Medtronic JSON file.
+      sourceFile: filename of the raw JSON file that the original data extracted from.
+
+    Returns:
+      Boolean indicating if new data is found (to be saved).
+    """
+
     NewRecordingFound = False
     for key in ChronicLFPs.keys():
         recording_info = {"Hemisphere": key}

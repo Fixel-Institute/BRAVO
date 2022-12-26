@@ -16,6 +16,17 @@ from utility import SignalProcessingUtility as SPU
 key = os.environ.get('ENCRYPTION_KEY')
 
 def saveBrainSenseSurvey(deviceID, surveyList, sourceFile):
+    """ Save BrainSense Survey Data in Database Storage
+
+    Args:
+      deviceID: UUID4 deidentified id for each unique Percept device.
+      surveyList: Array of BrainSense Survey structures extracted from Medtronic JSON file.
+      sourceFile: filename of the raw JSON file that the original data extracted from.
+
+    Returns:
+      Boolean indicating if new data is found (to be saved).
+    """
+
     NewRecordingFound = False
     for survey in surveyList:
         SurveyDate = datetime.fromtimestamp(Percept.getTimestamp(survey["FirstPacketDateTime"]), tz=pytz.utc)

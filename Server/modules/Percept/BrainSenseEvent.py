@@ -18,6 +18,17 @@ from modules.Percept import Therapy
 key = os.environ.get('ENCRYPTION_KEY')
 
 def saveBrainSenseEvents(deviceID, LfpFrequencySnapshotEvents, sourceFile):
+    """ Save BrainSense Events Data in MySQL Database.
+
+    Args:
+      deviceID: UUID4 deidentified id for each unique Percept device.
+      LfpFrequencySnapshotEvents: Event-snapshot Power Spectrum data extracted from Medtronic JSON file.
+      sourceFile: filename of the raw JSON file that the original data extracted from.
+
+    Returns:
+      Boolean indicating if new data is found (to be saved).
+    """
+
     NewRecordingFound = False
     batchStorage = list()
     for event in LfpFrequencySnapshotEvents:

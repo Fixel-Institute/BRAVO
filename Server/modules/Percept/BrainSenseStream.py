@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+""""""
+"""
+Python Module for BrainSense Streaming
+===================================================
+@author: Jackson Cagle, University of Florida
+@email: jackson.cagle@neurology.ufl.edu
+"""
+
 import os, sys, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.parent.resolve())
 sys.path.append(os.environ.get("PYTHON_UTILITY"))
@@ -24,6 +33,18 @@ from modules import Database
 key = os.environ.get('ENCRYPTION_KEY')
 
 def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
+    """ Save BrainSense Streaming Data in Database Storage
+
+    Args:
+      deviceID: UUID4 deidentified id for each unique Percept device.
+      StreamingTD: BrainSense TimeDomain structure extracted from Medtronic JSON file.
+      StreamingPower: BrainSense Power Channel structure extracted from Medtronic JSON file.
+      sourceFile: filename of the raw JSON file that the original data extracted from.
+
+    Returns:
+      Boolean indicating if new data is found (to be saved).
+    """
+
     NewRecordingFound = False
     StreamDates = list()
     for stream in StreamingTD:
@@ -70,6 +91,24 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
     return NewRecordingFound
 
 def processRealtimeStreams(stream, cardiacFilter=False):
+    """ Process BrainSense Streaming Data 
+
+    This is the primary processing function for all BrainSense Streaming data. 
+    The server will attempt to calculate Short-time Fourier Transform (STFT) with 1.0 second window and 0.5 second overlap. 
+    In addition to the STFT, the server will also calculate Wavelet Transform with a 500ms moving average window. 
+
+    The user can request the server to perform cardiac removal using cardiacFilter argument. 
+    If cardiac filter is used, the server will perform a template matching algorithm to remove cardiac signals.
+    (TODO: details algorithm for later).
+
+    Args:
+      stream: BrainSense TimeDomain structure extracted from Medtronic JSON file
+      cardiacFilter: Boolean indicating if you want to .
+
+    Returns:
+      Processed BrainSense TimeDomain structure
+    """
+
     stream["Wavelet"] = dict()
     stream["Spectrogram"] = dict()
     stream["Filtered"] = dict()
@@ -134,6 +173,19 @@ def processRealtimeStreams(stream, cardiacFilter=False):
     return stream
 
 def queryRealtimeStreamOverview(user, patientUniqueID, authority):
+    """ Query available BrainSense Streaming data from specific patient requested
+
+    This function will query all available BrainSense Streaming data that a specific user has access to for a specific patient. 
+
+    Args:
+      user: BRAVO Platform User object. 
+      patientUniqueID: Deidentified patient ID as referenced in SQL Database. 
+      authority: User permission structure indicating the type of access the user has.
+
+    Returns:
+      List of BrainSense Streaming data accessible.
+    """
+
     BrainSenseData = list()
     if not authority["Permission"]:
         return BrainSenseData
@@ -200,6 +252,22 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
     return BrainSenseData
 
 def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=False, refresh=False):
+    """ Query BrainSense Streaming Data
+
+    This function will query BrainSense recording data based on provided Recording ID.
+
+    Args:
+      user: BRAVO Platform User object. 
+      recordingId:  Deidentified recording ID as referenced in SQL Database. 
+      authority: User permission structure indicating the type of access the user has.
+      cardiacFilter: Boolean indicator if the user want to apply cardiac filters (see processRealtimeStreams function)
+      refresh: Boolean indicator if the user want to use cache data or reprocess the data.
+
+    Returns:
+      Returns a tuple (BrainSenseData, RecordingID) where BrainSenseData is the BrainSense streaming data structure in Database and RecordingID is the 
+      deidentified id of the available data.
+    """
+
     BrainSenseData = None
     RecordingID = None
     if authority["Level"] == 0:
@@ -239,6 +307,23 @@ def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=Fal
     return BrainSenseData, RecordingID
 
 def queryRealtimeStreamData(user, device, timestamp, authority, cardiacFilter=False, refresh=False):
+    """ Query BrainSense Streaming Data
+
+    This function will query BrainSense recording data based on provided Device ID and Timestamp of the recording.
+
+    Args:
+      user: BRAVO Platform User object. 
+      device:  Deidentified neurostimulator device ID as referenced in SQL Database. 
+      timestamp:  Unix timestamp at which the recording is collected.
+      authority: User permission structure indicating the type of access the user has.
+      cardiacFilter: Boolean indicator if the user want to apply cardiac filters (see processRealtimeStreams function)
+      refresh: Boolean indicator if the user want to use cache data or reprocess the data.
+
+    Returns:
+      Returns a tuple (BrainSenseData, RecordingID) where BrainSenseData is the BrainSense streaming data structure in Database and RecordingID is the 
+      deidentified id of the available data.
+    """
+
     BrainSenseData = None
     RecordingID = None
     if authority["Level"] == 0:
@@ -282,6 +367,23 @@ def queryRealtimeStreamData(user, device, timestamp, authority, cardiacFilter=Fa
     return BrainSenseData, RecordingID
 
 def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies=[0,0]):
+    """ Query BrainSense Streaming Data
+
+    This function will query BrainSense recording data based on provided Device ID and Timestamp of the recording.
+
+    Args:
+      user: BRAVO Platform User object. 
+      device:  Deidentified neurostimulator device ID as referenced in SQL Database. 
+      timestamp:  Unix timestamp at which the recording is collected.
+      authority: User permission structure indicating the type of access the user has.
+      cardiacFilter: Boolean indicator if the user want to apply cardiac filters (see processRealtimeStreams function)
+      refresh: Boolean indicator if the user want to use cache data or reprocess the data.
+
+    Returns:
+      Returns a tuple (BrainSenseData, RecordingID) where BrainSenseData is the BrainSense streaming data structure in Database and RecordingID is the 
+      deidentified id of the available data.
+    """
+    
     stream["Stimulation"] = processRealtimeStreamStimulationAmplitude(stream)
     stream["PowerBand"] = processRealtimeStreamPowerBand(stream)
     data = dict()

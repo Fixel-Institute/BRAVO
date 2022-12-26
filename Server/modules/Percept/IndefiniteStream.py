@@ -18,6 +18,17 @@ from modules import Database
 key = os.environ.get('ENCRYPTION_KEY')
 
 def saveMontageStreams(deviceID, streamList, sourceFile):
+    """ Save Indefinite Streaming Data in Database Storage
+
+    Args:
+      deviceID: UUID4 deidentified id for each unique Percept device.
+      streamList: Array of Indefinite Streaming structures extracted from Medtronic JSON file.
+      sourceFile: filename of the raw JSON file that the original data extracted from.
+
+    Returns:
+      Boolean indicating if new data is found (to be saved).
+    """
+
     NewRecordingFound = False
     StreamDates = list()
     for stream in streamList:
