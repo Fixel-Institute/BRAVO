@@ -24,6 +24,10 @@ import { Link, useNavigate } from "react-router-dom";
 // @mui material components
 import { 
   Container, 
+  Dialog,
+  DialogActions,
+  DialogContent,
+  TextField,
   Icon, 
   Popper, 
   Grow, 
@@ -37,6 +41,8 @@ import MuiLink from "@mui/material/Link";
 import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
 import LoginIcon from '@mui/icons-material/Login';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
+import StorageIcon from '@mui/icons-material/Storage';
+import CheckIcon from '@mui/icons-material/Check';
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -50,6 +56,7 @@ import breakpoints from "assets/theme/base/breakpoints";
 // BRAVO Context
 import { usePlatformContext, setContextState } from "context";
 import { dictionary } from "assets/translation.js";
+import { SessionController } from 'database/session-control';
 
 function DefaultNavbar({ transparent, light, action }) {
   const [ controller, dispatch ] = usePlatformContext();
@@ -59,6 +66,8 @@ function DefaultNavbar({ transparent, light, action }) {
   const [mobileView, setMobileView] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
   const [whichMenu, setWhichMenu] = useState("");
+  const [currentHost, setCurrentHost] = useState("Localhost");
+  const [customServer, setCustomServer] = useState({show: false, address: ""});
 
   const openMobileNavbar = ({ currentTarget }) => setMobileNavbar(currentTarget.parentNode);
   const closeMobileNavbar = () => setMobileNavbar(false);
@@ -80,6 +89,29 @@ function DefaultNavbar({ transparent, light, action }) {
     handleCloseMenu();
   };
 
+  const setServer = (server) => {
+    handleCloseMenu();
+
+    if (server == "Localhost") {
+      SessionController.setServer("http://localhost:3001");
+      window.location.reload();
+
+    } else if (server == "DemoServer") {
+      SessionController.setServer("https://bravo-server.jcagle.solutions");
+      window.location.reload();
+
+    } else {
+      if (customServer.show) {
+        SessionController.setServer(customServer.address);
+        window.location.reload();
+
+      } else {
+        setCustomServer({address: "", show: true});
+      }
+
+    }
+  };
+
   useEffect(() => {
     // A function that sets the display state for the DefaultNavbarMobile.
     function displayMobileNavbar() {
@@ -92,6 +124,14 @@ function DefaultNavbar({ transparent, light, action }) {
       }
     }
 
+    const serverAddress = SessionController.getServer();
+    if (serverAddress == "http://localhost:3001") {
+      setCurrentHost("Localhost");
+    } else if (serverAddress == "https://bravo-server.jcagle.solutions") {
+      setCurrentHost("DemoServer");
+    } else {
+      setCurrentHost("CustomizedServer");
+    }
     /** 
      The event listener that's calling the displayMobileNavbar function when 
      resizing the window.
@@ -123,6 +163,36 @@ function DefaultNavbar({ transparent, light, action }) {
           <Icon sx={{ mr: 1 }}><ChangeCircleIcon/></Icon>
           <MDTypography variant="button" fontWeight="regular" color="text">
             {lang}
+          </MDTypography>
+        </MenuItem>
+      ))}
+    </Menu>
+  );
+
+  // Render the notifications menu
+  const renderServerSelectionMenu = () => (
+    <Menu
+      anchorEl={openMenu}
+      anchorReference={null}
+      anchorOrigin={{
+        vertical: "bottom",
+        horizontal: "left",
+      }}
+      open={whichMenu === "ServerMenu"}
+      onClose={handleCloseMenu}
+      sx={{ mt: 2 }}
+    >
+      {["Localhost","DemoServer","CustomizedServer"].map((server) => (
+        <MenuItem key={server} onClick={() => setServer(server)}>
+          <Icon sx={{ mr: 1 }}>{
+            currentHost === server ? (
+              <CheckIcon/>
+            ) : (
+              <StorageIcon/>
+            )
+          }</Icon>
+          <MDTypography variant="button" fontWeight="regular" color="text">
+            {dictionary.SimplifiedNavbar[server][language]}
           </MDTypography>
         </MenuItem>
       ))}
@@ -169,6 +239,12 @@ function DefaultNavbar({ transparent, light, action }) {
         </MDBox>
         <MDBox color="inherit" display={{ xs: "none", lg: "flex" }} m={0} p={0}>
           <DefaultNavbarLink 
+            icon={<StorageIcon/>}
+            name={dictionary.SimplifiedNavbar.ChangeServer[language]}
+            onClick={(event) => handleOpenMenu(event, "ServerMenu")} 
+            light={light} 
+          />
+          <DefaultNavbarLink 
             icon={<ChangeCircleIcon/>}
             name={dictionary.SimplifiedNavbar.ChangeLanguage[language]}
             onClick={(event) => handleOpenMenu(event, "LanguageMenu")} 
@@ -187,6 +263,44 @@ function DefaultNavbar({ transparent, light, action }) {
             light={light}
           />
           {renderLanguageSelectionMenu()}
+          {renderServerSelectionMenu()}
+
+
+          <Dialog open={customServer.show} onClose={() => setCustomServer({...customServer, show: false})}>
+            <MDBox px={2} pt={2} sx={{minWidth: 500}}>
+              <MDTypography variant="h5">
+                {"Set Custom Server Address"}
+              </MDTypography>
+            </MDBox>
+            <DialogContent>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    variant="standard"
+                    margin="dense"
+                    placeholder="Server Address (i.e.: http://localhost:3001)"
+                    value={customServer.address}
+                    onChange={(event) => setCustomServer({...customServer, address: event.target.value})}
+                    fullWidth
+                  />
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <MDBox style={{marginLeft: "auto", paddingRight: 5}}>
+                <MDButton color={"secondary"} 
+                  onClick={() => setCustomServer({...customServer, show: false})}
+                >
+                  Cancel
+                </MDButton>
+                <MDButton color={"info"} 
+                  onClick={() => setServer()} style={{marginLeft: 10}}
+                >
+                  Update
+                </MDButton>
+              </MDBox>
+            </DialogActions>
+          </Dialog>
         </MDBox>
         {action &&
           (action.type === "internal" ? (

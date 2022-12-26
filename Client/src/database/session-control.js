@@ -9,7 +9,7 @@ import MuiAlertDialog from "components/MuiAlertDialog"
 
 export const SessionController = (function () {
   //let server = "https://bravo-server.jcagle.solutions";
-  let server = "http://localhost:3001";
+  let server = "";
 
   let synced = false;
   let session = {language: "en"};
@@ -23,6 +23,11 @@ export const SessionController = (function () {
 
   const getAuthToken = () => {
     return authToken;
+  };
+
+  const setServer = (address) => {
+    server = address;
+    localStorage.setItem("serverAddress", server);
   };
 
   const getServer = () => {
@@ -71,9 +76,13 @@ export const SessionController = (function () {
 
   const updateServerAddress = async () => {
     try {
-      const response = await query("/api/handshake", {});
+      if (localStorage.getItem("serverAddress")) {
+        server = localStorage.getItem("serverAddress");
+        console.log(server)
+      }
+      await query("/api/handshake", {});
     } catch (error) {
-      server = "https://bravo-server.jcagle.solutions";
+      setServer("https://bravo-server.jcagle.solutions");
     }
   }
 
@@ -83,13 +92,25 @@ export const SessionController = (function () {
         authToken = localStorage.getItem("accessToken");
       }
       await updateServerAddress();
+      console.log(server);
+    } catch (error) {
+      console.log(error);
+    }
+
+    try {
       const response = await query("/api/querySessions", {});
       session = response.data.session;
       user = response.data.user;
       synced = true;
-      return synced;
+
     } catch (error) {
-      console.log(error);
+      if (error.response.status == 401) {
+        setAuthToken("");
+        const response = await query("/api/querySessions", {});
+        session = response.data.session;
+        user = response.data.user;
+        synced = true;
+      }
     }
     return synced;
   };
@@ -182,6 +203,7 @@ export const SessionController = (function () {
   return {
     setAuthToken: setAuthToken,
     getAuthToken: getAuthToken,
+    setServer: setServer,
     getServer: getServer,
 
     query: query,

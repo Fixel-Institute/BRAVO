@@ -40,6 +40,22 @@ export const dictionary = {
       en: "Change Language",
       zh: "更改语言"
     },
+    ChangeServer: {
+      en: "Change Database Host",
+      zh: "更改数据库地址"
+    },
+    Localhost: {
+      en: "localhost:3001 (Standard Port)",
+      zh: "localhost:3001 (基础端口)"
+    },
+    DemoServer: {
+      en: "Demo Server",
+      zh: "测试用服务器"
+    },
+    CustomizedServer: {
+      en: "Enter Customized Server Endpoint",
+      zh: "自制服务器"
+    },
   },
   Register: {
     AccountRegister: {
