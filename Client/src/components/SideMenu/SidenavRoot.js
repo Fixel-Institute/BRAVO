@@ -19,7 +19,7 @@ import { styled } from "@mui/material/styles";
 
 export default styled(Drawer)(({ theme, ownerState }) => {
   const { palette, boxShadows, transitions, breakpoints, functions } = theme;
-  const { transparentSidenav, whiteSidenav, miniSidenav, darkMode } = ownerState;
+  const { transparentSidenav, whiteSidenav, hideSidenav, showSidenav, miniSidenav, darkMode } = ownerState;
 
   const sidebarWidth = 250;
   const { transparent, gradients, white, background } = palette;
@@ -81,12 +81,22 @@ export default styled(Drawer)(({ theme, ownerState }) => {
     },
   });
 
+  // styles for the sidenav when hideSidenav={true}
+  const drawerHideStyles = () => ({
+    background: backgroundValue,
+    transform: `translateX(${pxToRem(-320)})`,
+    transition: transitions.create("transform", {
+      easing: transitions.easing.sharp,
+      duration: transitions.duration.shorter,
+    }),
+  });
+
   return {
     "& .MuiDrawer-paper": {
       boxShadow: xxl,
       border: "none",
 
-      ...(miniSidenav ? drawerCloseStyles() : drawerOpenStyles()),
+      ...(hideSidenav ? drawerHideStyles() : (miniSidenav && !showSidenav ? drawerCloseStyles() : drawerOpenStyles())),
     },
   };
 });

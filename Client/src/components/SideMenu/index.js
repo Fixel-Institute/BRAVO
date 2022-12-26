@@ -192,7 +192,7 @@ const SideMenu = ({ color, brand, brandName, routes, ...rest }) => {
     <SidenavRoot
       {...rest}
       variant="permanent"
-      ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, darkMode }}
+      ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, hideSidenav, showSidenav, darkMode }}
     >
       <MDBox pt={3} pb={1} px={4} textAlign="center">
         <MDBox

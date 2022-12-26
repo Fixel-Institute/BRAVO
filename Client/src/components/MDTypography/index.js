@@ -73,6 +73,7 @@ MDTypography.propTypes = {
     "error",
     "light",
     "dark",
+    "black",
     "text",
     "white",
   ]),
