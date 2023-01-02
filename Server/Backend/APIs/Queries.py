@@ -312,7 +312,26 @@ class QueryPredictionModel(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        if "updatePredictionModels" in request.data:
+        # Force Error
+        if not request.user.is_clinician:
+            return Response(status=400, data={"code": ERROR_CODE["NOT_AVAILABLE_TO_DEMO"]})
+
+        if "requestOverview" in request.data:
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+            if Authority["Level"] == 0:
+                return Response(status=404)
+            elif Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
+                data = BrainSenseStream.queryRealtimeStreamOverview(request.user, request.data["id"], Authority)
+                return Response(status=200, data=data)
+            elif Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
+                data = BrainSenseStream.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
+                return Response(status=200, data=data)
+
+        elif "updatePredictionModels" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 0:

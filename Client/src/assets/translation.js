@@ -1061,6 +1061,10 @@ export const dictionary = {
       en: "Malformated Request",
       zh: "不合规范的数据",
     },
+    NOT_AVAILABLE_TO_DEMO: {
+      en: "The requested data is not available for Demo",
+      zh: "测试用服务器无法使用该功能",
+    },
     INTERNAL_SERVER_ERROR: {
       en: "Internal Server Error",
       zh: "后台错误",

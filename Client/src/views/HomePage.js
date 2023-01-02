@@ -16,7 +16,11 @@ import MDTypography from "components/MDTypography";
 // Layout
 import OnePageLayout from "layouts/OnePage";
 
+import { SessionController } from "database/session-control";
+
 export default function HomePage() {
+  const server = SessionController.getServer();
+  const connectionStatus = SessionController.getConnectionStatus();
 
   return (
     <OnePageLayout wide image={"https://j9q7m2a3.rocketcdn.me/wp-content/uploads/2022/01/UF-Health.jpg"}>
@@ -37,7 +41,17 @@ export default function HomePage() {
         </CardContent>
         <CardContent>
           <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={28}>
-            {"Temporary Front Page"}
+            {"Connection Status"}
+          </MDTypography>
+          <MDTypography variant={"h6"} color={"black"} align={"center"} fontSize={20}>
+            {connectionStatus ? "Backend Server Connected" : "Backend Server not Found"}
+            <br></br>
+            {"Host: " + server}
+          </MDTypography>
+          <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
+            {"Current Frontend Version: 2.0.0"}
+            <br></br>
+            {"Compatible Backend Version: 2.0.0"}
           </MDTypography>
         </CardContent>
       </Card>

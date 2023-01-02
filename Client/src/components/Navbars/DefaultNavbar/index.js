@@ -265,7 +265,6 @@ function DefaultNavbar({ transparent, light, action }) {
           {renderLanguageSelectionMenu()}
           {renderServerSelectionMenu()}
 
-
           <Dialog open={customServer.show} onClose={() => setCustomServer({...customServer, show: false})}>
             <MDBox px={2} pt={2} sx={{minWidth: 500}}>
               <MDTypography variant="h5">

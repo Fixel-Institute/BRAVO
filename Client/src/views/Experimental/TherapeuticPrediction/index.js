@@ -57,7 +57,7 @@ function TherapeuticPrediction() {
     if (!patientID) {
       navigate("/dashboard", {replace: true});
     } else {
-      SessionController.query("/api/queryBrainSenseStreaming", {
+      SessionController.query("/api/queryPredictionModel", {
         id: patientID,
         requestOverview: true
       }).then((response) => {

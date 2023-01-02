@@ -10,6 +10,7 @@ import MuiAlertDialog from "components/MuiAlertDialog"
 export const SessionController = (function () {
   //let server = "https://bravo-server.jcagle.solutions";
   let server = "";
+  let connectionStatus = false;
 
   let synced = false;
   let session = {language: "en"};
@@ -32,6 +33,10 @@ export const SessionController = (function () {
 
   const getServer = () => {
     return server;
+  };
+
+  const getConnectionStatus = () => {
+    return connectionStatus;
   };
 
   const query = (url, form, config) => {
@@ -75,27 +80,35 @@ export const SessionController = (function () {
   }
 
   const updateServerAddress = async () => {
-    try {
-      if (localStorage.getItem("serverAddress")) {
-        server = localStorage.getItem("serverAddress");
-        console.log(server)
-      }
-      await query("/api/handshake", {});
-    } catch (error) {
-      setServer("https://bravo-server.jcagle.solutions");
-    }
   }
 
   const syncSession = async () => {
-    try {
-      if (localStorage.getItem("accessToken")) {
-        authToken = localStorage.getItem("accessToken");
-      }
-      await updateServerAddress();
-      console.log(server);
-    } catch (error) {
-      console.log(error);
+    if (localStorage.getItem("accessToken")) {
+      authToken = localStorage.getItem("accessToken");
     }
+    
+    if (localStorage.getItem("serverAddress")) {
+      server = localStorage.getItem("serverAddress");
+      try {
+        await query("/api/handshake", {});
+        connectionStatus = true;
+      } catch (error) {
+        console.log(error);
+      }
+    } else {
+      for (let address of ["", "https://bravo-server.jcagle.solutions"]) {
+        try {
+          server = address;
+          await query("/api/handshake", {});
+          connectionStatus = true;
+          break;
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    }
+
+    if (!connectionStatus) return true;
 
     try {
       const response = await query("/api/querySessions", {});
@@ -205,6 +218,7 @@ export const SessionController = (function () {
     getAuthToken: getAuthToken,
     setServer: setServer,
     getServer: getServer,
+    getConnectionStatus: getConnectionStatus,
 
     query: query,
     displayError: displayError,
