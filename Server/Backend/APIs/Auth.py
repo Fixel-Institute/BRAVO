@@ -1,3 +1,11 @@
+""""""
+"""
+Authentication Module
+===================================================
+@author: Jackson Cagle, University of Florida
+@email: jackson.cagle@neurology.ufl.edu
+"""
+
 from django.contrib.auth import authenticate, login, logout, get_user_model
 
 import rest_framework.views as RestViews
@@ -6,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from knox.views import LoginView as KnoxLoginView
+from knox.views import LogoutView as KnoxLogoutView
 
 from modules import Database
 from Backend import models
@@ -20,7 +29,22 @@ import re
 def validateEmail(email):
     return re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', email)
 
-class UserRegister(RestViews.APIView):
+class UserRegister(KnoxLoginView):
+    """ User Registration.
+
+    **Route**: ``/api/registration``
+
+    Args:
+      Email (string): Email address will also serve as unique username. Must be a properly formated Email address and unique within database.
+      UserName (string): Human readable name of the user.
+      Institute (string): Common institute name of the user. This allow sharing of data among multiple users within same institute.
+      Password (string): Password of the account. Database will hash the password for security. 
+        User may also choose to perform end-to-end encryption during transmission if they desire.
+
+    Returns:
+      Response Code 200 if success or 400 if error.
+    """
+
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
@@ -48,12 +72,29 @@ class UserRegister(RestViews.APIView):
 
                 user = authenticate(request, username=request.data["Email"], password=request.data["Password"])
                 login(request, user)
-                request.session.set_expiry(36000)
-                return Response(status=200, data={"user": Database.extractUserInfo(user)})
+
+                authResponse = super(UserRegister, self).post(request, format=None)
+                authResponse.data.update({
+                    "user": Database.extractUserInfo(user)
+                })
+                return Response(status=200, data=authResponse.data)
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class UserAuth(KnoxLoginView):
+    """ User Authentication (Web Account Only).
+
+    **Route**: ``/api/authenticate``
+
+    Args:
+      Email (string): Email address also serves as unique username.
+      Password (string): Password of the account. Database will hash the password for security. 
+        User may also choose to perform end-to-end encryption during transmission if they desire.
+
+    Returns:
+      Response Code 200 if success or 400 if error.
+    """
+
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
@@ -61,7 +102,7 @@ class UserAuth(KnoxLoginView):
             user = authenticate(request, username=request.data["Email"], password=request.data["Password"])
             if user is not None:
                 if user.is_mobile:
-                    return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
                 if not models.UserConfigurations.objects.filter(user_id=user.unique_user_id).exists():
                     models.UserConfigurations(user_id=user.unique_user_id).save()
@@ -78,19 +119,37 @@ class UserAuth(KnoxLoginView):
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class FetchAuthorizedInstitute(RestViews.APIView):
+    """ NOT IMPLEMENTED
+    """
+
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
         return Response(status=200, data={"institutes": Database.extractInstituteInfo()})
 
-class UserSignout(RestViews.APIView):
+class UserSignout(KnoxLogoutView):
+    """ User logout while detroying the authentication token.
+
+    **Route**: ``/api/logout``
+
+    Returns:
+      Response Code 200.
+    """
+
     permission_classes = [IsAuthenticated,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
         logout(request)
-        return Response(status=200)
+        return super(UserSignout, self).post(request, format=None)
 
 class Handshake(RestViews.APIView):
+    """ Confirming that the BRAVO server exist.
+
+    **Route**: ``/api/handshake``
+
+    Returns:
+      Response Code 200.
+    """
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):

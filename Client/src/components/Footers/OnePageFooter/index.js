@@ -101,6 +101,17 @@ function Footer({ light }) {
                 </MDTypography>
               </Link>
             </MDBox>
+            <MDBox component="li" px={2} lineHeight={1}>
+              <Link href="https://bravo-documentation.jcagle.solutions/" target="_blank">
+                <MDTypography
+                  variant="button"
+                  fontWeight="regular"
+                  color={light ? "white" : "dark"}
+                >
+                  Documentation
+                </MDTypography>
+              </Link>
+            </MDBox>
           </MDBox>
         </MDBox>
       </Container>

@@ -33,8 +33,10 @@ export default function Register() {
 
   const handleRegistration = () => {
     SessionController.register(authInfo.username, authInfo.email, authInfo.password, authInfo.email).then((response) => {
-      setAuthInfo({...authInfo, password: ""});
       SessionController.setUser(response.data.user);
+      SessionController.setAuthToken(response.data.token);
+      SessionController.syncSession();
+      setAuthInfo({...authInfo, password: ""});
       setContextState(dispatch, "user", response.data.user);
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
