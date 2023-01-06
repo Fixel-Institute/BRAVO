@@ -47,7 +47,7 @@ export default function SignIn() {
 
   useEffect(() => {
     if (Object.keys(user).length > 0) {
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", {replace: false});
     }
   }, [user]);
 

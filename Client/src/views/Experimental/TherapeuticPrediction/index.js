@@ -55,7 +55,7 @@ function TherapeuticPrediction() {
 
   React.useEffect(() => {
     if (!patientID) {
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", {replace: false});
     } else {
       SessionController.query("/api/queryPredictionModel", {
         id: patientID,

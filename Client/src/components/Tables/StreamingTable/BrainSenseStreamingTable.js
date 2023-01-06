@@ -13,6 +13,7 @@ import {
   InputLabel,
   IconButton,
   Select,
+  Switch,
   MenuItem,
   Tooltip,
 } from "@mui/material"
@@ -28,7 +29,7 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import PatientTablePagination from "../PatientTable/PatientTablePagination.js";
 
-function BrainSenseStreamingTable({data, getRecordingData, children}) {
+function BrainSenseStreamingTable({data, getRecordingData, toggle, children}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
@@ -84,12 +85,11 @@ function BrainSenseStreamingTable({data, getRecordingData, children}) {
   
   const setViewDate = (date) => {
     setSelectedDate(date);
-
     var collectiveData = [];
     for (var i = 0; i < data.length; i++) {
       var timestruct = new Date(data[i]["Timestamp"]*1000);
-      if (timestruct.toLocaleDateString(language) == date.value) {
-        collectiveData.push(data[i]);
+      if (timestruct.toLocaleDateString(language) == date.value && data[i].Duration >= (toggle ? 0 : 30)) {
+        collectiveData.push({...data[i], state: false});
       }
     }
     setDisplayData(collectiveData);
@@ -113,6 +113,25 @@ function BrainSenseStreamingTable({data, getRecordingData, children}) {
     }
   }
   
+  const toggleSelection = (value, timestamp) => {
+    for (var i in displayData) {
+      if (displayData[i].Timestamp == timestamp || !timestamp) {
+        displayData[i].state = value;
+      }
+    }
+    setDisplayData([...displayData]);
+  };
+
+  const compareSelected = () => {
+    let recordingList = [];
+    for (var i in displayData) {
+      if (displayData[i].state) {
+        recordingList.push(displayData[i].RecordingID);
+      }
+    }
+    getRecordingData(recordingList);
+  };
+
   return (
     <>
       <MDBox p={2}>
@@ -136,6 +155,11 @@ function BrainSenseStreamingTable({data, getRecordingData, children}) {
         <Table size="large" style={{marginTop: 20}}>
           <TableHead sx={{display: "table-header-group"}}>
             <TableRow>
+              {toggle ? (
+                <TableCell key={"toggle"} variant="head" style={{width: "20px", minWidth: 20, verticalAlign: "bottom", paddingBottom: 0, paddingTop: 0}}>
+                  <Switch onChange={(event, value) => toggleSelection(value)} />
+                </TableCell>
+              ) : null}
               {tableHeader.map((col) => (
                 <TableCell key={col.title} variant="head" style={{width: col.width, minWidth: col.minWidth, verticalAlign: "bottom", paddingBottom: 0, paddingTop: 0}}>
                   <MDTypography variant="span" fontSize={12} fontWeight={"bold"} style={{cursor: "pointer"}} onClick={()=>console.log({col})}>
@@ -176,6 +200,11 @@ function BrainSenseStreamingTable({data, getRecordingData, children}) {
               }
               
               return <TableRow key={recording.RecordingID}>
+                {toggle ? (
+                  <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
+                    <Switch checked={recording.state} onChange={(event, value) => toggleSelection(value, recording.Timestamp)} />
+                  </TableCell>
+                ) : null}
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                   <MDTypography variant="h5" fontSize={15} style={{marginBottom: 0}}>
                     {new Date(recording.Timestamp*1000).toLocaleString(language)}
@@ -257,6 +286,13 @@ function BrainSenseStreamingTable({data, getRecordingData, children}) {
           </TableBody>
         </Table>
       </MDBox>
+      {toggle ? (
+        <MDBox p={2}>
+          <MDButton variant={"contained"} color="info" onClick={() => compareSelected()}>
+            {dictionary.MultipleSegmentAnalysis.Table.Compare[language]}
+          </MDButton>
+        </MDBox>
+      ) : null}
     </>
   );
 }

@@ -49,7 +49,7 @@ function TherapyHistory() {
 
   React.useEffect(() => {
     if (!patientID) {
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", {replace: false});
     } else {
       setAlert(<LoadingProgress/>);
       SessionController.query("/api/queryTherapyHistory", {id: patientID}).then((response) => {

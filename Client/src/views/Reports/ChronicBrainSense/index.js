@@ -40,7 +40,7 @@ function ChronicBrainSense() {
 
   useEffect(() => {
     if (!patientID) {
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", {replace: false});
     } else {
       setAlert(<LoadingProgress/>);
       SessionController.query("/api/queryChronicBrainSense", {

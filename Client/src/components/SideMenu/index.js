@@ -60,6 +60,8 @@ const SideMenu = ({ color, brand, brandName, routes, ...rest }) => {
       setContextState(dispatch, "showSidenav", window.innerWidth < 1200);
     }
 
+    setOpenCollapse(collapseName);
+
     /** 
      The event listener that's calling the handleMiniSidenav function when resizing the window.
     */

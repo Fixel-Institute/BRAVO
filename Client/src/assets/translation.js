@@ -696,6 +696,20 @@ export const dictionary = {
       }
     }
   },
+  MultipleSegmentAnalysis: {
+    Table: {
+      Compare: {
+        en: "Compare",
+        zh: "Compare"
+      },
+    },
+    Figure: {
+      FigureTitle: {
+        en: "Chronic BrainSense Timeline",
+        zh: "长期脑电记录时间线"
+      }
+    }
+  },
   Wearable: {
     Title: {
       en: "Pairing External Sensors",
@@ -758,6 +772,10 @@ export const dictionary = {
     "therapeutic-prediction": {
       en: "Predict Optimal Therapy Settings",
       zh: "计算最佳疗法"
+    },
+    "segment-analysis": {
+      en: "Multiple Segment Analysis",
+      zh: "Multiple Segment Analysis"
     },
     "patient-events": {
       en: "Patient Events",
@@ -832,6 +850,10 @@ export const dictionary = {
     TherapeuticPrediction: {
       en: "Therapy Prediction",
       zh: "计算最佳疗法"
+    },
+    MultipleSegmentAnalysis: {
+      en: "Multiple Segment Analysis",
+      zh: "Multiple Segment Analysis"
     },
     PatientEvents: {
       en: "Patient Events",

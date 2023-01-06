@@ -158,6 +158,10 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
     if (dataToRender) handleGraphing(dataToRender);
+    else {
+      fig.purge();
+      setShow(false);
+    }
   }, [dataToRender, language]);
 
   const onResize = useCallback(() => {

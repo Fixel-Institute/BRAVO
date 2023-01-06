@@ -46,8 +46,8 @@ export default function SessionOverview() {
   }, []);
 
   const deleteSession = (id) => {
-    SessionController.query("/api/querySessionOverview", {
-      id: patientID,
+    SessionController.query("/api/deleteSessionFiles", {
+      patientId: patientID,
       deleteSession: id,
     }).then((response) => {
       setAvailableSessions(availableSessions.filter((session) => session.SessionID != id))

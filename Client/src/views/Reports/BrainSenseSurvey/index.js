@@ -44,7 +44,7 @@ function BrainSenseSurvey() {
 
   useEffect(() => {
     if (!patientID) {
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", {replace: false});
     } else {
       setAlert(<LoadingProgress/>);
       SessionController.query("/api/queryBrainSenseSurveys", {

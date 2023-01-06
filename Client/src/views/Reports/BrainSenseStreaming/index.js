@@ -47,7 +47,7 @@ function BrainSenseStreaming() {
 
   React.useEffect(() => {
     if (!patientID) {
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", {replace: false});
     } else {
       SessionController.query("/api/queryBrainSenseStreaming", {
         id: patientID,
@@ -202,6 +202,10 @@ function BrainSenseStreaming() {
 
   // Divide all PSDs by day or by channel
   React.useEffect(() => {
+    setLeftHemispherePSD(false);
+    setLeftHemisphereBox(false);
+    setRightHemispherePSD(false);
+    setRightHemisphereBox(false);
     for (var i in dataToRender.Channels) {
       if (dataToRender.Channels[i].endsWith("LEFT")) {
         setLeftHemispherePSD(dataToRender[dataToRender.Channels[i]].StimPSD);

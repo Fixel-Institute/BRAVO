@@ -56,7 +56,7 @@ export default function PatientOverview() {
 
   useEffect(() => {
     if (!patientID) {
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", {replace: false});
     } else {
       SessionController.getPatientInfo(patientID).then((response) => {
         setEditPatientInfo({...editPatientInfo, ...response.data});
@@ -444,7 +444,7 @@ export default function PatientOverview() {
                     </MDTypography>
                   </MDBox>
                   <MDBox pb={2} px={2} lineHeight={1.25} sx={{position: "absolute", bottom: 0, width: "100%"}}>
-                    <MDButton variant={"contained"} color={"info"} fullWidth onClick={() => navigate(item.route, {replace: true})}>
+                    <MDButton variant={"contained"} color={"info"} fullWidth onClick={() => navigate(item.route, {replace: false})}>
                       {dictionary.PatientOverview.PatientInformation.View[language]}
                     </MDButton>
                   </MDBox>
@@ -485,7 +485,7 @@ export default function PatientOverview() {
                     </MDTypography>
                   </MDBox>
                   <MDBox pb={2} px={2} lineHeight={1.25} sx={{position: "absolute", bottom: 0, width: "100%"}}>
-                    <MDButton variant={"contained"} color={"info"} fullWidth onClick={() => navigate(item.route, {replace: true})}>
+                    <MDButton variant={"contained"} color={"info"} fullWidth onClick={() => navigate(item.route, {replace: false})}>
                       {dictionary.PatientOverview.PatientInformation.View[language]}
                     </MDButton>
                   </MDBox>

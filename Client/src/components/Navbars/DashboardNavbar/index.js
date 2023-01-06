@@ -102,7 +102,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       SessionController.nullifyUser();
       setContextState(dispatch, "user", {});
       setContextState(dispatch, "patientID", null);
-      navigate("/", {replace: true});
+      navigate("/", {replace: false});
     }).catch((error) => {
       console.log(error)
     })

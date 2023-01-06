@@ -33,6 +33,7 @@ import ChronicBrainSense from "views/Reports/ChronicBrainSense";
 import SessionOverview from "views/Reports/SessionsOverview";
 
 import TherapeuticPrediction from "views/Experimental/TherapeuticPrediction";
+import MultipleSegmentAnalysis from "views/Experimental/MultipleSegmentAnalysis";
 import PatientEvents from "views/Experimental/PatientEvents";
 import AdaptiveStimulation from "views/Experimental/AdaptiveStimulation";
 import CircadianThreshold from "views/Experimental/CircadianThreshold";
@@ -175,6 +176,15 @@ const routes = [
         icon: <BatchPredictionIcon style={{color: "white", margin: 0, padding: 0}}/>,
         route: "/experimental/therapeutic-prediction",
         component: <TherapeuticPrediction />,
+        identified: true,
+        deidentified: true
+      },
+      {
+        name: "MultipleSegmentAnalysis",
+        key: "segment-analysis",
+        icon: <BatchPredictionIcon style={{color: "white", margin: 0, padding: 0}}/>,
+        route: "/experimental/segment-analysis",
+        component: <MultipleSegmentAnalysis />,
         identified: true,
         deidentified: true
       },

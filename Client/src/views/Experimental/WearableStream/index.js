@@ -125,7 +125,7 @@ function WearableStream() {
 
   useEffect(() => {
     if (!patientID) {
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", {replace: false});
     } else {
       SessionController.query("/mobile/wearable/queryPairedDevice", {
         id: patientID,

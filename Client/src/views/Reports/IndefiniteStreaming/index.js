@@ -36,7 +36,7 @@ function IndefiniteStreaming() {
 
   React.useEffect(() => {
     if (!patientID) {
-      navigate("/dashboard", {replace: true});
+      navigate("/dashboard", {replace: false});
     } else {
       SessionController.query("/api/queryIndefiniteStreaming", {
         id: patientID, 

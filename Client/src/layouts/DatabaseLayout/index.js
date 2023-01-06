@@ -22,7 +22,7 @@ export default function DatabaseLayout({children}) {
         const redirectHomepage = () => {
           setContextState(dispatch, "user", {});
           setContextState(dispatch, "patientID", null);
-          navigate("/index", {replace: true});
+          navigate("/index", {replace: false});
         };
         setAlert(
           <MuiAlertDialog title={"ERROR"} message={"Connection Timed-out"}
