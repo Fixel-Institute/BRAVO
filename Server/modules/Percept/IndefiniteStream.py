@@ -58,6 +58,19 @@ def saveMontageStreams(deviceID, streamList, sourceFile):
     return NewRecordingFound
 
 def processMontageStreams(stream, method="spectrogram"):
+    """ Calculate BrainSense Survey Power Spectrum.
+
+    The pipeline will filter all channels in the raw Indefinite Streaming with a zero-phase 5th-order Butterworth filter between 1-100Hz.
+    Then time-frequency analysis is calculated using short-time Fourier Transform with 0.5Hz frequency resolution using 1.0 second 
+    window and 500ms overlap. Zero-padding when neccessary to increase frequency resolution.
+
+    Args:
+      stream: Indefinite Stream raw object. 
+
+    Returns:
+      Processed Indefinite Streams with Spectrums.
+    """
+
     [b,a] = signal.butter(5, np.array([1,100])*2/250, 'bp', output='ba')
     stream["Spectrums"] = dict()
     for channel in stream["Channels"]:
@@ -66,6 +79,19 @@ def processMontageStreams(stream, method="spectrogram"):
     return stream
 
 def queryMontageDataOverview(user, patientUniqueID, authority):
+    """ Query available Indefinite Streaming data from specific patient requested
+
+    This function will query all available Indefinite Streaming data that a specific user has access to for a specific patient. 
+
+    Args:
+      user: BRAVO Platform User object. 
+      patientUniqueID: Deidentified patient ID as referenced in SQL Database. 
+      authority: User permission structure indicating the type of access the user has.
+
+    Returns:
+      List of Indefinite Streaming data accessible.
+    """
+
     BrainSenseData = list()
     if not authority["Permission"]:
         return BrainSenseData
@@ -102,6 +128,21 @@ def queryMontageDataOverview(user, patientUniqueID, authority):
     return BrainSenseData
 
 def queryMontageData(user, devices, timestamps, authority):
+    """ Query available Indefinite Streaming data from specific patient requested
+
+    Query all data (which can be multiple recordings from the same day if data interruption exist) based on the 
+    timestamps.
+
+    Args:
+      user: BRAVO Platform User object. 
+      devices (list): Deidentified neurostimulator device IDs as referenced in SQL Database. 
+      timestamps (list): Unix timestamps at which the recordings are collected.
+      authority: User permission structure indicating the type of access the user has.
+
+    Returns:
+      List of Indefinite Streaming data accessible.
+    """
+
     BrainSenseData = list()
     for i in range(len(devices)):
         device = models.PerceptDevice.objects.filter(deidentified_id=devices[i]).first()

@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+""""""
+"""
+Python Module for BrainSense Surveys
+===================================================
+@author: Jackson Cagle, University of Florida
+@email: jackson.cagle@neurology.ufl.edu
+"""
+
 import os, sys, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.parent.resolve())
 sys.path.append(os.environ.get("PYTHON_UTILITY"))
@@ -39,13 +48,20 @@ def saveBrainSenseSurvey(deviceID, surveyList, sourceFile):
             NewRecordingFound = True
     return NewRecordingFound
 
-def processBrainSenseSurvey(survey, method="spectrogram"):
-    [b,a] = signal.butter(5, np.array([1,100])*2/250, 'bp', output='ba')
-    filtered = signal.filtfilt(b, a, survey["Data"])
-    survey["Spectrum"] = SPU.defaultSpectrogram(filtered, window=1.0, overlap=0.5,frequency_resolution=0.5, fs=250)
-    return survey
-
 def querySurveyResults(user, patientUniqueID, authority):
+    """ Extract all BrainSense Survey recordings and process for power spectrum.
+
+    This pipeline will process all BrainSense Survey recordings recorded from one patient and output the average power spectrum. 
+
+    Args:
+      user: BRAVO Platform User object. 
+      patientUniqueID: Deidentified patient ID as referenced in SQL Database. 
+      authority: User permission structure indicating the type of access the user has.
+
+    Returns:
+      List of processed BrainSense Surveys without raw time-domain data. 
+    """
+
     BrainSenseData = list()
     if not authority["Permission"]:
         return BrainSenseData
@@ -80,3 +96,22 @@ def querySurveyResults(user, patientUniqueID, authority):
             data["StdPower"] = SPU.stderr(survey["Spectrum"]["Power"],axis=1).tolist()
             BrainSenseData.append(data)
     return BrainSenseData
+
+def processBrainSenseSurvey(survey, method="spectrogram"):
+    """ Calculate BrainSense Survey Power Spectrum.
+
+    The pipeline will filter the raw BrainSense Survey with a zero-phase 5th-order Butterworth filter between 1-100Hz.
+    Then power spectrum is calculated using short-time Fourier Transform with 0.5Hz frequency resolution using 1.0 second window and 500ms overlap. 
+    Zero-padding when neccessary to increase frequency resolution.
+
+    Args:
+      survey: BrainSense Survey raw object. 
+
+    Returns:
+      List of processed BrainSense Surveys without raw time-domain data. 
+    """
+
+    [b,a] = signal.butter(5, np.array([1,100])*2/250, 'bp', output='ba')
+    filtered = signal.filtfilt(b, a, survey["Data"])
+    survey["Spectrum"] = SPU.defaultSpectrogram(filtered, window=1.0, overlap=0.5,frequency_resolution=0.5, fs=250)
+    return survey

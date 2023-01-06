@@ -160,6 +160,21 @@ def queryChronicLFPsByTime(user, patientUniqueID, timeRange, authority):
     return LFPTrends
 
 def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
+    """ Query Chronic LFPs based on Therapy History.
+
+    This function will query Chronic BrainSense Power Band data and Event PSDs based on therapy change logs.
+    This design is made because a change in therapy group may lead to different therapy effect or BrainSense configurations.
+
+    Args:
+      user: BRAVO Platform User object. 
+      patientUniqueID: Deidentified patient ID as referenced in SQL Database. 
+      TherapyHistory: List of therapy change logs ordered by time extracted from ``Therapy.queryTherapyHistory``. 
+      authority: User permission structure indicating the type of access the user has.
+
+    Returns:
+      Returns a list of LFPTrends, where each LFPTrends are continuous BrainSense Power with the same therapy configurations. 
+    """
+
     LFPTrends = list()
     if not authority["Permission"]:
         return LFPTrends
@@ -240,6 +255,34 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
     return LFPTrends
 
 def processChronicLFPs(LFPTrends, timezoneOffset=0):
+    """ Process Chronic LFPs based on Therapy History.
+
+    This pipeline will take the Chronic BrainSense data extracted from ``queryChronicLFPs`` and further processed 
+    to calculate Event-Locked Power, Therapy Amplitudes, and Circadian Rhythms. 
+
+    **Event-Locked Power**:
+
+    Take all BrainSense power within the same therapy configurations and calculate power trend 3 hours before and after an event marking
+    to identify changes in brain power related to pathology or events. 
+
+    **Therapy Amplitudes**:
+
+    When BrainSense is enabled, the therapy amplitude is logged. User can simply correlate brain power at different therapy amplitude
+    to track pathological brain signals with adjustable therapy amplitude.
+    
+    **Circadian Rhythms**:
+
+    Brain signal changes with sleep, and circadian rhythm analysis takes the timezoneOffset that the patient has 
+    and overlay all Chronic BrainSense on a 24-hour scale in a 30 minutes window. 
+    
+    Args:
+      LFPTrends: List of Chronic BrainSense Power data extracted from ``queryChronicLFPs``. 
+      timezoneOffset: user timezone offset from UTC, used to perform 24-hours circadian rhythm analysis.
+
+    Returns:
+      Returns a list of LFPTrends, where each LFPTrends are continuous BrainSense Power with the same therapy configurations. 
+    """
+
     for i in range(len(LFPTrends)):
         if LFPTrends[i]["Hemisphere"].startswith("Left"):
             Hemisphere = "LeftHemisphere"

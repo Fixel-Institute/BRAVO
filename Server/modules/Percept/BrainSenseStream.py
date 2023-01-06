@@ -208,7 +208,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
             if data["Timestamp"] in includedRecording:
                 continue
 
-            if data["Duration"] < 30:
+            if data["Duration"] < 5:
                 continue
 
             data["RecordingID"] = recording.recording_id
@@ -306,6 +306,79 @@ def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=Fal
         RecordingID = recording.recording_id
     return BrainSenseData, RecordingID
 
+def queryMultipleSegmentComparison(user, recordingIds, authority):
+    """ Query Multiple Segment Comparison
+
+    This function will query BrainSense recording data based on provided Recording ID.
+
+    Args:
+      user: BRAVO Platform User object. 
+      recordingIds:  List of deidentified recording IDs as referenced in SQL Database. 
+      authority: User permission structure indicating the type of access the user has.
+
+    Returns:
+      Returns a dictionary (SegmentSummaries) which contains average power spectrum and respective stimulation settings.
+    """
+
+    if authority["Level"] == 0:
+        return None
+
+    if not authority["Permission"]:
+        return None
+    
+    SegmentSummaries = {}
+
+    recordings = models.BrainSenseRecording.objects.filter(recording_id__in=recordingIds, recording_type="BrainSenseStream").all()
+    for recording in recordings:
+        if str(recording.device_deidentified_id) in authority["Devices"]:
+            BrainSenseData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+            if len(recording.recording_info["Channel"]) == 2:
+                info = "Bilateral"
+            else:
+                info = "Unilateral"
+
+            if not "Spectrogram" in BrainSenseData.keys():
+                BrainSenseData = processRealtimeStreams(BrainSenseData)
+                Database.saveSourceFiles(BrainSenseData, recording.recording_type, info, recording.recording_id, recording.device_deidentified_id)
+                recording.save()
+            
+            BrainSenseData["Stimulation"] = processRealtimeStreamStimulationAmplitude(BrainSenseData)
+            for StimulationSeries in BrainSenseData["Stimulation"]:
+
+                if StimulationSeries["Name"].endswith("LEFT"):
+                    StimFrequency = BrainSenseData["Therapy"]["Left"]["RateInHertz"]
+                    StimPulse = BrainSenseData["Therapy"]["Left"]["PulseWidthInMicroSecond"]
+                    StimContact = recording.recording_info["ContactType"][0]
+                else:
+                    StimFrequency = BrainSenseData["Therapy"]["Right"]["RateInHertz"]
+                    StimPulse = BrainSenseData["Therapy"]["Right"]["PulseWidthInMicroSecond"]
+                    StimContact = recording.recording_info["ContactType"][-1]
+
+                if not StimulationSeries["Name"] in SegmentSummaries.keys():
+                    SegmentSummaries[StimulationSeries["Name"]] = []
+
+                cIndex = 0;
+                for i in range(1,len(StimulationSeries["Time"])):
+                    StimulationDuration = StimulationSeries["Time"][i] - StimulationSeries["Time"][i-1]
+                    if StimulationDuration < 5:
+                        continue
+                    cIndex += 1
+
+                    timeSelection = rangeSelection(BrainSenseData["Spectrogram"][StimulationSeries["Name"]]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+                    SegmentSummaries[StimulationSeries["Name"]].append({
+                        "PSD": np.mean(BrainSenseData["Spectrogram"][StimulationSeries["Name"]]["Power"][:,timeSelection],axis=1),
+                        "Therapy": {
+                            "Amplitude": StimulationSeries["Amplitude"][i],
+                            "Frequency": StimFrequency,
+                            "Pulsewidth": StimPulse,
+                            "Contact": StimContact,
+                        },
+                        "RecordingID": recording.recording_id
+                    })
+            
+    return SegmentSummaries
+
 def queryRealtimeStreamData(user, device, timestamp, authority, cardiacFilter=False, refresh=False):
     """ Query BrainSense Streaming Data
 
@@ -367,21 +440,21 @@ def queryRealtimeStreamData(user, device, timestamp, authority, cardiacFilter=Fa
     return BrainSenseData, RecordingID
 
 def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies=[0,0]):
-    """ Query BrainSense Streaming Data
+    """ Process BrainSense Streaming Data to be used for Plotly rendering.
 
-    This function will query BrainSense recording data based on provided Device ID and Timestamp of the recording.
+    This function takes the processRealtimeStreams BrainSense Stream object and further process it for frontend rendering system.
+    This is to reduce some computational requirement for the frontend, and because Python signal processing is more efficient than 
+    Javascript frontend. 
+
+    This function wrap around ``processRealtimeStreamStimulationPSD`` function to generate stimulation related PSD at different stimulation state.
 
     Args:
-      user: BRAVO Platform User object. 
-      device:  Deidentified neurostimulator device ID as referenced in SQL Database. 
-      timestamp:  Unix timestamp at which the recording is collected.
-      authority: User permission structure indicating the type of access the user has.
-      cardiacFilter: Boolean indicator if the user want to apply cardiac filters (see processRealtimeStreams function)
-      refresh: Boolean indicator if the user want to use cache data or reprocess the data.
+      stream: processed BrainSense TimeDomain structure (see processRealtimeStreams function)
+      options: Signal processing module configurations. 
+      centerFrequencies: The center frequencies (Left and Right hemisphere) used to obtain Power-band box plot.
 
     Returns:
-      Returns a tuple (BrainSenseData, RecordingID) where BrainSenseData is the BrainSense streaming data structure in Database and RecordingID is the 
-      deidentified id of the available data.
+      Returns processed data object with content sufficient for React.js to render Plotly graphs.
     """
     
     stream["Stimulation"] = processRealtimeStreamStimulationAmplitude(stream)
@@ -421,6 +494,15 @@ def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies
     return data
 
 def processRealtimeStreamStimulationAmplitude(stream):
+    """ Process BrainSense Streaming Data to extract data segment at different stimulation amplitude.
+
+    Args:
+      stream: processed BrainSense TimeDomain structure (see processRealtimeStreams function)
+
+    Returns:
+      Returns list of stimulation series.
+    """
+
     StimulationSeries = list()
     Hemisphere = ["Left","Right"]
     for StimulationSide in range(2):
@@ -441,6 +523,17 @@ def processRealtimeStreamStimulationAmplitude(stream):
     return StimulationSeries
 
 def processRealtimeStreamPowerBand(stream):
+    """ Extract Onboard Power-band recording.
+
+    Additional filtering is done by performing zscore normalization. Outliers are removed. 
+
+    Args:
+      stream: processed BrainSense TimeDomain structure (see processRealtimeStreams function)
+
+    Returns:
+      Returns list of stimulation series.
+    """
+
     PowerSensing = list()
     Hemisphere = ["Left","Right"]
     for StimulationSide in range(2):
@@ -454,6 +547,25 @@ def processRealtimeStreamPowerBand(stream):
     return PowerSensing
 
 def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", stim_label="Ipsilateral", centerFrequency=0):
+    """ Process BrainSense Stream Stimulation-specific Power Spectrum
+
+    The process will take in stimulation epochs and compute Power Spectral Density using methods specified in parameters.
+    Stimulation epochs with less than 7 seconds of recording are skipped.
+    2 seconds before and after stimulation changes are skipped to avoid transition artifacts. 
+
+    Standard method uses 1 second Window and 0.5 seconds overlap. Standard Spectral Feature bandwidth is +/- 2Hz. 
+
+    Args:
+      stream: processed BrainSense TimeDomain structure (see processRealtimeStreams function)
+      channel: BrainSense TimeDomain data channel name.
+      method (string): Processing method. Default to "Spectrogram" method, can be one of (Welch, Spectrogram, or Wavelet).
+      stim_label (string): Using "Ipsilateral" stimulation label or "Contralateral" stimulation label. 
+      centerFrequency (int): The center frequency at which the spectral features are extracted from PSD. 
+
+    Returns:
+      Returns average PSD at each stimulation amplitude, and Spectral Features extracted from desired frequency band. 
+    """
+
     if stim_label == "Ipsilateral":
         for Stimulation in stream["Stimulation"]:
             if Stimulation["Name"] == channel:

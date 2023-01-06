@@ -30,9 +30,9 @@ def validateEmail(email):
     return re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', email)
 
 class UserRegister(KnoxLoginView):
-    """ User Registration.
+    """ User Registration (Web Account Only).
 
-    **Route**: ``/api/registration``
+    **POST**: ``/api/registration``
 
     Args:
       Email (string): Email address will also serve as unique username. Must be a properly formated Email address and unique within database.
@@ -42,7 +42,7 @@ class UserRegister(KnoxLoginView):
         User may also choose to perform end-to-end encryption during transmission if they desire.
 
     Returns:
-      Response Code 200 if success or 400 if error.
+      Response Code 200 if success or 400 if error. Response Body contains authentication token and user object.
     """
 
     permission_classes = [AllowAny,]
@@ -84,7 +84,7 @@ class UserRegister(KnoxLoginView):
 class UserAuth(KnoxLoginView):
     """ User Authentication (Web Account Only).
 
-    **Route**: ``/api/authenticate``
+    **POST**: ``/api/authenticate``
 
     Args:
       Email (string): Email address also serves as unique username.
@@ -92,7 +92,7 @@ class UserAuth(KnoxLoginView):
         User may also choose to perform end-to-end encryption during transmission if they desire.
 
     Returns:
-      Response Code 200 if success or 400 if error.
+      Response Code 200 if success or 400 if error. Response Body contains authentication token and user object.
     """
 
     permission_classes = [AllowAny,]
@@ -130,10 +130,10 @@ class FetchAuthorizedInstitute(RestViews.APIView):
 class UserSignout(KnoxLogoutView):
     """ User logout while detroying the authentication token.
 
-    **Route**: ``/api/logout``
+    **POST**: ``/api/logout``
 
     Returns:
-      Response Code 200.
+      Response Code 204.
     """
 
     permission_classes = [IsAuthenticated,]
@@ -145,7 +145,7 @@ class UserSignout(KnoxLogoutView):
 class Handshake(RestViews.APIView):
     """ Confirming that the BRAVO server exist.
 
-    **Route**: ``/api/handshake``
+    **POST**: ``/api/handshake``
 
     Returns:
       Response Code 200.

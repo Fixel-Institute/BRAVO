@@ -8,7 +8,7 @@ urlpatterns = [
 	path('registration', Auth.UserRegister.as_view()),
 	path('authenticate', Auth.UserAuth.as_view()),
 	path('logout', Auth.UserSignout.as_view()), 
-	path('authorizedInstitute', Auth.FetchAuthorizedInstitute.as_view()), 
+	#path('authorizedInstitute', Auth.FetchAuthorizedInstitute.as_view()), 
 	
 	path('deidentificationTable', Upload.DeidentificationTable.as_view()),
 	path('uploadSessionFiles', Upload.SessionUpload.as_view()),
@@ -33,6 +33,7 @@ urlpatterns = [
 	path('querySessionOverview', Queries.QuerySessionOverview.as_view()),
 
 	path('queryPredictionModel', Queries.QueryPredictionModel.as_view()),
+	path('queryMultipleSegmentComparison', Queries.QueryMultipleSegmentComparison.as_view()),
 	path('queryPatientEvents', Queries.QueryPatientEvents.as_view()),
 	path('queryAdaptiveGroups', Queries.QueryAdaptiveGroups.as_view()),
 	path('queryCircadianPower', Queries.QueryCircadianPower.as_view()),

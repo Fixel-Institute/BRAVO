@@ -1,0 +1,12 @@
+BrainSense Survey Pipeline
+=============================================
+
+Overview
+---------------------------------------------
+The BrainSense Survey Pipeline is a Python module specific for handling BrainSense Survey data format from Percept. 
+This section will go over all functions implemented and provide sufficient details on pipeline implementation.
+
+Methods
+---------------------------------------------
+.. automodule:: Percept.BrainSenseSurvey
+    :members: 

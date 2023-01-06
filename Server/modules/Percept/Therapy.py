@@ -49,6 +49,20 @@ def saveTherapySettings(deviceID, therapyList, sessionDate, type, sourceFile):
     return NewTherapyFound
 
 def queryTherapyHistory(user, patientUniqueID, authority):
+    """ Extract all therapy change logs.
+
+    This pipeline go through all therapy change logs and extract the time at which a group changes is made. 
+    The pipeline will also extract the actual setting that the device is on before and after changes.
+
+    Args:
+      user: BRAVO Platform User object. 
+      patientUniqueID: Deidentified patient ID as referenced in SQL Database. 
+      authority: User permission structure indicating the type of access the user has.
+
+    Returns:
+      List of therapy group history ordered by time. 
+    """
+
     TherapyHistoryContext = list()
     if not authority["Permission"]:
         return TherapyHistoryContext
@@ -139,17 +153,32 @@ def queryAdaptiveGroupForThreshold(user, patientUniqueID, authority):
     TherapyHistory = sorted(TherapyHistory, key=lambda x: x["TherapyGroup"])
     return TherapyHistory
 
-def queryTherapyConfigurations(user, patientUniqueID, authority, therapy_type="Past Therapy"):
+def queryTherapyConfigurations(user, patientUniqueID, authority, therapyType="Past Therapy"):
+    """ Extract all therapy configurations at each programming session.
+
+    This pipeline will go through all session files and extract the Therapy Groups and Therapy History objects 
+    to provide user with the detail therapy options that the patient had at each timepoint. 
+
+    Args:
+      user: BRAVO Platform User object. 
+      patientUniqueID: Deidentified patient ID as referenced in SQL Database. 
+      authority: User permission structure indicating the type of access the user has.
+      therapyType (string): The type of therapy that you want (Past Therapy, Pre-visit Therapy, and Post-visit Therapy).
+
+    Returns:
+      List of therapy configurations ordered by time. 
+    """
+
     TherapyHistory = list()
     if not authority["Permission"]:
         return TherapyHistory
 
     availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
     for device in availableDevices:
-        if therapy_type == "":
+        if therapyType == "":
             TherapyHistoryObjs = models.TherapyHistory.objects.filter(device_deidentified_id=device.deidentified_id).order_by("therapy_date").all()
         else:
-            TherapyHistoryObjs = models.TherapyHistory.objects.filter(device_deidentified_id=device.deidentified_id, therapy_type=therapy_type).order_by("therapy_date").all()
+            TherapyHistoryObjs = models.TherapyHistory.objects.filter(device_deidentified_id=device.deidentified_id, therapy_type=therapyType).order_by("therapy_date").all()
 
         for therapy in TherapyHistoryObjs:
             TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location}
@@ -167,9 +196,27 @@ def queryTherapyConfigurations(user, patientUniqueID, authority, therapy_type="P
 
     return TherapyHistory
 
-def getTherapyDetails(TherapyHistory, timestamp, group_id, typeID):
+def getTherapyDetails(TherapyHistory, timestamp, groupID, typeID):
+    """ Extract detail therapy configuration of specific group at specific time.
+
+    This pipeline will go through all configurations and extract the detail therapy configurations 
+    based on the user's request. 
+
+    For example, if Group A configuration is desired for Jan 01, 2021. The pipeline will go through all 
+    configurations and find the last therapy settings before Jan 01, 2021 for Group A and return that to you.
+
+    Args:
+      TherapyHistory: List of therapy configurations ordered by time extracted from ``queryTherapyConfigurations``. 
+      timestamp: A timestamp at which therapy configurations is wanted. 
+      groupID: Medtronic Group ID (Group_A to Group_D).
+      typeID (string): The type of therapy that you want (Past Therapy, Pre-visit Therapy, and Post-visit Therapy).
+
+    Returns:
+      A tuple of Therapy Details dictionary and unix timestamp at which the setting is programmed.
+    """
+
     for j in range(len(TherapyHistory["therapy_date"])):
-        if TherapyHistory["therapy_date"][j].timestamp() > timestamp and TherapyHistory["group_id"][j] == group_id and TherapyHistory["therapy_type"][j] == typeID:
+        if TherapyHistory["therapy_date"][j].timestamp() > timestamp and TherapyHistory["group_id"][j] == groupID and TherapyHistory["therapy_type"][j] == typeID:
             therapy_details = copy.deepcopy(TherapyHistory["therapy_details"][j])
             if "LeftHemisphere" in therapy_details.keys():
                 if type(therapy_details["LeftHemisphere"]["Channel"][0]) == list:
@@ -187,6 +234,22 @@ def getTherapyDetails(TherapyHistory, timestamp, group_id, typeID):
     return None, None
 
 def extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveConflicts=False):
+    """ General pipeline to extract therapy details for visualization. 
+
+    The pipeline will go through all timestamp first to identify all unique programming dates.
+    The unique dates were used to identify all TherapyChangeLog between visits to calculate percent time 
+    for each group in between visit. 
+
+    Then a processed organized dictionary of therapy settings called "Overview" will be generated for each therapy group. 
+
+    Args:
+      TherapyConfigurations: List of therapy configurations ordered by time extracted from ``queryTherapyConfigurations``. 
+      TherapyChangeLog: List of therapy change logs ordered by time extracted from ``queryTherapyHistory``. 
+
+    Returns:
+      A list of processed Therapy Data organized by time and by group.
+    """
+
     TherapyData = dict()
 
     # Normalize Timestamp
@@ -296,154 +359,5 @@ def extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveCon
 
     for key in TherapyData.keys():
         TherapyData[key] = sorted(TherapyData[key], key=lambda therapy: therapy["Overview"]["GroupName"])
-
-    return TherapyData
-
-def processTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveConflicts=True):
-    TherapyData = dict()
-
-    # Normalize Timestamp
-    DeviceTimestamp = dict()
-    for i in range(0,len(TherapyConfigurations)):
-        if not TherapyConfigurations[i]["DeviceID"] in DeviceTimestamp.keys():
-            DeviceTimestamp[TherapyConfigurations[i]["DeviceID"]] = list()
-
-    ExistingTimestamp = list()
-    for deviceID in DeviceTimestamp.keys():
-        for i in range(len(TherapyConfigurations)):
-            if TherapyConfigurations[i]["DeviceID"] == deviceID:
-                TimeDifferences = np.array([np.abs(TherapyConfigurations[i]["TherapyDate"] - time) for time in ExistingTimestamp])
-                Indexes = np.where(TimeDifferences < 3600*24)[0]
-                if len(Indexes > 0):
-                    TherapyConfigurations[i]["TherapyDate"] = ExistingTimestamp[Indexes[0]]
-                else:
-                    ExistingTimestamp.append(TherapyConfigurations[i]["TherapyDate"])
-
-                if not TherapyConfigurations[i]["TherapyDate"] in DeviceTimestamp[deviceID]:
-                    DeviceTimestamp[deviceID].append(TherapyConfigurations[i]["TherapyDate"])
-
-    for deviceID in DeviceTimestamp.keys():
-        for nConfig in range(len(DeviceTimestamp[deviceID])):
-            if nConfig == 0:
-                lastMeasuredTimestamp = 0
-            else:
-                lastMeasuredTimestamp = DeviceTimestamp[deviceID][nConfig-1]
-
-            TherapyDutyPercent = dict()
-            for i in range(len(TherapyChangeLog)):
-                if str(TherapyChangeLog[i]["device"]) == deviceID:
-                    for k in range(len(TherapyChangeLog[i]["date_of_change"])):
-                        if lastMeasuredTimestamp < DeviceTimestamp[deviceID][nConfig]:
-                            if k > 0:
-                                if TherapyChangeLog[i]["previous_group"][k] == TherapyChangeLog[i]["new_group"][k-1] or TherapyChangeLog[i]["previous_group"][k] == -1:
-                                    if TherapyChangeLog[i]["date_of_change"][k]/1000000000 > lastMeasuredTimestamp:
-                                        if not TherapyChangeLog[i]["previous_group"][k] in TherapyDutyPercent.keys():
-                                            TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] = 0
-                                        if TherapyChangeLog[i]["date_of_change"][k]/1000000000 > DeviceTimestamp[deviceID][nConfig]:
-                                            TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] += (DeviceTimestamp[deviceID][nConfig]-lastMeasuredTimestamp)
-                                            lastMeasuredTimestamp = DeviceTimestamp[deviceID][nConfig]
-                                        else:
-                                            TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] += (TherapyChangeLog[i]["date_of_change"][k]/1000000000-lastMeasuredTimestamp)
-                                            lastMeasuredTimestamp = TherapyChangeLog[i]["date_of_change"][k]/1000000000
-                            else:
-                                if TherapyChangeLog[i]["date_of_change"][k]/1000000000 > lastMeasuredTimestamp:
-                                    if not TherapyChangeLog[i]["previous_group"][k] in TherapyDutyPercent.keys():
-                                        TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] = 0
-                                    if TherapyChangeLog[i]["date_of_change"][k]/1000000000 > DeviceTimestamp[deviceID][nConfig]:
-                                        TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] += (DeviceTimestamp[deviceID][nConfig]-lastMeasuredTimestamp)
-                                        lastMeasuredTimestamp = DeviceTimestamp[deviceID][nConfig]
-                                    else:
-                                        TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] += (TherapyChangeLog[i]["date_of_change"][k]/1000000000-lastMeasuredTimestamp)
-                                        lastMeasuredTimestamp = TherapyChangeLog[i]["date_of_change"][k]/1000000000
-
-            for i in range(len(TherapyConfigurations)):
-                if TherapyConfigurations[i]["DeviceID"] == deviceID and TherapyConfigurations[i]["TherapyDate"] == DeviceTimestamp[deviceID][nConfig]:
-                    TherapyConfigurations[i]["TherapyDutyPercent"] = TherapyDutyPercent
-            print(TherapyDutyPercent)
-    for nConfig in range(len(TherapyConfigurations)):
-        therapy = TherapyConfigurations[nConfig]
-        if not int(therapy["TherapyDate"]) in TherapyData.keys():
-            TherapyData[int(therapy["TherapyDate"])] = list()
-        therapy["Overview"] = dict()
-        totalHours = np.sum([therapy["TherapyDutyPercent"][key] for key in therapy["TherapyDutyPercent"].keys()])
-        if not therapy["Therapy"]["GroupId"] in therapy["TherapyDutyPercent"].keys():
-            therapy["Overview"]["DutyPercent"] = "(0%)"
-        else:
-            therapy["Overview"]["DutyPercent"] = f"({therapy['TherapyDutyPercent'][therapy['Therapy']['GroupId']]/totalHours*100:.2f}%)"
-
-        therapy["Overview"]["GroupName"] = therapy["Therapy"]["GroupId"].replace("GroupIdDef.GROUP_","Group ")
-        therapy["Overview"]["TherapyLogID"] = therapy["LogID"]
-        therapy["Overview"]["TherapyType"] = therapy["TherapyType"]
-        therapy["Overview"]["TherapyUsage"] = 0
-
-        therapy["Overview"]["Frequency"] = ""
-        therapy["Overview"]["Amplitude"] = ""
-        therapy["Overview"]["PulseWidth"] = ""
-        therapy["Overview"]["Contacts"] = ""
-        therapy["Overview"]["BrainSense"] = ""
-        for hemisphere in ["LeftHemisphere","RightHemisphere"]:
-            if hemisphere in therapy["Therapy"].keys():
-                if hemisphere == "LeftHemisphere":
-                    symbol = '<div class="d-flex align-items-center"><span class="badge badge-primary">L</span>'
-                else:
-                    symbol = '<div class="d-flex align-items-center"><span class="badge badge-warning">R</span>'
-
-                if therapy["Therapy"][hemisphere]["Mode"] == "Interleaving":
-                    for i in range(len(therapy['Therapy'][hemisphere]['Frequency'])):
-                        therapy["Overview"]["Frequency"] += symbol + '<h6 class="text-sm mb-0">' + f"{therapy['Therapy'][hemisphere]['Frequency'][i]} Hz" + '</h6></div>'
-                    for i in range(len(therapy['Therapy'][hemisphere]['Amplitude'])):
-                        therapy["Overview"]["Amplitude"] += symbol + '<h6 class="text-sm mb-0">' + f"{therapy['Therapy'][hemisphere]['Amplitude'][i]} mA" + '</h6></div>'
-                    for i in range(len(therapy['Therapy'][hemisphere]['PulseWidth'])):
-                        therapy["Overview"]["PulseWidth"] += symbol + '<h6 class="text-sm mb-0">' + f"{therapy['Therapy'][hemisphere]['PulseWidth'][i]} μS" + '</h6></div>'
-                    for i in range(len(therapy['Therapy'][hemisphere]['Channel'])):
-                        therapy["Overview"]["Contacts"] += '<div class="d-flex align-items-center">'
-                        for contact in therapy['Therapy'][hemisphere]['Channel'][i]:
-                            if contact["ElectrodeStateResult"] == "ElectrodeStateDef.Negative":
-                                ContactPolarity = '<span class="text-md badge badge-info">'
-                                ContactSign = "-"
-                            elif contact["ElectrodeStateResult"] == "ElectrodeStateDef.Positive":
-                                ContactPolarity = '<span class="text-md badge badge-danger">'
-                                ContactSign = "+"
-                            else:
-                                ContactPolarity = '<span class="text-md badge badge-success">'
-                                ContactSign = ""
-                            ContactName, ContactID = Percept.reformatElectrodeDef(contact["Electrode"])
-                            if not ContactName == "CAN" or len(therapy['Therapy'][hemisphere]['Channel']) == 2:
-                                therapy["Overview"]["Contacts"] += ContactPolarity + ContactName.replace("E","") + ContactSign + '</span>'
-                        therapy["Overview"]["Contacts"] += '</div>'
-                else:
-                    if therapy["Therapy"][hemisphere]["Mode"] == "BrainSense":
-                        therapy["Overview"]["BrainSense"] += symbol + '<h6 class="text-sm mb-0">' + f"{therapy['Therapy'][hemisphere]['SensingSetup']['FrequencyInHertz']} Hz" + '</h6></div>'
-                    therapy["Overview"]["Frequency"] += symbol + '<h6 class="text-sm mb-0">' + f"{therapy['Therapy'][hemisphere]['Frequency']} Hz" + '</h6></div>'
-                    therapy["Overview"]["Amplitude"] += symbol + '<h6 class="text-sm mb-0">' + f"{therapy['Therapy'][hemisphere]['Amplitude']} mA" + '</h6></div>'
-                    therapy["Overview"]["PulseWidth"] += symbol + '<h6 class="text-sm mb-0">' + f"{therapy['Therapy'][hemisphere]['PulseWidth']} μS" + '</h6></div>'
-                    therapy["Overview"]["Contacts"] += '<div class="d-flex align-items-center">'
-                    for contact in therapy['Therapy'][hemisphere]['Channel']:
-                        if contact["ElectrodeStateResult"] == "ElectrodeStateDef.Negative":
-                            ContactPolarity = '<span class="text-md badge badge-info">'
-                            ContactSign = "-"
-                        elif contact["ElectrodeStateResult"] == "ElectrodeStateDef.Positive":
-                            ContactPolarity = '<span class="text-md badge badge-danger">'
-                            ContactSign = "+"
-                        else:
-                            ContactPolarity = '<span class="text-md badge badge-success">'
-                            ContactSign = ""
-                        ContactName, ContactID = Percept.reformatElectrodeDef(contact["Electrode"])
-                        if not ContactName == "CAN" or len(therapy['Therapy'][hemisphere]['Channel']) == 2:
-                            therapy["Overview"]["Contacts"] += ContactPolarity + ContactName.replace("E","") + ContactSign + '</span>'
-                    therapy["Overview"]["Contacts"] += '</div>'
-
-        TherapyData[int(therapy["TherapyDate"])].append(therapy)
-
-    for key in TherapyData.keys():
-        TherapyData[key] = sorted(TherapyData[key], key=lambda therapy: therapy["Overview"]["GroupName"])
-        if resolveConflicts:
-            existList = list(); i = 0;
-            while i < len(TherapyData[key]):
-                if not (TherapyData[key][i]["Overview"]["GroupName"] + TherapyData[key][i]["Device"]) in existList and not TherapyData[key][i]["Overview"]["Frequency"] == "":
-                    existList.append(TherapyData[key][i]["Overview"]["GroupName"] + TherapyData[key][i]["Device"])
-                    i += 1
-                else:
-                    del(TherapyData[key][i])
 
     return TherapyData

@@ -101,7 +101,7 @@ def queryPatientEventPSDs(user, patientUniqueID, TherapyHistory, authority):
         return PatientEventPSDs
 
     availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
-    TherapyConfigurations = Therapy.queryTherapyConfigurations(user, patientUniqueID, authority, therapy_type="Past Therapy")
+    TherapyConfigurations = Therapy.queryTherapyConfigurations(user, patientUniqueID, authority, therapyType="Past Therapy")
     for device in availableDevices:
         EventPSDs = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id, sensing_exist=True).all()
         if len(EventPSDs) > 0:

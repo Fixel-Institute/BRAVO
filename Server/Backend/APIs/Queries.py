@@ -1,3 +1,11 @@
+""""""
+"""
+All Queries Routes
+===================================================
+@author: Jackson Cagle, University of Florida
+@email: jackson.cagle@neurology.ufl.edu
+"""
+
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -21,6 +29,15 @@ with open(RESOURCES + "/../codes.json", "r") as file:
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
 class QueryDatabaseInfo(RestViews.APIView):
+    """ Query current database information.
+
+    **POST**: ``/api/queryDatabaseInfo``
+
+    Returns:
+      Response Code 200.
+      Response Body contains number of unique patients in database and size of data the user has access to. 
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -28,6 +45,15 @@ class QueryDatabaseInfo(RestViews.APIView):
         return Response(status=200, data=databaseInfo)
 
 class QueryPatientList(RestViews.APIView):
+    """ Query list of accessible patients in database.
+
+    **POST**: ``/api/queryPatients``
+
+    Returns:
+      Response Code 200.
+      Response Body contains list of patient object. 
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -35,6 +61,18 @@ class QueryPatientList(RestViews.APIView):
         return Response(status=200, data=Patients)
 
 class QueryPatientInfo(RestViews.APIView):
+    """ Query detailed patient information.
+
+    **POST**: ``/api/queryPatientInfo``
+
+    Args:
+      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+
+    Returns:
+      Response Code 200.
+      Response Body contains a single patient object with detailed information.
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -55,6 +93,24 @@ class QueryPatientInfo(RestViews.APIView):
             return Response(status=200, data=Patient)
 
 class QueryTherapyHistory(RestViews.APIView):
+    """ Query all therapy histories from desired patient.
+
+    The therapy histories include both therapy change logs and clinician configurations. 
+
+    The therapy histories do not include how patient adjust their stimulation amplitude within range 
+    because this information is not saved.
+    If BrainSense is enabled, user may query the stimulation amplitude changes through Chronic BrainSense.
+
+    **POST**: ``/api/queryTherapyHistory``
+
+    Args:
+      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body contains list of all Therapy Change Logs and Therapy Configurations.
+    """
+    
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -62,7 +118,7 @@ class QueryTherapyHistory(RestViews.APIView):
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 0:
-                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
             PatientID = request.data["id"]
             if Authority["Level"] == 1:
@@ -73,13 +129,30 @@ class QueryTherapyHistory(RestViews.APIView):
                 PatientID = PatientInfo.authorized_patient_id
 
             TherapyChangeLogs = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
-            TherapyConfigurations = Therapy.queryTherapyConfigurations(request.user, PatientID, Authority, therapy_type="")
+            TherapyConfigurations = Therapy.queryTherapyConfigurations(request.user, PatientID, Authority, therapyType="")
             TherapyConfigurations = Therapy.extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=TherapyChangeLogs, resolveConflicts=False)
             return Response(status=200, data={"TherapyChangeLogs": TherapyChangeLogs, "TherapyConfigurations": TherapyConfigurations})
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class QueryBrainSenseSurveys(RestViews.APIView):
+    """ Query all BrainSense Survey data.
+
+    The BrainSense Survey query will return processed power spectral density calculated from time-domain data. 
+    This is not the same as the on-board FFT result shown on Medtronic Tablet. 
+
+    Raw time-domain data will not be returned from this route.
+
+    **POST**: ``/api/queryBrainSenseSurveys``
+
+    Args:
+      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body contains list of all BrainSense Surveys.
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -105,6 +178,72 @@ class QueryBrainSenseSurveys(RestViews.APIView):
 
 
 class QueryBrainSenseStreaming(RestViews.APIView):
+    """ Query BrainSense Streaming Data.
+
+    The BrainSense Streaming query allows for multiple type of requests, based on what is sent in request body. 
+
+    **POST**: ``/api/queryBrainSenseStreaming``
+
+    **Request List of Available BrainSense Streaming Data**
+    
+    .. code-block:: json
+
+      {
+        "requestOverview": true,
+        "id": "(uuid)",
+      }
+
+    **Request specific BrainSense Streaming Recording based on recording ID**
+    
+    ``requestFrequency`` is optional if user want to request power value from different frequency instead of the automated algorithm
+      
+    .. code-block:: json
+
+      {
+        "requestData": true,
+        "id": "(uuid)",
+        "recordingId": "(uuid)",
+        "[requestFrequency]": "(int)"
+      }
+
+    **Request update on power spectrum data for rendering**
+
+    .. Note::
+      
+      Version 1.0.0 support ipsilateral/contralateral request, but 2.0.0-alpha has not implemented it yet. 
+    
+    ``channel`` is the Medtronic convention of channel identification, which is usually CONTACT_CONTACT_HEMISPHERE (i.e.: ZERO_TWO_LEFT)
+
+    This is a faster operation than request BrainSense Streaming Recording using ``requestFrequency`` because
+    this operation does not transmit raw data.
+
+    .. code-block:: json
+
+      {
+        "updateStimulationPSD": true,
+        "id": "(uuid)",
+        "recordingId": "(uuid)",
+        "channel": "(string)",
+        "centerFrequency": "(int)",
+      }
+
+    **Update BrainSense Streaming result with or without cardiac filter**
+
+    Permission denied unless you are the data owner (Permission == 1)
+
+    .. code-block:: json
+
+      {
+        "updateCardiacFilter": "(boolean)",
+        "id": "(uuid)",
+        "recordingId": "(uuid)"
+      }
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body contains requested data, often large due to time-domain data transmission.
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -129,7 +268,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 0:
-                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
             if "requestFrequency" in request.data:
                 centerFrequencies = request.data["requestFrequency"]
@@ -149,7 +288,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
 
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
                 if not request.data["recordingId"] in Authority["Permission"]:
-                    return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
                 BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
@@ -161,7 +300,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 0:
-                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
@@ -177,24 +316,23 @@ class QueryBrainSenseStreaming(RestViews.APIView):
 
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
                 if not request.data["recordingId"] in Authority["Permission"]:
-                    return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
                 BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
-                data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"])
-                return Response(status=200, data=data)
+                BrainSenseData["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData)
+                StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=request.data["centerFrequency"])
+                return Response(status=200, data=StimPSD)
 
         elif "updateCardiacFilter" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 0 or Authority["Level"] == 2:
-                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
             elif Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-            else:
-                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-            
+
             BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=True, cardiacFilter=request.data["updateCardiacFilter"])
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
@@ -204,6 +342,37 @@ class QueryBrainSenseStreaming(RestViews.APIView):
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class QueryIndefiniteStreaming(RestViews.APIView):
+    """ Query all Indefinite Streaming Data.
+
+    The Indefinite Streaming query allows for multiple type of requests, based on what is sent in request body. 
+
+    **POST**: ``/api/queryIndefiniteStreaming``
+
+    **Request List of Available Indefinite Streaming Data**
+    
+    .. code-block:: json
+
+      {
+        "requestOverview": true,
+        "id": "(uuid)",
+      }
+
+    **Request specific Indefinite Streaming Recording based on list of provided devices and timestamps**
+    
+    .. code-block:: json
+
+      {
+        "requestData": true,
+        "id": "(uuid)",
+        "timestamps": ["(int)"],
+        "devices": ["(uuid)"]
+      }
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body contains requested data, often large due to time-domain data transmission.
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -246,6 +415,24 @@ class QueryIndefiniteStreaming(RestViews.APIView):
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class QueryChronicBrainSense(RestViews.APIView):
+    """ Query all Chronic BrainSense Data.
+
+    The Chronic BrainSense data includes single power-band recorded using BrainSense-enabled group,
+    patient-reported events and event power spectrums. 
+
+    **POST**: ``/api/queryChronicBrainSense``
+
+    Args:
+      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+      requestData (boolean): Always true to request data.
+      timezoneOffset (int): seconds offset compare to Universal Time Coordinate. 
+        You can request this value from your browser through ``new Date().getTimezoneOffset()*60``.
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body contains Chronic BrainSense and Event PSDs. 
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -278,6 +465,23 @@ class QueryChronicBrainSense(RestViews.APIView):
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class QuerySessionOverview(RestViews.APIView):
+    """ Query all JSON sessions related to a patient.
+
+    This route will provide user with all JSON files uploaded related to a specific patient ID. 
+    This is useful to identify raw unprocessed file for analysis outside of the web platform.
+
+    User may also request deletion of session file (and all associated data) by requesting deletion.
+
+    **POST**: ``/api/querySessionOverview``
+
+    Args:
+      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body contains nothing if deleteSession is requested, otherwise contain list of available session files.
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -295,18 +499,12 @@ class QuerySessionOverview(RestViews.APIView):
 
         elif Authority["Level"] == 2:
             PatientInfo = Database.extractAccess(request.user, request.data["id"])
-            deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
             Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "ChronicLFPs")
             PatientID = PatientInfo.authorized_patient_id
 
-        if "deleteSession" in request.data:
-            Sessions.deleteSessions(request.user, request.data["id"], [request.data["deleteSession"]], Authority)
-            return Response(status=200)
-
-        else:
-            data = dict()
-            data["AvailableSessions"] = Sessions.queryAvailableSessionFiles(request.user, request.data["id"], Authority)
-            return Response(status=200, data=data)
+        data = dict()
+        data["AvailableSessions"] = Sessions.queryAvailableSessionFiles(request.user, PatientID, Authority)
+        return Response(status=200, data=data)
 
 class QueryPredictionModel(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
@@ -404,6 +602,41 @@ class QueryPredictionModel(RestViews.APIView):
                 data["PredictionModel"] = Features
                 return Response(status=200, data=data)
 
+        return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+
+class QueryMultipleSegmentComparison(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        # Force Error
+        if not request.user.is_clinician:
+            return Response(status=400, data={"code": ERROR_CODE["NOT_AVAILABLE_TO_DEMO"]})
+
+        Authority = {}
+        Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+        if Authority["Level"] == 0:
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+        if Authority["Level"] == 1:
+            Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
+
+            PatientInfo = Database.extractAccess(request.user, request.data["id"])
+            Authority["Devices"] = PatientInfo.device_deidentified_id
+
+            data = BrainSenseStream.queryMultipleSegmentComparison(request.user, request.data["recordingIds"], Authority)
+            return Response(status=200, data=data)
+
+        elif Authority["Level"] == 2:
+            PatientInfo = Database.extractAccess(request.user, request.data["id"])
+
+            Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
+            if not request.data["recordingId"] in Authority["Permission"]:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+            data ={}
+            # DO SOMETHING
+
+            return Response(status=200, data=data)
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class QueryPatientEvents(RestViews.APIView):

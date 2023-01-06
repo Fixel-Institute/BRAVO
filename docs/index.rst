@@ -10,13 +10,6 @@ University of Florida Brain Recording Analysis and Visualization Online (BRAVO) 
 is a Python-based data analysis tool for processing and analyzing session data collected with 
 sensing-enabled neurostimulators such as Medtronic Percept neurostimulator.
 
-.. note::
-
-  This is a Sphinx Documentation with Readthedocs Template hosted by Cloudflare to avoid advertisement showing up on the page.
-  
-  This documentation will be updated slowly because the BRAVO Platform currently is still a side-project started on my free time at work
-  and I am not funded for this project. 
-
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
@@ -35,13 +28,20 @@ Developer Documentation
 =============================================
 .. toctree::
    :maxdepth: 1
-   :caption: Javascript
-
-   JavascriptModules/PlotlyWrapper.rst
-
-.. toctree::
-   :maxdepth: 1
    :caption: Python
 
    PythonModules/PerceptDecoder.rst
    PythonModules/BackendAPIs.rst
+
+   PythonModules/Therapy.rst
+   PythonModules/BrainSenseSurvey.rst
+   PythonModules/BrainSenseStream.rst
+   PythonModules/IndefiniteStream.rst
+   PythonModules/ChronicBrainSense.rst
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Javascript
+
+   JavascriptModules/PlotlyWrapper.rst
+

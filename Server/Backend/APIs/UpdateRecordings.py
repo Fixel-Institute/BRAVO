@@ -1,3 +1,11 @@
+""""""
+"""
+Update Recording SQL Table
+===================================================
+@author: Jackson Cagle, University of Florida
+@email: jackson.cagle@neurology.ufl.edu
+"""
+
 from email.policy import default
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
@@ -24,6 +32,71 @@ with open(RESOURCES + "/../codes.json", "r") as file:
 key = os.environ.get('ENCRYPTION_KEY')
 
 class PatientInformationUpdate(RestViews.APIView):
+    """ Update Patient Information in SQL Table
+
+    The Patient Information Update has multiple functions implemented for the route, depending on the command sent. 
+
+    **POST**: ``/api/updatePatientInformation``
+
+    **Manually creating a new Patient entry in database**
+    
+    .. code-block:: json
+
+      {
+        "createNewPatientInfo": true,
+        "StudyID": "(string)",
+        "PatientID": "(string)",
+        "Diagnosis": "(string)",
+        "StudyID": "(string)",
+        "DeviceName": "(string)",
+      }
+
+    Respond body will contain new patient object if successful. 
+
+    **Add new Device entry for specific patient**
+    
+    ``updatePatientInfo`` is the unique identifier for a specific Patient object. 
+    The ``saveDeviceID`` is a human readable identifier for the device. A random 32-byte unique identifier for the device will be randomly generated.
+
+    .. code-block:: json
+
+      {
+        "updatePatientInfo": "(uuid)",
+        "saveDeviceID": "(string)",
+        "newDeviceLocation": "(string)",
+      }
+
+    **Change Device Name**
+    
+    ``updatePatientInfo`` is the unique identifier for a specific Patient object. 
+    ``updateDeviceID`` is the unique identifier for the device that name should be changed. 
+
+    .. code-block:: json
+
+      {
+        "updatePatientInfo": "(uuid)",
+        "updateDeviceID": "(uuid)",
+        "newDeviceName": "(string)",
+      }
+
+    **Update Patient Information**
+    
+    ``updatePatientInfo`` is the unique identifier for a specific Patient object. 
+
+    .. code-block:: json
+
+      {
+        "updatePatientInfo": "(uuid)",
+        "FirstName": "(string)",
+        "LastName": "(string)",
+        "Diagnosis": "(string)",
+        "MRN": "(string)",
+      }
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -97,19 +170,32 @@ class PatientInformationUpdate(RestViews.APIView):
         return Response(status=400)
 
 class BrainSenseStreamUpdate(RestViews.APIView):
+    """ Update BrainSense Stream recording information.
+
+    Currently only recording contact change is implemented because this is the only information not stored in Percept JSON. 
+    
+    **POST**: ``/api/updateBrainSenseStream``
+
+    Args:
+      requestData (uuid): Device Unique Identifier.
+      updateRecordingContactType (uuid): BrainSense Recording Unique Identifier.
+      contactIndex (int): Indicate for Left/Right hemisphere.
+      contactType (string): Contact Type (Segment, Ring, A/B/C)
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+    """
+
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
-        if not request.user.is_authenticated:
-          return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-
         if "updateRecordingContactType" in request.data:
             if request.user.is_admin or request.user.is_clinician:
                 if not models.PerceptDevice.objects.filter(deidentified_id=request.data["requestData"], authority_level="Clinic", authority_user=request.user.institute).exists():
-                  return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                  return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
             else:
                 if not models.PerceptDevice.objects.filter(deidentified_id=request.data["requestData"], authority_level="Research", authority_user=request.user.email).exists():
-                  return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                  return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
             recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=request.data["requestData"], recording_id=request.data["updateRecordingContactType"], recording_type="BrainSenseStream").first()
             recording.recording_info["ContactType"][request.data["contactIndex"]] = request.data["contactType"]
