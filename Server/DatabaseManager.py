@@ -175,7 +175,7 @@ def processInput(argv):
       for i in range(len(result)):
         oldPath = result[i]["session_file_path"].decode("utf-8")
         newPath = DATABASE_PATH + "sessions/" + oldPath.split("/")[-1]
-        #shutil.copyfile(oldPath, newPath)
+        shutil.copyfile(oldPath, newPath)
 
         session = models.PerceptSession(
           deidentified_id=uuid.UUID(result[i]["deidentified_id"].decode("utf-8")),

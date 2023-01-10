@@ -37,7 +37,11 @@ Major Changes
   wearable devices and speech analysis. These applications cannot use Session Authentication but Token authentication
   is good choice. By switching to Token authentication, it allows client to be hosted in a completely different state from the server.
 
+.. topic:: 3. SQL Database Changes
 
+  SQL Database is changed, both in naming convention and organization. This leads to incompatibility between old server and new server.
+  However, to facilitate better transition, a migration guide is available for user who started using BRAVO in the initial version. 
+  Check :doc:`Tutorials </Tutorials/MigrationGuide>` for migration guide.
   
   
 
