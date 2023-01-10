@@ -79,9 +79,6 @@ export const SessionController = (function () {
     }
   }
 
-  const updateServerAddress = async () => {
-  }
-
   const syncSession = async () => {
     if (localStorage.getItem("accessToken")) {
       authToken = localStorage.getItem("accessToken");
@@ -111,8 +108,14 @@ export const SessionController = (function () {
     if (!connectionStatus) return true;
 
     try {
-      const response = await query("/api/querySessions", {});
+      if (localStorage.getItem("sessionContext")) {
+        session = JSON.parse(localStorage.getItem("sessionContext"));
+      }
+      const response = await query("/api/querySessions", {
+        session: session,
+      });
       session = response.data.session;
+      localStorage.setItem("sessionContext", JSON.stringify(session));
       user = response.data.user;
       synced = true;
 
@@ -121,6 +124,7 @@ export const SessionController = (function () {
         setAuthToken("");
         const response = await query("/api/querySessions", {});
         session = response.data.session;
+        localStorage.setItem("sessionContext", JSON.stringify(session));
         user = response.data.user;
         synced = true;
       }
@@ -142,6 +146,7 @@ export const SessionController = (function () {
   const setSession = (type, value) => {
     query("/api/updateSession", {[type]: value});
     session[type] = value;
+    localStorage.setItem("sessionContext", JSON.stringify(session));
   };
 
   const getDateTimeOptions = (type) => {
@@ -183,9 +188,13 @@ export const SessionController = (function () {
 
   const nullifyUser = () => {
     user = {};
+    session = {};
     authToken = "";
     if (localStorage.getItem("accessToken")) {
       localStorage.setItem("accessToken", authToken);
+    }
+    if (localStorage.getItem("sessionContext")) {
+      localStorage.setItem("sessionContext", session);
     }
   };
 

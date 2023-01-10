@@ -46,6 +46,9 @@ class QuerySessionConfigs(RestViews.APIView):
                 request.user.save()
 
             userSession = formatRequestSession(request.user.configuration)
+            for key in request.data["session"].keys():
+                if not key in userSession.keys():
+                    userSession[key] = request.data["session"][key]
             return Response(status=200, data={"session": userSession, "user": Database.extractUserInfo(request.user)})
         
         userSession = formatRequestSession({})
