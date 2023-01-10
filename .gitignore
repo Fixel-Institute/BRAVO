@@ -313,4 +313,4 @@ packages/react-devtools-timeline/dist
 .DS_Store
 Client/package-lock.json
 
-mysql.config
+Server/mysql.config
