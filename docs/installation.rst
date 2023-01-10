@@ -19,7 +19,7 @@ Software Packages
 
 1. **Python** 3.70 or above 
 2. **MySQL** Databse 
-3. **Node Package Manager** 8 or above 
+3. **Node Package Manager** 7 or above 
 
 React Frontend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -172,7 +172,7 @@ You can access MySQL Database (the default database used for the installation sc
   # Create a user that can access the database called "BRAVOAdmin" with an admin password called "AdminPassword"
   # Change these values to what you see fit.
   mysql> CREATE USER 'BRAVOAdmin'@'localhost' IDENTIFIED WITH mysql_native_password BY 'AdminPassword';
-  mysql> GRANT ALL PRIVILEGES ON PerceptServer.* TO 'BRAVOAdmin'@'localhost';
+  mysql> GRANT ALL PRIVILEGES ON BRAVOServer.* TO 'BRAVOAdmin'@'localhost';
   mysql> FLUSH PRIVILEGES;
 
   # exit MySQL Interface 
@@ -246,7 +246,6 @@ This only need to be run once, unless a change is made to ``Server/Backend/model
 
   python3 $SCRIPT_DIR/manage.py makemigrations Backend
   python3 $SCRIPT_DIR/manage.py migrate
-  python3 $SCRIPT_DIR/manage.py collectstatic
 
 .. warning:: 
   
@@ -328,34 +327,23 @@ You now have all the software requirement (except Apache/NGINX, which will not b
 because I do not recommend using MacOS for hosting public application). The following script go over the rest of the dependencies
 installation for Python3 using Virtual Environment. 
 
-
-
-.. code-block:: bash
-
-  # Setup Redis Server on Docker for Django Channels
-  docker run -p 6379:6379 -d redis:5
-  
 All procedure assume that your working directory is the main directory of the cloned Git folder 
 (i.e.: ``/Users/Username/Documents/Github/BRAVO/Server``).
 
 .. code-block:: bash
-  
+
   # Set our current working directory as the SCRIPT_DIR
   SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-  # Install Dependencies with Apt
-  sudo apt-get update
-  sudo apt-get install python3-pip libjpeg-dev libjpeg8-dev libpng-dev nginx python3-virtualenv libmysqlclient-dev mysql-server docker.io
-  
   # Setup Redis Server on Docker for Django Channels
-  sudo docker run -p 6379:6379 -d redis:5
-
+  docker run -p 6379:6379 -d redis:5
+  
   # Create Virutal Environment for Python called "venv"
   virtualenv $SCRIPT_DIR/venv
   source $SCRIPT_DIR/venv/bin/activate
 
   pip3 install -r requirements.txt
-
+  
 Step 1: SQL Databse Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -453,33 +441,13 @@ This only need to be run once, unless a change is made to ``Server/Backend/model
 
   python3 $SCRIPT_DIR/manage.py makemigrations Backend
   python3 $SCRIPT_DIR/manage.py migrate
-  python3 $SCRIPT_DIR/manage.py collectstatic
 
 .. warning:: 
   
   The new BRAVO Server Database has significant difference when compared to the original BRAVO platform v0.1 released in 2021.
   The database are not convertable at the moment, but a migration script is in development to help as much migration as possible. 
 
-Step 4: SSL (HTTPS) Certificate (Optional)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This step is not neccessary for local deployment. However, for people who want additional security to deploy with HTTPS, 
-we will provide guidance for obtaining simple certificates for SSH. 
-
-The most common tool for free SSL certificate is through `CertBot <https://certbot.eff.org/>`_. 
-Refer to CertBot site to install tool on your server computer. 
-First, you can configure your DNS record to have your server address (``$YOUR_SERVER_ADDRESS``) point to your server IP. 
-Then run the following script to obtain your SSL certificate. 
-The output certificates should be saved in a directory at ``/etc/letsencrypt/live/$YOUR_SERVER_ADDRESS/``.
-
-.. code-block:: bash 
-  
-  sudo certbot certonly --standalone --preferred-challenges http -d $YOUR_SERVER_ADDRESS
-
-A bare-minimum sample nginx configuration file ``deployment.conf`` is in Server directory as a reference to create a working reverse proxy server to direct SSL traffic to your server.
-This configuration file should be saved in ``/etc/nginx/sites-enabled/`` directory and you should reload your nginx service whenever a change is made to the configuration.
-
-Step 5: Deployment
+Step 4: Deployment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Due to the use of Websocket for real-time analysis, the default operating condition is through 
@@ -492,7 +460,7 @@ To use ASGI, we use ``daphne`` to start our server. A standard startup script ``
   SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
   # To start with WSGI - Django Channels Disabled
-  $SCRIPT_DIR/venv/bin/python3 $SCRIPT_DIR/manage.py runserver 0:3001
+  #$SCRIPT_DIR/venv/bin/python3 $SCRIPT_DIR/manage.py runserver 0:3001
   
   # To start with ASGI - Django Channels Enabled. 
   $SCRIPT_DIR/venv/bin/daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application
@@ -500,3 +468,30 @@ To use ASGI, we use ``daphne`` to start our server. A standard startup script ``
 .. warning:: 
 
   Due to how daphne is looking for Python modules, the working directory must be in "Server" folder for the command to work. 
+
+
+.. danger::
+
+  If you encounter an error that shows ``NameError: name '_mysql' is not defined``. You are using a MacOS version that
+  doesn't handle MySQL Client properly. The easiest solution is a post provided by Adan Johnson on 
+  `How to use PyMySQL with Django <https://adamj.eu/tech/2020/02/04/how-to-use-pymysql-with-django/>`_. 
+
+  To summarize, you should install PyMySQL ``pip3 install PyMySQL`` and edit `Server/BRAVO/setting.py` in the following manner.
+
+  .. code-block:: python
+
+    # Find this code block
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'OPTIONS': {
+                'read_default_file': os.path.join(BASE_DIR, 'mysql.config'),
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+            },
+        }
+    }
+
+    # Add the following 3 lines right below it
+    import pymysql
+    pymysql.version_info = (1, 4, 2, "final", 0)
+    pymysql.install_as_MySQLdb()
