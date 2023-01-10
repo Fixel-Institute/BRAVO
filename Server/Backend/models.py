@@ -216,20 +216,6 @@ class TherapyChangeLog(models.Model):
     def __str__(self):
         return str(self.device_deidentified_id) + " " + str(self.date_of_change)
 
-class ChronicSensingLFP(models.Model):
-    uniqueIdentificationKey = models.CharField(default="", max_length=128, unique=True)
-    device_deidentified_id = models.UUIDField(default=uuid.uuid4)
-    hemisphere = models.CharField(default="", max_length=32)
-
-    timestamp = models.DateTimeField(default=timezone.now)
-    amplitude = models.FloatField(default=0)
-    power = models.FloatField(default=0)
-
-    source_file = models.CharField(default="", max_length=255)
-
-    class Meta:
-        ordering = ['-timestamp']
-
 class PatientCustomEvents(models.Model):
     deidentified_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     device_deidentified_id = models.UUIDField(default=uuid.uuid4)
@@ -238,6 +224,8 @@ class PatientCustomEvents(models.Model):
     event_time = models.DateTimeField(default=timezone.now)
     sensing_exist = models.BooleanField(default=False)
     brainsense_psd = models.JSONField(default=list, null=True)
+
+    source_file = models.CharField(default="", max_length=256)
 
     class Meta:
         ordering = ['-event_time']

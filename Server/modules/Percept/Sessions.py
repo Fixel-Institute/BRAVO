@@ -382,7 +382,6 @@ def queryAvailableSessionFiles(user, patient_id, authority):
                 "IndefiniteStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="IndefiniteStream").count(),
                 "BrainSenseSurvey": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseSurvey").count(),
                 "TherapyHistory": models.TherapyHistory.objects.filter(source_file=session.deidentified_id).count(),
-                "ChronicRecordings": models.ChronicSensingLFP.objects.filter(source_file=session.deidentified_id).count()
             }
             sessions.append(sessionInfo)
     return sessions
@@ -400,7 +399,6 @@ def deleteDevice(device_id):
     for session in Sessions:
         models.TherapyHistory.objects.filter(source_file=str(session.deidentified_id)).delete()
         models.TherapyChangeLog.objects.filter(source_file=str(session.deidentified_id)).delete()
-        models.ChronicSensingLFP.objects.filter(source_file=str(session.deidentified_id)).delete()
         try:
             os.remove(session.session_file_path)
         except:
@@ -415,7 +413,6 @@ def deleteSessions(user, patient_id, session_ids, authority):
             if models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id, deidentified_id=str(session_ids[i])).exists():
                 models.TherapyHistory.objects.filter(source_file=str(session_ids[i])).delete()
                 models.TherapyChangeLog.objects.filter(source_file=str(session_ids[i])).delete()
-                models.ChronicSensingLFP.objects.filter(source_file=str(session_ids[i])).delete()
                 recordings = models.BrainSenseRecording.objects.filter(source_file=str(session_ids[i])).all()
                 for recording in recordings:
                     try:

@@ -150,6 +150,7 @@ class Handshake(RestViews.APIView):
     Returns:
       Response Code 200.
     """
+    
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
