@@ -93,7 +93,7 @@ export const SessionController = (function () {
         console.log(error);
       }
     } else {
-      for (let address of ["", window.location.protocol + "//" + window.location.hostname + ":3001", "https://bravo-server.jcagle.solutions"]) {
+      for (let address of [window.location.protocol + "//" + window.location.hostname + ":3001", "https://bravo-server.jcagle.solutions"]) {
         try {
           server = address;
           await query("/api/handshake", {});
