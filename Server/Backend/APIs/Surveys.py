@@ -22,7 +22,7 @@ with open(RESOURCES + "/../codes.json", "r") as file:
 
 class AddNewSurvey(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if request.user.is_authenticated:
             if not "name" in request.data:
@@ -50,7 +50,7 @@ class AddNewSurvey(RestViews.APIView):
 
 class QueryAvailableSurveys(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-    
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if request.user.is_authenticated:
             surveys = models.CustomizedSurvey.objects.filter(creator=request.user.unique_user_id, archived=False)
@@ -67,7 +67,7 @@ class QueryAvailableSurveys(RestViews.APIView):
 
 class QueryAvailableRedcapSchedule(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-    
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if request.user.is_authenticated:
             redcapSchedule = models.RedcapSurveyLink.objects.filter(owner=request.user.unique_user_id)
@@ -102,7 +102,7 @@ class QueryAvailableRedcapSchedule(RestViews.APIView):
 
 class QuerySurveyContent(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [AllowAny]
     def post(self, request):
         survey = models.CustomizedSurvey.objects.filter(url=request.data["id"], archived=False).first()
         if survey:
@@ -115,7 +115,7 @@ class QuerySurveyContent(RestViews.APIView):
 
 class UpdateSurveyContent(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if request.user.is_authenticated:
             survey = models.CustomizedSurvey.objects.filter(url=request.data["id"], creator=request.user.unique_user_id, archived=False).first()
@@ -131,7 +131,7 @@ class UpdateSurveyContent(RestViews.APIView):
 
 class ArchiveSurvey(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if request.user.is_authenticated:
             survey = models.CustomizedSurvey.objects.filter(url=request.data["id"], creator=request.user.unique_user_id, archived=False).first()
@@ -144,7 +144,7 @@ class ArchiveSurvey(RestViews.APIView):
 
 class SubmitSurveyResults(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [AllowAny]
     def post(self, request):
         if request.user.is_authenticated:
             survey = models.CustomizedSurvey.objects.filter(url=request.data["id"], archived=False).first()
@@ -212,7 +212,7 @@ class SubmitSurveyResults(RestViews.APIView):
 
 class RedcapVerification(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if request.user.is_authenticated:
             if not "redcapServer" in request.data or not "redcapSurveyName" in request.data or not "redcapToken" in request.data:
@@ -233,7 +233,7 @@ class RedcapVerification(RestViews.APIView):
                 })
 
                 if response.status_code != 200:
-                    print(response.status_code)
+                    print(response)
                     return Response(status=500)
 
                 dom = minidom.parseString(response.text)
@@ -255,6 +255,7 @@ class RedcapVerification(RestViews.APIView):
                     if (field["form_name"] == request.data["redcapSurveyName"]):
                         availableFields.append(field["field_name"])
 
+                print(availableFields)
                 for page in survey.contents:
                     for question in page["questions"]:
                         if question["variableName"] in availableFields:
@@ -262,6 +263,7 @@ class RedcapVerification(RestViews.APIView):
                         else:
                             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
                 
+                print(availableFields)
                 if len(availableFields) > 0:
                     return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
@@ -277,7 +279,7 @@ class RedcapVerification(RestViews.APIView):
 
 class SetupSurveyScheduler(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if request.user.is_authenticated:
             if not "linkageId" in request.data:
@@ -328,7 +330,7 @@ class SetupSurveyScheduler(RestViews.APIView):
 
 class SurveySchedulerStatus(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         if request.user.is_authenticated:
             if not "linkageId" in request.data and not "reportId" in request.data:
