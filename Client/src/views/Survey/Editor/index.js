@@ -256,6 +256,11 @@ export default function SurveyEditor({match}) {
     setContents({...contents});
   };
 
+  const setQuestionRequired = (index, questionId, value) => {
+    contents.contents[index].questions[questionId]["changed"] = !value;
+    setContents({...contents});
+  };
+
   const setTextQuestionValue = (index, questionId, value) => {
     contents.contents[index].questions[questionId].value = value;
     contents.contents[index].questions[questionId].default = value;
@@ -378,6 +383,9 @@ export default function SurveyEditor({match}) {
                             </MDBox>
                             <FormControlLabel label={"Show to user?"}
                               control={<Checkbox checked={question.show} onChange={(event) => setQuestionDisplay(index, questionId, event.target.checked)}/>}
+                            />
+                            <FormControlLabel label={"Response required?"}
+                              control={<Checkbox checked={!question.changed} onChange={(event) => setQuestionRequired(index, questionId, event.target.checked)}/>}
                             />
                             {question.type === "text" ? (
                             <MDBox sx={{display: "flex", flexDirection: "row", justifyContent: "flex-start", alignItems: "center", marginY: 1}}>

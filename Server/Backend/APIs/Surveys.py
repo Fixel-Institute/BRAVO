@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 import json
+import uuid
 from copy import deepcopy
 import datetime
 from Backend import models
@@ -45,6 +46,48 @@ class AddNewSurvey(RestViews.APIView):
                     "name": survey.name,
                     "date": survey.date.timestamp()
                 })
+
+        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+class RequestSurveyAccessCode(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        if not "id" in request.data or not "tokenModification" in request.data:
+            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+        survey = models.CustomizedSurvey.objects.filter(creator=request.user.unique_user_id, survey_id=request.data["id"]).first()
+        if survey:
+            if request.data["tokenModification"] == "view":
+                if len(survey.authorized_users) > 0:
+                    return Response(status=200, data={
+                            "token": survey.authorized_users[0]
+                        })
+                else: 
+                    return Response(status=200, data={
+                            "token": ""
+                        })
+
+            elif request.data["tokenModification"] == "new":
+                survey.authorized_users = [str(uuid.uuid4())]
+                survey.save()
+                return Response(status=200, data={
+                        "token": survey.authorized_users[0]
+                    })
+
+        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+class QuerySurveyResults(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [AllowAny]
+    def post(self, request):
+        if not "token" in request.data:
+            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+        survey = models.CustomizedSurvey.objects.filter(authorized_users=[request.data["token"]]).first()
+        if survey:
+            results = models.SurveyResults.objects.filter(survey_id=survey.survey_id, responder=request.data["passcode"]).all()
+            return Response(status=200, data=[{"value": results[i].values, "date": results[i].date.timestamp()} for i in range(len(results))])
 
         return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 

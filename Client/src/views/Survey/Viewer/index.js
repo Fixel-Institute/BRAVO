@@ -11,6 +11,7 @@ import {
   FormControlLabel,
   InputLabel,
   Select,
+  TextField,
   Stack,
   Slider,
   RadioGroup,
@@ -64,6 +65,12 @@ export default function SurveyViewer({match}) {
       SessionController.displayError(error, setAlert);
     });
   }, []);
+
+  const setTextQuestionValue = (index, questionId, value) => {
+    contents.contents[index].questions[questionId].value = value;
+    contents.contents[index].questions[questionId].changed = true;
+    setContents({...contents});
+  };
 
   const setScoreQuestionValue = (index, questionId, type, value) => {
     contents.contents[index].questions[questionId][type] = parseFloat(value);
@@ -144,6 +151,17 @@ export default function SurveyViewer({match}) {
                                     {question.max}
                                   </MDTypography>
                                 </Stack>
+                                {question.changed ? null : (
+                                  <MDTypography variant="h5" fontSize={12} color={"error"}>
+                                    {"*Required"}
+                                  </MDTypography>
+                                )}
+                              </MDBox>
+                            ) : null}
+                            {question.type == "text" ? (
+                              <MDBox sx={{display: "flex", flexDirection: "column", justifyContent: "flex-start", alignItems: "center", marginY: 1}}>
+                                <TextField variant={"standard"} value={question.value} label={"Default Text Field"} onChange={(event) => setTextQuestionValue(index, questionId, event.target.value)} rows={4} sx={{marginX: 1}} fullWidth multiline>
+                                </TextField>
                                 {question.changed ? null : (
                                   <MDTypography variant="h5" fontSize={12} color={"error"}>
                                     {"*Required"}

@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 
 import {
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
   Table,
   TableHead,
   TableBody,
@@ -34,6 +38,9 @@ const SurveyTable = ({data, onDelete}) => {
     totalPages: 0
   });
 
+  const [currentAccessCode, setAccessCode] = useState("");
+  const [showAccessDialog, setShowAccessDialog] = useState(false);
+
   useEffect(() => {
     setPagination({currentPage: 0, totalPages: Math.ceil(data.length / viewPerPage)})
   }, [data]);
@@ -47,6 +54,30 @@ const SurveyTable = ({data, onDelete}) => {
     window.open(`/survey/${id}`,'_blank');
   };
 
+  const viewAccessCode = (id) => {
+    SessionController.query("/api/requestSurveyAccessCode", {
+      id: id,
+      tokenModification: "view"
+    }).then((response) => {
+      setShowAccessDialog(id);
+      setAccessCode(response.data.token);
+    }).catch((error) => {
+      console.log(error);
+    });
+  };
+
+  const newAccessCode = (id) => {
+    SessionController.query("/api/requestSurveyAccessCode", {
+      id: id,
+      tokenModification: "new"
+    }).then((response) => {
+      setShowAccessDialog(id);
+      setAccessCode(response.data.token);
+    }).catch((error) => {
+      console.log(error);
+    });
+  };
+
   const editSurvey = (id) => {
     navigate(`/survey/${id}/edit`, {params: {}, replace: false});
   };
@@ -57,6 +88,28 @@ const SurveyTable = ({data, onDelete}) => {
 
   return (
     <MDBox style={{overflowX: "auto"}}>
+      <Dialog open={showAccessDialog} onClose={()=>setShowAccessDialog(false)} sx={{ padding: 15 }} >
+        <DialogTitle>
+          <MDTypography align="center" fontSize={30}>
+            {"Access Code"}
+          </MDTypography>
+        </DialogTitle>
+        <DialogContent sx={{paddingLeft: 5, paddingRight: 5}}>
+          <DialogContentText>
+            <MDTypography variant="p" align="center" fontSize={20}>
+              {currentAccessCode === "" ? "No Access Token Available" : currentAccessCode}
+            </MDTypography>
+          </DialogContentText>
+        </DialogContent>
+        <MDBox display={"flex"} justifyContent={"space-around"} sx={{paddingLeft: 5, paddingRight: 5, paddingTop: 2, paddingBottom: 2}}>
+          <MDButton variant="gradient" color="error" onClick={()=>newAccessCode(showAccessDialog)} sx={{minWidth: 100}}>
+            {"New Token"}
+          </MDButton>
+          <MDButton variant="gradient" color="info" onClick={()=>setShowAccessDialog(false)} sx={{minWidth: 100}}>
+            {"Close"}
+          </MDButton>
+        </MDBox>
+      </Dialog>
       <Table size="small">
         <TableHead sx={{display: "table-header-group"}}>
           <TableRow>
@@ -97,6 +150,11 @@ const SurveyTable = ({data, onDelete}) => {
                 <Tooltip title="View Survey" placement="top">
                   <IconButton color="info" size="small" onClick={() => viewSurvey(survey.url)} sx={{paddingX: 1}}>
                     <i className="fa-solid fa-eye"></i>
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="View Survey" placement="top">
+                  <IconButton color="info" size="small" onClick={() => viewAccessCode(survey.id)} sx={{paddingX: 1}}>
+                    <i className="fa-solid fa-circle-info"></i>
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Edit Survey" placement="top">
