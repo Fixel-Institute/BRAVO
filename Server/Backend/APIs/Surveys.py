@@ -87,6 +87,10 @@ class QuerySurveyResults(RestViews.APIView):
         survey = models.CustomizedSurvey.objects.filter(authorized_users=[request.data["token"]]).first()
         if survey:
             results = models.SurveyResults.objects.filter(survey_id=survey.survey_id, responder=request.data["passcode"]).all()
+            if "delete" in request.data:
+                results.delete()
+                return Response(status=200)
+
             return Response(status=200, data=[{"value": results[i].values, "date": results[i].date.timestamp()} for i in range(len(results))])
 
         return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
@@ -303,7 +307,6 @@ class RedcapVerification(RestViews.APIView):
                     if (field["form_name"] == request.data["redcapSurveyName"]):
                         availableFields.append(field["field_name"])
 
-                print(availableFields)
                 for page in survey.contents:
                     for question in page["questions"]:
                         if question["variableName"] in availableFields:
@@ -311,7 +314,6 @@ class RedcapVerification(RestViews.APIView):
                         else:
                             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
                 
-                print(availableFields)
                 if len(availableFields) > 0:
                     return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
