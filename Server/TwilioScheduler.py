@@ -20,7 +20,7 @@ def checkMessageSchedule():
             service = models.TwilioService.objects.filter(linkage_id=schedule.linkage_id, report_id=schedule.report_id).first()
 
             client = Client(service.account_id, service.authToken)
-            surveyLink = "http://" + os.environ.get('SERVER_ADDRESS') + "/survey/" + survey.url + f"?__passcode={schedule.report_id}"
+            surveyLink = os.environ.get('CLIENT_ADDRESS') + "/survey/" + survey.url + f"?__passcode={schedule.report_id}"
 
             message = client.messages.create(
                 to=service.receiver["value"],
