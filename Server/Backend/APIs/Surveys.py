@@ -204,9 +204,7 @@ class SubmitSurveyResults(RestViews.APIView):
             survey = models.CustomizedSurvey.objects.filter(url=request.data["id"], archived=False).first()
             result = models.SurveyResults(survey_id=survey.survey_id, version=request.data["version"], responder=request.data["passcode"], values=request.data["results"], date=datetime.datetime.fromtimestamp(request.data["date"]/1000))
             result.save()
-            return Response(status=200)
             
-            """
             service = models.TwilioService.objects.filter(report_id=request.data["passcode"]).first()
             linkage = models.RedcapSurveyLink.objects.filter(linkage_id=service.linkage_id).first()
             if linkage.survey_id == survey.survey_id:
@@ -252,14 +250,14 @@ class SubmitSurveyResults(RestViews.APIView):
                     "type": "flat",
                     "overwriteBehavior": "normal",
                     "forceAutoNumber": False,
-                    "data": resultingCSV + "\n" + respondRow
+                    "data": resultingCSV + "\n" + respondRow.replace("\n", "<br>")
                 })
 
                 if response.status_code == 200:
                     return Response(status=200)
                 else:
                     print(response.content)
-                """
+                    
         return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
 class RedcapVerification(RestViews.APIView):
