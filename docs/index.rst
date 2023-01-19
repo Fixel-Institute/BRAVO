@@ -10,6 +10,8 @@ University of Florida Brain Recording Analysis and Visualization Online (BRAVO) 
 is a Python-based data analysis tool for processing and analyzing session data collected with 
 sensing-enabled neurostimulators such as Medtronic Percept neurostimulator.
 
+Please refer to `GitHub Repository <https://github.com/Fixel-Institute/BRAVO>`_ to submit feature requests.
+
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started

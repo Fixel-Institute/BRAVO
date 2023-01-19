@@ -43,6 +43,5 @@ Major Changes
   However, to facilitate better transition, a migration guide is available for user who started using BRAVO in the initial version. 
   Check :doc:`Tutorials </Tutorials/MigrationGuide>` for migration guide.
   
-  
 
 
