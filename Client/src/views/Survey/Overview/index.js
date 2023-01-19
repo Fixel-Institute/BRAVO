@@ -115,6 +115,10 @@ export default function SurveyList() {
     });
   };
 
+  const skipRedcapConnectivity = () => {
+    setScheduleSurveyLinkDialog({...scheduleSurveyLinkDialog, linkageId: "skip",  activeStep: scheduleSurveyLinkDialog.activeStep + 1});
+  };
+
   const handleLastPage = () => {
     setScheduleSurveyLinkDialog({...scheduleSurveyLinkDialog, activeStep: scheduleSurveyLinkDialog.activeStep - 1});
   };
@@ -301,6 +305,9 @@ export default function SurveyList() {
               <Grid item xs={12}>
                 <MDButton color="info" onClick={verifyRedcapConnectivity} disabled={scheduleSurveyLinkDialog.verified} fullWidth>{"Verify Connectivity"}</MDButton>
               </Grid>
+              <Grid item xs={12}>
+                <MDButton color="secondary" onClick={skipRedcapConnectivity} disabled={scheduleSurveyLinkDialog.verified} fullWidth>{"Skip REDCap Link"}</MDButton>
+              </Grid>
             </Grid>
           ) : null}
           {scheduleSurveyLinkDialog.activeStep == 1 ? (
@@ -441,7 +448,7 @@ export default function SurveyList() {
         <DialogActions style={{display: "flex"}}>
           <MDButton color="secondary" onClick={() => setScheduleSurveyLinkDialog({...scheduleSurveyLinkDialog, state: false})}>Cancel</MDButton>
           <MDButton color="error" onClick={handleLastPage} disabled={scheduleSurveyLinkDialog.activeStep == 0} style={{marginLeft: "auto"}} >Previous</MDButton>
-          <MDButton color="info" onClick={handleNextPage} disabled={!scheduleSurveyLinkDialog.verified}>{scheduleSurveyLinkDialog.activeStep == 2 ? "Submit" : "Next"}</MDButton>
+          <MDButton color="info" onClick={handleNextPage} disabled={scheduleSurveyLinkDialog.activeStep == 0 ? !scheduleSurveyLinkDialog.verified : false}>{scheduleSurveyLinkDialog.activeStep == 2 ? "Submit" : "Next"}</MDButton>
         </DialogActions>
       </Dialog>
       {alert}
