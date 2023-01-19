@@ -181,6 +181,11 @@ export default function SurveyEditor({match}) {
     setContents({...contents});
   };
 
+  const deletePage = (index) => {
+    contents.contents = contents.contents.filter((content, i) => i != index);
+    setContents({...contents});
+  };
+
   const addQuestion = (index) => {
     contents.contents[index].questions.push({
       type: "text",
@@ -278,6 +283,11 @@ export default function SurveyEditor({match}) {
     setContents({...contents});
   };
 
+  const deleteChoiceQuestionOption = (index, questionId, letter) => {
+    contents.contents[index].questions[questionId].options = contents.contents[index].questions[questionId].options.filter((option, i) => letter != i);
+    setContents({...contents});
+  }
+
   return (
     <SurveyLayout>
       <MDBox>
@@ -344,6 +354,9 @@ export default function SurveyEditor({match}) {
                           )}
                           <IconButton onClick={() => editText === `page${index}Header` ? setEditText(false) : setEditText(`page${index}Header`)}>
                             <i className="fa-solid fa-pen"></i>
+                          </IconButton>
+                          <IconButton color={"error"} onClick={() => deletePage(index)}>
+                            <i className="fa-solid fa-xmark"></i>
                           </IconButton>
                         </MDBox>
                       </Grid>
@@ -437,6 +450,9 @@ export default function SurveyEditor({match}) {
                                   )}
                                   <IconButton onClick={() => editText === `page${index}question${questionId}option${letter}` ? setEditText(false) : setEditText(`page${index}question${questionId}option${letter}`)}>
                                     <i className="fa-solid fa-pen"></i>
+                                  </IconButton>
+                                  <IconButton color={"error"} onClick={() => deleteChoiceQuestionOption(index, questionId, letter)}>
+                                    <i className="fa-solid fa-xmark"></i>
                                   </IconButton>
                                 </MDBox>
                               })}
