@@ -327,9 +327,21 @@ export const dictionary = {
         en: "Connected Electrodes",
         zh: "电极"
       },
+      ElectrodeType: {
+        en: "Electrode Type",
+        zh: "Electrode Type"
+      },
+      ElectrodeChannel: {
+        en: "Electrode Channel",
+        zh: "Electrode Channel"
+      },
       ImplantDate: {
         en: "Implant Date",
         zh: "植入日期"
+      },
+      DeviceLocation: {
+        en: "Device Location",
+        zh: "植入位置"
       },
       LastAccessDate: {
         en: "Last Access Date",
@@ -338,7 +350,11 @@ export const dictionary = {
       BatteryEOL: {
         en: "Battery EOL Estimate",
         zh: "预测电量耗尽日期"
-      }
+      },
+      BatteryPercent: {
+        en: "Battery Percentage Remains",
+        zh: "剩余电量"
+      },
     },
     PatientInformation: {
       FirstName: {
@@ -360,6 +376,10 @@ export const dictionary = {
       MRN: {
         en: "Medical Record Number",
         zh: "医疗记录号"
+      },
+      ClinicianNotes: {
+        en: "Clinician Notes",
+        zh: "医护笔记"
       },
       ParkinsonsDisease: {
         en: "Parkinson's Disease",
@@ -562,6 +582,14 @@ export const dictionary = {
       en: "Session List",
       zh: "Session List"
     },
+    SessionOverview: {
+      en: "Session Overview",
+      zh: "Session Overview"
+    },
+    SessionEMR: {
+      en: "Format for EMR",
+      zh: "Format for EMR"
+    },
     SessionDate: {
       en: "Session Date",
       zh: "Session Date"
@@ -573,6 +601,26 @@ export const dictionary = {
     SessionData: {
       en: "Available Data",
       zh: "Available Data"
+    },
+    TherapyConfiguration: {
+      en: "Therapy Configurations",
+      zh: "Therapy Configurations"
+    },
+    PreviousTherapy: {
+      en: "Previous Therapy Groups",
+      zh: "Previous Therapy Groups"
+    },
+    NewTherapy: {
+      en: "New Therapy Groups",
+      zh: "New Therapy Groups"
+    },
+    LeftHemisphere: {
+      en: "Left",
+      zh: "Left"
+    },
+    RightHemisphere: {
+      en: "Right",
+      zh: "Right"
     },
     Select: {
       Session: {

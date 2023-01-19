@@ -49,13 +49,30 @@ export const formatSegmentString = (channels) => {
 export const formatStimulationChannel = (channels) => {
   let formattedChannel = [];
 
+  let commonAmplitude = 0;
+  for (let channel of channels) {
+    if (channel.ElectrodeAmplitudeInMilliAmps) {
+      if (commonAmplitude == 0) {
+        commonAmplitude = channel.ElectrodeAmplitudeInMilliAmps;
+      } else if (commonAmplitude != channel.ElectrodeAmplitudeInMilliAmps) {
+        commonAmplitude = -1;
+      }
+    }
+  }
+
   for (let channel of channels) {
     let channelName = "";
     switch (channel.Electrode.toLowerCase()) {
       case "electrodedef.case":
         channelName = "CAN";
         break;
-      case "dlectrodedef.fourelectrodes_1":
+      case "electrodedef.sensight_0":
+        channelName = "E0";
+        break;
+      case "electrodedef.fourelectrodes_0":
+        channelName = "E0";
+        break;
+      case "electrodedef.fourelectrodes_1":
         channelName = "E1";
         break;
       case "electrodedef.sensight_1a":
@@ -79,6 +96,12 @@ export const formatStimulationChannel = (channels) => {
       case "electrodedef.sensight_2c":
         channelName = "E2C";
         break;
+      case "electrodedef.sensight_3":
+        channelName = "E3";
+        break;
+      case "electrodedef.fourelectrodes_3":
+        channelName = "E3";
+        break;
       default:
         channelName = channel.Electrode;
         break;
@@ -86,8 +109,14 @@ export const formatStimulationChannel = (channels) => {
 
     if (channel.ElectrodeStateResult === "ElectrodeStateDef.Positive") {
       channelName += "+";
+    } else if (channel.ElectrodeStateResult === "ElectrodeStateDef.None") {
+      continue
     } else {
       channelName += "-";
+    }
+
+    if (commonAmplitude < 0 && channelName.endsWith("-")) {
+      channelName += ` (${channel.ElectrodeAmplitudeInMilliAmps} mA)`
     }
 
     formattedChannel.push(channelName);
