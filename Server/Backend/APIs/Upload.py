@@ -212,3 +212,28 @@ class SessionRemove(RestViews.APIView):
             return Response(status=200)
 
         return Response(status=404)
+
+class ExtractSessionEMR(RestViews.APIView):
+    """ Extract EMR from Session JSON File
+
+    **POST**: ``/api/extractSessionEMR``
+
+    Args:
+      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+      sessionId (uuid): Session Unique Identifier as provided from ``QuerySessionOverview`` route.
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+    """
+
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        Authority = {}
+        Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+        if Authority["Level"] != 1:
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+        Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
+        Overview = Sessions.viewSession(request.user, request.data["id"], request.data["sessionId"], Authority)
+        return Response(status=200, data=Overview)

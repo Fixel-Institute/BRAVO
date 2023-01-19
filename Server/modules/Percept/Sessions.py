@@ -270,8 +270,47 @@ def processSessionFile(JSON):
 
     Overview = {}
     Overview["Overall"] = Percept.extractPatientInformation(JSON, {})
+    Overview["Overall"]["PatientInformation"]["Diagnosis"] = Overview["Overall"]["PatientInformation"]["Diagnosis"].replace("DiagnosisTypeDef.","")
     Overview["Therapy"] = Percept.extractTherapySettings(JSON, {})
-    Overview["Overall"]["SessionDate"] = datetime.fromtimestamp(SessionDate).strftime("%Y/%m/%d")
+    Overview["Overall"]["SessionDate"] = SessionDate
+    
+    LeadConfigurations = []
+    LeadInformation = JSON["LeadConfiguration"]["Final"]
+    for lead in LeadInformation:
+        LeadConfiguration = dict()
+        LeadConfiguration["TargetLocation"] = lead["Hemisphere"].replace("HemisphereLocationDef.","") + " "
+        if lead["LeadLocation"] == "LeadLocationDef.Vim":
+            LeadConfiguration["TargetLocation"] += "VIM"
+        elif lead["LeadLocation"] == "LeadLocationDef.Stn":
+            LeadConfiguration["TargetLocation"] += "STN"
+        elif lead["LeadLocation"] == "LeadLocationDef.Gpi":
+            LeadConfiguration["TargetLocation"] += "GPi"
+        else:
+            LeadConfiguration["TargetLocation"] += lead["LeadLocation"].replace("LeadLocationDef.","")
+
+        if lead["ElectrodeNumber"] == "InsPort.ZERO_THREE":
+            LeadConfiguration["ElectrodeNumber"] = "E00-E03"
+        elif lead["ElectrodeNumber"] == "InsPort.ZERO_SEVEN":
+            LeadConfiguration["ElectrodeNumber"] = "E00-E07"
+        elif lead["ElectrodeNumber"] == "InsPort.EIGHT_ELEVEN":
+            LeadConfiguration["ElectrodeNumber"] = "E08-E11"
+        elif lead["ElectrodeNumber"] == "InsPort.EIGHT_FIFTEEN":
+            LeadConfiguration["ElectrodeNumber"] = "E08-E15"
+        if lead["Model"] == "LeadModelDef.LEAD_B33015":
+            LeadConfiguration["ElectrodeType"] = "SenSight B33015"
+        elif lead["Model"] == "LeadModelDef.LEAD_B33005":
+            LeadConfiguration["ElectrodeType"] = "SenSight B33005"
+        elif lead["Model"] == "LeadModelDef.LEAD_3387":
+            LeadConfiguration["ElectrodeType"] = "Medtronic 3387"
+        elif lead["Model"] == "LeadModelDef.LEAD_3389":
+            LeadConfiguration["ElectrodeType"] = "Medtronic 3389"
+        elif lead["Model"] == "LeadModelDef.LEAD_OTHER":
+            LeadConfiguration["ElectrodeType"] = "Unknown Lead"
+        else:
+            LeadConfiguration["ElectrodeType"] = lead["Model"]
+        LeadConfigurations.append(LeadConfiguration)
+
+    Overview["Overall"]["LeadConfiguration"] = LeadConfigurations
 
     lastMeasuredTimestamp = 0
     if "TherapyHistory" in Overview["Therapy"].keys():
@@ -349,7 +388,7 @@ def viewSession(user, patient_id, session_id, authority):
     for device in availableDevices:
         if models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id, deidentified_id=str(session_id)).exists():
             session = models.PerceptSession.objects.filter(deidentified_id=session_id).first()
-            JSON = Percept.decodeJSON(session.session_file_path)
+            JSON = Percept.decodeEncryptedJSON(session.session_file_path, key)
             Overview = processSessionFile(JSON)
 
             if not user.is_clinician:
