@@ -122,12 +122,6 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       onClose={handleCloseMenu}
       sx={{ mt: 2 }}
     >
-      <MenuItem >
-        <i className="fa-solid fa-address-card" style={{paddingRight: 15}}></i>
-        <MDTypography variant="button" fontWeight="regular" color="text">
-          {dictionary.SimplifiedNavbar.Profile[language]}
-        </MDTypography>
-      </MenuItem>
       <MenuItem onClick={() => logoutUser()}>
         <i className="fa-solid fa-arrow-right-from-bracket" style={{paddingRight: 15}}></i>
         <MDTypography variant="button" fontWeight="regular" color="text">
@@ -238,7 +232,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
                 variant="contained"
                 onClick={(event) => handleOpenMenu(event, "ProfileMenu")}
               >
-                <MDBadge badgeContent={9} color="error" size="xs" circular>
+                <MDBadge badgeContent={null} color="error" size="xs" circular>
                   <Avatar src={""} />
                 </MDBadge>
               </IconButton>

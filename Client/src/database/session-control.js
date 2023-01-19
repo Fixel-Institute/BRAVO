@@ -39,8 +39,9 @@ export const SessionController = (function () {
     return connectionStatus;
   };
 
-  const query = (url, form, config) => {
+  const query = (url, form, config, timeout) => {
     return axios.post(server + url, form, {
+      timeout: timeout,
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -87,7 +88,7 @@ export const SessionController = (function () {
     if (localStorage.getItem("serverAddress")) {
       server = localStorage.getItem("serverAddress");
       try {
-        await query("/api/handshake", {});
+        await query("/api/handshake", {}, {}, 2000);
         connectionStatus = true;
       } catch (error) {
         console.log(error);
@@ -96,7 +97,7 @@ export const SessionController = (function () {
       for (let address of [window.location.protocol + "//" + window.location.hostname + ":3001", "https://bravo-server.jcagle.solutions"]) {
         try {
           server = address;
-          await query("/api/handshake", {});
+          await query("/api/handshake", {}, {}, 2000);
           connectionStatus = true;
           break;
         } catch (error) {
@@ -129,7 +130,7 @@ export const SessionController = (function () {
         synced = true;
       }
     }
-    return synced;
+    return true;
   };
 
   const isSynced = () => {
