@@ -16,13 +16,15 @@ import MDButton from "components/MDButton";
 import DropzoneUploader from "components/DropzoneUploader";
 import FormField from "components/MDInput/FormField.js";
 
+import { v4 as uuidv4 } from 'uuid';
+
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
 import { dictionary, dictionaryLookup } from "assets/translation";
 
 export default function UploadDialog({availableDevices, onCancel}) {
   const [controller, dispatch] = usePlatformContext();
-  const { user, language } = controller;
+  const { user, language, patientID } = controller;
 
   const [deidentifiedInfo, setDeidentifiedInfo] = useState({patientId: "", studyId: "", diagnosis: "", deviceName: ""});
   const [decryptionKey, setDecryptionKey] = useState("");
@@ -30,11 +32,17 @@ export default function UploadDialog({availableDevices, onCancel}) {
   
   const uploadSessionsDeidentified = () => {
     const myDropzone = dropzoneRef.current.dropzone;
+    let deviceId = selectedDevice.value;
+    if (deviceId === "NewDevice") {
+      deviceId = uuidv4();
+    }
+
     myDropzone.on("processing", function() {
       this.options.autoProcessQueue = true;
     });
-    myDropzone.on("sending", function(file, xhr, formData) { 
-      formData.append("deviceId", selectedDevice.value);  
+    myDropzone.on("sending", function(file, xhr, formData) {
+      formData.append("deviceId", deviceId);  
+      formData.append("patientId", patientID);  
     });
     myDropzone.on("success", function(file, response) {
       this.removeFile(file);
@@ -60,7 +68,7 @@ export default function UploadDialog({availableDevices, onCancel}) {
         <Grid item xs={12}>
           <Autocomplete
             value={selectedDevice}
-            options={availableDevices}
+            options={[...availableDevices, {label: "New Device", value: "NewDevice"}]}
             onChange={(event, value) => setSelectedDevice(value)}
             renderInput={(params) => (
               <FormField

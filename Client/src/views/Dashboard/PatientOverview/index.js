@@ -51,6 +51,7 @@ export default function PatientOverview() {
   const [editPatientInfo, setEditPatientInfo] = useState({show: false});
   const [editDeviceInfo, setEditDeviceInfo] = useState({show: false});
   const [uploadNewJson, setUploadNewJson] = useState({show: false});
+  const [addNewDevice, setAddNewDevice] = useState({show: false});
 
   const [alert, setAlert] = useState(null);
 
@@ -93,7 +94,7 @@ export default function PatientOverview() {
 
   const updatePatientInformation = () => {
     SessionController.query("/api/updatePatientInformation", {
-      updatePatientInfo: true,
+      updatePatientInfo: patientID,
       FirstName: editPatientInfo.FirstName,
       LastName: editPatientInfo.LastName,
       Diagnosis: editPatientInfo.Diagnosis,
@@ -105,6 +106,7 @@ export default function PatientOverview() {
         Diagnosis: editPatientInfo.Diagnosis,
         MRN: editPatientInfo.MRN
       });
+      setEditPatientInfo({...editPatientInfo, show: false});
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
     });
@@ -112,18 +114,18 @@ export default function PatientOverview() {
 
   const updateDeviceInformation = () => {
     SessionController.query("/api/updatePatientInformation", {
-      updatePatientInfo: true,
-      FirstName: editPatientInfo.FirstName,
-      LastName: editPatientInfo.LastName,
-      Diagnosis: editPatientInfo.Diagnosis,
-      MRN: editPatientInfo.MRN,
+      updatePatientInfo: patientID,
+      newDeviceName: editDeviceInfo.DeviceName,
+      updateDeviceID: editDeviceInfo.DeviceID,
     }).then(() => {
-      setPatientInfo({...patientInfo, 
-        FirstName: editPatientInfo.FirstName,
-        LastName: editPatientInfo.LastName,
-        Diagnosis: editPatientInfo.Diagnosis,
-        MRN: editPatientInfo.MRN
-      });
+      setPatientInfo({...patientInfo, Devices: patientInfo.Devices.map((device) => {
+        if (device.ID != editDeviceInfo.DeviceID) return device
+        return {
+          ...device,
+          DeviceName: editDeviceInfo.DeviceName
+        };
+      })});
+      setEditDeviceInfo({...editDeviceInfo, show: false});
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
     });
@@ -199,7 +201,7 @@ export default function PatientOverview() {
                         </MDTypography>
                       </MDBox>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={12} xl={6}>
                       <Divider variant="middle" />
                       <MDButton variant="outlined" color="warning" 
                         onClick={() => setEditPatientInfo({...patientInfo, show: true})}
@@ -207,7 +209,7 @@ export default function PatientOverview() {
                         {dictionary.PatientOverview.EditPatientInfo[language]}
                       </MDButton>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={12} xl={6}>
                       <Divider variant="middle" />
                       <MDButton variant="outlined" color="info"
                         onClick={() => setUploadNewJson({show: true})}
@@ -223,6 +225,9 @@ export default function PatientOverview() {
                 <MDBox px={2} pt={2}>
                   <MDTypography variant="h5">
                     Edit Patient Information
+                  </MDTypography>
+                  <MDTypography variant="h5">
+                    {patientID}
                   </MDTypography>
                 </MDBox>
                 <DialogContent>

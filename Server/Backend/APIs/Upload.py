@@ -6,6 +6,7 @@ from rest_framework.response import Response
 import os, sys, pathlib
 import json
 import base64
+import datetime, pytz
 
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
 with open(RESOURCES + "/../codes.json", "r") as file:
@@ -16,6 +17,7 @@ DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
 import queue
 import hashlib, random, string
+from uuid import UUID
 processingQueue = queue.Queue()
 
 from Backend import models
@@ -124,8 +126,25 @@ class SessionUpload(RestViews.APIView):
             
             result = "Failed"
             if "deviceId" in request.data:
+                AuthorityLevel = Database.verifyAccess(request.user, request.data["patientId"])
+                if not AuthorityLevel == 1:
+                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+                deviceId = request.data["deviceId"]
+                device = models.PerceptDevice.objects.filter(patient_deidentified_id=request.data["patientId"], deidentified_id=request.data["deviceId"]).first()
+                if not device:
+                    serial_number = "".join(random.choices(string.ascii_uppercase + string.digits, k=32))
+                    patient = models.Patient.objects.get(deidentified_id=request.data["patientId"])
+                    device = models.PerceptDevice(patient_deidentified_id=request.data["patientId"], serial_number=serial_number, deidentified_id=UUID(request.data["deviceId"]), device_location="")
+                    device.device_eol_date = datetime.datetime.fromtimestamp(0, tz=pytz.utc)
+                    device.device_last_seen = datetime.datetime.fromtimestamp(0, tz=pytz.utc)
+                    device.authority_level = "Research"
+                    device.authority_user = request.user.email
+                    device.save()
+                    patient.addDevice(str(device.deidentified_id))
+                
                 try:
-                    result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes, device_deidentified_id=request.data["deviceId"])
+                    result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes, device_deidentified_id=deviceId)
                 except Exception as e:
                     print(e)
             else:
