@@ -10,6 +10,7 @@ import MDPagination from "components/MDPagination";
 
 import { dictionary } from "assets/translation";
 import { usePlatformContext } from "context";
+import { SessionController } from "database/session-control";
 
 export default function PatientTablePagination({totalCount, totalPages, currentPage, setPagination}) {
   const [controller, ] = usePlatformContext();
@@ -21,6 +22,7 @@ export default function PatientTablePagination({totalCount, totalPages, currentP
         totalPages: totalPages,
         currentPage: page,
       });
+      SessionController.setPageIndex("PatientTable", page);
     }
   };
 

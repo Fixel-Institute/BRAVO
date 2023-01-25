@@ -147,6 +147,7 @@ export const SessionController = (function () {
   const setSession = (type, value) => {
     query("/api/updateSession", {[type]: value});
     session[type] = value;
+    session["lastActive"] = new Date().getTime();
     localStorage.setItem("sessionContext", JSON.stringify(session));
   };
 
@@ -223,6 +224,10 @@ export const SessionController = (function () {
     });
   };
 
+  const setPageIndex = (type, index) => {
+    setSession(type+"PageIndex", index);
+  };
+
   return {
     setAuthToken: setAuthToken,
     getAuthToken: getAuthToken,
@@ -250,6 +255,7 @@ export const SessionController = (function () {
 
     setPatientID: setPatientID,
     getPatientInfo: getPatientInfo,
+    setPageIndex: setPageIndex
   }
 
 })();

@@ -55,8 +55,6 @@ const SideMenu = ({ color, brand, brandName, routes, ...rest }) => {
     // A function that sets the mini state of the sidenav.
     function handleMiniSidenav() {
       setContextState(dispatch, "hideSidenav", window.innerWidth < 1200);
-      setContextState(dispatch, "transparentSidenav", window.innerWidth < 1200 ? false : transparentSidenav);
-      setContextState(dispatch, "whiteSidenav", window.innerWidth < 1200 ? false : whiteSidenav);
       setContextState(dispatch, "showSidenav", window.innerWidth < 1200);
     }
 

@@ -23,7 +23,6 @@ import { dictionary } from "assets/translation.js";
 import MDBox from "components/MDBox/index.js";
 import FormField from "components/MDInput/FormField.js";
 import MDTypography from "components/MDTypography";
-import PatientTablePagination from "../PatientTable/PatientTablePagination.js";
 import MDButton from "components/MDButton/index.js";
 
 function IndefiniteStreamingTable({data, requestDataForRender, children}) {

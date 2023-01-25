@@ -27,7 +27,6 @@ import FormField from "components/MDInput/FormField.js";
 import MDButton from "components/MDButton";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-import PatientTablePagination from "../PatientTable/PatientTablePagination.js";
 
 function BrainSenseStreamingTable({data, getRecordingData, toggle, children}) {
   const [controller, dispatch] = usePlatformContext();

@@ -29,11 +29,8 @@ export default function App() {
   const {
     hideSidenav,
     miniSidenav,
-    showSidenav,
     layout,
     sidenavColor,
-    transparentSidenav,
-    whiteSidenav,
     darkMode,
   } = controller;
   const [onMouseEnter, setOnMouseEnter] = useState(false);
