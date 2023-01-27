@@ -181,7 +181,7 @@ def queryTherapyConfigurations(user, patientUniqueID, authority, therapyType="Pa
             TherapyHistoryObjs = models.TherapyHistory.objects.filter(device_deidentified_id=device.deidentified_id, therapy_type=therapyType).order_by("therapy_date").all()
 
         for therapy in TherapyHistoryObjs:
-            TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location}
+            TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": device.device_name, "DeviceLocation": device.device_location}
             TherapyInfo["TherapyDate"] = therapy.therapy_date.timestamp()
             TherapyInfo["TherapyGroup"] = therapy.group_id
             TherapyInfo["TherapyType"] = therapy.therapy_type

@@ -142,7 +142,7 @@ class PerceptDevice(models.Model):
     serial_number = models.CharField(default="", max_length=512)
     device_name = models.CharField(default="", max_length=32)
     device_type = models.CharField(default="Percept PC", max_length=32)
-    deidentified_id = models.UUIDField(default=uuid.uuid4, editable=False)
+    deidentified_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     patient_deidentified_id = models.UUIDField(default=uuid.uuid4)
     implant_date = models.DateTimeField(default=timezone.now)
 

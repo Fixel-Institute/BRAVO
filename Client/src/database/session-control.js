@@ -39,12 +39,11 @@ export const SessionController = (function () {
     return connectionStatus;
   };
 
-  const query = (url, form, config, timeout) => {
+  const query = (url, form, config, timeout, responseType) => {
     return axios.post(server + url, form, {
       timeout: timeout,
+      responseType: responseType,
       headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
         "Authorization": authToken === "" ? null : "Token " + authToken,
         ...config,
       }

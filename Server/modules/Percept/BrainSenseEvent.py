@@ -125,6 +125,8 @@ def queryPatientEventPSDs(user, patientUniqueID, TherapyHistory, authority):
                                 for therapy in TherapyConfigurations:
                                     if therapy["DeviceID"] == str(device.deidentified_id) and therapy["TherapyGroup"] == eventPSD.brainsense_psd[hemisphere]["GroupId"] and therapy["TherapyDate"] > EventTimestamp and TherapyKey in therapy["Therapy"].keys():
                                         PatientEventPSDs[-1]["Therapy"].append(therapy["Therapy"][TherapyKey])
+                                        if len(eventPSD.brainsense_psd[hemisphere]["FFTBinData"]) < 100: 
+                                            eventPSD.brainsense_psd[hemisphere]["FFTBinData"].extend([0 for i in range(100-len(eventPSD.brainsense_psd[hemisphere]["FFTBinData"]))])
                                         PatientEventPSDs[-1]["PSDs"].append(eventPSD.brainsense_psd[hemisphere]["FFTBinData"])
                                         PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
                                         break
@@ -132,6 +134,8 @@ def queryPatientEventPSDs(user, patientUniqueID, TherapyHistory, authority):
                                 for therapy in TherapyConfigurations:
                                     if therapy["DeviceID"] == str(device.deidentified_id) and therapy["TherapyGroup"] == eventPSD.brainsense_psd[hemisphere]["GroupId"] and therapy["TherapyDate"] > EventTimestamp and TherapyKey in therapy["Therapy"].keys():
                                         PatientEventPSDs[-1]["Therapy"].append(therapy["Therapy"][TherapyKey])
+                                        if len(eventPSD.brainsense_psd[hemisphere]["FFTBinData"]) < 100: 
+                                            eventPSD.brainsense_psd[hemisphere]["FFTBinData"].extend([0 for i in range(100-len(eventPSD.brainsense_psd[hemisphere]["FFTBinData"]))])
                                         PatientEventPSDs[-1]["PSDs"].append(eventPSD.brainsense_psd[hemisphere]["FFTBinData"])
                                         PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
                                         break
