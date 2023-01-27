@@ -99,13 +99,24 @@ function TherapyHistory() {
         );
       } else {
         return (
-          <MDTypography fontSize={12} color={color} style={{flexDirection: "row", paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+          <MDBox style={{display: "flex", flexDirection: "row"}}>
             {therapy.Channel.map((contact) => {
+              console.log(contact)
               if (!contact.Electrode.startsWith("ElectrodeDef")) {
-                return contact.Electrode + " ";
+                if (contact.ElectrodeAmplitudeInMilliAmps) {
+                  return <Tooltip title={contact.ElectrodeAmplitudeInMilliAmps + " mA"} placement="top">
+                    <MDTypography fontSize={12} color={color} style={{paddingBottom: 0, paddingRight: 5, paddingTop: 0, marginBottom: 0}}>
+                      {contact.Electrode + " "}
+                    </MDTypography>
+                  </Tooltip>
+                } else {
+                  return <MDTypography fontSize={12} color={color} style={{paddingBottom: 0, paddingRight: 5, paddingTop: 0, marginBottom: 0}}>
+                    {contact.Electrode + " "}
+                  </MDTypography>
+                }
               }
             })}
-          </MDTypography>
+          </MDBox>
         );
       }
     } else if (type == "Settings") {
@@ -126,21 +137,36 @@ function TherapyHistory() {
       }
     } else if (type == "BrainSense") {
       if (therapy.Mode == "BrainSense") {
-        return (
-        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
-          <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
-            {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
-          </MDTypography>
-          <MDBox display={"flex"} flexDirection={"column"} ml={2}>
+        if (therapy.LFPThresholds[0] == 20 && therapy.LFPThresholds[1] == 30 && therapy.CaptureAmplitudes[0] == 0 && therapy.CaptureAmplitudes[1] == 0) {
+          return (
+          <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
             <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
-              {"Threshold at: "} {`[${therapy.LFPThresholds[0]} , ${therapy.LFPThresholds[1]}]`}
+              {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
             </MDTypography>
-            <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
-              {"Stimulation Range at: "} {`[${therapy.CaptureAmplitudes[0]} , ${therapy.CaptureAmplitudes[1]}]`}
-            </MDTypography>
+            <MDBox display={"flex"} flexDirection={"column"} ml={2}>
+              <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+                {"Adaptive DBS Disabled"}
+              </MDTypography>
+            </MDBox>
           </MDBox>
-        </MDBox>
-        );
+          );
+        } else {
+          return (
+          <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
+            <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+              {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
+            </MDTypography>
+            <MDBox display={"flex"} flexDirection={"column"} ml={2}>
+              <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+                {"Threshold at: "} {`[${therapy.LFPThresholds[0]} , ${therapy.LFPThresholds[1]}]`}
+              </MDTypography>
+              <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+                {"Stimulation Range at: "} {`[${therapy.CaptureAmplitudes[0]} , ${therapy.CaptureAmplitudes[1]}]`}
+              </MDTypography>
+            </MDBox>
+          </MDBox>
+          );
+        }
       } else {
         return (<MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
             {"BrainSense Disabled"}

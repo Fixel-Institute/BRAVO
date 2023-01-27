@@ -23,7 +23,7 @@ import PatientTablePagination from "./PatientTablePagination.js";
 
 const PatientTable = ({data}) => {
   const [controller, dispatch] = usePlatformContext();
-  const { language } = controller;
+  const { language, PatientTablePageIndex, lastActive } = controller;
 
   const navigate = useNavigate();
 
@@ -35,7 +35,12 @@ const PatientTable = ({data}) => {
   });
 
   useEffect(() => {
-    setPagination({currentPage: 0, totalPages: Math.ceil(data.length / viewPerPage)})
+    if (new Date().getTime() - lastActive > 60000) {
+      SessionController.setPageIndex("PatientTable", 0);
+      setPagination({currentPage: 0, totalPages: Math.ceil(data.length / viewPerPage)});
+    } else {
+      setPagination({currentPage: PatientTablePageIndex ? PatientTablePageIndex : 0, totalPages: Math.ceil(data.length / viewPerPage)});
+    }
   }, [data]);
 
   useEffect(() => {
