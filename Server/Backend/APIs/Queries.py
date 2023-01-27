@@ -687,16 +687,16 @@ class QueryImageModel(RestViews.APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         Authority = {}
-        Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+        Authority["Level"] = Database.verifyAccess(request.user, request.data["Directory"])
         if Authority["Level"] == 0:
             return Response(status=404)
 
         elif Authority["Level"] == 1:
-            Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
-            PatientID = request.data["id"]
+            Authority["Permission"] = Database.verifyPermission(request.user, request.data["Directory"], Authority, "ChronicLFPs")
+            PatientID = request.data["Directory"]
 
         elif Authority["Level"] == 2:
-            PatientInfo = Database.extractAccess(request.user, request.data["id"])
+            PatientInfo = Database.extractAccess(request.user, request.data["Directory"])
             Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "Imaging")
             if not request.data["FileName"] in Authority["Permission"]:
                 return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
@@ -720,6 +720,21 @@ class QueryImageModel(RestViews.APIView):
                 return Response(status=200, data={
                     "points": tracts
                 })
+            
+            elif request.data["FileType"] == "electrode":
+                file_data = ImageDatabase.stlReader("Electrodes/" + request.data["ElectrodeName"], request.data["FileName"])
+                if not file_data:
+                    return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+                return HttpResponse(bytes(file_data), status=200, headers={
+                    "Content-Type": "application/octet-stream"
+                })
+
+        elif request.data["FileMode"] == "multiple":
+            if request.data["FileType"] == "electrode":
+                pages = ImageDatabase.electrodeReader(request.data["FileName"])
+                return Response(status=200, data={"pages": pages, "color": "0x000000"})
+            
 
 class QueryAdaptiveGroups(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]

@@ -3,7 +3,7 @@ import { identityMatrix, computeElectrodePlacement, parseBinarySTL } from ".";
 import * as THREE from "three";
 import * as math from "mathjs";
 
-const getModels = async (directory, item) => {
+const getModels = async (directory, item, color) => {
   const controlledItems = [];
   if (item.mode == "single") {
     
@@ -13,7 +13,7 @@ const getModels = async (directory, item) => {
         "FileName": item.file,
         "FileMode": item.mode,
         "FileType": item.type
-      }, {responseType: "arraybuffer"});
+      }, {}, null, "arraybuffer");
       const data = parseBinarySTL(response.data);
       controlledItems.push({
         filename: item.file,
@@ -21,7 +21,7 @@ const getModels = async (directory, item) => {
         downloaded: true,
         data: data,
         opacity: 1,
-        color: data.color,
+        color: color ? color : data.color,
         matrix: identityMatrix(),
         show: true,
       });
@@ -32,7 +32,7 @@ const getModels = async (directory, item) => {
         "FileName": item.file,
         "FileMode": item.mode,
         "FileType": item.type
-      }, {responseType: "arraybuffer"});
+      }, {}, null, "arraybuffer");
       return response.data;
 
     } else if (item.type == "tracts") {
@@ -48,7 +48,7 @@ const getModels = async (directory, item) => {
         downloaded: true,
         data: response.data.points,
         thickness: 1,
-        color: "#FFFFFF",
+        color: color ? color : "#FFFFFF",
         matrix: identityMatrix(),
         show: true,
       });
@@ -66,7 +66,7 @@ const getModels = async (directory, item) => {
         downloaded: true,
         data: response.data.points,
         thickness: 1,
-        color: "#FFFFFF",
+        color: color ? color : "#FFFFFF",
         matrix: identityMatrix(),
         show: true,
       });
@@ -74,15 +74,16 @@ const getModels = async (directory, item) => {
     } else if (item.type == "electrode") {
       const response = await SessionController.query("/api/queryImageModel", {
         "Directory": directory,
+        "ElectrodeName": item.electrode,
         "FileName": item.file,
         "FileMode": item.mode,
         "FileType": item.type
-      }, {responseType: "arraybuffer"});
+      }, {}, null, "arraybuffer");
       const data = parseBinarySTL(response.data);
       controlledItems.push({
         filename: item.file,
         data: data,
-        color: data.color,
+        color: color ? color : data.color,
       });
 
     }
@@ -107,7 +108,7 @@ const getModels = async (directory, item) => {
         downloaded: true,
         subname: [],
         data: [],
-        color: pagination.data.color,
+        color: color,
         opacity: 1,
         targetPts: targetPts,
         entryPts: entryPts,
@@ -115,8 +116,9 @@ const getModels = async (directory, item) => {
         show: true,
       };
       for (var page of pagination.data.pages) {
-        const data = await getModels(page.directory, {
-          filename: page.filename,
+        const data = await getModels(directory, {
+          file: page.filename,
+          electrode: page.electrode,
           mode: "single",
           type: page.type
         });

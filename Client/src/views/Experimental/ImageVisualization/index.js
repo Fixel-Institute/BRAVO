@@ -36,7 +36,8 @@ import {
   Model,
   Tractography,
   VolumetricObject,
-  retrieveModels
+  retrieveModels,
+  computeElectrodePlacement
 } from "graphing-utility/Volumetric";
 
 import DatabaseLayout from "layouts/DatabaseLayout";
@@ -53,6 +54,7 @@ function ImageVisualization() {
   const [existingFiles, setExistingFiles] = useState(false);
   const [availableItems, setAvailableItems] = React.useState([]);
   const [controlItems, setControlItems] = React.useState([]);
+  const [descriptor, setDescriptor] = React.useState({});
 
   const [addItemModal, setAddItemModal] = useState({show: false});
 
@@ -78,7 +80,8 @@ function ImageVisualization() {
       SessionController.query("/api/queryImageDirectory", {
         id: patientID
       }).then((response) => {
-        setAvailableItems(response.data);
+        setAvailableItems(response.data.availableModels);
+        setDescriptor(response.data.descriptor);
         setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -86,30 +89,64 @@ function ImageVisualization() {
     }
   }, [patientID]);
 
+  useEffect(() => {
+    downloadModelsFromDescriptor();
+  }, [availableItems, descriptor]);
+
+  const downloadModelsFromDescriptor = async () => {
+    setAlert(<LoadingProgress/>);
+    let allItems = [];
+    const files = Object.keys(descriptor);
+    for (let item of availableItems) {
+      if (files.includes(item.file)) {
+        if (!item.downloaded) {
+          const data = await retrieveModels(patientID, item, descriptor[item.file].color);
+          if (item.type === "electrode") {
+            var electrodeCount = 0;
+            for (var i in controlItems) {
+              if (controlItems[i].type == "electrode") {
+                electrodeCount++;
+              }
+            }
+            if (descriptor[item.file].targetPoint) data[0].targetPts = descriptor[item.file].targetPoint;
+            if (descriptor[item.file].entryPoint) data[0].entryPts = descriptor[item.file].entryPoint;
+            data[0].filename += " " + electrodeCount.toString();
+          } else {
+            const index = checkItemIndex(item);    
+            availableItems[index].downloaded = true;
+          }
+          allItems = [...allItems, ...data];
+        }
+      }
+    }
+    setControlItems(allItems);
+    setAvailableItems(availableItems);
+    setAlert(null);
+  }
+
   const checkItemIndex = (item) => {
     for (var i in availableItems) {
       if (availableItems[i].filename == item.filename) return i; 
     }
   };
 
-  const addModel = (item) => {
+  const addModel = async (item, color) => {
     if (!item.downloaded) {
-      retrieveModels(patientID, item).then((data) => {
-        if (item.type === "electrode") {
-          var electrodeCount = 0;
-          for (var i in controlItems) {
-            if (controlItems[i].type == "electrode") {
-              electrodeCount++;
-            }
+      const data = await retrieveModels(patientID, item, color);
+      if (item.type === "electrode") {
+        var electrodeCount = 0;
+        for (var i in controlItems) {
+          if (controlItems[i].type == "electrode") {
+            electrodeCount++;
           }
-          data[0].filename += " " + electrodeCount.toString();
-        } else {
-          const index = checkItemIndex(item);    
-          availableItems[index].downloaded = true;
-          setAvailableItems(availableItems);
         }
-        setControlItems([...controlItems, ...data]);
-      });
+        data[0].filename += " " + electrodeCount.toString();
+      } else {
+        const index = checkItemIndex(item);    
+        availableItems[index].downloaded = true;
+        setAvailableItems(availableItems);
+      }
+      setControlItems([...controlItems, ...data]);
     } else {
       for (var i in controlItems) {
         if (controlItems[i].filename == item.filename) {
@@ -204,14 +241,15 @@ function ImageVisualization() {
                                     opacity: item.opacity
                                   }} matrix={item.matrix}></Model>
                                 } else if (item.type === "electrode") {
+                                  let matrix = computeElectrodePlacement(item.targetPts, item.entryPts);
                                   return <group key={item.filename}>
                                     {item.data.map((value, index) => {
                                       return <Model key={item.subname[index]} geometry={value} material={{
-                                        color: item.subname[index].endsWith("_shaft.stl") ? item.color : "#FFFFFF",
+                                        color: item.subname[index].endsWith("shaft.stl") ? item.color : "#FFFFFF",
                                         specular: 0x111111,
                                         shininess: 200,
                                         opacity: item.opacity
-                                      }} matrix={item.matrix}></Model>
+                                      }} matrix={matrix}></Model>
                                     })}
                                   </group>
                                 } else if (item.type === "points") {
