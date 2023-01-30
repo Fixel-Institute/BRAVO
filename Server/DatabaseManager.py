@@ -285,6 +285,33 @@ def processInput(argv):
 
       return True
 
+    elif argv[1] == "Merge":
+      if argv[2] == "Patient":
+        PatientID = argv[3]
+        PatientID2 = argv[4]
+        SourcePatient = models.Patient.objects.filter(deidentified_id=PatientID).first()
+        MergePatient = models.Patient.objects.filter(deidentified_id=PatientID2).first()
+
+        if MergePatient and SourcePatient:
+          for device_id in SourcePatient.device_deidentified_id:
+            device = models.PerceptDevice.objects.filter(deidentified_id=device_id).first()
+            device.patient_deidentified_id = MergePatient.deidentified_id
+            device.save()
+            MergePatient.addDevice(str(device.deidentified_id))
+
+        SourcePatient.delete()
+        return True
+      
+      else: 
+        PatientID = argv[2]
+        SourcePatient = models.Patient.objects.filter(deidentified_id=PatientID).first()
+        for device_id in SourcePatient.device_deidentified_id:
+          device = models.PerceptDevice.objects.filter(deidentified_id=device_id).first()
+          device.patient_deidentified_id = SourcePatient.deidentified_id
+          device.save()
+          print(device)
+        
+        return True
 
     elif argv[1] == "Refresh":
       if argv[2] == "TherapyHistory":
