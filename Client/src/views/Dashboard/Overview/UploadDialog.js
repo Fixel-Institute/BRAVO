@@ -41,7 +41,8 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
         this.options.autoProcessQueue = true;
       });
       myDropzone.on("sending", function(file, xhr, formData) { 
-        formData.append("deviceId", response.data.deviceID);  
+        formData.append("deviceId", response.data.deviceID);
+        formData.append("patientId", response.data.newPatient.ID);
       });
       myDropzone.on("success", function(file, response) {
         this.removeFile(file);
