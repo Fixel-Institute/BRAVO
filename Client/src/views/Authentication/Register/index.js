@@ -6,9 +6,13 @@ import { Link, useNavigate } from "react-router-dom";
 // @mui material components
 import {
   Card, 
-  Checkbox
+  Checkbox,
+  Dialog,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 
+import MuiAlertDialog from "components/MuiAlertDialog";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";
@@ -28,19 +32,28 @@ export default function Register() {
   const navigate = useNavigate();
 
   const [alert, setAlert] = useState(null);
+  const [displayDisclaimer, setDisplayDisclaimer] = useState(false);
   const [authInfo, setAuthInfo] = useState({email: "", password: ""});
-  const [rememberMe, setRememberMe] = useState(false);
+  const [agree, setAgreeDisclaimer] = useState(false);
 
   const handleRegistration = () => {
-    SessionController.register(authInfo.username, authInfo.email, authInfo.password, authInfo.email).then((response) => {
-      SessionController.setUser(response.data.user);
-      SessionController.setAuthToken(response.data.token);
-      SessionController.syncSession();
-      setAuthInfo({...authInfo, password: ""});
-      setContextState(dispatch, "user", response.data.user);
-    }).catch((error) => {
-      SessionController.displayError(error, setAlert);
-    });
+    if (agree) {
+      SessionController.register(authInfo.username, authInfo.email, authInfo.password, authInfo.email).then((response) => {
+        SessionController.setUser(response.data.user);
+        SessionController.setAuthToken(response.data.token);
+        SessionController.syncSession();
+        setAuthInfo({...authInfo, password: ""});
+        setContextState(dispatch, "user", response.data.user);
+      }).catch((error) => {
+        SessionController.displayError(error, setAlert);
+      });
+    } else {
+      setAlert(<MuiAlertDialog title={"ERROR"} message={
+          "You must accept the terms and conditions listed on the tool."
+        }
+        handleClose={() => setAlert()} 
+        handleConfirm={() => setAlert()}/>)
+    }
   }
 
   useEffect(() => {
@@ -80,7 +93,7 @@ export default function Register() {
               <MDInput type="password" label={dictionary.Register.Password[language]} value={authInfo.password} onChange={(event) => setAuthInfo({...authInfo, password: event.currentTarget.value})} fullWidth/>
             </MDBox>
             <MDBox display="flex" alignItems="center" ml={-1}>
-              <Checkbox value={rememberMe} onClick={() => setRememberMe(!rememberMe)} />
+              <Checkbox value={agree} onClick={() => setAgreeDisclaimer(!agree)} />
               <MDTypography
                 variant="button"
                 fontWeight="regular"
@@ -96,6 +109,7 @@ export default function Register() {
                 fontWeight="bold"
                 color="info"
                 textGradient
+                onClick={() => setDisplayDisclaimer(true)}
               >
                 {dictionary.Register.Disclaimer[language]}
               </MDTypography>
@@ -122,6 +136,18 @@ export default function Register() {
           </MDBox>
         </MDBox>
       </Card>
+      <Dialog open={displayDisclaimer} onClose={() => setDisplayDisclaimer(false)}>
+        <MDBox px={5} pt={2} pb={2}>
+          <MDTypography variant="h2" fontSize={24}>
+            {dictionary.Register.Disclaimer[language]}
+          </MDTypography>
+        </MDBox>
+        <MDBox px={5} pb={5}>
+          <MDTypography variant="p" fontSize={18}>
+            {dictionary.Register.DisclaimerContent[language]}
+          </MDTypography>
+        </MDBox>
+      </Dialog>
     </OnePageLayout>
   );
 };

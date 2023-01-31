@@ -97,6 +97,16 @@ export const dictionary = {
     Disclaimer: {
       en: "Terms and Conditions",
       zh: "条款与细则"
+    },
+    DisclaimerContent: {
+      en: `This is a demo website for the UF BRAVO Platform submitted for publication.
+      Registered Accounts are by default "Researcher-only" accounts without ability to view identified data.
+      The platform is hosted in a cloud-server and data are stored in cloud server to demonstrate long-term data analysis capability.
+      Please upload data with that in mind and upload deidentified data only.`,
+      zh: `This is a demo website for the UF BRAVO Platform submitted for publication.
+      Registered Accounts are by default "Researcher-only" accounts without ability to view identified data.
+      The platform is hosted in a cloud-server and data are stored in cloud server to demonstrate long-term data analysis capability.
+      Please upload data with that in mind and upload deidentified data only.`,
     }
   },
   Login: {
@@ -309,6 +319,10 @@ export const dictionary = {
     UploadNewSession: {
       en: "Upload New Sessions",
       zh: "上传新数据"
+    },
+    AddNewDevice: {
+      en: "Add New Device",
+      zh: "添加新脉冲发生器"
     },
     DeletePatient: {
       en: "Delete Patient Entry",
