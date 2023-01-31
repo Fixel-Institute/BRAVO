@@ -6,6 +6,8 @@ Authentication Module
 @email: jackson.cagle@neurology.ufl.edu
 """
 
+import datetime
+
 from django.contrib.auth import authenticate, login, logout, get_user_model
 
 import rest_framework.views as RestViews
@@ -97,6 +99,7 @@ class UserAuth(KnoxLoginView):
 
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
+    
     def post(self, request):
         if "Email" in request.data and "Password" in request.data:
             user = authenticate(request, username=request.data["Email"], password=request.data["Password"])
@@ -109,6 +112,47 @@ class UserAuth(KnoxLoginView):
 
                 login(request, user)
                 authResponse = super(UserAuth, self).post(request, format=None)
+                authResponse.data.update({
+                    "user": Database.extractUserInfo(user)
+                })
+                return Response(status=200, data=authResponse.data)
+            else:
+                return Response(status=400, data={"code": ERROR_CODE["INCORRECT_PASSWORD_OR_USERNAME"]})
+
+        return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+
+class UserAuthPermanent(KnoxLoginView):
+    """ User Authentication (Web Account Only).
+
+    **POST**: ``/api/authenticatePermanent``
+
+    Args:
+      Email (string): Email address also serves as unique username.
+      Password (string): Password of the account. Database will hash the password for security. 
+        User may also choose to perform end-to-end encryption during transmission if they desire.
+
+    Returns:
+      Response Code 200 if success or 400 if error. Response Body contains authentication token and user object.
+    """
+
+    permission_classes = [AllowAny,]
+    parser_classes = [RestParsers.JSONParser]
+    
+    def get_token_ttl(self):
+        return None
+
+    def post(self, request):
+        if "Email" in request.data and "Password" in request.data:
+            user = authenticate(request, username=request.data["Email"], password=request.data["Password"])
+            if user is not None:
+                if user.is_mobile:
+                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+                if not models.UserConfigurations.objects.filter(user_id=user.unique_user_id).exists():
+                    models.UserConfigurations(user_id=user.unique_user_id).save()
+
+                login(request, user)
+                authResponse = super(UserAuthPermanent, self).post(request, format=None)
                 authResponse.data.update({
                     "user": Database.extractUserInfo(user)
                 })

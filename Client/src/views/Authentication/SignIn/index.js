@@ -34,7 +34,7 @@ export default function SignIn() {
   const handleSetRememberMe = () => setRememberMe(!rememberMe);
 
   const handleAuthentication = () => {
-    SessionController.authenticate(authInfo.email, authInfo.password).then((response) => {
+    SessionController.authenticate(authInfo.email, authInfo.password, rememberMe).then((response) => {
       SessionController.setUser(response.data.user);
       SessionController.setAuthToken(response.data.token);
       SessionController.syncSession();

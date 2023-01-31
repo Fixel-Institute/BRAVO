@@ -175,8 +175,12 @@ export const SessionController = (function () {
     }
   };
 
-  const authenticate = (username, password) => {
-    return query("/api/authenticate", {Email: username, Password: password});
+  const authenticate = (username, password, rememberMe) => {
+    if (rememberMe) {
+      return query("/api/authenticatePermanent", {Email: username, Password: password});
+    } else {
+      return query("/api/authenticate", {Email: username, Password: password});
+    }
   };
 
   const register = (username, email, password, institute) => {

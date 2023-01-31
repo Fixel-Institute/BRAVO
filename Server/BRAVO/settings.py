@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 from pathlib import Path
 import os, sys
 import json
+import datetime
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 if os.path.exists(os.path.join(BASE_DIR, '.env')):
@@ -115,7 +116,7 @@ REST_FRAMEWORK = {
 }
 
 REST_KNOX = {
-    'TOKEN_TTL': None,
+    'TOKEN_TTL': datetime.timedelta(hours=1)
 }
 
 ASGI_APPLICATION = 'BRAVO.asgi.application'
