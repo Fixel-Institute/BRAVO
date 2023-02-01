@@ -66,7 +66,6 @@ export default function SessionOverview() {
       id: patientID,
       sessionId: id,
     }).then((response) => {
-      console.log(response.data)
       setSessionOverview(response.data);
       setShowSessionLists(false);
     }).catch((error) => {
@@ -75,7 +74,7 @@ export default function SessionOverview() {
   };
 
   const formatTherapyGroup = (group) => {
-    return <MDBox mb={1} mt={2} lineHeight={1}>
+    return <MDBox key={group.GroupId} mb={1} mt={2} lineHeight={1}>
       <MDBox mb={0} lineHeight={1}>
         <MDTypography variant="p" fontSize={15} fontWeight={"medium"} style={{marginBottom: 0}}>
           {group.GroupName === "" ? group.GroupId.replace("GroupIdDef.GROUP_","Group ") : group.GroupName}{" "}
@@ -88,7 +87,7 @@ export default function SessionOverview() {
         {group.LeftHemisphere ? <>
           {group.LeftHemisphere.Mode === "Interleaving" ? <>
             {[0,1].map((index) => {
-              return <MDBox mb={0} lineHeight={1}>
+              return <MDBox key={index} mb={0} lineHeight={1}>
                 <MDTypography variant="p" fontSize={15} style={{marginBottom: 0}}>
                   {"["}{dictionary.SessionOverview.LeftHemisphere[language]}{"] "}
                 </MDTypography>
@@ -133,7 +132,7 @@ export default function SessionOverview() {
         {group.RightHemisphere ? <>
           {group.RightHemisphere.Mode === "Interleaving" ? <>
             {[0,1].map((index) => {
-              return <MDBox mb={0} lineHeight={1}>
+              return <MDBox key={index} mb={0} lineHeight={1}>
                 <MDTypography variant="p" fontSize={15} style={{marginBottom: 0}}>
                   {"["}{dictionary.SessionOverview.RightHemisphere[language]}{"] "}
                 </MDTypography>
