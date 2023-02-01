@@ -122,7 +122,8 @@ class Patient(models.Model):
 class SearchTags(models.Model):
     tag_name = models.CharField(default="", max_length=255)
     tag_type = models.CharField(default="Patient", max_length=255)
-
+    institute = models.CharField(default="", max_length=255)
+    
 class DeidentifiedPatientTable(models.Model):
     researcher_id = models.UUIDField(default=uuid.uuid1)
     lookup_table = models.TextField(default="", max_length=999999)

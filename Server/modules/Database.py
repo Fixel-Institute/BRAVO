@@ -266,8 +266,8 @@ def extractPatientInfo(user, patientUniqueID):
 
     return info
 
-def extractTags(typeName):
-    allTags = models.SearchTags.objects.filter(tag_type=typeName).all()
+def extractTags(typeName, institute):
+    allTags = models.SearchTags.objects.filter(tag_type=typeName, institute=institute).all()
     return [tag.tag_name for tag in allTags]
 
 def getPerceptDevices(user, patientUniqueID, authority):

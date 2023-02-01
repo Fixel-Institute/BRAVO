@@ -138,7 +138,7 @@ class PatientInformationUpdate(RestViews.APIView):
         elif "updatePatientInfo" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["updatePatientInfo"])
-            if Authority["Level"] == 0:
+            if Authority["Level"] == 0 or Authority["Level"] == 2:
                 return Response(status=404)
 
             patient = models.Patient.objects.get(deidentified_id=request.data["updatePatientInfo"])
@@ -166,8 +166,14 @@ class PatientInformationUpdate(RestViews.APIView):
                 patient.setPatientMRN(request.data["MRN"], key)
                 patient.tags = request.data["Tags"]
                 patient.save()
-                for i in range(len(request.data["Tags"])):
-                    models.SearchTags.objects.get_or_create(tag_name=request.data["Tags"][i], tag_type="Patient")
+
+                if request.user.is_clinician:
+                  for i in range(len(request.data["Tags"])):
+                      models.SearchTags.objects.get_or_create(tag_name=request.data["Tags"][i], tag_type="Patient", institute=request.user.institute)
+                else:
+                  for i in range(len(request.data["Tags"])):
+                      models.SearchTags.objects.get_or_create(tag_name=request.data["Tags"][i], tag_type="Patient", institute=request.user.email)
+
                 return Response(status=200)
 
         return Response(status=400)
