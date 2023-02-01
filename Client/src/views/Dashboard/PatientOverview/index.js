@@ -19,6 +19,8 @@ import {
   IconButton,
 } from "@mui/material";
 
+import CreatableSelect from 'react-select/creatable';
+
 import BoltIcon from '@mui/icons-material/Bolt';
 import PollIcon from '@mui/icons-material/Poll';
 import SensorsIcon from '@mui/icons-material/Sensors';
@@ -52,6 +54,7 @@ export default function PatientOverview() {
   const [editDeviceInfo, setEditDeviceInfo] = useState({show: false});
   const [uploadNewJson, setUploadNewJson] = useState({show: false});
   const [addNewDevice, setAddNewDevice] = useState({show: false});
+  const [availableTags, setAvailableTags] = useState([]);
 
   const [alert, setAlert] = useState(null);
 
@@ -60,8 +63,16 @@ export default function PatientOverview() {
       navigate("/dashboard", {replace: false});
     } else {
       SessionController.getPatientInfo(patientID).then((response) => {
+        response.data.Tags = response.data.Tags.map((tag) => ({
+          label: tag,
+          value: tag
+        }));
         setEditPatientInfo({...editPatientInfo, ...response.data});
-        setPatientInfo(response.data)
+        setPatientInfo(response.data);
+        setAvailableTags(response.data.AvailableTags.map((tag) => ({
+          label: tag,
+          value: tag
+        })));
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
@@ -99,12 +110,14 @@ export default function PatientOverview() {
       LastName: editPatientInfo.LastName,
       Diagnosis: editPatientInfo.Diagnosis,
       MRN: editPatientInfo.MRN,
+      Tags: editPatientInfo.Tags ? editPatientInfo.Tags.map((tag) => tag.value) : []
     }).then(() => {
       setPatientInfo({...patientInfo, 
         FirstName: editPatientInfo.FirstName,
         LastName: editPatientInfo.LastName,
         Diagnosis: editPatientInfo.Diagnosis,
-        MRN: editPatientInfo.MRN
+        MRN: editPatientInfo.MRN,
+        Tags: editPatientInfo.Tags ? editPatientInfo.Tags : []
       });
       setEditPatientInfo({...editPatientInfo, show: false});
     }).catch((error) => {
@@ -238,7 +251,7 @@ export default function PatientOverview() {
                         margin="dense" id="name"
                         value={editPatientInfo.FirstName}
                         onChange={(event) => setEditPatientInfo({...editPatientInfo, FirstName: event.target.value})}
-                        label={dictionary.SessionUpload.PatientIdentifier[language]} type="text"
+                        label={user.Clinician ? dictionary.SessionUpload.PatientFirstName[language] : dictionary.SessionUpload.PatientIdentifier[language]} type="text"
                         fullWidth
                       />
                     </Grid>
@@ -248,7 +261,7 @@ export default function PatientOverview() {
                         margin="dense" id="name"
                         value={editPatientInfo.LastName}
                         onChange={(event) => setEditPatientInfo({...editPatientInfo, LastName: event.target.value})}
-                        label={dictionary.SessionUpload.StudyIdentifier[language]} type="text"
+                        label={user.Clinician ? dictionary.SessionUpload.PatientLastName[language] : dictionary.SessionUpload.StudyIdentifier[language]} type="text"
                         fullWidth
                       />
                     </Grid>
@@ -268,33 +281,44 @@ export default function PatientOverview() {
                         margin="dense" id="name"
                         value={editPatientInfo.MRN}
                         onChange={(event) => setEditPatientInfo({...editPatientInfo, MRN: event.target.value})}
-                        label={dictionary.SessionUpload.DeviceName[language]} type="text"
+                        label={dictionary.SessionUpload.MRN[language]} type="text"
                         fullWidth
                       />
                     </Grid>
+                    <Grid item xs={12}>
+                      <CreatableSelect 
+                        isClearable 
+                        isMulti 
+                        isSearchable 
+                        placeholder={dictionary.PatientOverview.TagNames[language]}
+                        value={editPatientInfo.Tags}
+                        onChange={(newValue) => setEditPatientInfo({...editPatientInfo, Tags: newValue})}
+                        options={availableTags}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sx={{display: "flex", justifyContent: "space-between"}}>
+                      <MDBox style={{paddingLeft: 5}}>
+                        <MDButton color={"error"} 
+                          onClick={() => removePatient()}
+                        >
+                          Delete
+                        </MDButton>
+                      </MDBox>
+                      <MDBox style={{marginLeft: "auto", paddingRight: 5}}>
+                        <MDButton color={"secondary"} 
+                          onClick={() => setEditPatientInfo({...editPatientInfo, show: false})}
+                        >
+                          Cancel
+                        </MDButton>
+                        <MDButton color={"info"} 
+                          onClick={() => updatePatientInformation()} style={{marginLeft: 10}}
+                        >
+                          Update
+                        </MDButton>
+                      </MDBox>
+                    </Grid>
                   </Grid>
                 </DialogContent>
-                <DialogActions>
-                  <MDBox style={{paddingLeft: 5}}>
-                    <MDButton color={"error"} 
-                      onClick={() => removePatient()}
-                    >
-                      Delete
-                    </MDButton>
-                  </MDBox>
-                  <MDBox style={{marginLeft: "auto", paddingRight: 5}}>
-                    <MDButton color={"secondary"} 
-                      onClick={() => setEditPatientInfo({...editPatientInfo, show: false})}
-                    >
-                      Cancel
-                    </MDButton>
-                    <MDButton color={"info"} 
-                      onClick={() => updatePatientInformation()} style={{marginLeft: 10}}
-                    >
-                      Update
-                    </MDButton>
-                  </MDBox>
-                </DialogActions>
               </Dialog>
             </Grid>
             <Grid item xs={12} lg={8} display={"flex"} alignItems={"stretch"}>

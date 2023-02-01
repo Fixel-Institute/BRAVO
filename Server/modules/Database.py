@@ -191,6 +191,7 @@ def extractPatientTableRow(user, patient):
     info["MRN"] = patient.getPatientMRN(key)
     info["DOB"] = patient.birth_date
     info["Institute"] = patient.institute
+    info["Tags"] = patient.tags
     info["DaysSinceImplant"] = []
     lastTimestamp = datetime.fromtimestamp(0, tz=pytz.utc)
 
@@ -239,6 +240,7 @@ def extractPatientInfo(user, patientUniqueID):
     info["Institute"] = patient.institute
 
     info["Devices"] = list()
+    info["Tags"] = patient.tags
     deviceIDs = patient.device_deidentified_id
 
     for id in deviceIDs:
@@ -263,6 +265,10 @@ def extractPatientInfo(user, patientUniqueID):
         info["Devices"].append(deviceInfo)
 
     return info
+
+def extractTags(typeName):
+    allTags = models.SearchTags.objects.filter(tag_type=typeName).all()
+    return [tag.tag_name for tag in allTags]
 
 def getPerceptDevices(user, patientUniqueID, authority):
     availableDevices = None

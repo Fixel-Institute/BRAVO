@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react"
+import { useState, useEffect, memo, Fragment } from "react"
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -10,6 +10,7 @@ import {
   TableCell,
   IconButton,
   Tooltip,
+  Chip,
 } from "@mui/material"
 
 import { SessionController } from "database/session-control.js";
@@ -78,37 +79,47 @@ const PatientTable = ({data}) => {
         </TableHead>
         <TableBody>
           {displayData.map((patient) => {
-            return <TableRow key={patient.ID}>
-              <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
-                  {patient.LastName}, {patient.FirstName}
-                </MDTypography>
-              </TableCell>
-              <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                <MDTypography variant="p" fontSize={12} style={{marginBottom: 0}}>
-                  {dictionaryLookup(dictionary.PatientOverview.PatientInformation, patient.Diagnosis, language)}
-                </MDTypography>
-              </TableCell>
-              <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-              {patient.DaysSinceImplant.map((device) => {
-                return <MDTypography key={device.Name} variant="p" fontSize={12} style={{marginBottom: 0}}>
-                  {device.Name} {<br></br>}
+            return <Fragment key={patient.ID}>
+              <TableRow>
+                <TableCell style={{paddingBottom: 1, borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>
+                  <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
+                    {patient.LastName}, {patient.FirstName}
                   </MDTypography>
-              })}
-              </TableCell>
-              <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                <MDTypography variant="p" fontSize={12} style={{marginBottom: 0}}>
-                  {new Date(patient.LastSeen * 1000).toLocaleString(language, SessionController.getDateTimeOptions("DateFull"))}
-                </MDTypography>
-              </TableCell>
-              <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                <Tooltip title="View Patient" placement="top">
-                  <MDButton variant="contained" color="info" size="small" onClick={() => viewPatientData(patient.ID)}>
-                    <i className="fa-solid fa-eye"></i>
-                  </MDButton>
-                </Tooltip>
-              </TableCell>
-            </TableRow>
+                </TableCell>
+                <TableCell style={{paddingBottom: 1, borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>
+                  <MDTypography variant="p" fontSize={12} style={{marginBottom: 0}}>
+                    {dictionaryLookup(dictionary.PatientOverview.PatientInformation, patient.Diagnosis, language)}
+                  </MDTypography>
+                </TableCell>
+                <TableCell style={{paddingBottom: 1, borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>
+                {patient.DaysSinceImplant.map((device) => {
+                  return <MDTypography key={device.Name} variant="p" fontSize={12} style={{marginBottom: 0}}>
+                    {device.Name} {<br></br>}
+                    </MDTypography>
+                })}
+                </TableCell>
+                <TableCell style={{paddingBottom: 1, borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>
+                  <MDTypography variant="p" fontSize={12} style={{marginBottom: 0}}>
+                    {new Date(patient.LastSeen * 1000).toLocaleString(language, SessionController.getDateTimeOptions("DateFull"))}
+                  </MDTypography>
+                </TableCell>
+                <TableCell style={{paddingBottom: 1, borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>
+                  <Tooltip title="View Patient" placement="top">
+                    <MDButton variant="contained" color="info" size="small" onClick={() => viewPatientData(patient.ID)}>
+                      <i className="fa-solid fa-eye"></i>
+                    </MDButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell colSpan={5} style={{paddingTop: 0, borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
+                  {patient.Tags.map((tag) => {
+                    //console.log(tag)
+                    return <Chip key={patient.ID + " " + tag} label={tag} size={"small"} sx={{marginRight: 0.5}} />
+                  })}
+                </TableCell>
+              </TableRow>
+            </Fragment>
           })}
         </TableBody>
       </Table>

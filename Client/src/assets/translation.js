@@ -244,6 +244,10 @@ export const dictionary = {
       en: "Deidentified Device Name",
       zh: "脉冲发生器名字"
     },
+    MRN: {
+      en: "Medical Record Number",
+      zh: "Medical Record Number"
+    },
     Dropzone: {
       en: "Drag and Drop to Upload Session Files (*.json)",
       zh: "Drag and Drop to Upload Session Files (*.json)"
@@ -315,6 +319,10 @@ export const dictionary = {
     EditDeviceInfo: {
       en: "Edit Device Information",
       zh: "修改脉冲发生器信息"
+    },
+    TagNames: {
+      en: "Select or Add Tag Names",
+      zh: "Select or Add Tag Names"
     },
     UploadNewSession: {
       en: "Upload New Sessions",

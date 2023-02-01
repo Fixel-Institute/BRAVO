@@ -164,7 +164,10 @@ class PatientInformationUpdate(RestViews.APIView):
                 patient.setPatientLastName(request.data["LastName"], key)
                 patient.diagnosis = request.data["Diagnosis"]
                 patient.setPatientMRN(request.data["MRN"], key)
+                patient.tags = request.data["Tags"]
                 patient.save()
+                for i in range(len(request.data["Tags"])):
+                    models.SearchTags.objects.get_or_create(tag_name=request.data["Tags"][i], tag_type="Patient")
                 return Response(status=200)
 
         return Response(status=400)

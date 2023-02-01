@@ -83,6 +83,7 @@ class QueryPatientInfo(RestViews.APIView):
 
         if Authority["Level"] == 1:
             Patient = Database.extractPatientInfo(request.user, request.data["id"])
+            Patient["AvailableTags"] = Database.extractTags("Patient")
             return Response(status=200, data=Patient)
 
         elif Authority["Level"] == 2:
@@ -90,6 +91,7 @@ class QueryPatientInfo(RestViews.APIView):
             deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
             Patient = Database.extractPatientInfo(request.user, PatientInfo.deidentified_id)
             Patient["Devices"] = deidentification["Devices"]
+            Patient["AvailableTags"] = Database.extractTags("Patient")
             return Response(status=200, data=Patient)
 
 class QueryTherapyHistory(RestViews.APIView):

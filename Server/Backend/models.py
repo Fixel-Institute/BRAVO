@@ -72,6 +72,7 @@ class Patient(models.Model):
     diagnosis = models.CharField(default="", max_length=255)
     institute = models.CharField(default="", max_length=255)
     medical_record_number = models.CharField(default="", max_length=255)
+    tags = models.JSONField(default=list, null=False)
 
     research_study_id = models.JSONField(default=list, null=True)
     patient_identifier_hashfield = models.CharField(default="", max_length=255)
@@ -117,6 +118,10 @@ class Patient(models.Model):
         if deviceID in self.device_deidentified_id:
             self.device_deidentified_id.remove(deviceID)
             self.save()
+
+class SearchTags(models.Model):
+    tag_name = models.CharField(default="", max_length=255)
+    tag_type = models.CharField(default="Patient", max_length=255)
 
 class DeidentifiedPatientTable(models.Model):
     researcher_id = models.UUIDField(default=uuid.uuid1)
