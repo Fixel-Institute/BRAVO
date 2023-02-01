@@ -101,16 +101,15 @@ function TherapyHistory() {
         return (
           <MDBox style={{display: "flex", flexDirection: "row"}}>
             {therapy.Channel.map((contact) => {
-              console.log(contact)
               if (!contact.Electrode.startsWith("ElectrodeDef")) {
                 if (contact.ElectrodeAmplitudeInMilliAmps) {
-                  return <Tooltip title={contact.ElectrodeAmplitudeInMilliAmps + " mA"} placement="top">
+                  return <Tooltip key={contact.Electrode} title={contact.ElectrodeAmplitudeInMilliAmps + " mA"} placement="top">
                     <MDTypography fontSize={12} color={color} style={{paddingBottom: 0, paddingRight: 5, paddingTop: 0, marginBottom: 0}}>
                       {contact.Electrode + " "}
                     </MDTypography>
                   </Tooltip>
                 } else {
-                  return <MDTypography fontSize={12} color={color} style={{paddingBottom: 0, paddingRight: 5, paddingTop: 0, marginBottom: 0}}>
+                  return <MDTypography key={contact.Electrode} fontSize={12} color={color} style={{paddingBottom: 0, paddingRight: 5, paddingTop: 0, marginBottom: 0}}>
                     {contact.Electrode + " "}
                   </MDTypography>
                 }
