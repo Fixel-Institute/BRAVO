@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
+  Autocomplete,
   Card,
   Divider,
   Dialog,
@@ -18,6 +19,8 @@ import {
   Icon,
   IconButton,
 } from "@mui/material";
+
+import { createFilterOptions } from "@mui/material/Autocomplete";
 
 import CreatableSelect from 'react-select/creatable';
 
@@ -44,6 +47,8 @@ import { usePlatformContext, setContextState } from "context";
 import { dictionary } from "assets/translation";
 import { AccessAlarm } from "@mui/icons-material";
 
+const filter = createFilterOptions();
+
 export default function PatientOverview() {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
@@ -64,13 +69,13 @@ export default function PatientOverview() {
     } else {
       SessionController.getPatientInfo(patientID).then((response) => {
         response.data.Tags = response.data.Tags.map((tag) => ({
-          label: tag,
+          title: tag,
           value: tag
         }));
         setEditPatientInfo({...editPatientInfo, ...response.data});
         setPatientInfo(response.data);
         setAvailableTags(response.data.AvailableTags.map((tag) => ({
-          label: tag,
+          title: tag,
           value: tag
         })));
       }).catch((error) => {
@@ -104,13 +109,15 @@ export default function PatientOverview() {
   };
 
   const updatePatientInformation = () => {
+    console.log(editPatientInfo)
+    console.log(availableTags)
     SessionController.query("/api/updatePatientInformation", {
       updatePatientInfo: patientID,
       FirstName: editPatientInfo.FirstName,
       LastName: editPatientInfo.LastName,
       Diagnosis: editPatientInfo.Diagnosis,
       MRN: editPatientInfo.MRN,
-      Tags: editPatientInfo.Tags ? editPatientInfo.Tags.map((tag) => tag.value) : []
+      Tags: editPatientInfo.Tags ? editPatientInfo.Tags.map((tag) => tag.value ? tag.value : tag.inputValue ) : []
     }).then(() => {
       setPatientInfo({...patientInfo, 
         FirstName: editPatientInfo.FirstName,
@@ -286,14 +293,48 @@ export default function PatientOverview() {
                       />
                     </Grid>
                     <Grid item xs={12}>
-                      <CreatableSelect 
-                        isClearable 
-                        isMulti 
-                        isSearchable 
-                        placeholder={dictionary.PatientOverview.TagNames[language]}
+                      <Autocomplete 
+                        selectOnFocus 
+                        clearOnBlur 
+                        multiple
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            variant="standard"
+                            placeholder={dictionary.PatientOverview.TagNames[language]}
+                          />
+                        )}
+                        filterOptions={(options, params) => {
+                          const filtered = filter(options, params);
+                          const { inputValue } = params;
+
+                          // Suggest the creation of a new value
+                          const isExisting = options.some((option) => inputValue === option.title);
+                          if (inputValue !== '' && !isExisting) {
+                            filtered.push({
+                              inputValue,
+                              title: `Add "${inputValue}"`,
+                            });
+                          }
+                          return filtered;
+                        }}
+                        getOptionLabel={(option) => {
+                          if (typeof option === 'string') {
+                            return option;
+                          }
+                          if (option.inputValue) {
+                            return option.inputValue;
+                          }
+                          return option.title;
+                        }}
+                        isOptionEqualToValue={(option, value) => {
+                          return option.value === value.value;
+                        }}
+                        renderOption={(props, option) => <li {...props}>{option.title}</li>}
+
                         value={editPatientInfo.Tags}
-                        onChange={(newValue) => setEditPatientInfo({...editPatientInfo, Tags: newValue})}
                         options={availableTags}
+                        onChange={(event, newValue) => setEditPatientInfo({...editPatientInfo, Tags: newValue})}
                       />
                     </Grid>
                     <Grid item xs={12} sx={{display: "flex", justifyContent: "space-between"}}>

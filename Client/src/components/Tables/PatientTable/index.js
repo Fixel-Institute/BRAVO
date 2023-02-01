@@ -114,7 +114,6 @@ const PatientTable = ({data}) => {
               <TableRow>
                 <TableCell colSpan={5} style={{paddingTop: 0, borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                   {patient.Tags.map((tag) => {
-                    //console.log(tag)
                     return <Chip key={patient.ID + " " + tag} label={tag} size={"small"} sx={{marginRight: 0.5}} />
                   })}
                 </TableCell>

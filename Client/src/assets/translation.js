@@ -1169,6 +1169,10 @@ export const dictionary = {
       en: "You do not have the permission",
       zh: "你没有权限浏览",
     },
+    CONNECTION_TIMEDOUT: {
+      en: "Connection Timed-Out",
+      zh: "连接已超时",
+    },
     UNKNOWN_ERROR: {
       en: "Unknown Error",
       zh: "未知错误",
