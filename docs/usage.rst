@@ -43,7 +43,6 @@ As a demo web application, no verification will be used on the registration emai
 Feel free to use made-up email address to register. 
 In addition, no "Clinician" nor "Admin" accounts are created for the demo application. 
 
-
 Account Sign-In
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -64,11 +63,20 @@ Patient Table
 Patient Table is the first interface available to the user once logged in. 
 A typical patient table containing more than 200 patients is shown below.
 
-The clinician view will display patient's name, diagnosis, device name (and type of neurostimulator), 
-and last accessed session file for each patient. A search bar is available to user (top right of the table). 
-Filterable keywords include 1) Name, 2) Diagnosis, and 3) Device Name.
+.. image:: images/PatientTable.png
+  :target: images/PatientTable.png
+  :width: 800
 
-In a de-identified "Researcher" account view, fields are mostly leave as blank if user didn't provide any information (Figure 2.2). 
+The clinician view will display patient's name, diagnosis, device name, 
+and last accessed session file for each patient. A search bar is available to user (top right of the table). 
+Filterable keywords include 1) Name, 2) Diagnosis, and 3) Device Name. 
+
+.. admonition:: Development
+  
+  The Patient Table also contains tagging system, where user may assign tags to each study participants in `Edit Patient Information`_ page. 
+  The tags will also be used for filtering.
+
+In a de-identified "Researcher" account view, fields are mostly leave as blank if user didn't provide any information. 
 It is up to the researcher to properly label each deidentified patient to avoid confusion. 
 Details on how to create a deidentified patient will be discussed in Reference `Upload Deidentified Patient`_ section. 
 Details on how to edit an existing patient's information will be discussed in Patient Overview section.
@@ -89,12 +97,14 @@ All files in the upload box will be associated with the specific deidentified pa
 Once clicking ``Upload``, a new row will be insert to the deidentified patient table. 
 If this patient has multiple device, follow instruction in Upload JSON Files (Research Only) to add new devices or additional JSON files. 
 
-User may also opt to use the Batch Upload option (Work In Progress) with identified JSON file. 
+User may also opt to use the Batch Upload option with identified JSON file. 
 The server will deidentify all identified file based on a simple encrypted lookup table upload by the user. 
 
 .. image:: images/BatchDeidentificationUpload.png
   :target: images/BatchDeidentificationUpload.png
   :width: 400
+
+More details on the encrypted lookup table can be found in `Patient Lookup Table`_ section. 
 
 Upload Identified Patient (Clinician Account)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,6 +117,47 @@ exported from Percept Neurostimulator.
 The primary health information extracted are based on 1) Patient First and Last Name, 
 and 2) Device Serial Number. Data aggregation is based primarily on Device Serial Number, 
 and Patient Identifiers are used to determine if multiple devices belong to the same patient or not. 
+
+Patient Lookup Table
+---------------------------------------------
+
+The Patient Lookup Table tab is a route only available on "Researcher Account". 
+By the default, the page will only tell user if there is an existing Lookup Table on the server for your account or not.
+
+.. image:: images/DeidentificationTable.png
+  :target: images/DeidentificationTable.png
+  :width: 400
+
+If a table does not exist or you wish to update the table, you can use the "Add Table Here" option, which will bring up the 
+upload dialog like below: 
+
+.. image:: images/DeidentificationTableUploadDialog.png
+  :target: images/DeidentificationTableUploadDialog.png
+  :width: 400
+
+In the upload dialog, you must enter a secure passcode for your lookup table because your lookup table will contain PHI. 
+To ensure maximum security. your passkey will not be stored on the server and if you lost your passkey, your lookup table 
+will be permenantly unusable. In such event, if you have the original table, you may choose to upload it again and overwrite the previous table. 
+
+The minimum length of the passcode must be 4-character long. 
+
+The lookup table must follow a standard CSV formatting, with the following require columns: 
+
+1. patient_deidentifier, which will be used as Patient ID (FirstName) for deidentification 
+2. study_deidentifier, which will be used as Study ID (LastName) for deidentification
+3. identifier, which is the PHI composed of patient {First Name} {Last Name} {MRN} as recorded in the Percept Tablet. 
+4. tags, which will be used to insert initial tags for the patient generated (Unavailable at the moment). 
+
+Each patient_deidentifier and study_deidentifier combo may have multiple different identifier if the patient's name changed or that
+different devices have different information stored. This identifier will be independent of the actual device ID. 
+
+Once the table is uploaded, you can view the uploaded table using "Decrypt Table Here" option, which will attempt to parse the 
+table using a password you provided. Error will be returned if password is incorrect. The viewing option is a once-only occurance and 
+user must reenter the password when the page is refreshed. 
+
+.. image:: images/DeidentificationTableView.png
+  :target: images/DeidentificationTableView.png
+  :width: 800
 
 Patient Overview 
 ---------------------------------------------
@@ -122,14 +173,12 @@ These information will be automatically populated as long as they are not remove
 
 .. image:: images/PatientOverview.png
   :target: images/PatientOverview.png
-  :width: 400
+  :width: 800
 
-.. note:: 
+.. admonition:: Future Updates
 
-  **Future Updates**:
-
-  Device Type only support Medtronic Percept PC device in Research View. 
-  However, the JSON files obtained from Activa SC, PC, or RC are parsible with the platform. Additional supported devices will be included as we obtained more data.
+  Device Type only support Medtronic Activa SC, PC, RC or Percept PC device in Research View. 
+  Additional supported devices will be included as we obtained more data.
 
 Edit Patient Information
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -142,25 +191,29 @@ then click ``UPDATE`` will prompt a database update.
   :target: images/EditPatientInformation.png
   :width: 400
 
-Clicking ``DELETE`` will prompt user to confirm if they want to remove all data associated with this patient ID. 
+Clicking ``DELETE`` will remove all data associated with this patient ID. 
 
 .. _Upload JSON Files:
 
-Upload JSON Data (Research-Only) [NOT IMPLEMENTED IN 2.0]
+Upload JSON Data (Research-Only)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here is where the Research account should upload their data. 
+.. image:: images/ResearchUploadJSON.png
+  :target: images/ResearchUploadJSON.png
+  :width: 400
+
+"Upload New Sessions" is where the Research account should upload their data. 
 Unlike Clinician account, the Research account is assumed to be working with deidentified files. 
 That means the PHI used to group uploaded JSON into respective Patient ID or Device ID will not be present 
 in the uploaded JSON files. This additional process required by the Research account ensure we can properly 
 manage the data and organize them in correct group. 
 
-After initial deidentified patient creation in Deidentified Patient Table , the patient overview will be shown 
-without any associated device. The user may manually add a Percept PC device via "Add Device" in Red Box 1 of Figure 3.3. 
-The fields can all be leave as blank, a fake device ID will be generated in place with most information unavailable to the user. 
-Once generated, look at the device table and you will see "Upload" in Red Box 3 of Figure 3.3. 
-The user then can upload one or more files associate with that device. If a patient is using bilateral Percept Device, 
-the user should create a second blank device and upload files separately. 
+After initial deidentified patient creation in Dashboard, the patient overview will be shown 
+without any associated device. The user may manually add a device via "New Device" in "Device to Upload To" dropdown menu.
+The user then can upload one or more files associate with that device. It is recommended to change device name after it is done by using the 
+"Pen" icon on the right side of Device Table. 
+
+If a patient is using bilateral Percept Device, the user should create a second "New Device" and upload files separately. 
 
 Primary Analysis Navigations 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -181,6 +234,8 @@ Primary Analysis Navigations
     - Another form of Realtime Streaming, based on simultaneous multi-channel streaming without stimulation. 
   * - `Chronic Brainsense`_
     - Aggregated BrainSense Power recording recorded chronically when patient is using BrainSense-enabled therapy group.  
+  * - `Session Overview`_
+    - All Session JSON files uploaded to this patient. Also where EMR document can be generated. 
       
 .. _Therapy History:
 
@@ -225,6 +280,9 @@ The therapy information is displayed in 5 columns:
   3. Therapy configurations 
   4. BrainSense Configurations
   5. Cycling Stimulation configurations
+
+When cursor hover over Therapy Active Contacts for a sensight lead, the individual contact amplitude for segmented electrode will 
+be display as a tooltip. However, the individual segment amplitude is information stored only in Pre-visit Therapy and Post-visit Therapy. 
 
 .. warning::
 
@@ -425,8 +483,6 @@ Each sample contains a timestamp, a LFP measurment (integer, arbituary unit), an
   :target: images/Chronic LFP.png
   :width: 800
 
-
-
 .. note::
 
   It is important to note that ``DiagnosticData.LFPTrendLogs`` doesn't contain any important therapeutic information 
@@ -510,3 +566,24 @@ Event Power Spectrum
 Patient Events that contains PSDs will be averaged within group and compare to other events. 
 The shaded area is one standard-error from mean.
 Number of sample is usually different from event-locked power trend because not every recorded event contain PSD snapshot. 
+
+.. _Session Overview:
+
+Session Overview View
+---------------------------------------------
+
+.. image:: images/SessionOverviewPage.png
+  :target: images/SessionOverviewPage.png
+  :width: 800
+
+The session overview page will display the device name and date at which the JSON session is recorded. 
+The list is organized by time with the oldest session first. 
+The table will display all the unique data extracted from the session JSON file and the source JSON filename. 
+
+Using "Format for EMR" option can generate a simple table listing basic therapeutic information in the session JSON file 
+such as shown below
+
+.. image:: images/SessionSummary.png
+  :target: images/SessionSummary.png
+  :width: 800
+
