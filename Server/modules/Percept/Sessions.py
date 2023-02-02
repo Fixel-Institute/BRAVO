@@ -22,24 +22,47 @@ key = os.environ.get('ENCRYPTION_KEY')
 def retrievePatientInformation(PatientInformation, Institute, lookupTable=None, encoder=None):
     if not encoder:
         encoder = Fernet(key)
-        
-    FirstName = encoder.encrypt(PatientInformation["PatientFirstName"].encode('utf_8')).decode("utf-8")
-    LastName = encoder.encrypt(PatientInformation["PatientLastName"].encode('utf_8')).decode("utf-8")
-    Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
-    MRN = encoder.encrypt(PatientInformation["PatientId"].encode('utf_8')).decode("utf-8")
+    
+    patientFound = False
+    if lookupTable:
+        PatientIdentifier = PatientInformation["PatientFirstName"] + " " + PatientInformation["PatientLastName"] + " " + PatientInformation["PatientId"]
+        for i in range(len(lookupTable)):
+            if lookupTable[i]["identifier"] == PatientIdentifier:
+                patientFound = True
+                hashfield = hashlib.sha256((lookupTable[i]["study_deidentifier"] + " " + lookupTable[i]["patient_deidentifier"]).encode("utf-8")).hexdigest()
+                
+                FirstName = encoder.encrypt(lookupTable[i]["patient_deidentifier"].encode('utf_8')).decode("utf-8")
+                LastName = encoder.encrypt(lookupTable[i]["study_deidentifier"].encode('utf_8')).decode("utf-8")
+                Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
+                MRN = ""
+                PatientDateOfBirth = datetime.fromtimestamp(0)
+                
+    else:
+        patientFound = True
+        FirstName = encoder.encrypt(PatientInformation["PatientFirstName"].encode('utf_8')).decode("utf-8")
+        LastName = encoder.encrypt(PatientInformation["PatientLastName"].encode('utf_8')).decode("utf-8")
+        Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
+        MRN = encoder.encrypt(PatientInformation["PatientId"].encode('utf_8')).decode("utf-8")
+        hashfield = hashlib.sha256((PatientInformation["PatientFirstName"] + " " + PatientInformation["PatientLastName"]).encode("utf-8")).hexdigest()
+        try:
+            PatientDateOfBirth = datetime.fromisoformat(PatientInformation["PatientDateOfBirth"][:-1]+"+00:00")
+        except:
+            PatientDateOfBirth = datetime.fromtimestamp(0)
 
-    hashfield = hashlib.sha256((PatientInformation["PatientFirstName"] + " " + PatientInformation["PatientLastName"]).encode("utf-8")).hexdigest()
-
-    try:
-        PatientDateOfBirth = datetime.fromisoformat(PatientInformation["PatientDateOfBirth"][:-1]+"+00:00")
-    except:
-        PatientDateOfBirth = datetime.fromtimestamp(0)
+    if not patientFound:
+        return None, None
 
     newPatient = False
     try:
-        patient = models.Patient.objects.get(patient_identifier_hashfield=hashfield, birth_date=PatientDateOfBirth, diagnosis=Diagnosis, institute=Institute)
+        patient = models.Patient.objects.get(patient_identifier_hashfield=hashfield, institute=Institute)
     except:
-        patient = models.Patient(first_name=FirstName, last_name=LastName, patient_identifier_hashfield=hashfield, birth_date=PatientDateOfBirth, diagnosis=Diagnosis, medical_record_number=MRN, institute=Institute)
+        patient = models.Patient(first_name=FirstName, 
+            last_name=LastName, 
+            patient_identifier_hashfield=hashfield, 
+            birth_date=PatientDateOfBirth, 
+            diagnosis=Diagnosis, 
+            medical_record_number=MRN, 
+            institute=Institute)
         patient.save()
         newPatient = True
 
@@ -84,8 +107,7 @@ def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", look
     if deviceID == None:
         PatientInformation = JSON["PatientInformation"]["Final"]
         
-        
-        patient, isNewPatient = retrievePatientInformation(PatientInformation, user.institute, encoder=secureEncoder)
+        patient, isNewPatient = retrievePatientInformation(PatientInformation, user.institute, lookupTable=lookupTable, encoder=secureEncoder)
         if isNewPatient:
             newPatient = patient
             patient.institute = user.institute

@@ -102,6 +102,8 @@ class Patient(models.Model):
         self.last_name = secureEncoder.encrypt(last_name.encode('utf_8')).decode("utf-8")
 
     def getPatientMRN(self, key):
+        if self.medical_record_number == "":
+            return ""
         secureEncoder = Fernet(key)
         return secureEncoder.decrypt(self.medical_record_number.encode("utf-8")).decode("utf-8")
 

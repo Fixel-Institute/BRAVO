@@ -35,7 +35,7 @@ class DeidentificationTable(RestViews.APIView):
             if not "passkey" in request.data:
                 return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
-            if len(request.data["passkey"]) < 8:
+            if len(request.data["passkey"]) < 4:
                 return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
             
             hashedKey = hashlib.sha256(request.data["passkey"].encode("utf-8")).hexdigest()[:32]
@@ -96,7 +96,6 @@ class SessionUpload(RestViews.APIView):
             
             randomSalt = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
             hashedKey = hashlib.sha256(randomSalt.encode("utf-8")).hexdigest()
-
             processingQueue.put(hashedKey)
             while processingQueue.queue[0] != hashedKey:
                 pass
@@ -120,10 +119,6 @@ class SessionUpload(RestViews.APIView):
             randomSalt = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
             hashedKey = hashlib.sha256(randomSalt.encode("utf-8")).hexdigest()
 
-            processingQueue.put(hashedKey)
-            while processingQueue.queue[0] != hashedKey:
-                pass
-            
             result = "Failed"
             if "deviceId" in request.data:
                 AuthorityLevel = Database.verifyAccess(request.user, request.data["patientId"])
@@ -143,18 +138,28 @@ class SessionUpload(RestViews.APIView):
                     device.save()
                     patient.addDevice(str(device.deidentified_id))
                 
+                processingQueue.put(hashedKey)
+                while processingQueue.queue[0] != hashedKey:
+                    pass
                 try:
                     result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes, device_deidentified_id=deviceId)
                 except Exception as e:
                     print(e)
+                hashedKey = processingQueue.get()
+                
             else:
-                table = Database.getDeidentificationLookupTable(request.user, request.data["decrpytionKey"])
+                hashedEncrpytionKey = hashlib.sha256(request.data["decryptionKey"].encode("utf-8")).hexdigest()[:32]
+                passkey = base64.b64encode(hashedEncrpytionKey.encode("utf-8"))
+                table = Database.getDeidentificationLookupTable(request.user, passkey)
+
+                processingQueue.put(hashedKey)
+                while processingQueue.queue[0] != hashedKey:
+                    pass
                 try:
                     result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes, lookupTable=table)
                 except Exception as e:
                     print(e)
-
-            hashedKey = processingQueue.get()
+                hashedKey = processingQueue.get()
 
             if result == "Success":
                 data = dict()

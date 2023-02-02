@@ -47,7 +47,7 @@ const DeidentificationTable = ({data}) => {
       <Table size="small">
         <TableHead sx={{display: "table-header-group"}}>
           <TableRow>
-            {["Deidentifier", "Diagnosis", "Alias"].map((col) => {
+            {["Deidentifier", "Tags", "Alias"].map((col) => {
               return (
                 <TableCell key={col} variant="head" style={{width: "33%", minWidth: 200, verticalAlign: "bottom", paddingBottom: 0, paddingTop: 0}}>
                   <MDTypography variant="span" fontSize={12} fontWeight={"bold"} style={{cursor: "pointer"}} onClick={()=>console.log({col})}>
@@ -62,16 +62,18 @@ const DeidentificationTable = ({data}) => {
             return <TableRow key={index}>
               <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                 <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
-                  {row.deidentifier}
+                  {row.study_deidentifier} {row.patient_deidentifier}
                 </MDTypography>
               </TableCell>
               <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                 <MDTypography variant="p" fontSize={12} style={{marginBottom: 0}}>
-                  {dictionaryLookup(dictionary.PatientOverview.PatientInformation, row.diagnosis, language)}
+                  {row.tags}
                 </MDTypography>
               </TableCell>
               <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                {row.identifier}
+                <MDTypography variant="p" fontSize={12} style={{marginBottom: 0}}>
+                  {row.identifier}
+                </MDTypography>
               </TableCell>
             </TableRow>
           })}

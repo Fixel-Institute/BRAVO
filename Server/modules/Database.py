@@ -110,13 +110,9 @@ def getDeidentificationLookupTable(user, key):
         secureEncoder = Fernet(key)
         text = secureEncoder.decrypt(table.lookup_table.encode("utf-8")).decode("utf-8")
         dictionary = json.loads(text)
-        for key in dictionary.keys():
-            for alias in dictionary[key]["identifier"]:
-                identifierTable.append({"deidentifier": key, "diagnosis": dictionary[key]["diagnosis"], "identifier": alias})
+        return dictionary
 
-        return identifierTable
     except Exception as e:
-        print(key)
         print(e)
         return identifierTable
 

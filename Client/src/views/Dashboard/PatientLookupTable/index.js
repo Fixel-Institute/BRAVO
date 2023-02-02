@@ -81,18 +81,28 @@ export default function PatientLookupTable() {
           {deidentificationTable.length > 0 ? (
             <DeidentificationTable data={deidentificationTable}/>
           ) : (
-            <MDBox p={2}>
-              <MDBox px={2} pb={2} style={{display: "flex", flexDirection: "column", justifyContent: "center"}}>
-                <MDTypography variant={"h6"} fontSize={25} textAlign={"center"}>
-                  {"Existing Lookup Table Found"}
-                </MDTypography>
-                <MDButton variant={"outlined"} color={"info"} onClick={() => {
-                  setTableDialog({...tableDialog, show: "DecryptTable"})
-                }}>
-                  {"Decrypt Table Here"}
-                </MDButton>
+            tableAvailable ? (
+              <MDBox p={2}>
+                <MDBox px={2} pb={2} style={{display: "flex", flexDirection: "column", justifyContent: "center"}}>
+                  <MDTypography variant={"h6"} fontSize={25} textAlign={"center"}>
+                    {"Existing Lookup Table Found"}
+                  </MDTypography>
+                  <MDButton variant={"outlined"} color={"info"} onClick={() => {
+                    setTableDialog({...tableDialog, show: "DecryptTable"})
+                  }}>
+                    {"Decrypt Table Here"}
+                  </MDButton>
+                </MDBox>
               </MDBox>
-            </MDBox>
+            ) : (
+              <MDBox p={2}>
+                <MDBox px={2} pb={2} style={{display: "flex", flexDirection: "column", justifyContent: "center"}}>
+                  <MDTypography variant={"h6"} fontSize={25} textAlign={"center"}>
+                    {"Existing Lookup Table Not Found"}
+                  </MDTypography>
+                </MDBox>
+              </MDBox>
+            )
           )}
         </Card>
 
@@ -116,7 +126,7 @@ export default function PatientLookupTable() {
               />
 
               <MDButton variant={"contained"} color={"warning"} onClick={() => {
-                if (tableDialog.passcode.length >= 8) {
+                if (tableDialog.passcode.length >= 4) {
                   SessionController.query("/api/deidentificationTable", {
                     passkey: tableDialog.passcode,
                     QueryTable: true
@@ -163,7 +173,7 @@ export default function PatientLookupTable() {
               />
 
               <MDButton variant={"contained"} color={"warning"} onClick={() => {
-                if (tableDialog.passcode.length >= 8) {
+                if (tableDialog.passcode.length >= 4) {
                   inputFile.current.click();
                 } else {
                   SessionController.displayError({
@@ -184,22 +194,17 @@ export default function PatientLookupTable() {
                 reader.onload = () => {
                   const table = csvParser(reader.result);
                   if (table.length > 0) {
-                    if (table[0].identifier && table[0].deidentifier && table[0].diagnosis) {
+                    if (table[0].identifier && table[0].patient_deidentifier && table[0].tags) {
 
-                      let lookupTable = {};
+                      let lookupTable = [];
                       for (let row of table) {
-                        if (row.identifier && row.deidentifier && row.diagnosis) {
-                          if (Object.keys(lookupTable).includes(row.deidentifier)) {
-                            lookupTable[row.deidentifier] = {
-                              diagnosis: row.diagnosis,
-                              identifier: [...lookupTable[row.deidentifier].identifier, row.identifier]
-                            };
-                          } else {
-                            lookupTable[row.deidentifier] = {
-                              diagnosis: row.diagnosis,
-                              identifier: [row.identifier]
-                            };
-                          }
+                        if (row.study_deidentifier && row.patient_deidentifier && row.identifier && row.tags) {
+                          lookupTable.push({
+                            tags: JSON.parse(row.tags),
+                            identifier: row.identifier,
+                            study_deidentifier: row.study_deidentifier,
+                            patient_deidentifier: row.patient_deidentifier
+                          })
                         }
                       }
 
