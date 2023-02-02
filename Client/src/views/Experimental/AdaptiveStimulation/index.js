@@ -45,7 +45,7 @@ function AdaptiveStimulation() {
         requestData: true, 
         timezoneOffset: new Date().getTimezoneOffset()*60
       }).then((response) => {
-        setData(response.data);
+        if (response.data.ChronicData.length > 0) setData(response.data);
         setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
