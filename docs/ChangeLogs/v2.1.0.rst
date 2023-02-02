@@ -1,0 +1,15 @@
+Version 2.1.0 (Developmental)
+===============================================
+
+Overview
+---------------------------------------------
+UF Brain Recording and Analysis Visualization Online (BRAVO) Platform Version 2.1.0-alpha will be focused on the Imaging pipelines
+and Adaptive DBS configurations. Changes made to v2.0.0 will be outlined in the following Major Changes or Minor Changes section. 
+
+Major Changes 
+---------------------------------------------
+
+
+Minor Changes 
+---------------------------------------------
+

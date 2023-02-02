@@ -24,6 +24,7 @@ Please refer to `GitHub Repository <https://github.com/Fixel-Institute/BRAVO>`_ 
    :maxdepth: 1
    :caption: Change Logs
 
+   ChangeLogs/v2.1.0.rst
    ChangeLogs/v2.0.0.rst
 
 Developer Documentation
