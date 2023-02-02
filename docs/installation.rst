@@ -68,7 +68,7 @@ React Frontend Installation Guide
 The frontend webpage is written in React.js as a static standalone application. 
 This means that the frontend webpage can be shared as a simple static folder without compilation. 
 User may download pre-built application folder to host on their own server
-or use statically hosted `webpage <https://uf-bravo.jcagle.solutions/>`_. 
+or use `statically hosted webpage <https://uf-bravo.jcagle.solutions/>`_. 
 
 Build from Source (NPM)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -55,13 +55,14 @@ If the session idle for more than 60 minutes, the user will be required to login
   :target: images/Login.png
   :width: 400
 
+If you enable "Remember me" option, the token requested from the server will have no expiration date and require user to manually 
+log out from the account when they are done. This should only be used in local server. 
+
 Patient Table  
 ---------------------------------------------
 
 Patient Table is the first interface available to the user once logged in. 
 A typical patient table containing more than 200 patients is shown below.
-
-
 
 The clinician view will display patient's name, diagnosis, device name (and type of neurostimulator), 
 and last accessed session file for each patient. A search bar is available to user (top right of the table). 
