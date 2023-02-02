@@ -532,8 +532,14 @@ export const dictionary = {
         }
       },
       Wavelet: {
-        en: "Use Wavelet Transform",
-        zh: "Use Wavelet Transform"
+        Add: {
+          en: "Use Wavelet Transform",
+          zh: "过滤ECG"
+        },
+        Remove: {
+          en: "Use Standard Spectrogram",
+          zh: "取消过滤ECG"
+        }
       },
       SFFT: {
         en: "Use Short-time FFT Transform",

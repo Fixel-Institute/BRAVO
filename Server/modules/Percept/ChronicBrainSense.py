@@ -295,9 +295,9 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
                 continue
             Therapy = LFPTrends[i]["Therapy"][j][Hemisphere]
             if "SensingSetup" in Therapy.keys():
-                TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS @ {Therapy['SensingSetup']['FrequencyInHertz']}Hz"
+                TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS {Therapy['Channel']} @ {Therapy['SensingSetup']['FrequencyInHertz']}Hz"
             else:
-                TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS @ {0}Hz"
+                TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS {Therapy['Channel']} @ {0}Hz"
             LFPTrends[i]["Therapy"][j]["TherapyOverview"] = TherapyOverview
 
             TherapyList.append(TherapyOverview)
@@ -316,9 +316,9 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
                     continue
                 Therapy = LFPTrends[i]["Therapy"][j][Hemisphere]
                 if "SensingSetup" in Therapy.keys():
-                    TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS @ {Therapy['SensingSetup']['FrequencyInHertz']}Hz"
+                    TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS {Therapy['Channel']} @ {Therapy['SensingSetup']['FrequencyInHertz']}Hz"
                 else:
-                    TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS @ {0}Hz"
+                    TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS {Therapy['Channel']} @ {0}Hz"
 
                 if TherapyOverview == therapy:
                     LFPTrends[i]["CircadianPowers"][-1]["Power"].extend(LFPTrends[i]["Power"][j])

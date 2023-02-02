@@ -7,6 +7,7 @@ import {
   Grid,
 } from "@mui/material"
 
+import MDButton from "components/MDButton";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import FormField from "components/MDInput/FormField";
@@ -22,7 +23,7 @@ import DatabaseLayout from "layouts/DatabaseLayout";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
-import { dictionary } from "assets/translation.js";
+import { dictionary, dictionaryLookup } from "assets/translation.js";
 
 function ChronicBrainSense() {
   const navigate = useNavigate();
@@ -140,6 +141,31 @@ function ChronicBrainSense() {
     }
   }, [data]);
 
+  const exportCurrentStream = () => {
+    console.log(data)
+    var csvData = "Time,Power,Therapy,Amplitude,Device,Hemisphere";
+    csvData += "\n";
+
+    for (let i = 0; i < data.ChronicData.length; i++) {
+      for (let j = 0; j < data.ChronicData[i].Power.length; j++) {
+        for (let k = 0; k < data.ChronicData[i].Power[j].length; k++) {
+          csvData += data.ChronicData[i].Timestamp[j][k] + ",";
+          csvData += data.ChronicData[i].Power[j][k] + ",";
+          csvData += data.ChronicData[i].Therapy[j].TherapyOverview + ",";
+          csvData += data.ChronicData[i].Amplitude[j][k] + ",";
+          csvData += data.ChronicData[i].Device + ",";
+          csvData += data.ChronicData[i].Hemisphere + "\n";
+        }
+      }
+    }
+
+    var downloader = document.createElement('a');
+    downloader.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData);
+    downloader.target = '_blank';
+    downloader.download = 'ChronicBrainSense.csv';
+    downloader.click();
+  };
+
   return (
     <>
       {alert}
@@ -150,16 +176,31 @@ function ChronicBrainSense() {
               <Grid item xs={12}>
                 <Card sx={{width: "100%"}}>
                   <Grid container>
-                    <Grid item xs={12}>
-                      <MDBox p={2}>
-                        <MDTypography variant={"h6"} fontSize={24}>
-                          {dictionary.ChronicBrainSense.Figure.FigureTitle[language]}
-                        </MDTypography>
-                      </MDBox>
-                    </Grid>
-                    <Grid item xs={12} lg={12}>
-                      {data ? <ChronicPowerTrend dataToRender={data} height={800} events={eventList} figureTitle={"ChronicPowerTrend"}/> : null}
-                    </Grid>
+                    {data ? (
+                      <>
+                        <Grid item xs={12}>
+                          <MDBox p={2}>
+                            <MDTypography variant={"h6"} fontSize={24}>
+                              {dictionary.ChronicBrainSense.Figure.FigureTitle[language]}
+                            </MDTypography>
+                            <MDButton size="large" variant="contained" color="primary" style={{marginBottom: 3}} onClick={() => exportCurrentStream()}>
+                              {dictionaryLookup(dictionary.FigureStandardText, "Export", language)}
+                            </MDButton>
+                          </MDBox>
+                        </Grid>
+                        <Grid item xs={12} lg={12}>
+                          <ChronicPowerTrend dataToRender={data} height={800} events={eventList} figureTitle={"ChronicPowerTrend"}/>
+                        </Grid>
+                      </>
+                    ) : (
+                      <Grid item xs={12}>
+                        <MDBox p={2}>
+                          <MDTypography variant="h6" fontSize={24}>
+                            {dictionary.WarningMessage.NoData[language]}
+                          </MDTypography>
+                        </MDBox>
+                      </Grid>
+                    )}
                   </Grid>
                 </Card>
               </Grid>
