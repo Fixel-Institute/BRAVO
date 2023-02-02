@@ -258,12 +258,16 @@ class QueryBrainSenseStreaming(RestViews.APIView):
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data = BrainSenseStream.queryRealtimeStreamOverview(request.user, request.data["id"], Authority)
+                data = {}
+                data["streamingData"] = BrainSenseStream.queryRealtimeStreamOverview(request.user, request.data["id"], Authority)
+                data["configuration"] = request.user.configuration["ProcessingSettings"]["RealtimeStream"]
                 return Response(status=200, data=data)
             elif Authority["Level"] == 2:
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
-                data = BrainSenseStream.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
+                data = {}
+                data["streamingData"] = BrainSenseStream.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
+                data["configuration"] = request.user.configuration["ProcessingSettings"]["RealtimeStream"]
                 return Response(status=200, data=data)
 
         elif "requestData" in request.data:
@@ -336,6 +340,23 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
 
             BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=True, cardiacFilter=request.data["updateCardiacFilter"])
+            if BrainSenseData == None:
+                return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
+            data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"])
+            return Response(status=200, data=data)
+
+        elif "updateWaveletTransform" in request.data:
+            request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"] = request.data["updateWaveletTransform"]
+            request.user.save()
+
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+            if Authority["Level"] == 0 or Authority["Level"] == 2:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            elif Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
+
+            BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority)
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
             data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"])

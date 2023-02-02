@@ -295,7 +295,7 @@ def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=Fal
             recording.recording_info["CardiacFilter"] = cardiacFilter
             recording.save()
 
-        if not "Spectrogram" in BrainSenseData.keys() or (refresh and (not recording.recording_info["CardiacFilter"] == cardiacFilter)):
+        if not "Spectrogram" in BrainSenseData.keys() or (refresh and not recording.recording_info["CardiacFilter"] == cardiacFilter):
             recording.recording_info["CardiacFilter"] = cardiacFilter
             BrainSenseData = processRealtimeStreams(BrainSenseData, cardiacFilter=cardiacFilter)
             Database.saveSourceFiles(BrainSenseData,recording.recording_type,info,recording.recording_id, recording.device_deidentified_id)

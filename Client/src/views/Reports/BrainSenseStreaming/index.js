@@ -32,6 +32,7 @@ function BrainSenseStreaming() {
   const [recordingId, setRecordingId] = React.useState([]);
 
   const [data, setData] = React.useState([]);
+  const [configuration, setConfiguration] = React.useState({});
   const [dataToRender, setDataToRender] = React.useState(false);
   const [channelInfos, setChannelInfos] = React.useState([]);
   const [leftHemispherePSD, setLeftHemispherePSD] = React.useState(false);
@@ -53,7 +54,8 @@ function BrainSenseStreaming() {
         id: patientID,
         requestOverview: true,
       }).then((response) => {
-        setData(response.data);
+        setData(response.data.streamingData);
+        setConfiguration(response.data.configuration);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
@@ -132,6 +134,27 @@ function BrainSenseStreaming() {
       recordingId: recordingId,
     }).then((response) => {
       setDataToRender(response.data);
+      setAlert(null);
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
+  };
+
+  const toggleWaveletTransform = () => {
+    setAlert(<LoadingProgress/>);
+    SessionController.query("/api/queryBrainSenseStreaming", {
+      updateWaveletTransform: configuration.SpectrogramMethod.value === "Wavelet" ? "Spectrogram" : "Wavelet",
+      id: patientID,
+      recordingId: recordingId,
+    }).then((response) => {
+      setDataToRender(response.data);
+      setConfiguration({
+        ...configuration,
+        SpectrogramMethod: {
+          ...configuration.SpectrogramMethod,
+          value: configuration.SpectrogramMethod.value === "Wavelet" ? "Spectrogram" : "Wavelet"
+        }
+      });
       setAlert(null);
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
@@ -259,8 +282,8 @@ function BrainSenseStreaming() {
                             <MDButton size="small" variant="contained" color="info" style={{marginBottom: 3}} onClick={() => toggleCardiacFilter()}>
                               {dictionaryLookup(dictionary.BrainSenseStreaming.Figure.CardiacFilter, dataToRender.Info.CardiacFilter ? "Remove" : "Add", language)}
                             </MDButton>
-                            <MDButton size="small" variant="contained" color="info">
-                              {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "Wavelet", language)}
+                            <MDButton size="small" variant="contained" color="info" onClick={() => toggleWaveletTransform()}>
+                              {dictionaryLookup(dictionary.BrainSenseStreaming.Figure.Wavelet, configuration.SpectrogramMethod.value === "Wavelet" ? "Remove" : "Add", language)}
                             </MDButton>
                           </MDBox>
                         </MDBox>
