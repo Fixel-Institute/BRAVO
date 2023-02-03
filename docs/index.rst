@@ -17,8 +17,8 @@ Please refer to `GitHub Repository <https://github.com/Fixel-Institute/BRAVO>`_ 
    :caption: Getting Started
 
    installation.rst
-   tutorials.rst 
    usage.rst
+   tutorials.rst 
 
 .. toctree::
    :maxdepth: 1
