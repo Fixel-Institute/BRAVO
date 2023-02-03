@@ -36,7 +36,7 @@ const PatientTable = ({data}) => {
   });
 
   useEffect(() => {
-    if (new Date().getTime() - lastActive > 60000) {
+    if (new Date().getTime() - lastActive > 600000) {
       SessionController.setPageIndex("PatientTable", 0);
       setPagination({currentPage: 0, totalPages: Math.ceil(data.length / viewPerPage)});
     } else {
