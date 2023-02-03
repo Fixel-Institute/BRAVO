@@ -94,7 +94,17 @@ export const SessionController = (function () {
         connectionStatus = true;
       } catch (error) {
         console.log(error);
+        if (error.response.status  == 401) {
+          setAuthToken("");
+          try {
+            await query("/api/handshake", {}, {}, 2000);
+            connectionStatus = true;
+          } catch (error) {
+            console.log(error);
+          }
+        }
       }
+
     } else {
       for (let address of [window.location.protocol + "//" + window.location.hostname + ":3001", "https://bravo-server.jcagle.solutions"]) {
         try {
