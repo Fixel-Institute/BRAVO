@@ -106,11 +106,11 @@ export default function PatientTablePagination({totalCount, totalPages, currentP
         variant={"gradient"}
         color={"info"}
       >
-        <MDPagination item onClick={() => {}}>
+        <MDPagination item onClick={() => handlePageChange(currentPage-1)}>
           <Icon sx={{ fontWeight: "bold" }}>chevron_left</Icon>
         </MDPagination>
         {pageItems}
-        <MDPagination item onClick={() => {}}>
+        <MDPagination item onClick={() => handlePageChange(currentPage+1)}>
           <Icon sx={{ fontWeight: "bold" }}>chevron_right</Icon>
         </MDPagination>
       </MDPagination>
