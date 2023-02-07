@@ -1,7 +1,7 @@
 Installation Procedures
 =============================================
 
-The UF BRAVO P1latform consist of 2 main components: *Python Server* and *React Frontend*. 
+The UF BRAVO Platform consist of 2 main components: *Python Server* and *React Frontend*. 
 These two components can communicate through both Websocket and REST APIs, 
 supported by `Django Channels <https://channels.readthedocs.io/en/stable/>`_ and 
 `Django REST Framework <https://www.django-rest-framework.org/>`_. 

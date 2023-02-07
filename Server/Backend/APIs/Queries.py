@@ -685,6 +685,22 @@ class QueryPatientEvents(RestViews.APIView):
         return Response(status=200, data=data)
 
 class QueryImageModelDirectory(RestViews.APIView):
+    """ Query all Image models store in the patient's imaging folder.
+
+    This route will provide user with all model descriptor related to a specific patient, assuming 
+    there are imaging models in the patient's imaging folder.
+
+    **POST**: ``/api/queryImageDirectory``
+
+    Args:
+      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body contains ``descriptor``, a dictionary that describe initial rendered objects and their parameters, and
+      ``availableModels``, an array of dictionary with field {file, type, mode}. 
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -706,6 +722,24 @@ class QueryImageModelDirectory(RestViews.APIView):
         return Response(status=200, data=data)
 
 class QueryImageModel(RestViews.APIView):
+    """ Query all Image models store in the patient's imaging folder.
+
+    This route will provide user with all model descriptor related to a specific patient, assuming 
+    there are imaging models in the patient's imaging folder.
+
+    **POST**: ``/api/queryImageModel``
+
+    Args:
+      Directory (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+      FileMode (string): "single" or "multiple", define whether the API should return individual file or pagination for multiple requests.
+      FileType (string): "stl", "tracts", or "electrode", define what kind of model the server should retrieve. This defines the decoder function.
+      FileName (string): filename of the model.
+      
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body contains an octet-stream (binary buffer) for "stl" and "electrode", or array of points for tracts.
+    """
+
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):

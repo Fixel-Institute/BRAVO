@@ -14,6 +14,16 @@ from Backend import models
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
 def extractAvailableModels(patient_id, authority):
+    """ Extract available image models from patient directory
+
+    Args:
+      patient_id: UUID4 deidentified id for each unique Patient in SQL Database.
+      authority: User permission structure indicating the type of access the user has.
+
+    Returns:
+      Dictionary with ``availableModels`` array and ``descriptor`` object. 
+    """
+
     descriptor = {}
     availableModels = []
 
@@ -83,7 +93,20 @@ def extractAvailableModels(patient_id, authority):
     return {"availableModels": availableModels, "descriptor": descriptor}
 
 def stlReader(directory, filename, color="#FFFFFF"):
-    print(DATABASE_PATH + 'imaging/' + directory + "/" + filename)
+    """ Decode STL files. 
+
+    The color parameter will encode color code to binary STL header. This
+    will ensure the STL decoder associate the STL object with a specific color.
+
+    Args:
+      directory: UUID4 deidentified id for each unique Patient in SQL Database.
+      filename: String of model filename
+      color: Hex-encoded color string
+
+    Returns:
+      Raw byte array of binary STL file.
+    """
+
     if not os.path.exists(DATABASE_PATH + 'imaging/' + directory + "/" + filename):
         return False 
 
@@ -111,6 +134,19 @@ def stlReader(directory, filename, color="#FFFFFF"):
     return file_data
 
 def tractReader(directory, filename):
+    """ Decode Tract files. 
+
+    This is a wrapper for NiBabel library's streamlines class. This function can be used to 
+    read MRTRIX3 tck file format.
+
+    Args:
+      directory: UUID4 deidentified id for each unique Patient in SQL Database.
+      filename: String of model filename
+
+    Returns:
+      Point arrays of tracts.
+    """
+
     if not os.path.exists(DATABASE_PATH + 'imaging/' + directory + "/" + filename):
         return False 
 
@@ -122,6 +158,18 @@ def tractReader(directory, filename):
     return tracts
 
 def electrodeReader(filename):
+    """ Extract electrode paginations
+
+    This function will read in all models within Electrode directory to create a 
+    multi-STL pagination for frontend to request multiple objects. 
+
+    Args:
+      filename: String of model filename
+
+    Returns:
+      Array of dictionary for Pagination. Each dictionary defines "filename", "electrode", "directory", and "type" 
+    """
+
     pages = []
     if not os.path.exists(DATABASE_PATH + '/imaging/Electrodes/' + filename):
         return False 

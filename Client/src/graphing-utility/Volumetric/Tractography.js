@@ -1,6 +1,16 @@
 import * as THREE from "three";
 import React from "react";
 
+/**
+ * Wrapper for creating a line from buffer geometry 
+ *
+ * @param {number[][]} pointArray - Array of connected points in 3D space.
+ * @param {string} color - Hex-encoded color string
+ * @param {number} linewidth - Currently linewidth is useless on browser due to WebGL limitation
+ * @param {THREE.Matrix4} matrix - Transformation matrix for the mesh object.
+ * 
+ * @return {line} Line object to be rendered.
+ */
 function Tractography({pointArray, color, linewidth, matrix}) {
   const points = [];
   for (var point of pointArray) {

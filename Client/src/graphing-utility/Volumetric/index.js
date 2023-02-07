@@ -11,6 +11,15 @@ import Model from "./Model";
 import Tractography from "./Tractography";
 import VolumetricObject from "./VolumetricObject";
 
+/**
+ * Convert Byte-size R/G/B values to hex color string.
+ *
+ * @param {number} r - number of rows in subplot grid
+ * @param {number} g - number of columns in subplot grid
+ * @param {number} b - number of columns in subplot grid
+ * 
+ * @return {string} Hex encoded RGB value in format of RRGGBB (without #). 
+ */
 function rgbaToHex (r,g,b,a) {
   var outParts = [
     r.toString(16),
@@ -28,6 +37,15 @@ function rgbaToHex (r,g,b,a) {
   return ('#' + outParts.join(''));
 }
 
+
+/**
+ * Parse Binary STL file into Three.js BufferAttribute
+ *
+ * @param {bufferArray} data - Raw STL binary buffer
+ * 
+ * @return {Object} Dictionary {position, normal, color} containing Three.js BufferAttribute of vertices position, 
+ * normal vector, and color (if available in STL)
+ */
 export const parseBinarySTL = (data) => {
   const reader = new DataView( data );
   const faces = reader.getUint32( 80, true );
@@ -103,6 +121,11 @@ export const parseBinarySTL = (data) => {
   };
 }
 
+/**
+ * Return Identity Matrix for Transformation. 
+ *
+ * @return {THREE.Matrix4} Identity Matrix where diagonal of the matrix are 1 and everywhere else 0.
+ */
 export const identityMatrix = () => {
   const matrix = new THREE.Matrix4();
   matrix.set(1, 0, 0, 0,
@@ -112,6 +135,14 @@ export const identityMatrix = () => {
   return matrix;
 }
 
+/**
+ * Compute Affine Matrix to transform electrode model to patient-specific electrode location
+ *
+ * @param {number[]} targetPts - 3-dimensional point value in brain space for tip of electrode
+ * @param {number[]} entryPts - 3-dimensional point value in brain space for any point along the trajectory above tip
+ * 
+ * @return {THREE.Matrix4} Affine matrix that defines 3D transformation of the electrode model.
+ */
 export const computeElectrodePlacement = (targetPts, entryPts) => {
   const default_lead_model = math.matrix([[0,0,0,1],[0,1,0,1],[0,0,1,1],[1,0,0,1]]);
   const target = math.matrix(math.dotMultiply(targetPts, [-1, -1, 1]));

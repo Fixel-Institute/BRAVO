@@ -1,7 +1,8 @@
 {
   "source": {
       "include": [
-        "../Client/src/graphing-utility/Plotly"
+        "../Client/src/graphing-utility/Plotly",
+        "../Client/src/graphing-utility/Volumetric"
       ],
       "exclude": [],
       "includePattern": ".+\\.js(doc|x)?$",

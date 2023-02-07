@@ -42,9 +42,12 @@ Developer Documentation
    PythonModules/IndefiniteStream.rst
    PythonModules/ChronicBrainSense.rst
 
+   PythonModules/ImageDatabase.rst
+
 .. toctree::
    :maxdepth: 1
    :caption: Javascript
 
    JavascriptModules/PlotlyWrapper.rst
+   JavascriptModules/OnlineRenderer.rst
 

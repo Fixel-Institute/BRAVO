@@ -3,7 +3,16 @@ import { identityMatrix, computeElectrodePlacement, parseBinarySTL } from ".";
 import * as THREE from "three";
 import * as math from "mathjs";
 
-const getModels = async (directory, item, color) => {
+/**
+ * Wrapper for retriving models from UF BRAVO Platform Backend Server. 
+ *
+ * @param {string} directory - Directory that store the model. Typically the Patient ID.
+ * @param {Object} item - The model object that describe the available models in the server. 
+ * @param {string} color - Hex-encoded color string to force model into specific colors. 
+ * 
+ * @return {Object[]} Array of controllable items that contain both data and description of the model downloaded. 
+ */
+const retrieveModels = async (directory, item, color) => {
   const controlledItems = [];
   if (item.mode == "single") {
     
@@ -116,7 +125,7 @@ const getModels = async (directory, item, color) => {
         show: true,
       };
       for (var page of pagination.data.pages) {
-        const data = await getModels(directory, {
+        const data = await retrieveModels(directory, {
           file: page.filename,
           electrode: page.electrode,
           mode: "single",
@@ -146,7 +155,7 @@ const getModels = async (directory, item, color) => {
       volume.matrix = new THREE.Matrix4();
       volume.matrix.set(...volume.header.affine);
       
-      const _data = await getModels(directory, {
+      const _data = await retrieveModels(directory, {
         filename: item.file,
         mode: "single",
         type: item.type
@@ -180,4 +189,4 @@ const getModels = async (directory, item, color) => {
   }
 };
 
-export default getModels; 
+export default retrieveModels; 

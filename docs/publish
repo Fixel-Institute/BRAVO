@@ -1,0 +1,1 @@
+npx wrangler pages publish _build/html --branch=main
