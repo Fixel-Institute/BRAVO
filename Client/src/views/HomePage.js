@@ -46,7 +46,7 @@ export default function HomePage() {
           <MDTypography variant={"h6"} color={"black"} align={"center"} fontSize={20}>
             {connectionStatus ? "Backend Server Connected" : "Backend Server not Found"}
             <br></br>
-            {"Host: " + server}
+            {"Host: " + (server || (window.location.protocol + "//" + window.location.hostname))}
           </MDTypography>
           <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
             {"Current Frontend Version: 2.0.0"}

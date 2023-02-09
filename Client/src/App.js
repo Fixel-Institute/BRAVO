@@ -22,6 +22,8 @@ import SurveyEditor from "views/Survey/Editor";
 import SurveyViewer from "views/Survey/Viewer";
 
 import { usePlatformContext, setContextState } from "context.js";
+import { SessionController } from "database/session-control";
+
 import routes from "routes";
 
 export default function App() {
@@ -54,6 +56,30 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    let server = localStorage.getItem("serverAddress") || "";
+    SessionController.verifyServerAddress(server).then(async (connectionState) => {
+      let sessionStates = {};
+      if (connectionState) {
+        let authToken = localStorage.getItem("accessToken") || "";
+        await SessionController.verifyAuthToken(authToken);
+        sessionStates = await SessionController.syncSession();
+      } else if (server === "") {
+        // Regardless of condition, reset Auth Token if we cannot connect to the first serverAddress in cache.
+        SessionController.setAuthToken("");
+        if (window.location.protocol == "http:") {
+          if (await SessionController.verifyServerAddress(window.location.protocol + "//" + window.location.hostname + ":3001")) {
+            sessionStates = await SessionController.syncSession();
+          }
+        }
+      }
+
+      for (let key of Object.keys(sessionStates)) {
+        setContextState(dispatch, key, sessionStates[key]);
+      }
+    });
+  }, []);
+
   // Setting page scroll to 0 when changing the route
   useEffect(() => {
     document.documentElement.scrollTop = 0;
@@ -65,11 +91,9 @@ export default function App() {
       if (route.collapse) {
         return getRoutes(route.collapse);
       }
-
       if (route.route) {
         return <Route exact path={route.route} element={route.component} key={route.key} />;
       }
-
       return null;
     });
   }

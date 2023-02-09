@@ -124,14 +124,6 @@ function DefaultNavbar({ transparent, light, action }) {
       }
     }
 
-    const serverAddress = SessionController.getServer();
-    if (serverAddress == "http://localhost:3001") {
-      setCurrentHost("Localhost");
-    } else if (serverAddress == "https://bravo-server.jcagle.solutions") {
-      setCurrentHost("DemoServer");
-    } else {
-      setCurrentHost("CustomizedServer");
-    }
     /** 
      The event listener that's calling the displayMobileNavbar function when 
      resizing the window.
@@ -185,11 +177,7 @@ function DefaultNavbar({ transparent, light, action }) {
       {["Localhost","DemoServer","CustomizedServer"].map((server) => (
         <MenuItem key={server} onClick={() => setServer(server)}>
           <Icon sx={{ mr: 1 }}>{
-            currentHost === server ? (
-              <CheckIcon/>
-            ) : (
-              <StorageIcon/>
-            )
+            <StorageIcon/>
           }</Icon>
           <MDTypography variant="button" fontWeight="regular" color="text">
             {dictionary.SimplifiedNavbar[server][language]}

@@ -80,69 +80,52 @@ export const SessionController = (function () {
     } else {
       console.log(error);
     }
-  }
+  };
 
-  const syncSession = async () => {
-    if (localStorage.getItem("accessToken")) {
-      authToken = localStorage.getItem("accessToken");
-    }
-    
-    if (localStorage.getItem("serverAddress")) {
-      server = localStorage.getItem("serverAddress");
-      try {
-        await query("/api/handshake", {}, {}, 2000);
-        connectionStatus = true;
-      } catch (error) {
-        console.log(error);
-        if (error.response.status  == 401) {
-          setAuthToken("");
-          try {
-            await query("/api/handshake", {}, {}, 2000);
-            connectionStatus = true;
-          } catch (error) {
-            console.log(error);
-          }
-        }
-      }
+  const verifyServerAddress = async (storedServer) => {
+    // Reset Credentials in case of 401
+    authToken = "";
+    server = storedServer;
 
-    } else {
-      for (let address of [window.location.protocol + "//" + window.location.hostname + ":3001", "https://bravo-server.jcagle.solutions"]) {
-        try {
-          server = address;
-          await query("/api/handshake", {}, {}, 2000);
-          connectionStatus = true;
-          break;
-        } catch (error) {
-          console.log(error);
-        }
-      }
-    }
-
-    if (!connectionStatus) return true;
-
+    connectionStatus = false;
     try {
-      if (localStorage.getItem("sessionContext")) {
-        session = JSON.parse(localStorage.getItem("sessionContext"));
-      }
-      const response = await query("/api/querySessions", {
-        session: session,
-      });
-      session = response.data.session;
-      localStorage.setItem("sessionContext", JSON.stringify(session));
-      user = response.data.user;
-      synced = true;
+      await query("/api/handshake", {}, {}, 2000);
+      connectionStatus = true;
+    } catch (error) {
+      console.log(error);
+    }
 
+    if (connectionStatus) setServer(server);
+    return connectionStatus;
+  };
+
+  const verifyAuthToken = async (token) => {
+    // Token can be empty, which is common if you are not logged in.
+    if (token === "") return;
+
+    authToken = token;
+    try {
+      await query("/api/handshake", {}, {}, 2000);
     } catch (error) {
       if (error.response.status == 401) {
         setAuthToken("");
-        const response = await query("/api/querySessions", {});
-        session = response.data.session;
-        localStorage.setItem("sessionContext", JSON.stringify(session));
-        user = response.data.user;
-        synced = true;
       }
     }
-    return true;
+  };
+
+  const syncSession = async () => {
+    if (localStorage.getItem("sessionContext")) {
+      session = JSON.parse(localStorage.getItem("sessionContext"));
+    }
+
+    const response = await query("/api/querySessions", {
+      session: session,
+    });
+    session = response.data.session;
+    localStorage.setItem("sessionContext", JSON.stringify(session));
+    user = response.data.user;
+
+    return getSession();
   };
 
   const isSynced = () => {
@@ -250,6 +233,9 @@ export const SessionController = (function () {
     setServer: setServer,
     getServer: getServer,
     getConnectionStatus: getConnectionStatus,
+
+    verifyServerAddress: verifyServerAddress,
+    verifyAuthToken: verifyAuthToken,
 
     query: query,
     displayError: displayError,

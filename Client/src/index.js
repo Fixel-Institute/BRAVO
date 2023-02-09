@@ -5,25 +5,13 @@ import App from "App";
 
 import { PlatformContextProvider } from "context.js";
 
-// Session Sync
-import { SessionController } from "database/session-control.js";
-
 function Main() {
-  const [synced, setSynced] = useState(false);
-
-  useEffect(() => {
-    if (!synced) {
-      SessionController.syncSession().then((result) => {
-        setSynced(result);
-      });
-    }
-  }, []);
-
-  return synced ? (
-    <PlatformContextProvider initialStates={SessionController.getSession()}>
-      <App />
-    </PlatformContextProvider>
-  ) : null;
+  return <PlatformContextProvider initialStates={{
+    language: "en",
+    user: {}
+  }}>
+    <App />
+  </PlatformContextProvider>
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"))
