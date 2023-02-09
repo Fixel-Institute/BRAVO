@@ -103,7 +103,7 @@ const retrieveModels = async (directory, item, color) => {
     if (item.type === "electrode") {
       const pagination = await SessionController.query("/api/queryImageModel", {
         "Directory": directory,
-        "FileName": item.file,
+        "FileName": item.electrodeName,
         "FileMode": item.mode,
         "FileType": item.type
       });
@@ -156,7 +156,7 @@ const retrieveModels = async (directory, item, color) => {
       volume.matrix.set(...volume.header.affine);
       
       const _data = await retrieveModels(directory, {
-        filename: item.file,
+        file: item.file,
         mode: "single",
         type: item.type
       });

@@ -39,14 +39,15 @@ def extractAvailableModels(patient_id, authority):
             if file == "renderer.json": 
                 with open(DATABASE_PATH + 'imaging/' + patient_id + "/" + file) as fid:
                     descriptor = json.load(fid)
-                    if "Medtronic_B33015" in descriptor.keys():
-                        availableModels.append({
-                            "file": "Medtronic_B33015",
-                            "type": "electrode",
-                            "mode": "multiple"
-                        })
-
-                print(descriptor)
+                    for key in descriptor.keys():
+                        if "electrode" in descriptor[key].keys():
+                            availableModels.append({
+                                "file": key,
+                                "electrodeName": descriptor[key]["electrode"],
+                                "type": "electrode",
+                                "mode": "multiple"
+                            })
+                            
             elif file.endswith(".stl"):
                 availableModels.append({
                     "file": file,
@@ -75,8 +76,6 @@ def extractAvailableModels(patient_id, authority):
                     "type": "volume",
                     "mode": "multiple"
                 })
-        
-        
 
     """
     if not request.data["Directory"] == "Electrodes":
@@ -156,6 +155,46 @@ def tractReader(directory, filename):
         tracts.append(tract)
 
     return tracts
+
+def niftiInfo(directory, filename):
+    """ Extract Header information from NifTi file
+
+    Args:
+      directory: UUID4 deidentified id for each unique Patient in SQL Database.
+      filename: String of model filename
+
+    Returns:
+      NifTi headers that describe dimension and size of the volume
+    """
+
+    if not os.path.exists(DATABASE_PATH + 'imaging/' + directory + "/" + filename):
+        return np.array([]) 
+
+    nii = nib.load(DATABASE_PATH + 'imaging/' + directory + "/" + filename)
+    headers = {
+        "size": nii.header["dim"][1:4],
+        "pixdim": nii.header["pixdim"][1:4],
+        "affine": nii.header.get_best_affine().reshape(16)
+    }
+    return headers
+
+def niftiLoader(directory, filename):
+    """ Extract raw byte values from NifTi file
+
+    Args:
+      directory: UUID4 deidentified id for each unique Patient in SQL Database.
+      filename: String of model filename
+
+    Returns:
+      Raw byte array of 3D NifTi matrix.
+    """
+
+    if not os.path.exists(DATABASE_PATH + 'imaging/' + directory + "/" + filename):
+        return False 
+
+    nii = nib.load(DATABASE_PATH + 'imaging/' + directory + "/" + filename)
+    raw_data = nii.get_fdata().astype(np.uint16)
+    return raw_data
 
 def electrodeReader(filename):
     """ Extract electrode paginations

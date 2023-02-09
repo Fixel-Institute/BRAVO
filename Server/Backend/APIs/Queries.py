@@ -19,6 +19,7 @@ from modules.Percept import Therapy, Sessions, BrainSenseSurvey, BrainSenseEvent
 from utility.PythonUtility import uniqueList
 import json
 import numpy as np
+import nibabel as nib
 
 import os, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
@@ -787,11 +788,23 @@ class QueryImageModel(RestViews.APIView):
                     "Content-Type": "application/octet-stream"
                 })
 
+            elif request.data["FileType"] == "volume":
+                file_data = ImageDatabase.niftiLoader(PatientID, request.data["FileName"])
+                if len(file_data) == 0:
+                    return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+                return HttpResponse(bytes(file_data), status=200, headers={
+                    "Content-Type": "application/octet-stream"
+                })
+
         elif request.data["FileMode"] == "multiple":
             if request.data["FileType"] == "electrode":
                 pages = ImageDatabase.electrodeReader(request.data["FileName"])
                 return Response(status=200, data={"pages": pages, "color": "0x000000"})
             
+            elif request.data["FileType"] == "volume":
+                headers = ImageDatabase.niftiInfo(PatientID, request.data["FileName"])
+                return Response(status=200, data={"headers": headers})
 
 class QueryAdaptiveGroups(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
