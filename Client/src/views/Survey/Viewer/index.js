@@ -53,6 +53,10 @@ export default function SurveyViewer({match}) {
 
   useEffect(() => {
     setAlert(<LoadingProgress/>);
+    console.log(SessionController.getServer())
+    if (SessionController.getServer() === "") {
+      SessionController.setServer("https://bravo-server.jcagle.solutions");
+    }
 
     SessionController.query("/api/querySurveyContent", {
       id: surveyId

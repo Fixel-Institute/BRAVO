@@ -36,6 +36,7 @@ export default function App() {
     darkMode,
   } = controller;
   const [onMouseEnter, setOnMouseEnter] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
   const { pathname } = useLocation();
 
   // Open sidenav when mouse enter on mini sidenav
@@ -77,6 +78,8 @@ export default function App() {
       for (let key of Object.keys(sessionStates)) {
         setContextState(dispatch, key, sessionStates[key]);
       }
+
+      setSessionReady(true);
     });
   }, []);
 
@@ -98,7 +101,7 @@ export default function App() {
     });
   }
 
-  return (
+  return sessionReady ? (
     <ThemeProvider theme={darkMode ? themeDark : theme}>
       <CssBaseline />
       {layout === "dashboard" && (
@@ -125,5 +128,5 @@ export default function App() {
         <Route path="*" element={<Navigate to="/index" />} />
       </Routes>
     </ThemeProvider>
-  );
+  ) : null;
 }
