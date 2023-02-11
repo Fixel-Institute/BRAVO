@@ -1,7 +1,8 @@
 from django.urls import path
 from django.conf import settings
 
-from .APIs import urls as API_urls
-from .MobileEndpoints import urls as MobileEndpoints_urls
+from . import views
 
-urlpatterns = API_urls.urlpatterns + MobileEndpoints_urls.urlpatterns
+urlpatterns = [
+	path('', views.Homepage.as_view()),
+]

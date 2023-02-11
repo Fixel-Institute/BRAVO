@@ -19,6 +19,7 @@ from django.urls import include, path
 from Backend.MobileEndpoints import urls as MobileURLs 
 
 urlpatterns = [
+    path('', include('Backend.urls')),
     path('api/', include('Backend.APIs.urls')),
     path('mobile/', include('Backend.MobileEndpoints.urls')),
 ]
