@@ -108,8 +108,8 @@ const retrieveModels = async (directory, item, color) => {
         "FileType": item.type
       });
 
-      const targetPts = [0,0,0];
-      const entryPts = [0,0,50];
+      const targetPts = item.targetPt || [0,0,0];
+      const entryPts = item.entryPt || [0,0,50];
 
       const electrode_data = {
         filename: item.file,

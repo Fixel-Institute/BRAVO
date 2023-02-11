@@ -4,15 +4,18 @@ import { useNavigate } from "react-router-dom";
 import {
   TextField,
   Autocomplete,
+  Popover,
   Card,
   Grid,
   Modal,
   ListItemButton,
   ListItemText,
-  ListItemIcon
+  ListItemIcon,
+  IconButton,
 } from "@mui/material";
 
 import { ViewInAr, Timeline } from "@mui/icons-material";
+import { TwitterPicker, BlockPicker } from "react-color";
 
 import React from "react";
 import * as THREE from "three";
@@ -57,6 +60,7 @@ function ImageVisualization() {
   const [descriptor, setDescriptor] = React.useState({});
 
   const [addItemModal, setAddItemModal] = useState({show: false});
+  const [popup, setPopupState] = React.useState({item: ""});
 
   const [cameraLock, setCameraLock] = React.useState(false);
   const [worldMatrix, setWorldMatrx] = React.useState(null);
@@ -90,7 +94,7 @@ function ImageVisualization() {
   }, [patientID]);
 
   useEffect(() => {
-    downloadModelsFromDescriptor();
+    //downloadModelsFromDescriptor();
   }, [availableItems, descriptor]);
 
   const downloadModelsFromDescriptor = async () => {
@@ -102,15 +106,8 @@ function ImageVisualization() {
         if (!item.downloaded) {
           const data = await retrieveModels(patientID, item, descriptor[item.file].color);
           if (item.type === "electrode") {
-            var electrodeCount = 0;
-            for (var i in controlItems) {
-              if (controlItems[i].type == "electrode") {
-                electrodeCount++;
-              }
-            }
             if (descriptor[item.file].targetPoint) data[0].targetPts = descriptor[item.file].targetPoint;
             if (descriptor[item.file].entryPoint) data[0].entryPts = descriptor[item.file].entryPoint;
-            data[0].filename += " " + electrodeCount.toString();
           } else {
             const index = checkItemIndex(item);    
             availableItems[index].downloaded = true;
@@ -126,7 +123,7 @@ function ImageVisualization() {
 
   const checkItemIndex = (item) => {
     for (var i in availableItems) {
-      if (availableItems[i].filename == item.filename) return i; 
+      if (availableItems[i].file == item.file) return i; 
     }
   };
 
@@ -140,22 +137,31 @@ function ImageVisualization() {
             electrodeCount++;
           }
         }
-        data[0].filename += " " + electrodeCount.toString();
-      } else {
-        const index = checkItemIndex(item);    
-        availableItems[index].downloaded = true;
-        setAvailableItems(availableItems);
       }
+
+      const index = checkItemIndex(item);
+      availableItems[index].downloaded = true;
+      setAvailableItems(availableItems);
       setControlItems([...controlItems, ...data]);
     } else {
       for (var i in controlItems) {
-        if (controlItems[i].filename == item.filename) {
+        if (controlItems[i].filename == item.file) {
           controlItems[i].show = !controlItems[i].show;
         }
       }
       setControlItems([...controlItems]);
     }
     setAddItemModal({...addItemModal, show: false});
+  };
+
+  const updateObjectColor = (filename, color) => {
+    for (var i in controlItems) {
+      if (controlItems[i].filename == filename) {
+        controlItems[i].color = color.hex;
+        break;
+      }
+    }
+    setControlItems([...controlItems]);
   };
 
   return (
@@ -219,7 +225,55 @@ function ImageVisualization() {
                           </MDBox>
                         </MDBox>
                       </Modal>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Grid container>
+                        {availableItems.map((item) => {
+                          let downloadedItem = null;
+                          for (let i in controlItems) {
+                            if (controlItems[i].filename == item.file) {
+                              downloadedItem = controlItems[i]
+                            }
+                          }
 
+                          return <Grid item xs={12} sm={6} md={4}>
+                            <MDBox px={2} style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
+                              {downloadedItem ? (
+                                <>
+                                  <IconButton
+                                    style={{padding: 0, marginRight: 3, borderStyle: "solid", borderColor: "#000000", borderWidth: 1, height: "100%"}} 
+                                    onClick={(event) => setPopupState({item: item.file, anchorEl: event.currentTarget})}
+                                  >
+                                    <img style={{background: downloadedItem.color, padding: 8, borderRadius: "50%"}}/>
+                                  </IconButton>
+                                  <Popover 
+                                    open={popup.item == item.file}
+                                    onClose={() => setPopupState({item: "", anchorEl: null})}
+                                    anchorEl={popup.anchorEl}
+                                    anchorOrigin={{
+                                      vertical: 'bottom',
+                                      horizontal: 'left',
+                                    }}
+                                    transformOrigin={{
+                                      vertical: "top",
+                                      horizontal: 'left',
+                                    }}
+                                    PaperProps={{sx: {boxShadow: "none"}}}
+                                  >
+                                    <TwitterPicker color={downloadedItem.color} onChange={(color) => updateObjectColor(item.file, color)}/>
+                                  </Popover>
+                                </>
+                              ) : null}
+                              <MDTypography variant="h6" fontSize={15} color={downloadedItem ? "dark" : "light"} style={{cursor: "pointer"}} onClick={() => addModel(item)}>
+                                {item.file}
+                              </MDTypography>
+                              {downloadedItem ? (<IconButton variant="contained" color={downloadedItem.show ? "info" : "light"} onClick={() => addModel(item)}>
+                                <i className="fa-solid fa-eye" style={{fontSize: 10}}></i>
+                              </IconButton>) : null}
+                            </MDBox>
+                          </Grid>
+                        })}
+                      </Grid>
                     </Grid>
                     <Grid item xs={12}>
                       <MDBox p={2}>

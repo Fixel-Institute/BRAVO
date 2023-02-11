@@ -44,6 +44,8 @@ def extractAvailableModels(patient_id, authority):
                             availableModels.append({
                                 "file": key,
                                 "electrodeName": descriptor[key]["electrode"],
+                                "targetPt": descriptor[key]["targetPoint"],
+                                "entryPt": descriptor[key]["entryPoint"],
                                 "type": "electrode",
                                 "mode": "multiple"
                             })
