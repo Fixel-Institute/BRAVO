@@ -50,4 +50,5 @@ Developer Documentation
 
    JavascriptModules/PlotlyWrapper.rst
    JavascriptModules/OnlineRenderer.rst
+   JavascriptModules/Language.rst
 

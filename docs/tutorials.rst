@@ -8,5 +8,6 @@ analysis. These capabilities often require server manager to handle stuff at the
   :maxdepth: 1
 
   Tutorials/MigrationGuide.rst
+  Tutorials/SSLCertificateForBRAVOServer.rst
   Tutorials/TwilioService.rst
   Tutorials/ImageRenderer.rst

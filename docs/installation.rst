@@ -119,6 +119,8 @@ If you intend to deploy this software for public, I highly recommend using Linux
 This tutorial will also cover for procedure to setup Amazon Web Service Elastic Cloud Compute (EC2) 
 platform to work with Django Project. 
 
+.. _LinuxEnvirontmentSetup:
+
 Step 0: Environment Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -292,6 +294,8 @@ To use ASGI, we use ``daphne`` to start our server. A standard startup script ``
 .. warning:: 
 
   Due to how daphne is looking for Python modules, the working directory must be in "Server" folder for the command to work. 
+
+A more advanced SSL Certificate and Automatic Background Service tutorial can be found at :ref:`SSLCertificateTutorial` tutorial page. 
 
 Python Server Installation Guide (MacOS)
 ------------------------------------------------

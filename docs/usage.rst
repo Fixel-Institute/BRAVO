@@ -11,6 +11,37 @@ Despite only deidentification IDs are shown, the platform will still retain the 
 demonstrate the capability of long-term data aggregation. It is up to the user to ensure that any data uploaded 
 will comply with their institutes' requirement for deidentification. 
 
+.. _databaseModification:
+
+Database Modification
+---------------------------------------------
+
+The client page is serverless static page, with all data retrieved from the server via simple REST API requests. 
+The BRAVO Server can be hosted anywhere, including your local PC or internal IP. 
+
+The standard port for locally hosted BRAVO Server is usually 3001 by default. Choosing ``localhost:3001`` will attempt to communicate with 
+your server currently running on your PC. 
+The Demo Server is hosted on Amazon Web Server and is only being used to demo platform capabilities. 
+
+The ``Customized Server Endpoint`` option will bring up a text-form dialog to allow user to enter their own server (either publically accessible 
+or internal network). If you are using the personally hosted HTTP deployment of the frontend, then the Network Endpoint 
+can be HTTP as well. However, if you are using the publically available `UF BRAVO Demo Page <https://uf-bravo.jcagle.solutions/index>`_,
+the endpoint has to be SSL secured. Check :ref:`SSLCertificateTutorial` for how to make your own server SSL certificate. 
+
+.. image:: images/DatabaseModification.png
+  :target: images/DatabaseModification.png
+  :width: 400
+
+Language Modification
+---------------------------------------------
+
+The BRAVO Platform uses React library for creating dynamic single page website. This means that all items on screen 
+are dynamically generated, including text. See :ref:`languageDocumentation` for how you can edit the translation dictionary.
+
+.. image:: images/LanguageSelector.png
+  :target: images/LanguageSelector.png
+  :width: 400
+
 Authentication 
 ---------------------------------------------
 
