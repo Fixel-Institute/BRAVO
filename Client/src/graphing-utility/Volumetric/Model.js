@@ -1,4 +1,5 @@
 import React from "react";
+import { DoubleSide } from "three";
 
 /**
  * Wrapper for creating a mesh from buffer geometry 
@@ -15,7 +16,7 @@ function Model({geometry, material, matrix}) {
       position: geometry.position,
       normal: geometry.normal
     }}/>
-    <meshPhongMaterial transparent opacity={material.opacity} color={material.color} specular={material.specular} shininess={material.shininess} />
+    <meshPhongMaterial transparent side={DoubleSide} opacity={material.opacity} color={material.color} specular={material.specular} shininess={material.shininess} />
   </mesh>
 };
 
