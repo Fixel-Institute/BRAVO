@@ -83,23 +83,37 @@ def queryTherapyHistory(user, patientUniqueID, authority):
             TherapyChangeData["date_of_change"] = TherapyChangeHistory["date_of_change"].values[DateSelection].tolist()
             TherapyChangeData["previous_group"] = TherapyChangeHistory["previous_group"].values[DateSelection].tolist()
             TherapyChangeData["new_group"] = TherapyChangeHistory["new_group"].values[DateSelection].tolist()
+            
+            VisitTimestamps = np.unique(TherapyHistory["therapy_date"])
+            for i in range(len(VisitTimestamps)):
+                SessionTime = VisitTimestamps[i].timestamp() * 1000000000
+                for j in range(1, len(TherapyChangeData["date_of_change"])):
+                    if TherapyChangeData["date_of_change"][j] > SessionTime:
+                        TherapyChangeData["date_of_change"].insert(j, SessionTime)
+                        TherapyChangeData["previous_group"].insert(j, TherapyChangeData["new_group"][j-1])
+                        TherapyChangeData["new_group"].insert(j, TherapyChangeData["new_group"][j-1])
+                        break
+
             TherapyChangeData["therapy"] = list()
             for i in range(len(TherapyChangeData["date_of_change"])):
                 DetailTherapy, DetailTherapy_date = getTherapyDetails(TherapyHistory, TherapyChangeData["date_of_change"][i]/1000000000, TherapyChangeData["new_group"][i], "Pre-visit Therapy")
                 BriefTherapy, BriefTherapy_date = getTherapyDetails(TherapyHistory, TherapyChangeData["date_of_change"][i]/1000000000, TherapyChangeData["new_group"][i], "Past Therapy")
                 PostVisitTherapy, PostVisitTherapy_date = getTherapyDetails(TherapyHistory, TherapyChangeData["date_of_change"][i]/1000000000, TherapyChangeData["new_group"][i], "Post-visit Therapy")
-                if DetailTherapy == None:
-                    if not BriefTherapy == None:
-                        TherapyChangeData["therapy"].append(BriefTherapy)
-                    elif not PostVisitTherapy == None:
-                        TherapyChangeData["therapy"].append(PostVisitTherapy)
-                else:
-                    if BriefTherapy == None:
-                        TherapyChangeData["therapy"].append(DetailTherapy)
-                    elif datetime.fromtimestamp(BriefTherapy_date).date() < datetime.fromtimestamp(DetailTherapy_date).date():
+
+                if not DetailTherapy == None and not BriefTherapy == None:
+                    if datetime.fromtimestamp(BriefTherapy_date).date() < datetime.fromtimestamp(DetailTherapy_date).date():
                         TherapyChangeData["therapy"].append(BriefTherapy)
                     else:
                         TherapyChangeData["therapy"].append(DetailTherapy)
+                
+                elif not DetailTherapy == None:
+                    TherapyChangeData["therapy"].append(DetailTherapy)
+
+                elif not PostVisitTherapy == None:
+                    TherapyChangeData["therapy"].append(PostVisitTherapy)
+                
+                else:
+                    TherapyChangeData["therapy"].append(BriefTherapy)
 
             for i in range(len(TherapyHistory["therapy_date"])):
                 if TherapyHistory["therapy_date"][i].timestamp() > TherapyChangeData["date_of_change"][-1]/1000000000 and (TherapyHistory["therapy_date"][i].timestamp() < authority["Permission"][1] or authority["Permission"][1] == 0):
@@ -110,19 +124,24 @@ def queryTherapyHistory(user, patientUniqueID, authority):
                     DetailTherapy, DetailTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Pre-visit Therapy")
                     BriefTherapy, BriefTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Past Therapy")
                     PostVisitTherapy, PostVisitTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Post-visit Therapy")
-                    if DetailTherapy == None:
-                        if not BriefTherapy == None:
-                            TherapyChangeData["therapy"].append(BriefTherapy)
-                        elif not PostVisitTherapy == None:
-                            TherapyChangeData["therapy"].append(PostVisitTherapy)
-                    else:
-                        if BriefTherapy == None:
-                            TherapyChangeData["therapy"].append(DetailTherapy)
-                        elif datetime.fromtimestamp(BriefTherapy_date).date() < datetime.fromtimestamp(DetailTherapy_date).date():
+                    
+                    if not DetailTherapy == None and not BriefTherapy == None:
+                        if datetime.fromtimestamp(BriefTherapy_date).date() < datetime.fromtimestamp(DetailTherapy_date).date():
                             TherapyChangeData["therapy"].append(BriefTherapy)
                         else:
                             TherapyChangeData["therapy"].append(DetailTherapy)
+                    
+                    elif not DetailTherapy == None:
+                        TherapyChangeData["therapy"].append(DetailTherapy)
 
+                    elif not PostVisitTherapy == None:
+                        TherapyChangeData["therapy"].append(PostVisitTherapy)
+                    
+                    else:
+                        TherapyChangeData["therapy"].append(BriefTherapy)
+
+            print(len(TherapyChangeData["therapy"]))
+            print(len(TherapyChangeData["date_of_change"]))
             TherapyHistoryContext.append(TherapyChangeData)
 
     return TherapyHistoryContext
@@ -218,22 +237,55 @@ def getTherapyDetails(TherapyHistory, timestamp, groupID, typeID):
       A tuple of Therapy Details dictionary and unix timestamp at which the setting is programmed.
     """
 
+    DateFound = 0
+    if typeID == "Post-visit Therapy":
+        for j in range(len(TherapyHistory["therapy_date"])-1, -1, -1):
+            if TherapyHistory["therapy_type"][j] == typeID:
+                if TherapyHistory["therapy_date"][j].timestamp() < timestamp:
+                    if DateFound == 0:
+                        DateFound = TherapyHistory["therapy_date"][j].timestamp()
+                    elif TherapyHistory["therapy_date"][j].timestamp() < DateFound:
+                        return None, None
+
+                    if TherapyHistory["group_id"][j] == groupID:
+                        therapy_details = copy.deepcopy(TherapyHistory["therapy_details"][j])
+                        if "LeftHemisphere" in therapy_details.keys():
+                            if type(therapy_details["LeftHemisphere"]["Channel"][0]) == list:
+                                for i in range(len(therapy_details["LeftHemisphere"]["Channel"])):
+                                    therapy_details["LeftHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"][i])
+                            else:
+                                therapy_details["LeftHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"])
+                        if "RightHemisphere" in therapy_details.keys():
+                            if type(therapy_details["RightHemisphere"]["Channel"][0]) == list:
+                                for i in range(len(therapy_details["RightHemisphere"]["Channel"])):
+                                    therapy_details["RightHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"][i])
+                            else:
+                                therapy_details["RightHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"])
+                        return therapy_details, TherapyHistory["therapy_date"][j].timestamp()
+
     for j in range(len(TherapyHistory["therapy_date"])):
-        if TherapyHistory["therapy_date"][j].timestamp() > timestamp and TherapyHistory["group_id"][j] == groupID and TherapyHistory["therapy_type"][j] == typeID:
-            therapy_details = copy.deepcopy(TherapyHistory["therapy_details"][j])
-            if "LeftHemisphere" in therapy_details.keys():
-                if type(therapy_details["LeftHemisphere"]["Channel"][0]) == list:
-                    for i in range(len(therapy_details["LeftHemisphere"]["Channel"])):
-                        therapy_details["LeftHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"][i])
-                else:
-                    therapy_details["LeftHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"])
-            if "RightHemisphere" in therapy_details.keys():
-                if type(therapy_details["RightHemisphere"]["Channel"][0]) == list:
-                    for i in range(len(therapy_details["RightHemisphere"]["Channel"])):
-                        therapy_details["RightHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"][i])
-                else:
-                    therapy_details["RightHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"])
-            return therapy_details, TherapyHistory["therapy_date"][j].timestamp()
+        if TherapyHistory["therapy_type"][j] == typeID:
+            if TherapyHistory["therapy_date"][j].timestamp() > timestamp:
+                if DateFound == 0:
+                    DateFound = TherapyHistory["therapy_date"][j].timestamp()
+                elif TherapyHistory["therapy_date"][j].timestamp() > (DateFound + 3600*24):
+                    return None, None
+
+                if TherapyHistory["group_id"][j] == groupID:
+                    therapy_details = copy.deepcopy(TherapyHistory["therapy_details"][j])
+                    if "LeftHemisphere" in therapy_details.keys():
+                        if type(therapy_details["LeftHemisphere"]["Channel"][0]) == list:
+                            for i in range(len(therapy_details["LeftHemisphere"]["Channel"])):
+                                therapy_details["LeftHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"][i])
+                        else:
+                            therapy_details["LeftHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"])
+                    if "RightHemisphere" in therapy_details.keys():
+                        if type(therapy_details["RightHemisphere"]["Channel"][0]) == list:
+                            for i in range(len(therapy_details["RightHemisphere"]["Channel"])):
+                                therapy_details["RightHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"][i])
+                        else:
+                            therapy_details["RightHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"])
+                    return therapy_details, TherapyHistory["therapy_date"][j].timestamp()
     return None, None
 
 def extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveConflicts=False):
