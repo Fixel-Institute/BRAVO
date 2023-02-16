@@ -83,7 +83,7 @@ export default function UploadDialog({availableDevices, onCancel}) {
         
       <MDBox pt={2}>
         <DropzoneUploader options={{
-          url: window.location.origin + "/api/uploadSessionFiles",
+          url: SessionController.getServer() + "/api/uploadSessionFiles",
           paramName: "file",
           addRemoveLinks: true,
           acceptedFiles: ".json",
