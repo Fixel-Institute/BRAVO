@@ -1186,6 +1186,18 @@ export const dictionary = {
   }
 };
 
+/**
+ * Simple Dictionary Lookup function
+ * 
+ * Obtain text string based on language code and key string. If key string is not present in dictionary object,
+ * then return key as the text to be rendered. 
+ *
+ * @param {object} object - The dictionary object to search
+ * @param {string} key - Lookup which key inside the object
+ * @param {string} language - ISO 639-1 Code for Language [``en`` for English or ``zh`` for Chinese]
+ * 
+ * @return {string} the text string to be rendered.
+ */
 export const dictionaryLookup = (object, key, language) => {
   if (object[key]) return object[key][language];
   return key;

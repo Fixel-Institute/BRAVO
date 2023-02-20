@@ -29,6 +29,7 @@ import routes from "routes";
 export default function App() {
   const [controller, dispatch] = usePlatformContext();
   const {
+    user,
     hideSidenav,
     miniSidenav,
     layout,
@@ -82,6 +83,21 @@ export default function App() {
       setSessionReady(true);
     });
   }, []);
+
+  useEffect(() => {
+    if (user.expireAt) {
+      let authWatchdog = setInterval(() => {
+        const now = new Date();
+        if (new Date(user.expireAt) < now) {
+          console.log("Expired")
+        }
+      }, 1000);
+  
+      return () => {
+        clearInterval(authWatchdog);
+      };
+    }
+  }, [user])
 
   // Setting page scroll to 0 when changing the route
   useEffect(() => {

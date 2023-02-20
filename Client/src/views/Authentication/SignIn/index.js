@@ -35,11 +35,17 @@ export default function SignIn() {
 
   const handleAuthentication = () => {
     SessionController.authenticate(authInfo.email, authInfo.password, rememberMe).then((response) => {
-      SessionController.setUser(response.data.user);
+      SessionController.setUser({
+        ...response.data.user,
+        expireAt: response.data.expiry
+      });
       SessionController.setAuthToken(response.data.token);
       SessionController.syncSession();
       setAuthInfo({...authInfo, password: ""});
-      setContextState(dispatch, "user", response.data.user);
+      setContextState(dispatch, "user", {
+        ...response.data.user,
+        expireAt: response.data.expiry
+      });
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
     });
