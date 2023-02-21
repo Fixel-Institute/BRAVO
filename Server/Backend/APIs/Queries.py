@@ -607,7 +607,7 @@ class QueryPredictionModel(RestViews.APIView):
                 BrainSenseData["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData)
                 
                 data = dict()
-                data["StimPSD"] = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.session["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=request.data["centerFrequency"])
+                data["StimPSD"] = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=request.data["centerFrequency"])
                 
                 if not "CenterFrequency" in BrainSenseData["Info"]:
                     BrainSenseData["Info"]["CenterFrequency"] = dict()
