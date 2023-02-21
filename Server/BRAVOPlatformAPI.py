@@ -74,8 +74,13 @@ class BRAVOPlatformRequest:
         return 
         
     def RequestTherapyConfigurations(self, PatientID):
-        # TODO 
-        return 
+        form = {"id": PatientID}
+        response = requests.post(self.__Server + "/api/queryTherapyHistory", json.dumps(form), headers=self.__Headers)
+        if response.status_code == 200:
+            payload = response.json()
+            return payload
+        else:
+            raise Exception(f"Network Error: {response.status_code}")
     
     def RequestChronicLFP(self, PatientID):
         form = {"id": PatientID, "requestData": True, "timezoneOffset": 3600*5}
