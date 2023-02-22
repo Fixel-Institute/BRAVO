@@ -5,7 +5,7 @@ attrs==22.1.0
 autobahn==22.7.1
 Automat==20.2.0
 Babel==2.11.0
-backports.zoneinfo==0.2.1
+backports.zoneinfo==0.2.1;python_version<"3.9"
 certifi==2022.6.15
 cffi==1.15.1
 channels==4.0.0

@@ -1,0 +1,16 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "BRAVO Server",
+            "type": "shell",
+            "command": "sudo /etc/init.d/mysql start; ${cwd}/Server/startServer.sh"
+        },
+        {
+            "label": "Build Sphinx Doc",
+            "type": "shell",
+            "command": "cd ${cwd}/docs; source ${cwd}/Server/venv/bin/activate; make html;",
+            "problemMatcher": []
+        }
+    ]
+}
