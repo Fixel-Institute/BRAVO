@@ -48,10 +48,6 @@ class BRAVOPlatformRequest:
         # Not Implemented in V2.0
         return 
             
-    def RequestBrainSenseStreamList(self, PatientID):
-        # TODO 
-        return 
-        
     def RequestBrainSenseSurveys(self, PatientID):
         form = {"id": PatientID}
         response = requests.post(self.__Server + "/api/queryBrainSenseSurveys", json.dumps(form), headers=self.__Headers)
@@ -61,13 +57,41 @@ class BRAVOPlatformRequest:
         else:
             raise Exception(f"Network Error: {response.status_code}")
         
-    def RequestBrainSenseStream(self, DeviceID, Timestamp):
-        # TODO 
-        return 
+    def RequestBrainSenseStreamList(self, PatientID):
+        form = {"id": PatientID, "requestOverview": True}
+        response = requests.post(self.__Server + "/api/queryBrainSenseStreaming", json.dumps(form), headers=self.__Headers)
+        if response.status_code == 200:
+            payload = response.json()
+            return payload
+        else:
+            raise Exception(f"Network Error: {response.status_code}")
         
-    def RequestIndefiniteStreaming(self, DeviceID, Timestamp):
-        # TODO 
-        return 
+    def RequestBrainSenseStream(self, PatientID, RecordingID):
+        form = {"id": PatientID, "recordingId": RecordingID, "requestData": True}
+        response = requests.post(self.__Server + "/api/queryBrainSenseStreaming", json.dumps(form), headers=self.__Headers)
+        if response.status_code == 200:
+            payload = response.json()
+            return payload
+        else:
+            raise Exception(f"Network Error: {response.status_code}")
+        
+    def RequestIndefiniteStreamList(self, PatientID):
+        form = {"id": PatientID, "requestOverview": True}
+        response = requests.post(self.__Server + "/api/queryIndefiniteStreaming", json.dumps(form), headers=self.__Headers)
+        if response.status_code == 200:
+            payload = response.json()
+            return payload
+        else:
+            raise Exception(f"Network Error: {response.status_code}")
+        
+    def RequestIndefiniteStream(self, PatientID, Timestamps, Devices):
+        form = {"id": PatientID, "timestamps": Timestamps, "devices": Devices, "requestData": True}
+        response = requests.post(self.__Server + "/api/queryIndefiniteStreaming", json.dumps(form), headers=self.__Headers)
+        if response.status_code == 200:
+            payload = response.json()
+            return payload
+        else:
+            raise Exception(f"Network Error: {response.status_code}")
         
     def RequestBrainSenseStimulationPSD(self, DeviceID, Timestamp, ChannelID):
         # TODO 
