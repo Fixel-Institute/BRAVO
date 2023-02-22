@@ -2,9 +2,14 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "BRAVO Server",
+            "label": "BRAVO Server ASGI",
             "type": "shell",
-            "command": "sudo /etc/init.d/mysql start; ${cwd}/Server/startServer.sh"
+            "command": "cd ${cwd}/Server; sudo /etc/init.d/mysql start; sudo ${cwd}/Server/venv/bin/daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
+        },
+        {
+            "label": "BRAVO Server WSGI",
+            "type": "shell",
+            "command": "cd ${cwd}/Server; sudo /etc/init.d/mysql start; sudo ${cwd}/Server/venv/bin/python3 ${cwd}/Server/manage.py runserver 0:3001"
         },
         {
             "label": "Build Sphinx Doc",
