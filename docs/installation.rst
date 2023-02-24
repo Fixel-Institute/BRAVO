@@ -381,6 +381,13 @@ To start MySQL server, you should call ``sudo service mysql start`` manually to 
 Once the account is set-up and database is created. You can edit the ``Server/mysql.config`` file to 
 reflect actual accses credential for your database. 
 
+.. note:: 
+
+  Given how WSL handles permission. If your folder is cloned on your ``/mnt`` drive, you must modify the file's permission on Windows end to allow it 
+  to be read by Django. After you finish editing the config file, you must disable inheritance of permission from parent object. Then you remove all user
+  permission, leave only ``Authenticated User`` group with Read and Read/Execute Access only (not even write access). This will avoid 
+  [World Writable] permission error.
+
 Step 2: Server Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -469,10 +476,10 @@ bring up WSL Terminal, which will run the following pipeline to start BRAVO Serv
 for your needs. 
 
 .. code-block:: bash
-  
+
   cd ${cwd}/Server; 
   sudo /etc/init.d/mysql start; 
-  sudo $SCRIPT_DIR/venv/bin/daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application
+  sudo ${cwd}/Server/venv/bin/daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application
 
 Python Server Installation Guide (MacOS)
 ------------------------------------------------

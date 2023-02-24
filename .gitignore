@@ -293,7 +293,6 @@ chrome-user-data
 *.sublime-workspace
 .idea
 *.iml
-.vscode
 *.swp
 *.swo
 
@@ -310,7 +309,6 @@ packages/react-devtools-inline/dist
 packages/react-devtools-shell/dist
 packages/react-devtools-timeline/dist
 
-.DS_Store
 Client/package-lock.json
 
 Server/mysql.config

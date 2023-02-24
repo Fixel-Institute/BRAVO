@@ -873,10 +873,22 @@ class PlotlyRenderManager {
    */
   render() {
     if (this.fresh) {
-      Plotly.newPlot(this.divName, this.traces, this.layout, {responsive: true, locale: this.locale});
+      Plotly.newPlot(this.divName, this.traces, this.layout, {
+        responsive: true, locale: this.locale,
+        toImageButtonOptions: {
+          format: 'svg', // one of png, svg, jpeg, webp
+          scale: 1
+        }
+      });
       this.fresh = false;
     } else {
-      Plotly.react(this.divName, this.traces, this.layout, {responsive: true, locale: this.locale});
+      Plotly.react(this.divName, this.traces, this.layout, {
+        responsive: true, locale: this.locale,
+        toImageButtonOptions: {
+          format: 'svg', // one of png, svg, jpeg, webp
+          scale: 1
+        }
+      });
     }
   }
 
