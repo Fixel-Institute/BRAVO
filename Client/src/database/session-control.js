@@ -153,7 +153,7 @@ export const SessionController = (function () {
       return {dateStyle: "long"};
     } else if (type == "DateNumeric") {
       return {year: 'numeric', month: 'numeric', day: 'numeric'};
-    }  else {
+    } else {
       return {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'}
     }
   };

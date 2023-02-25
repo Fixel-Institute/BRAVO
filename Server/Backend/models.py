@@ -328,3 +328,11 @@ class ScheduledSurveys(models.Model):
     linkage_id = models.UUIDField(default=uuid.uuid4)
     report_id = models.UUIDField(default=uuid.uuid4)
     date = models.DateTimeField(default=timezone.now)
+
+class ProcessingQueue(models.Model):
+    owner = models.UUIDField(default=uuid.uuid4)
+    queue_id = models.UUIDField(default=uuid.uuid4)
+    type = models.CharField(default="decodeJSON", max_length=255)
+    datetime = models.DateTimeField(default=timezone.now)
+    state = models.CharField(default="InProgress", max_length=255)
+    descriptor = models.JSONField(default=dict)

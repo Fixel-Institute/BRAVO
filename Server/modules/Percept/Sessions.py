@@ -68,11 +68,14 @@ def retrievePatientInformation(PatientInformation, Institute, lookupTable=None, 
 
     return patient, newPatient
 
-def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", lookupTable=None, process=True):
+def saveCacheJSON(filename, rawBytes):
     secureEncoder = Fernet(key)
     with open(DATABASE_PATH + "cache" + os.path.sep + filename, "wb+") as file:
         file.write(secureEncoder.encrypt(rawBytes))
 
+def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=None, process=True):
+    secureEncoder = Fernet(key)
+    
     try:
         JSON = Percept.decodeEncryptedJSON(DATABASE_PATH + "cache" + os.path.sep + filename, key)
     except:

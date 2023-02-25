@@ -1,7 +1,7 @@
 from django.urls import path
 from django.conf import settings
 
-from . import Auth, Session, Queries, Upload, UpdateRecordings, Surveys
+from . import Auth, Session, Queries, Upload, UpdateRecordings, Surveys, RealtimeUpdates
 
 urlpatterns = [
 	path('handshake', Auth.Handshake.as_view()),
@@ -26,6 +26,7 @@ urlpatterns = [
 	path('queryDatabaseInfo', Queries.QueryDatabaseInfo.as_view()),
 	path('queryPatients', Queries.QueryPatientList.as_view()),
 	path('queryPatientInfo', Queries.QueryPatientInfo.as_view()),
+	path('queryProcessingQueue', Queries.QueryProcessingQueue.as_view()),
 
 	path('queryTherapyHistory', Queries.QueryTherapyHistory.as_view()),
 	path('queryBrainSenseSurveys', Queries.QueryBrainSenseSurveys.as_view()),
@@ -56,4 +57,8 @@ urlpatterns = [
 	path('verifyRedcapLink', Surveys.RedcapVerification.as_view()),
 	path('surveySchedulerSetup', Surveys.SetupSurveyScheduler.as_view()),
 	path('surveySchedulerStatus', Surveys.SurveySchedulerStatus.as_view()),
+]
+
+websocket_urlpatterns = [
+    path("socket/notification", RealtimeUpdates.NotificationSystem.as_asgi()),
 ]

@@ -95,6 +95,41 @@ class QueryPatientInfo(RestViews.APIView):
             Patient["AvailableTags"] = Database.extractTags("Patient", request.user.email)
             return Response(status=200, data=Patient)
 
+class QueryProcessingQueue(RestViews.APIView):
+    """ Query current processing queue list
+
+    **POST**: ``/api/queryProcessingQueue``
+
+    Returns:
+      Response Code 200.
+      Response Body contains list of processing queue items owned by the request owner.
+    """
+
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        if "clearQueue" in request.data:
+            if request.data["clearQueue"] == "All":
+                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id).delete()
+            else:
+                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, state=request.data["clearQueue"]).delete()
+            return Response(status=200)
+        else:
+            queues = models.ProcessingQueue.objects.all()
+            data = []
+            for i in range(len(queues)):
+                if queues[i].owner == request.user.unique_user_id:
+                    data.append({
+                        "currentIndex": i,
+                        "taskId": queues[i].queue_id,
+                        "type": queues[i].type,
+                        "since": queues[i].datetime.timestamp(),
+                        "state": queues[i].state,
+                        "descriptor": queues[i].descriptor,
+                    })
+
+            return Response(status=200, data=data)
+
 class QueryTherapyHistory(RestViews.APIView):
     """ Query all therapy histories from desired patient.
 

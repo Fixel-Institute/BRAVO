@@ -14,31 +14,33 @@ Coded by www.creative-tim.com
 */
 
 import { useState, useEffect } from "react";
-
-// react-router components
 import { useLocation, Link, useNavigate } from "react-router-dom";
-
-// prop-types is a library for typechecking of props.
 import PropTypes from "prop-types";
 
 // @material-ui core components
 import { 
   AppBar,
   Avatar,
+  Dialog,
   Toolbar,
   Icon,
   IconButton,
   Menu,
-  MenuItem
+  MenuItem,
+  CircularProgress
 } from "@mui/material";
-import TranslateIcon from '@mui/icons-material/Translate';
-import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
+
+import {
+  Translate,
+  ChangeCircle,
+  PublishedWithChanges
+} from '@mui/icons-material';
 
 import MDBox from "components/MDBox";
 import MDInput from "components/MDInput";
 import MDBadge from "components/MDBadge";
-
 import Breadcrumbs from "components/Breadcrumbs";
+import ProcessingQueue from "components/ProcessingQueue";
 
 // Custom styles for DashboardNavbar
 import {
@@ -57,6 +59,8 @@ import MDTypography from "components/MDTypography";
 
 function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
   const navigate = useNavigate();
+  const [alert, setAlert] = useState(null);
+  const [queueState, setQueueState] = useState({queues: [], show: false})
   const [navbarType, setNavbarType] = useState();
   const [controller, dispatch] = usePlatformContext();
   const { miniSidenav, hideSidenav, transparentNavbar, darkMode, language } = controller;
@@ -69,19 +73,54 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
   }
 
   useEffect(() => {
+    SessionController.query("/api/queryProcessingQueue").then((response) => {
+      setQueueState({...queueState, queues: response.data, show: false});
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
+
+    let client = new WebSocket(SessionController.getServer().replace("http","ws") + "/socket/notification");
+    client.onerror = function() {
+      console.log('Connection Error');
+    };
+    client.onopen = () => {
+      client.send(JSON.stringify({
+        "Authorization": SessionController.getAuthToken()
+      }));
+    };
+    client.onclose = () => {
+      console.log('Connection Closed');
+    };
+
+    client.onmessage = (event) => {
+      let content = JSON.parse(event.data);
+      if (content["Notification"] === "QueueUpdate") {
+        if (content["UpdateType"] === "JobCompletion") {
+          setQueueState(currentState => {
+            for (let i in currentState.queues) {
+              if (currentState.queues[i].taskId == content["TaskID"]) {
+                currentState.queues[i].state = content["State"];
+              }
+            }
+            return {...currentState};
+          });
+        }
+      }
+      
+    };
+
+    return () => {
+      client.close();
+    }
+  }, []);
+
+  useEffect(() => {
     // Setting the navbar type
     if (fixedNavbar) {
       setNavbarType("sticky");
     } else {
       setNavbarType("static");
     }
-    
-    // A function that sets the transparent state of the navbar.
-    /*
-    handleTransparentNavbar();
-    window.addEventListener("scroll", handleTransparentNavbar);
-    return () => window.removeEventListener("scroll", handleTransparentNavbar);
-    */
   }, [dispatch, fixedNavbar]);
 
   const handleHideSidenav = () => {
@@ -154,9 +193,8 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       sx={{ mt: 2 }}
     >
       {["English","中文"].map((lang) => (
-
         <MenuItem key={lang} onClick={() => setLanguage(lang)}>
-          <Icon sx={{ mr: 1 }}><ChangeCircleIcon/></Icon>
+          <Icon sx={{ mr: 1 }}><ChangeCircle/></Icon>
           <MDTypography variant="button" fontWeight="regular" color="text">
             {lang}
           </MDTypography>
@@ -164,6 +202,30 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       ))}
     </Menu>
   );
+
+  const getProcessingQueue = () => {
+    setQueueState({...queueState, show: true})
+  };
+
+  const clearQueue = (type) => {
+    if (type == "All") {
+      setQueueState({...queueState, queues:[], show: false});
+    } else if (type == "Complete") {
+      SessionController.query("/api/queryProcessingQueue", {
+        clearQueue: "Complete",
+      }).then((response) => {
+        if (response.status == 200) {
+          setQueueState(currentState => {
+            currentState.queues = currentState.queues.filter((item) => item.state != "Complete");
+            console.log(currentState.queues)
+            return {...currentState};
+          });
+        }
+      }).catch((error) => {
+        SessionController.displayError(error,setAlert);
+      })
+    }
+  };
 
   // Styles for the navbar icons
   const iconsStyle = ({ palette: { dark, white, text }, functions: { rgba } }) => ({
@@ -184,6 +246,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       color="inherit"
       sx={(theme) => navbar(theme, { transparentNavbar, absolute, light, darkMode })}
     >
+      {alert}
       <Toolbar sx={(theme) => navbarContainer(theme)}>
         <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
           <Breadcrumbs icon="home" title={route[route.length - 1]} route={route} light={light} />
@@ -206,21 +269,28 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
         </MDBox>
         {isMini ? null : (
           <MDBox sx={(theme) => navbarRow(theme, { isMini })}>
-            <MDBox pr={1}>
-              
-            </MDBox>
+            <MDBox pr={1}/>
             <MDBox color={light ? "white" : "inherit"}>
               <IconButton
                 size="small"
                 disableRipple
                 color="inherit"
                 sx={navbarIconButton}
-                aria-controls="notification-menu"
+                variant="contained"
+                onClick={(event) => getProcessingQueue()}
+              >
+                {queueState.queues.filter((item) => item.state === "InProgress").length > 0 ? <CircularProgress color={"info"} fontSize="large" /> : <PublishedWithChanges color={"info"} fontSize="large" />}
+              </IconButton>
+              <IconButton
+                size="small"
+                disableRipple
+                color="inherit"
+                sx={navbarIconButton}
                 aria-haspopup="true"
                 variant="contained"
                 onClick={(event) => handleOpenMenu(event, "LanguageMenu")}
               >
-                <TranslateIcon fontSize="large" />
+                <Translate fontSize="large" />
               </IconButton>
               <IconButton
                 size="small"
@@ -242,6 +312,18 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
           </MDBox>
         )}
       </Toolbar>
+      
+      <Dialog
+        open={queueState.show}
+        PaperProps={{
+          sx: {
+            minWidth: 700
+          }
+        }}
+        onClose={() => setQueueState({...queueState, show: false})}
+      >
+        <ProcessingQueue queues={queueState.queues} clearQueue={clearQueue}/>
+      </Dialog>
     </AppBar>
   );
 }

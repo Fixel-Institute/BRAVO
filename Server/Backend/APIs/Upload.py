@@ -93,33 +93,13 @@ class SessionUpload(RestViews.APIView):
 
         rawBytes = request.data["file"].read()
         if request.user.is_clinician:
-            
-            randomSalt = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
-            hashedKey = hashlib.sha256(randomSalt.encode("utf-8")).hexdigest()
-            processingQueue.put(hashedKey)
-            while processingQueue.queue[0] != hashedKey:
-                pass
-            
-            result = "Failed"
-            try:
-                result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes)
-            except Exception as e:
-                print(e)
-            hashedKey = processingQueue.get()
-            
-            if result == "Success":
-                data = dict()
-                if not patient == None:
-                    data["newPatient"] = Database.extractPatientTableRow(request.user, patient)
-                return Response(status=200, data=data)
-            else:
-                print(result)
-        
-        else:
-            randomSalt = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
-            hashedKey = hashlib.sha256(randomSalt.encode("utf-8")).hexdigest()
+            queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
+                "filename": request.data["file"].name
+            })
+            Sessions.saveCacheJSON(request.data["file"].name, rawBytes)
+            queueItem.save()
 
-            result = "Failed"
+        else:
             if "deviceId" in request.data:
                 AuthorityLevel = Database.verifyAccess(request.user, request.data["patientId"])
                 if not AuthorityLevel == 1:
@@ -137,39 +117,24 @@ class SessionUpload(RestViews.APIView):
                     device.authority_user = request.user.email
                     device.save()
                     patient.addDevice(str(device.deidentified_id))
-                
-                processingQueue.put(hashedKey)
-                while processingQueue.queue[0] != hashedKey:
-                    pass
-                try:
-                    result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes, device_deidentified_id=deviceId)
-                except Exception as e:
-                    print(e)
-                hashedKey = processingQueue.get()
+
+                queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
+                    "filename": request.data["file"].name,
+                    "device_deidentified_id": deviceId
+                })
                 
             else:
                 hashedEncrpytionKey = hashlib.sha256(request.data["decryptionKey"].encode("utf-8")).hexdigest()[:32]
                 passkey = base64.b64encode(hashedEncrpytionKey.encode("utf-8"))
-                table = Database.getDeidentificationLookupTable(request.user, passkey)
+                queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
+                    "filename": request.data["file"].name,
+                    "passkey": passkey
+                })
 
-                processingQueue.put(hashedKey)
-                while processingQueue.queue[0] != hashedKey:
-                    pass
-                try:
-                    result, patient, JSON = Sessions.processPerceptJSON(request.user, request.data["file"].name, rawBytes, lookupTable=table)
-                except Exception as e:
-                    print(e)
-                hashedKey = processingQueue.get()
+            Sessions.saveCacheJSON(request.data["file"].name, rawBytes)
+            queueItem.save()
 
-            if result == "Success":
-                data = dict()
-                if not patient == None:
-                    data["newPatient"] = Database.extractPatientTableRow(request.user, patient)
-                return Response(status=200, data=data)
-            else:
-                print(result)
-                
-        return Response(status=404)
+        return Response(status=200)
 
 class SessionRemove(RestViews.APIView):
     """ Delete JSON Session File.

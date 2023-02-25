@@ -14,7 +14,9 @@ import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import AuthenticationFailed
 
+from knox.auth import TokenAuthentication
 from knox.views import LoginView as KnoxLoginView
 from knox.views import LogoutView as KnoxLogoutView
 
@@ -30,6 +32,14 @@ with open(RESOURCES + "/../codes.json", "r") as file:
 import re
 def validateEmail(email):
     return re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', email)
+
+def ValidateAuthToken(token):
+    try:
+        knoxAuth = TokenAuthentication()
+        user, _ = knoxAuth.authenticate_credentials(token.encode())
+        return user
+    except AuthenticationFailed:
+        return None
 
 class UserRegister(KnoxLoginView):
     """ User Registration (Web Account Only).

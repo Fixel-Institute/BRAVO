@@ -36,6 +36,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
+DATASERVER_PATH = os.environ.get('DATASERVER_PATH')
+os.makedirs(DATASERVER_PATH + "cache", exist_ok=True)
+os.makedirs(DATASERVER_PATH + "imaging", exist_ok=True)
+os.makedirs(DATASERVER_PATH + "sessions", exist_ok=True)
+os.makedirs(DATASERVER_PATH + "recordings", exist_ok=True)
+
 # SECURITY WARNING: don't run with debug turned on in production!
 MODE = os.environ.get('MODE')
 if not MODE == "PRODUCTION":
