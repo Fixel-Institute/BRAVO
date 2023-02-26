@@ -40,15 +40,35 @@ class NotificationSystem(AsyncWebsocketConsumer):
 
                 # Root User Broadcasting Messages
                 if token == os.environ["ENCRYPTION_KEY"]:
-                    await self.channel_layer.group_send("BroadcastChannel", {
-                        "type": "broadcast_queue_complete",
-                        "message": {
-                            "UserID": request["TaskUser"],
-                            "TaskID": request["TaskID"],
-                            "State": request["State"],
-                            "Message": request["Message"],
-                        }
-                    })
+                    if "PersistentConnection" in request.keys():
+                        await self.channel_layer.group_add("ProcessingQueueManager", self.channel_name)
+                        return
+
+                    if request["NotificationType"] == "RequestProcessing":
+                        await self.channel_layer.group_send("ProcessingQueueManager", {
+                            "type": "request_processing_queue",
+                            "message": {}
+                        })
+
+                    elif request["NotificationType"] == "NewPatient":
+                        await self.channel_layer.group_send("BroadcastChannel", {
+                            "type": "broadcast_new_patient",
+                            "message": {
+                                "UserID": request["TaskUser"],
+                                "NewPatient": request["NewPatient"],
+                            }
+                        })
+
+                    elif request["NotificationType"] == "TaskComplete":
+                        await self.channel_layer.group_send("BroadcastChannel", {
+                            "type": "broadcast_queue_complete",
+                            "message": {
+                                "UserID": request["TaskUser"],
+                                "TaskID": request["TaskID"],
+                                "State": request["State"],
+                                "Message": request["Message"],
+                            }
+                        })
                     
                     return
 
@@ -64,8 +84,13 @@ class NotificationSystem(AsyncWebsocketConsumer):
             if self.scope["authorization"]:
                 if self.scope["user"] == "LocalAdmin":
                     print(request)
+    
+    async def request_processing_queue(self, event):
+        await self.send(text_data=json.dumps({
+            "Notification": "ProcessQueue",
+        }))
 
-    # Broadcast Configurations
+    # Broadcast Queue Compeltion
     async def broadcast_queue_complete(self, event):
         if "UserID" in event["message"]:
             if str(self.scope["user"].unique_user_id) == event["message"]["UserID"]:
@@ -77,6 +102,21 @@ class NotificationSystem(AsyncWebsocketConsumer):
                     "Message": event["message"]["Message"],
                 }))
 
+            await self.send(text_data=json.dumps({
+                "Notification": "QueueUpdate",
+                "UpdateType": "QueueReduced",
+            }))
+        pass
+
+    # Broadcast New Patient Table
+    async def broadcast_new_patient(self, event):
+        if "UserID" in event["message"]:
+            if str(self.scope["user"].unique_user_id) == event["message"]["UserID"]:
+                await self.send(text_data=json.dumps({
+                    "Notification": "PatientTableUpdate",
+                    "UpdateType": "NewPatient",
+                    "NewPatient": event["message"]["NewPatient"],
+                }))
         pass
 
     # Broadcast Streams

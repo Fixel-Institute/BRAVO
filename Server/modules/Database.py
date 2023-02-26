@@ -185,7 +185,7 @@ def extractPatientTableRow(user, patient):
     info["LastName"] = patient.getPatientLastName(key)
     info["Diagnosis"] = patient.diagnosis
     info["MRN"] = patient.getPatientMRN(key)
-    info["DOB"] = patient.birth_date
+    info["DOB"] = patient.birth_date.timestamp()
     info["Institute"] = patient.institute
     info["Tags"] = patient.tags
     info["DaysSinceImplant"] = []
@@ -199,10 +199,8 @@ def extractPatientTableRow(user, patient):
             patient.save()
             continue
 
-        if not (user.is_admin or user.is_clinician):
-            device = models.PerceptDevice.objects.filter(deidentified_id=id).first()
-            if device.device_name == "":
-                device.device_name = id
+        if device.device_name == "":
+            device.device_name = id
 
         daysSinceImplant = np.round((datetime.now(tz=pytz.utc) - device.implant_date).total_seconds() / (3600*24))
         if device.device_name == "":

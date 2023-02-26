@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 
 import {
   Card,
@@ -88,6 +88,36 @@ export default function DashboardOverview() {
         setFilteredPatients(response.data);
       }
     });
+    
+    let client = new WebSocket(SessionController.getServer().replace("http","ws") + "/socket/notification");
+    client.onerror = function() {
+      console.log('Connection Error');
+    };
+    client.onopen = () => {
+      client.send(JSON.stringify({
+        "Authorization": SessionController.getAuthToken()
+      }));
+    };
+    client.onclose = () => {
+      console.log('Connection Closed');
+    };
+
+    let currentPatientList = [];
+    client.onmessage = (event) => {
+      let content = JSON.parse(event.data);
+      if (content["Notification"] === "PatientTableUpdate") {
+        if (content["UpdateType"] === "NewPatient") {
+          setPatients(currentPatients => {
+            return [content["NewPatient"], ...currentPatients];
+          });
+        }
+      }
+    };
+
+    return () => {
+      client.close();
+    }
+
   }, []);
 
   const handlePatientFilter = (event) => {
@@ -180,10 +210,8 @@ export default function DashboardOverview() {
           </MDBox>
         </Card>
       </MDBox>
-
-      <Dialog open={Boolean(uploadInterface)} onClose={() => setUploadInterface(null)}>
-        <UploadDialog deidentified={!user.Clinician} onUpdate={onNewPatient} onCancel={() => setUploadInterface(null)} />
-      </Dialog>
+              
+      <UploadDialog show={Boolean(uploadInterface)} deidentified={!user.Clinician} onCancel={() => setUploadInterface(null)} />
     </DatabaseLayout>
   );
 };

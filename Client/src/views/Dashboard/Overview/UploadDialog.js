@@ -1,7 +1,8 @@
-import { createRef, useState } from "react";
+import { createRef, useState, memo } from "react";
 
 import {
   Grid,
+  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -18,7 +19,7 @@ import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
 import { dictionary, dictionaryLookup } from "assets/translation";
 
-export default function UploadDialog({deidentified, onUpdate, onCancel}) {
+function UploadDialog({show, deidentified, onCancel}) {
   const [controller, dispatch] = usePlatformContext();
   const { user, language } = controller;
 
@@ -40,17 +41,23 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
       myDropzone.on("processing", function() {
         this.options.autoProcessQueue = true;
       });
-      myDropzone.on("sending", function(file, xhr, formData) { 
+      myDropzone.on("sendingmultiple", function(file, xhr, formData) {
         formData.append("deviceId", response.data.deviceID);
         formData.append("patientId", response.data.newPatient.ID);
       });
       myDropzone.on("success", function(file, response) {
         this.removeFile(file);
       });
+      myDropzone.on("successmultiple", function(file, response) {
+        if (myDropzone.files.length > 0) {
+          myDropzone.processQueue();
+        }
+      });
       myDropzone.on("complete", function(file, response) {
         if (myDropzone.getUploadingFiles().length === 0 && myDropzone.getQueuedFiles().length === 0) {
-          onUpdate(newPatient);
-          onCancel();
+          SessionController.query("/api/requestProcessing").then((response) => {
+            if (myDropzone.getRejectedFiles().length === 0) onCancel();
+          });
         }
       });
       myDropzone.processQueue();
@@ -63,7 +70,7 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
   const uploadSessions = () => {
     const myDropzone = dropzoneRef.current.dropzone;
     myDropzone.on("processing", function() {
-      this.options.autoProcessQueue = true;
+      this.options.autoProcessQueue = false;
     });
 
     if (batchUpload) {
@@ -71,13 +78,20 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
         formData.append("decryptionKey", decryptionKey);  
       });
     }
+
     myDropzone.on("success", function(file, response) {
       this.removeFile(file);
     });
+    myDropzone.on("successmultiple", function(file, response) {
+      if (myDropzone.files.length > 0) {
+        myDropzone.processQueue();
+      }
+    });
     myDropzone.on("complete", function(file, response) {
       if (myDropzone.getUploadingFiles().length === 0 && myDropzone.getQueuedFiles().length === 0) {
-        onUpdate({Refresh: true});
-        onCancel();
+        SessionController.query("/api/requestProcessing").then((response) => {
+          if (myDropzone.getRejectedFiles().length === 0) onCancel();
+        });
       }
     });
     myDropzone.processQueue();
@@ -86,6 +100,7 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
   const dropzoneRef = createRef();
 
   return <>
+  <Dialog open={show} onClose={onCancel}>
     <MDBox px={2} pt={2}>
       <MDTypography variant="h5">
         {deidentified ? dictionary.SessionUpload.ResearchTitle[language] : dictionary.SessionUpload.ClinicTitle[language]} 
@@ -168,9 +183,10 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
             acceptedFiles: ".json",
             autoDiscover: false,
             autoProcessQueue: false,
-            uploadMultiple: false,
+            uploadMultiple: true,
             headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
-            parraleleupload: 1,
+            parallelUploads: 50,
+            maxFiles: batchUpload ? 2000 : 50
           }} ref={dropzoneRef}>
           </DropzoneUploader>
         </MDBox>
@@ -185,9 +201,10 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
             acceptedFiles: ".json",
             autoDiscover: false,
             autoProcessQueue: false,
-            uploadMultiple: false,
+            uploadMultiple: true,
             headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
-            parraleleupload: 1,
+            parallelUploads: 50,
+            maxFiles: 2000
           }} ref={dropzoneRef}>
           </DropzoneUploader>
         </MDBox>
@@ -197,5 +214,8 @@ export default function UploadDialog({deidentified, onUpdate, onCancel}) {
       <MDButton color="secondary" onClick={() => onCancel()}>Cancel</MDButton>
       <MDButton color="info" onClick={() => (deidentified && !batchUpload) ? uploadSessionsDeidentified() : uploadSessions()}>Upload</MDButton>
     </DialogActions>
+  </Dialog>
   </>
 }
+
+export default memo(UploadDialog);

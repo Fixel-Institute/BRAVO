@@ -47,9 +47,16 @@ export default function UploadDialog({availableDevices, onCancel}) {
     myDropzone.on("success", function(file, response) {
       this.removeFile(file);
     });
+    myDropzone.on("successmultiple", function(file, response) {
+      if (myDropzone.files.length > 0) {
+        myDropzone.processQueue();
+      }
+    });
     myDropzone.on("complete", function(file, response) {
       if (myDropzone.getUploadingFiles().length === 0 && myDropzone.getQueuedFiles().length === 0) {
-        onCancel();
+        SessionController.query("/api/requestProcessing").then((response) => {
+          if (myDropzone.getRejectedFiles().length === 0) onCancel();
+        });
       }
     });
     myDropzone.processQueue();
@@ -89,9 +96,10 @@ export default function UploadDialog({availableDevices, onCancel}) {
           acceptedFiles: ".json",
           autoDiscover: false,
           autoProcessQueue: false,
-          uploadMultiple: false,
+          uploadMultiple: true,
           headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
-          parraleleupload: 1,
+          parallelUploads: 50,
+          maxFiles: 50
         }} ref={dropzoneRef}>
         </DropzoneUploader>
       </MDBox>

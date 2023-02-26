@@ -7,6 +7,7 @@ import os, sys, pathlib
 import json
 import base64
 import datetime, pytz
+import websocket
 
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
 with open(RESOURCES + "/../codes.json", "r") as file:
@@ -88,17 +89,20 @@ class SessionUpload(RestViews.APIView):
     parser_classes = [RestParsers.MultiPartParser, RestParsers.FormParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        if not "file" in request.data:
-            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+        for key in request.data.keys():
+            if not (key.startswith("file") or key == "deviceId" or key == "patientId" or key == "decryptionKey"):
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
-        rawBytes = request.data["file"].read()
         if request.user.is_clinician:
-            queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
-                "filename": request.data["file"].name
-            })
-            Sessions.saveCacheJSON(request.data["file"].name, rawBytes)
-            queueItem.save()
-
+            for key in request.data.keys():
+                if key.startswith("file"):
+                    rawBytes = request.data[key].read()
+                    queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
+                        "filename": request.data[key].name
+                    })
+                    Sessions.saveCacheJSON(request.data[key].name, rawBytes)
+                    queueItem.save()
+            
         else:
             if "deviceId" in request.data:
                 AuthorityLevel = Database.verifyAccess(request.user, request.data["patientId"])
@@ -118,23 +122,44 @@ class SessionUpload(RestViews.APIView):
                     device.save()
                     patient.addDevice(str(device.deidentified_id))
 
-                queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
-                    "filename": request.data["file"].name,
-                    "device_deidentified_id": deviceId
-                })
-                
+                for key in request.data.keys():
+                    if key.startswith("file"):
+                        rawBytes = request.data[key].read()
+                        queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
+                            "filename": request.data[key].name,
+                            "device_deidentified_id": deviceId
+                        })
+                        Sessions.saveCacheJSON(request.data[key].name, rawBytes)
+                        queueItem.save()
+
             else:
                 hashedEncrpytionKey = hashlib.sha256(request.data["decryptionKey"].encode("utf-8")).hexdigest()[:32]
                 passkey = base64.b64encode(hashedEncrpytionKey.encode("utf-8"))
-                queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
-                    "filename": request.data["file"].name,
-                    "passkey": passkey
-                })
-
-            Sessions.saveCacheJSON(request.data["file"].name, rawBytes)
-            queueItem.save()
+                for key in request.data.keys():
+                    if key.startswith("file"):
+                        rawBytes = request.data[key].read()
+                        queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
+                            "filename": request.data[key].name,
+                            "passkey": passkey
+                        })
+                        Sessions.saveCacheJSON(request.data[key].name, rawBytes)
+                        queueItem.save()
 
         return Response(status=200)
+
+class RequestProcessingQueue(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        ws = websocket.WebSocket()
+        ws.connect("ws://localhost:3001/socket/notification")
+        ws.send(json.dumps({
+            "NotificationType": "RequestProcessing",
+            "Authorization": os.environ["ENCRYPTION_KEY"]
+        }))
+        ws.close()
+        return Response(status=200)
+
 
 class SessionRemove(RestViews.APIView):
     """ Delete JSON Session File.
