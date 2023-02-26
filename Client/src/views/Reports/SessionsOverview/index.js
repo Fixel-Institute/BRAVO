@@ -66,6 +66,7 @@ export default function SessionOverview() {
       id: patientID,
       sessionId: id,
     }).then((response) => {
+      console.log(response.data)
       setSessionOverview(response.data);
       setShowSessionLists(false);
     }).catch((error) => {
@@ -125,6 +126,11 @@ export default function SessionOverview() {
             <MDTypography variant="p" fontSize={15} style={{marginBottom: 0}}>
               {group.LeftHemisphere.Amplitude}{" "}{dictionary.FigureStandardUnit.mA[language]}{" "}
             </MDTypography>
+            {group.LeftHemisphere.AmplitudeThreshold ? (
+              <MDTypography variant="p" fontSize={15} style={{marginBottom: 0}}>
+                {"["}{group.LeftHemisphere.AmplitudeThreshold[0]}{"-"}{group.LeftHemisphere.AmplitudeThreshold[1]}{dictionary.FigureStandardUnit.mA[language]}{" ]"}
+              </MDTypography>
+            ) : null}
           </>}
         </> : null}
       </MDBox>
@@ -170,6 +176,11 @@ export default function SessionOverview() {
             <MDTypography variant="p" fontSize={15} style={{marginBottom: 0}}>
               {group.RightHemisphere.Amplitude}{" "}{dictionary.FigureStandardUnit.mA[language]}{" "}
             </MDTypography>
+            {group.RightHemisphere.AmplitudeThreshold ? (
+              <MDTypography variant="p" fontSize={15} style={{marginBottom: 0}}>
+                {"["}{group.RightHemisphere.AmplitudeThreshold[0]}{"-"}{group.RightHemisphere.AmplitudeThreshold[1]}{dictionary.FigureStandardUnit.mA[language]}{" ]"}
+              </MDTypography>
+            ) : null}
           </>}
         </> : null}
       </MDBox>
@@ -360,13 +371,13 @@ export default function SessionOverview() {
                         {dictionary.PatientOverview.DeviceTable.Electrodes[language]}: 
                       </MDTypography>
                     </Grid>
-                    {sessionOverview.Overall.LeadConfiguration.map((config, index) => (
-                      <Grid key={index} item sm={12} md={6}>
+                    {sessionOverview.Overall.LeadConfiguration.map((config, index) => {
+                      return <Grid key={index} item sm={12} md={6}>
                         <MDBox mb={0} lineHeight={1}>
                           <MDBox mb={0} lineHeight={1}>
                             <MDTypography variant="h6" fontSize={18} style={{marginBottom: 0}}>
-                              {dictionary.FigureStandardText[config.TargetLocation.split(" ")[0]][language]} {" "}
-                              {dictionary.BrainRegions[config.TargetLocation.split(" ")[1]][language]}
+                              {dictionaryLookup(dictionary.FigureStandardText, config.TargetLocation.split(" ")[0], language)} {" "}
+                              {dictionaryLookup(dictionary.BrainRegions, config.TargetLocation.split(" ")[1], language)}
                             </MDTypography>
                           </MDBox>
                           <MDBox mb={0} lineHeight={1}>
@@ -383,7 +394,7 @@ export default function SessionOverview() {
                           </MDBox>
                         </MDBox>
                       </Grid>
-                    ))}
+                    })}
                   </Grid>
                 </Grid>
 

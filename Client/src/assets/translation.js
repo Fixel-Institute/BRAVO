@@ -1053,6 +1053,10 @@ export const dictionary = {
       en: "Globus Pallius Internus",
       zh: "内苍白球"
     },
+    Other: {
+      en: "Other",
+      zh: "Other"
+    }
   },
   FigureStandardText: {
     Frequency: {
