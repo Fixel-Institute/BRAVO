@@ -143,8 +143,6 @@ def queryTherapyHistory(user, patientUniqueID, authority):
                     else:
                         TherapyChangeData["therapy"].append(BriefTherapy)
 
-            print(len(TherapyChangeData["therapy"]))
-            print(len(TherapyChangeData["date_of_change"]))
             TherapyHistoryContext.append(TherapyChangeData)
 
     return TherapyHistoryContext
@@ -205,6 +203,7 @@ def queryTherapyConfigurations(user, patientUniqueID, authority, therapyType="Pa
         deviceName = device.device_name
         if deviceName == "":
             deviceName = device.getDeviceSerialNumber(key)
+
         for therapy in TherapyHistoryObjs:
             TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": deviceName, "DeviceLocation": device.device_location}
             TherapyInfo["TherapyDate"] = therapy.therapy_date.timestamp()
@@ -410,11 +409,11 @@ def extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveCon
                         ContactName, ContactID = Percept.reformatElectrodeDef(contact["Electrode"])
                         if not ContactName == "CAN" or len(therapy['Therapy'][hemisphere]['Channel']) == 2:
                             contact["Electrode"] = ContactName + ContactPolarity
-        key = str(therapy["TherapyDate"]) + "_" + therapy["Therapy"]["GroupId"] + "_" + therapy["TherapyType"]
+        key = str(therapy["TherapyDate"]) + "_" + therapy["Therapy"]["GroupId"] + "_" + therapy["TherapyType"] + "_" + TherapyConfigurations[nConfig]["DeviceID"]
         if not key in existingGroups:
             TherapyData[int(therapy["TherapyDate"])].append(therapy)
             existingGroups.append(key)
-
+            
     for key in TherapyData.keys():
         TherapyData[key] = sorted(TherapyData[key], key=lambda therapy: therapy["Overview"]["GroupName"])
 
