@@ -28,8 +28,6 @@ export default function ProcessingQueue({queues, clearQueue}) {
   const [ context, dispatch ] = usePlatformContext();
   const { language } = context;
 
-  console.log(queues)
-
   return <MDBox style={{
     minHeight: 500
   }}>
@@ -71,7 +69,7 @@ export default function ProcessingQueue({queues, clearQueue}) {
         </TableHead>
         <TableBody>
           {queues.map((queue) => {
-            return <TableRow key={queue.descriptor.filename}>
+            return <TableRow key={queue.taskId}>
               <TableCell>
                 <MDTypography variant="p" align="center" fontSize={9}>
                   {queue.descriptor.filename}

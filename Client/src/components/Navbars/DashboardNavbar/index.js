@@ -104,9 +104,13 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
             }
             return {...currentState};
           });
+        } else if (content["UpdateType"] === "NewJob") {
+          setQueueState(currentState => {
+            currentState.queues.push(content["NewJob"]);
+            return {...currentState};
+          });
         }
       }
-      
     };
 
     return () => {
@@ -204,7 +208,11 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
   );
 
   const getProcessingQueue = () => {
-    setQueueState({...queueState, show: true})
+    SessionController.query("/api/queryProcessingQueue").then((response) => {
+      setQueueState({...queueState, queues: response.data, show: true});
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
   };
 
   const clearQueue = (type) => {
