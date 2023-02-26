@@ -44,7 +44,7 @@ export default function SessionOverview() {
     SessionController.query("/api/querySessionOverview", {
       id: patientID
     }).then((response) => {
-      setAvailableSessions(response.data.AvailableSessions)
+      setAvailableSessions(response.data.AvailableSessions.sort((a,b) => b.SessionTimestamp - a.SessionTimestamp))
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
     });
