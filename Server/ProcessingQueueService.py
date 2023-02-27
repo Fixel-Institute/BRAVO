@@ -28,6 +28,7 @@ def processJSONUploads():
             if not models.ProcessingQueue.objects.filter(state="InProgress", queue_id=queue.queue_id).exists():
                 continue
             
+            print(f"Start Processing {queue.descriptor['filename']}")
             newPatient = None
             ErrorMessage = ""
             ProcessingResult = ""
@@ -46,6 +47,7 @@ def processJSONUploads():
                 ErrorMessage = str(e)
                 print(ErrorMessage)
 
+            print(f"End Processing {queue.descriptor['filename']}")
             if ProcessingResult == "Success":
                 queue.state = "Complete"
                 queue.save()
@@ -81,6 +83,7 @@ def on_message(ws, message):
     processJSONUploads()
 
 if __name__ == '__main__':
+    processJSONUploads()
     while True:
         wsapp = websocket.WebSocketApp("ws://localhost:3001/socket/notification",
             on_open=on_open,
