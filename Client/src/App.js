@@ -86,10 +86,14 @@ export default function App() {
 
   useEffect(() => {
     if (user.expireAt) {
+      setContextState(dispatch, "sessionState", "active");
+      SessionController.setSession("sessionState", "active");
+      
       let authWatchdog = setInterval(() => {
         const now = new Date();
         if (new Date(user.expireAt) < now) {
-          console.log("Expired")
+          setContextState(dispatch, "sessionState", "expired");
+          SessionController.setSession("sessionState", "expired");
         }
       }, 1000);
   

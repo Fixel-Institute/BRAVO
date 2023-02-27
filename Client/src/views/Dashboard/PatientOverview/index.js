@@ -22,8 +22,6 @@ import {
 
 import { createFilterOptions } from "@mui/material/Autocomplete";
 
-import CreatableSelect from 'react-select/creatable';
-
 import BoltIcon from '@mui/icons-material/Bolt';
 import PollIcon from '@mui/icons-material/Poll';
 import SensorsIcon from '@mui/icons-material/Sensors';

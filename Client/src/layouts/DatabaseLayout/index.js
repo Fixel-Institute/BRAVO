@@ -8,9 +8,11 @@ import MuiAlertDialog from "components/MuiAlertDialog";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
+import { dictionary, dictionaryLookup } from "assets/translation";
 
 export default function DatabaseLayout({children}) {
   const [controller, dispatch] = usePlatformContext();
+  const { language, sessionState } = controller;
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -19,19 +21,21 @@ export default function DatabaseLayout({children}) {
   useEffect(() => {
     SessionController.handShake().then((state) => {
       if (!state) {
-        const redirectHomepage = () => {
-          setContextState(dispatch, "user", {});
-          setContextState(dispatch, "patientID", null);
-          navigate("/index", {replace: false});
-        };
+        SessionController.nullifyUser();
+        setContextState(dispatch, "user", {});
+        setContextState(dispatch, "patientID", null);
+        
+        const handleTimeout = () => {
+          navigate("/", {replace: false});
+        }
+
         setAlert(
-          <MuiAlertDialog title={"ERROR"} message={"Connection Timed-out"}
-            handleClose={redirectHomepage} 
-            handleConfirm={redirectHomepage}/>
-        );
+          <MuiAlertDialog title={"ERROR"} message={dictionaryLookup(dictionary.ErrorMessage, "CONNECTION_TIMEDOUT", language)}
+            handleClose={handleTimeout} 
+            handleConfirm={handleTimeout}/>)
       }
-    })
-  }, [pathname]);
+    });
+  }, [pathname, sessionState]);
 
   return <>
     <DashboardLayout>

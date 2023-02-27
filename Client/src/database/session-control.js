@@ -140,7 +140,7 @@ export const SessionController = (function () {
   };
 
   const setSession = (type, value) => {
-    query("/api/updateSession", {[type]: value});
+    query("/api/updateSession", {[type]: value}).catch((error) => console.log(error));
     session[type] = value;
     session["lastActive"] = new Date().getTime();
     localStorage.setItem("sessionContext", JSON.stringify(session));

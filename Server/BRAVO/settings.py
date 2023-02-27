@@ -122,8 +122,8 @@ REST_FRAMEWORK = {
 }
 
 REST_KNOX = {
-    "TOKEN_TTL": datetime.timedelta(minutes=30),
-    "AUTO_REFRESH": True
+    "TOKEN_TTL": datetime.timedelta(hours=1),
+    "AUTO_REFRESH": False
 }
 
 ASGI_APPLICATION = 'BRAVO.asgi.application'
