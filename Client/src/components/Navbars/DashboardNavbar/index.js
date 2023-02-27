@@ -147,8 +147,15 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       setContextState(dispatch, "patientID", null);
       navigate("/", {replace: false});
     }).catch((error) => {
-      console.log(error)
-    })
+      if (error.response.status == 401) {
+        SessionController.nullifyUser();
+        setContextState(dispatch, "user", {});
+        setContextState(dispatch, "patientID", null);
+        navigate("/", {replace: false});
+      } else {
+        console.log(error)
+      }
+    });
   };
 
   // Render the notifications menu
