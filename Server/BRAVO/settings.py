@@ -60,7 +60,7 @@ else:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-ALLOWED_HOSTS = ['localhost', os.environ.get('SERVER_ADDRESS')]
+ALLOWED_HOSTS = ['localhost', os.environ.get('SERVER_ADDRESS'), "uf-bravo.jcagle.solutions"]
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000", 'https://uf-bravo.jcagle.solutions', os.environ.get('CLIENT_ADDRESS')]
 CORS_ALLOW_HEADERS = [
     'content-type',
