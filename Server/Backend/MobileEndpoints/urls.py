@@ -3,7 +3,7 @@ from django.conf import settings
 
 from knox import views as KnoxViews
 
-from . import Wearable, Auth
+from . import Wearable, Auth, Speech
 
 urlpatterns = [
 	path('auth/login', Auth.UserLogin.as_view()),
@@ -16,7 +16,7 @@ urlpatterns = [
 	path('wearable/verifyDevicePairing', Wearable.VerifyPairing.as_view()),
 
 	path('wearable/uploadRecording', Wearable.UploadRecording.as_view()),
-
+	path('speech/uploadRecording', Speech.UploadRecording.as_view()),
 ]
 
 websocket_urlpatterns = [
