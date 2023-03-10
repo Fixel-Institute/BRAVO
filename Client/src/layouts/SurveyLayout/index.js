@@ -29,7 +29,7 @@ export default function SurveyLayout({viewOnly, children}) {
 
           const handleTimeout = () => {
             navigate("/", {replace: false});
-          }
+          };
 
           setAlert(
             <MuiAlertDialog title={"ERROR"} message={dictionaryLookup(dictionary.ErrorMessage, "CONNECTION_TIMEDOUT", language)}

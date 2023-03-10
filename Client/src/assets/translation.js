@@ -455,6 +455,10 @@ export const dictionary = {
         en: "Continuous Stimulation",
         zh: "持续刺激"
       },
+      ImpedanceTable: {
+        en: "Electrode Impedance State",
+        zh: "电极阻抗记录"
+      },
     },
     Figure: {
       TherapyChangeLog: {
@@ -464,6 +468,10 @@ export const dictionary = {
       TherapyGroup: {
         en: "Therapy Group",
         zh: "疗法设置"
+      },
+      ImpedanceHistory: {
+        en: "Impedance History",
+        zh: "Impedance History"
       },
     }
   },

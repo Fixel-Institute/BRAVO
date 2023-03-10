@@ -162,6 +162,7 @@ export const SessionController = (function () {
     if (Object.keys(user).length === 0) {
       return false;
     }
+    
     try {
       await query("/api/handshake");
       return true;

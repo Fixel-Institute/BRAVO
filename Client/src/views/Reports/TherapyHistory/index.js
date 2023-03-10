@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import {
   Box,
+  Backdrop,
   IconButton,
   Accordion,
   AccordionSummary,
@@ -14,6 +15,8 @@ import {
   TableHead,
   TableBody,
   TableCell,
+  ToggleButtonGroup,
+  ToggleButton,
   Tooltip,
 } from "@mui/material"
 
@@ -27,6 +30,8 @@ import LoadingProgress from "components/LoadingProgress";
 
 import DatabaseLayout from "layouts/DatabaseLayout";
 import TherapyHistoryFigure from "./TherapyHistoryFigure";
+import ImpedanceHeatmap from "./ImpedanceHeatmap";
+import ImpedanceHistory from "./ImpedanceHistory";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
@@ -39,9 +44,11 @@ function TherapyHistory() {
   const [controller, dispatch] = usePlatformContext();
   const { patientID, language } = controller;
 
-  const [changeLogs, setChangeLogs] = React.useState({});
   const [data, setData] = React.useState({});
+  const [changeLogs, setChangeLogs] = React.useState({});
   const [therapyHistory, setTherapyHistory] = React.useState({});
+  const [impedanceLogs, setImpedanceLogs] = React.useState({});
+  const [impedanceMode, setImpedanceMode] = React.useState("Bipolar");
 
   const [alert, setAlert] = React.useState(null);
   const [activeTab, setActiveTab] = React.useState(null);
@@ -55,6 +62,8 @@ function TherapyHistory() {
       SessionController.query("/api/queryTherapyHistory", {id: patientID}).then((response) => {
         setChangeLogs(response.data.TherapyChangeLogs);
         setData(response.data.TherapyConfigurations);
+        setImpedanceLogs(response.data.Impedance);
+        console.log(response.data.Impedance)
         setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -179,6 +188,48 @@ function TherapyHistory() {
     const percent = cycling.OnDurationInMilliSeconds / (cycling.OnDurationInMilliSeconds + cycling.OffDurationInMilliSeconds) * 100;
     return `${percent.toFixed(1)}% (${(cycling.OnDurationInMilliSeconds/1000).toFixed(1) + " " + dictionary.Time.Seconds[language]} : ${(cycling.OffDurationInMilliSeconds/1000).toFixed(1) + " " + dictionary.Time.Seconds[language]})`;
   };
+
+  const onContactSelect = (point) => {
+    let dataToRender = {};
+    if (point.data.xaxis === "x") {
+      // This is Left Side
+      dataToRender.data = impedanceLogs.map((data) => {
+        try {
+          if (therapyHistory[activeDevice].Device != data.device) return null;
+          return {timestamps: data.session_date, value: impedanceMode === "Monopolar" ? data.log.Left[impedanceMode][point.y] : data.log.Left[impedanceMode][point.y][point.x]};
+        } catch (error) {
+          return null;
+        }
+      }).filter((value) => value);
+
+    } else {
+      // This is Right Side
+      dataToRender.data = impedanceLogs.map((data) => {
+        try {
+          if (therapyHistory[activeDevice].Device != data.device) return null;
+          return {timestamps: data.session_date, value: impedanceMode === "Monopolar" ? data.log.Left[impedanceMode][point.y] : data.log.Left[impedanceMode][point.y][point.x]};
+        } catch (error) {
+          return null;
+        }
+      }).filter((value) => value);
+    }
+
+    dataToRender.point = point;
+
+    setAlert(<>
+      <Backdrop
+        sx={{ color: '#FFFFFF', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={true}
+        onClick={() => setAlert(null)}
+      >
+        <Card>
+          <MDBox p={5} display={"flex"} alignItems={"center"} flexDirection={"column"} style={{minWidth: 800}}>
+            <ImpedanceHistory dataToRender={dataToRender} height={300} figureTitle={"Impedance History"} />
+          </MDBox>
+        </Card>
+      </Backdrop>
+    </>);
+  }
 
   return (
     <DatabaseLayout>
@@ -352,6 +403,48 @@ function TherapyHistory() {
               </Card>
             ) : null}
           </Grid>
+          {impedanceLogs.length > 0 ? (
+            <Grid item xs={12}>
+              <Card>
+                <Grid container spacing={1}>
+                  <Grid item xs={12}>
+                    <MDBox p={2} style={{display: "flex", justifyContent: "space-between"}}>
+                      <MDTypography variant="h5" fontWeight="bold" fontSize={24}>
+                        {dictionary.TherapyHistory.Table.ImpedanceTable[language]}
+                      </MDTypography>
+                      <ToggleButtonGroup
+                        color="info"
+                        value={impedanceMode}
+                        exclusive
+                        onChange={(event, value) => setImpedanceMode(value)}
+                      >
+                        <ToggleButton value="Bipolar">
+                          <MDTypography variant="p" fontWeight="bold" fontSize={15}>
+                            {"Bipolar"}
+                          </MDTypography>
+                        </ToggleButton>
+                        <ToggleButton value="Monopolar">
+                          <MDTypography variant="p" fontWeight="bold" fontSize={15}>
+                            {"Monopolar"}
+                          </MDTypography>
+                        </ToggleButton>
+                      </ToggleButtonGroup>
+                    </MDBox>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <MDBox p={2}>
+                      <ImpedanceHeatmap dataToRender={impedanceLogs.filter((log) => {
+                        if (Object.keys(therapyHistory).includes(activeDevice)) {
+                          return therapyHistory[activeDevice].Device == log.device;
+                        } 
+                        return false;
+                      })} logType={impedanceMode} onContactSelect={onContactSelect} height={600} figureTitle={dictionary.TherapyHistory.Table.ImpedanceTable[language]} />
+                    </MDBox>
+                  </Grid>
+                </Grid>
+              </Card>
+            </Grid>
+          ) : null}
         </Grid>
       </MDBox>
     </DatabaseLayout>

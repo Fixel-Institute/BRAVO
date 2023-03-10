@@ -148,10 +148,12 @@ class PlotlyRenderManager {
    * @param {Object} [options] - Axes Configuration Options
    * @param {bool} [options.sharex=false] - Each column share the same x-axis (default false)
    * @param {bool} [options.sharey=false] - Each row share the same y-axis (default false)
+   * @param {bool} [options.colSpacing=false] - Spacing between each subplots on the same row (default 0.02)
+   * @param {bool} [options.rowSpacing=false] - Spacing between each subplots on the same column (default 0.15)
    * 
    * @return {string[]} Array of subplots created, C-ordered. 
    */
-  subplots(row, col, options={sharex: false, sharey: false}) {
+  subplots(row, col, options={sharex: false, sharey: false, colSpacing: 0.02, rowSpacing: 0.15}) {
     this.ax = [];
 
     if (options.sharex) {
@@ -170,8 +172,8 @@ class PlotlyRenderManager {
     
     const colFraction = 1/col;
     const rowFraction = 1/row;
-    const colSpacing = colFraction*0.02;
-    const rowSpacing = rowFraction*0.15;
+    const colSpacing = colFraction*options.colSpacing;
+    const rowSpacing = rowFraction*options.rowSpacing;
     for (var i = 0; i < row; i++) {
       for (var k = 0; k < col; k++) {
         var xaxis = (options.sharex ? xAxesLabels[k] : xAxesLabels[i*col+k]);
