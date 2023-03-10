@@ -408,4 +408,21 @@ def processInput(argv):
             deviceObj.device_lead_configurations = LeadConfigurations
             deviceObj.save()
 
+      elif argv[2] == "Impedance":
+        if argv[3] == "All":
+          SessionFiles = models.PerceptSession.objects.all()
+        else:
+          SessionFiles = models.PerceptSession.objects.filter(device_deidentified_id=argv[3]).all()
+
+        for sessionFile in SessionFiles:
+          try:
+            JSON = Percept.decodeEncryptedJSON(sessionFile.session_file_path, key)
+          except:
+            print(sessionFile.session_file_path)
+            continue
+
+          Data = Percept.extractPatientInformation(JSON)
+          if "Impedance" in Data.keys():
+            models.ImpedanceHistory(impedance_record=Data["Impedance"], device_deidentified_id=sessionFile.device_deidentified_id, session_date=sessionFile.session_date).save()
+          
       return True

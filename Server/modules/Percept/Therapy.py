@@ -48,6 +48,20 @@ def saveTherapySettings(deviceID, therapyList, sessionDate, type, sourceFile):
 
     return NewTherapyFound
 
+def queryImpedanceHistory(user, patientUniqueID, authority):
+    ImpedanceHistory = list()
+    if not authority["Permission"]:
+        return ImpedanceHistory
+
+    availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
+    for device in availableDevices:
+        DeviceName = device.device_name
+        if DeviceName == "":
+            DeviceName = device.getDeviceSerialNumber(key)
+        ImpedanceLogs = models.ImpedanceHistory.objects.filter(device_deidentified_id=device.deidentified_id).order_by("session_date").all()
+        ImpedanceHistory.extend([{"session_date": log.session_date.timestamp(), "log": log.impedance_record, "device": DeviceName} for log in ImpedanceLogs])
+    return ImpedanceHistory
+
 def queryTherapyHistory(user, patientUniqueID, authority):
     """ Extract all therapy change logs.
 

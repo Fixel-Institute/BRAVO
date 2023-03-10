@@ -281,6 +281,9 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
         if BrainSenseEvent.saveBrainSenseEvents(deviceID.deidentified_id, JSON["DiagnosticData"]["LfpFrequencySnapshotEvents"], sessionUUID):
             NewDataFound = True
 
+    if "Impedance" in Data.keys():
+        models.ImpedanceHistory(impedance_record=Data["Impedance"], device_deidentification_id=deviceID.deidentified_id, session_date=SessionDate).save()
+
     if NewDataFound:
         os.rename(DATABASE_PATH + "cache" + os.path.sep + filename, session.session_file_path)
         session.save()

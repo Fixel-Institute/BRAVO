@@ -206,6 +206,11 @@ class TherapyHistory(models.Model):
     def extractTherapy(self):
         return self.therapy_details
 
+class ImpedanceHistory(models.Model):
+    device_deidentified_id = models.UUIDField(default=uuid.uuid4)
+    impedance_record = models.JSONField(default=dict, null=True)
+    session_date = models.DateTimeField(default=timezone.now)
+
 class PredictionModel(models.Model):
     recording_id = models.UUIDField(default=uuid.uuid4)
     recording_channel = models.CharField(default="", max_length=64)

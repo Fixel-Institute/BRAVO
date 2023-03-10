@@ -169,7 +169,8 @@ class QueryTherapyHistory(RestViews.APIView):
             TherapyChangeLogs = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
             TherapyConfigurations = Therapy.queryTherapyConfigurations(request.user, PatientID, Authority, therapyType="")
             TherapyConfigurations = Therapy.extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=TherapyChangeLogs, resolveConflicts=False)
-            return Response(status=200, data={"TherapyChangeLogs": TherapyChangeLogs, "TherapyConfigurations": TherapyConfigurations})
+            Impedance = Therapy.queryImpedanceHistory(request.user, PatientID, Authority)
+            return Response(status=200, data={"TherapyChangeLogs": TherapyChangeLogs, "TherapyConfigurations": TherapyConfigurations, "Impedance": Impedance})
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
