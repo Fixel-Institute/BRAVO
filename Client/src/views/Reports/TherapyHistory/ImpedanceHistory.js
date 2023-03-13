@@ -28,10 +28,10 @@ function ImpedanceHistory({dataToRender, height, figureTitle}) {
       fig.setYlabel(dictionaryLookup(dictionary.TherapyHistory.Figure, "Impedance", language), {fontSize: 15});
       fig.setTitle(dictionaryLookup(dictionary.TherapyHistory.Figure, "ImpedanceHistory", language));
     }
-    console.log(data)
+    
     fig.plot(data.data.map((item) => new Date(item.timestamps*1000)), data.data.map((item) => item.value), {
       type: 'scatter',
-      mode: 'lines',
+      mode: 'lines+markers',
       hovertemplate: "  %{x} <br>  %{y} <extra></extra>",
     });
 

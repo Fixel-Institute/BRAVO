@@ -473,6 +473,10 @@ export const dictionary = {
         en: "Impedance History",
         zh: "Impedance History"
       },
+      Impedance: {
+        en: "Impedance",
+        zh: "Impedance"
+      },
     }
   },
   BrainSenseSurvey: {

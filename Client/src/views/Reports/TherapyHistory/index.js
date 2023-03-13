@@ -5,6 +5,8 @@ import {
   Box,
   Backdrop,
   IconButton,
+  Dialog,
+  DialogContent,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -217,19 +219,20 @@ function TherapyHistory() {
     dataToRender.point = point;
 
     setAlert(<>
-      <Backdrop
+      <Dialog 
         sx={{ color: '#FFFFFF', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        PaperProps={{
+          sx: { minWidth: 800 }
+        }}
         open={true}
-        onClick={() => setAlert(null)}
+        onClose={() => setAlert(null)}
       >
-        <Card>
-          <MDBox p={5} display={"flex"} alignItems={"center"} flexDirection={"column"} style={{minWidth: 800}}>
-            <ImpedanceHistory dataToRender={dataToRender} height={300} figureTitle={"Impedance History"} />
-          </MDBox>
-        </Card>
-      </Backdrop>
+        <MDBox p={5} display={"flex"} alignItems={"center"} flexDirection={"column"} >
+          <ImpedanceHistory dataToRender={dataToRender} height={400} figureTitle={"Impedance History"} />
+        </MDBox>
+      </Dialog>
     </>);
-  }
+  } 
 
   return (
     <DatabaseLayout>
