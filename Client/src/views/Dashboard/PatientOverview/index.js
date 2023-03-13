@@ -43,7 +43,10 @@ import UploadDialog from "./UploadDialog";
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
 import { dictionary } from "assets/translation";
-import { AccessAlarm } from "@mui/icons-material";
+
+import {
+  experimentalRoutes
+} from "views/Experimental/plugins";
 
 const filter = createFilterOptions();
 
@@ -158,14 +161,13 @@ export default function PatientOverview() {
     {title: "SessionOverview", icon: <ArticleIcon/>, route: "/reports/session-overview"}
   ];
 
-  const experimentals = [
-    {title: "TherapeuticPrediction", icon: <BatchPredictionIcon/>, route: "/experimental/therapeutic-prediction"},
-    {title: "PatientEvents", icon: <TimelineIcon/>, route: "/experimental/patient-events"},
-    {title: "AdaptiveStimulation", icon: <FlashAutoIcon/>, route: "/experimental/adaptive"},
-    {title: "CircadianThreshold", icon: <AccessAlarm/>, route: "/experimental/circadian"},
-    {title: "ImageVisualization", icon: <PhotoIcon/>, route: "/experimental/visualize"},
-    {title: "WearableStream", icon: <WatchIcon/>, route: "/experimental/wearable"},
-  ];
+  const experimentals = experimentalRoutes.map((route) => {
+    return {
+      title: route.name, 
+      icon: route.icon,
+      route: route.route,
+    };
+  });
 
   return (
     <DatabaseLayout>
@@ -541,6 +543,9 @@ export default function PatientOverview() {
                       shadow="md"
                       borderRadius="lg"
                       variant="gradient"
+                      style={{
+                        background: "#544f4f"
+                      }}
                     >
                       <Icon fontSize="large">
                         {item.icon}

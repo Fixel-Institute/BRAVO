@@ -32,15 +32,6 @@ import IndefiniteStreaming from "views/Reports/IndefiniteStreaming";
 import ChronicBrainSense from "views/Reports/ChronicBrainSense";
 import SessionOverview from "views/Reports/SessionsOverview";
 
-import TherapeuticPrediction from "views/Experimental/TherapeuticPrediction";
-import MultipleSegmentAnalysis from "views/Experimental/MultipleSegmentAnalysis";
-import PatientEvents from "views/Experimental/PatientEvents";
-import AdaptiveStimulation from "views/Experimental/AdaptiveStimulation";
-import CircadianThreshold from "views/Experimental/CircadianThreshold";
-import ImageVisualization from "views/Experimental/ImageVisualization";
-import WearableStream from "views/Experimental/WearableStream";
-
-
 // Material Dashboard 2 React components
 import MDAvatar from "components/MDAvatar";
 
@@ -56,11 +47,9 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import PersonIcon from '@mui/icons-material/Person';
 import BiotechIcon from '@mui/icons-material/Biotech';
-import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
-import FlashAutoIcon from '@mui/icons-material/FlashAuto';
-import PhotoIcon from '@mui/icons-material/Photo';
-import WatchIcon from '@mui/icons-material/Watch';
 import { AccessAlarm, People, Article } from "@mui/icons-material";
+
+import { experimentalRoutes } from "views/Experimental/plugins";
 
 const routes = [
   {
@@ -170,69 +159,7 @@ const routes = [
     deidentified: true,
     icon: <BiotechIcon/>,
     collapse: [
-      {
-        name: "TherapeuticPrediction",
-        key: "therapeutic-prediction",
-        icon: <BatchPredictionIcon style={{color: "white", margin: 0, padding: 0}}/>,
-        route: "/experimental/therapeutic-prediction",
-        component: <TherapeuticPrediction />,
-        identified: true,
-        deidentified: true
-      },
-      {
-        name: "MultipleSegmentAnalysis",
-        key: "segment-analysis",
-        icon: <BatchPredictionIcon style={{color: "white", margin: 0, padding: 0}}/>,
-        route: "/experimental/segment-analysis",
-        component: <MultipleSegmentAnalysis />,
-        identified: true,
-        deidentified: true
-      },
-      {
-        name: "PatientEvents",
-        key: "patient-events",
-        icon: <TimelineIcon style={{color: "white", margin: 0, padding: 0}}/>,
-        route: "/experimental/patient-events",
-        component: <PatientEvents />,
-        identified: true,
-        deidentified: true
-      },
-      {
-        name: "AdaptiveStimulation",
-        key: "adaptive",
-        icon: <FlashAutoIcon style={{color: "white", margin: 0, padding: 0}}/>,
-        route: "/experimental/adaptive",
-        component: <AdaptiveStimulation />,
-        identified: true,
-        deidentified: true
-      },
-      {
-        name: "CircadianThreshold",
-        key: "circadian",
-        icon: <AccessAlarm style={{color: "white", margin: 0, padding: 0}}/>,
-        route: "/experimental/circadian",
-        component: <CircadianThreshold />,
-        identified: true,
-        deidentified: true
-      },
-      {
-        name: "ImageVisualization",
-        key: "visualize",
-        icon: <PhotoIcon style={{color: "white", margin: 0, padding: 0}}/>,
-        route: "/experimental/visualize",
-        component: <ImageVisualization />,
-        identified: true,
-        deidentified: true
-      },
-      {
-        name: "WearableStream",
-        key: "wearable",
-        icon: <WatchIcon style={{color: "white", margin: 0, padding: 0}}/>,
-        route: "/experimental/wearable",
-        component: <WearableStream />,
-        identified: true,
-        deidentified: true
-      },
+      ...experimentalRoutes
     ]
   },
   {
