@@ -241,7 +241,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                 contacts, hemisphere = Percept.reformatChannelName(channel)
                 for lead in leads:
                     if lead["TargetLocation"].startswith(hemisphere):
-                        data["Channels"].append({"Hemisphere": lead["TargetLocation"], "Contacts": contacts})
+                        data["Channels"].append({"Hemisphere": lead["TargetLocation"], "Contacts": contacts, "Type": lead["ElectrodeType"]})
                         if lead["ElectrodeType"].startswith("SenSight"):
                             data["ContactTypes"].append(["Ring","Segment A","Segment B","Segment C","Segment AB","Segment BC","Segment AC"])
                         else:
