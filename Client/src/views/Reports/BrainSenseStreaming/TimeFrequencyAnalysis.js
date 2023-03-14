@@ -17,11 +17,10 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
 
   const handleGraphing = (data) => {
     fig.clearData();
-    
+
     if (fig.fresh) {
-      var ax;
       if (data.Channels.length == 2) {
-        ax = fig.subplots(7, 1, {sharey: false, sharex: true});
+        let ax = fig.subplots(7, 1, {sharey: false, sharex: true});
 
         for (var i in data.Channels) {
           fig.setYlim([-200, 200], ax[0+i*3]);
@@ -45,7 +44,8 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
         fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Stimulation", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)})`, {fontSize: 15}, ax[6]);
         fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15}, ax[6]);
       } else {
-        ax = fig.subplots(4, 1, {sharey: false, sharex: true});
+        let ax = fig.subplots(4, 1, {sharey: false, sharex: true});
+        console.log(ax)
 
         for (var i in data.Channels) {
           fig.setYlim([-200, 200], ax[0+i*3]);
@@ -72,7 +72,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
     }
 
     if (data.Channels.length == 2) {
-      var ax = fig.getAxes();
+      let ax = fig.getAxes();
       for (var i in data.Channels) {
         var timeArray = Array(data[data.Channels[i]].RawData.length).fill(0).map((value, index) => new Date(data.Timestamp*1000 + 4*index));
         fig.plot(timeArray, data[data.Channels[i]].RawData, {
@@ -102,6 +102,8 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
         }
       }
     } else {
+      let ax = fig.getAxes();
+
       var timeArray = Array(data[data.Channels[0]].RawData.length).fill(0).map((value, index) => new Date(data.Timestamp*1000 + 4*index));
       fig.plot(timeArray, data[data.Channels[0]].RawData, {
         linewidth: 0.5,
@@ -130,6 +132,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
       }
     }
 
+    let ax = fig.getAxes();
     for (var stimulation of data.Stimulation) {
       var stimulationLineColor;
       if (stimulation.Name.endsWith("RIGHT")) {
