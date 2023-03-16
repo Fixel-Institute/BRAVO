@@ -142,7 +142,6 @@ function ChronicBrainSense() {
   }, [data]);
 
   const exportCurrentStream = () => {
-    console.log(data)
     var csvData = "Time,Power,Therapy,Amplitude,Device,Hemisphere";
     csvData += "\n";
 

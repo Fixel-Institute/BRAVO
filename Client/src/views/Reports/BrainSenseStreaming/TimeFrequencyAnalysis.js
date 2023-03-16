@@ -45,8 +45,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
         fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15}, ax[6]);
       } else {
         let ax = fig.subplots(4, 1, {sharey: false, sharex: true});
-        console.log(ax)
-
+        
         for (var i in data.Channels) {
           fig.setYlim([-200, 200], ax[0+i*3]);
           fig.setYlim([0, 100], ax[1+i*3]);

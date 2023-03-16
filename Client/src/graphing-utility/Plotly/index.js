@@ -177,7 +177,6 @@ class PlotlyRenderManager {
     const rowFraction = 1/row;
     const colSpacing = colFraction*options.colSpacing;
     const rowSpacing = rowFraction*options.rowSpacing;
-    console.log(options.rowSpacing)
     for (var i = 0; i < row; i++) {
       for (var k = 0; k < col; k++) {
         var xaxis = (options.sharex ? xAxesLabels[k] : xAxesLabels[i*col+k]);

@@ -65,7 +65,6 @@ function TherapyHistory() {
         setChangeLogs(response.data.TherapyChangeLogs);
         setData(response.data.TherapyConfigurations);
         setImpedanceLogs(response.data.Impedance);
-        console.log(response.data.Impedance)
         setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);

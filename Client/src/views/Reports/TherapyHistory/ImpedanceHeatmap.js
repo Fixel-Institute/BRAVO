@@ -142,7 +142,6 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    console.log(dataToRender)
     if (dataToRender.length > 0) handleGraphing(dataToRender[dataToRender.length-1]);
     else {
       fig.purge();
@@ -170,7 +169,6 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
     } else {
       plotly_singleclicked = true;
       updateTimeout = setTimeout(function() {
-        console.log(data)
         onContactSelect(data["points"][0]);
         plotly_singleclicked = false
       }, 300);

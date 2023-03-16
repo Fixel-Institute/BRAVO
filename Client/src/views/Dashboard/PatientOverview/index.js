@@ -110,8 +110,6 @@ export default function PatientOverview() {
   };
 
   const updatePatientInformation = () => {
-    console.log(editPatientInfo)
-    console.log(availableTags)
     SessionController.query("/api/updatePatientInformation", {
       updatePatientInfo: patientID,
       FirstName: editPatientInfo.FirstName,

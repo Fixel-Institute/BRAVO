@@ -66,7 +66,6 @@ export default function SessionOverview() {
       id: patientID,
       sessionId: id,
     }).then((response) => {
-      console.log(response.data)
       setSessionOverview(response.data);
       setShowSessionLists(false);
     }).catch((error) => {

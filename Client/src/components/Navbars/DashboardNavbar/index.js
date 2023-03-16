@@ -232,7 +232,6 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
         if (response.status == 200) {
           setQueueState(currentState => {
             currentState.queues = currentState.queues.filter((item) => item.state != "Complete");
-            console.log(currentState.queues)
             return {...currentState};
           });
         }
