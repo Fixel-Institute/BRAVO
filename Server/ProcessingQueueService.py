@@ -79,6 +79,13 @@ def processJSONUploads():
                 queue.state = "Error"
                 queue.save()
 
+def on_close(wsapp, event, state):
+    print("socket closed")
+
+def on_error(ws, error):
+    print("socket error")
+    print(error)
+
 def on_message(ws, message):
     processJSONUploads()
 
@@ -87,6 +94,8 @@ if __name__ == '__main__':
     while True:
         wsapp = websocket.WebSocketApp("ws://localhost:3001/socket/notification",
             on_open=on_open,
+            on_close=on_close,
+            on_error=on_error,
             on_message=on_message,
         )
         wsapp.run_forever()

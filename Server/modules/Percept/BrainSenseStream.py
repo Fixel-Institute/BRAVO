@@ -464,11 +464,11 @@ def mergeRealtimeStreamData(recordings):
     for i in range(1, len(recordings)):
         CurrentTime = recordings[i].recording_date.timestamp()
         BrainSenseData[i]["Time"] += CurrentTime
-        Timeskip = int(float(CurrentTime - CombinedData["Time"][-1])*250)
+        Timeskip = int((CurrentTime - CombinedData["Time"][-1]) * 250)
         for channel in CombinedData["Channels"]:
             CombinedData["Missing"][channel] = np.concatenate((CombinedData["Missing"][channel], np.ones(Timeskip), BrainSenseData[i]["Missing"][channel]))
             CombinedData[channel] = np.concatenate((CombinedData[channel], np.zeros(Timeskip), BrainSenseData[i][channel]))
-        CombinedData["Stimulation"] = np.concatenate((CombinedData["Stimulation"], np.ones((Timeskip, 2)), BrainSenseData[i]["Stimulation"]))
+        CombinedData["Stimulation"] = np.concatenate((CombinedData["Stimulation"], np.ones((Timeskip, 2))*CombinedData["Stimulation"][-1,:], BrainSenseData[i]["Stimulation"]))
         CombinedData["PowerBand"] = np.concatenate((CombinedData["PowerBand"], np.ones((Timeskip, 2)), BrainSenseData[i]["PowerBand"]))
         CombinedData["Time"] = np.arange(CombinedData["Stimulation"].shape[0]) / 250
     
