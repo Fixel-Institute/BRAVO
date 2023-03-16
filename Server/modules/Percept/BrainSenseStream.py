@@ -30,6 +30,7 @@ from utility.PythonUtility import *
 from Backend import models
 from modules import Database
 
+DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 key = os.environ.get('ENCRYPTION_KEY')
 
 def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
@@ -438,6 +439,56 @@ def queryRealtimeStreamData(user, device, timestamp, authority, cardiacFilter=Fa
         BrainSenseData["Info"] = recording.recording_info;
         RecordingID = recording.recording_id
     return BrainSenseData, RecordingID
+
+def mergeRealtimeStreamData(recordings):
+    BrainSenseData = []
+    Therapies = []
+    for recording in recordings:
+        BrainSenseData.append(Database.loadSourceDataPointer(recording.recording_datapointer))
+        Therapies.append(BrainSenseData[-1]["Therapy"])
+    
+    for Therapy in Therapies:
+        for side in ["Left", "Right"]:
+            if side in Therapy.keys():
+                Therapy[side]["UpperLimitInMilliAmps"] = 0
+                Therapy[side]["LowerLimitInMilliAmps"] = 0
+                
+    Therapies = uniqueList(Therapies)
+    if len(Therapies) > 1:
+        print(Therapies)
+        return False
+    
+    CombinedData = copy.deepcopy(BrainSenseData[0])
+    CurrentTime = recordings[0].recording_date.timestamp()
+    CombinedData["Time"] += CurrentTime
+    for i in range(1, len(recordings)):
+        CurrentTime = recordings[i].recording_date.timestamp()
+        BrainSenseData[i]["Time"] += CurrentTime
+        Timeskip = int(float(CurrentTime - CombinedData["Time"][-1])*250)
+        for channel in CombinedData["Channels"]:
+            CombinedData["Missing"][channel] = np.concatenate((CombinedData["Missing"][channel], np.ones(Timeskip), BrainSenseData[i]["Missing"][channel]))
+            CombinedData[channel] = np.concatenate((CombinedData[channel], np.zeros(Timeskip), BrainSenseData[i][channel]))
+        CombinedData["Stimulation"] = np.concatenate((CombinedData["Stimulation"], np.ones((Timeskip, 2)), BrainSenseData[i]["Stimulation"]))
+        CombinedData["PowerBand"] = np.concatenate((CombinedData["PowerBand"], np.ones((Timeskip, 2)), BrainSenseData[i]["PowerBand"]))
+        CombinedData["Time"] = np.arange(CombinedData["Stimulation"].shape[0]) / 250
+    
+    if len(CombinedData["Channels"]) == 2:
+        info = "Bilateral"
+    else:
+        info = "Unilateral"
+        
+    Database.saveSourceFiles(CombinedData, recordings[0].recording_type, info, recordings[0].recording_id, recordings[0].device_deidentified_id)
+    recordings[0].recording_duration = CombinedData["Time"][-1]
+    recordings[0].save()
+
+    for i in range(1, len(recordings)):
+        try:
+            os.remove(DATABASE_PATH + "recordings" + os.path.sep + recordings[i].recording_datapointer)
+        except:
+            pass
+        recordings[i].delete()
+    
+    return True
 
 def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies=[0,0]):
     """ Process BrainSense Streaming Data to be used for Plotly rendering.

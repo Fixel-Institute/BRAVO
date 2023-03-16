@@ -86,6 +86,24 @@ function BrainSenseStreaming() {
       SessionController.displayError(error, setAlert);
     });
   };
+  
+  const handleMerge = async (toggleMerge) => {
+    try {
+      let mergeResponse = await SessionController.query("/api/updateBrainSenseStream", {
+        mergeRecordings: toggleMerge.merge
+      });
+      if (mergeResponse.status == 200) {
+        const response = await SessionController.query("/api/queryBrainSenseStreaming", {
+          id: patientID,
+          requestOverview: true,
+        });
+        setData(response.data.streamingData);
+        setConfiguration(response.data.configuration);
+      }
+    } catch (error) {
+      SessionController.displayError(error, setAlert);
+    }
+  };
 
   const onCenterFrequencyChange = (side, freq) => {
     var channelName = "";
@@ -253,7 +271,7 @@ function BrainSenseStreaming() {
                     <Grid item xs={12}>
                       <MDBox p={2} lineHeight={1}>
                         {data.length > 0 ? (
-                          <BrainSenseStreamingTable data={data} getRecordingData={getRecordingData}/>
+                          <BrainSenseStreamingTable data={data} getRecordingData={getRecordingData} handleMerge={handleMerge}/>
                         ) : (
                           <MDTypography variant="h6" fontSize={24}>
                             {dictionary.WarningMessage.NoData[language]}

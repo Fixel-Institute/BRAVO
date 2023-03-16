@@ -16,12 +16,14 @@ from Backend import models
 
 import os
 from modules import Database
-from modules.Percept import Sessions
+from modules.Percept import Sessions, BrainSenseStream
 import json
 import random, string
 import datetime
 import pytz
 from copy import deepcopy
+
+from utility import PythonUtility
 
 import pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
@@ -210,5 +212,26 @@ class BrainSenseStreamUpdate(RestViews.APIView):
             recording.recording_info["ContactType"][request.data["contactIndex"]] = request.data["contactType"]
             recording.save()
             return Response(status=200)
+        
+        elif "mergeRecordings" in request.data:
+            recordings = models.BrainSenseRecording.objects.filter(recording_id__in=request.data["mergeRecordings"], recording_type="BrainSenseStream").all()
+            if not len(recordings) == len(request.data["mergeRecordings"]):
+                return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+            
+            deviceIds = PythonUtility.uniqueList([recording.device_deidentified_id for recording in recordings])
+            if len(deviceIds) > 1 or len(deviceIds) == 0:
+                return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+            
+            if request.user.is_admin or request.user.is_clinician:
+                if not models.PerceptDevice.objects.filter(deidentified_id=deviceIds[0], authority_level="Clinic", authority_user=request.user.institute).exists():
+                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            else:
+                if not models.PerceptDevice.objects.filter(deidentified_id=deviceIds[0], authority_level="Research", authority_user=request.user.email).exists():
+                  return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            recordings = sorted(recordings, key=lambda recording: recording.recording_date)
+            result = BrainSenseStream.mergeRealtimeStreamData(recordings)
+            if result:
+                return Response(status=200)
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})

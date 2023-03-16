@@ -16,6 +16,7 @@ import {
   Switch,
   MenuItem,
   Tooltip,
+  Checkbox,
 } from "@mui/material"
 
 import { SessionController } from "database/session-control.js";
@@ -28,10 +29,11 @@ import MDButton from "components/MDButton";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 
-function BrainSenseStreamingTable({data, getRecordingData, toggle, children}) {
+function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, children}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
+  const [toggleMerge, setToggleMerge] = React.useState({show: false, merge: []});
   const [selectedDate, setSelectedDate] = React.useState([]);
   const [availableDates, setAvailableDates] = React.useState([]);
   
@@ -151,14 +153,25 @@ function BrainSenseStreamingTable({data, getRecordingData, toggle, children}) {
         />
       </MDBox>
       <MDBox style={{overflowX: "auto"}}>
+        <MDButton variant={"contained"} color={!toggleMerge.show ? "info" : "error"} style={{marginLeft: 10}} onClick={() => {
+          if (toggleMerge.show) {
+            if (toggleMerge.merge.length == 0) {
+              setToggleMerge({merge: [], show: false});
+              return;
+            }
+
+            handleMerge(toggleMerge).then(() => {
+              setToggleMerge({merge: [], show: false});
+            });
+          } else {
+            setToggleMerge({...toggleMerge, merge: [], show: true});
+          }
+        }}>
+          {"Merge Recordings"}
+        </MDButton>
         <Table size="large" style={{marginTop: 20}}>
           <TableHead sx={{display: "table-header-group"}}>
             <TableRow>
-              {toggle ? (
-                <TableCell key={"toggle"} variant="head" style={{width: "20px", minWidth: 20, verticalAlign: "bottom", paddingBottom: 0, paddingTop: 0}}>
-                  <Switch onChange={(event, value) => toggleSelection(value)} />
-                </TableCell>
-              ) : null}
               {tableHeader.map((col) => (
                 <TableCell key={col.title} variant="head" style={{width: col.width, minWidth: col.minWidth, verticalAlign: "bottom", paddingBottom: 0, paddingTop: 0}}>
                   <MDTypography variant="span" fontSize={12} fontWeight={"bold"} style={{cursor: "pointer"}} onClick={()=>console.log({col})}>
@@ -197,13 +210,8 @@ function BrainSenseStreamingTable({data, getRecordingData, toggle, children}) {
                   </>
                 }
               }
-              
+
               return <TableRow key={recording.RecordingID}>
-                {toggle ? (
-                  <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                    <Switch checked={recording.state} onChange={(event, value) => toggleSelection(value, recording.Timestamp)} />
-                  </TableCell>
-                ) : null}
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                   <MDTypography variant="h5" fontSize={15} style={{marginBottom: 0}}>
                     {new Date(recording.Timestamp*1000).toLocaleString(language)}
@@ -211,6 +219,21 @@ function BrainSenseStreamingTable({data, getRecordingData, toggle, children}) {
                   <MDTypography variant="h6" style={{marginBottom: 0}} fontSize={12} fontWeight={"bold"}>
                     {recording.DeviceName}
                   </MDTypography>
+                  {toggleMerge.show ? (
+                    <Checkbox label={"Merge"} style={{padding: 0}} onClick={() => {
+                      if (!toggleMerge.merge.includes(recording.RecordingID)) {
+                        setToggleMerge((toggleMerge) => {
+                          toggleMerge.merge.push(recording.RecordingID);
+                          return toggleMerge;
+                        })
+                      } else {
+                        setToggleMerge((toggleMerge) => {
+                          toggleMerge.merge = toggleMerge.merge.filter((id) => id != recording.RecordingID);
+                          return toggleMerge;
+                        })
+                      }
+                    }} />
+                  ) : null}
                 </TableCell>
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                   <MDBox style={{display: "flex", flexDirection: "column"}}>
