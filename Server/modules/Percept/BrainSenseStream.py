@@ -301,6 +301,13 @@ def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=Fal
             BrainSenseData = processRealtimeStreams(BrainSenseData, cardiacFilter=cardiacFilter)
             Database.saveSourceFiles(BrainSenseData,recording.recording_type,info,recording.recording_id, recording.device_deidentified_id)
             recording.save()
+        
+        for channel in BrainSenseData["Filtered"].keys():
+            if not BrainSenseData["Filtered"][channel].shape == BrainSenseData[channel].shape:
+                recording.recording_info["CardiacFilter"] = cardiacFilter
+                BrainSenseData = processRealtimeStreams(BrainSenseData, cardiacFilter=cardiacFilter)
+                Database.saveSourceFiles(BrainSenseData,recording.recording_type,info,recording.recording_id, recording.device_deidentified_id)
+                recording.save()
 
         BrainSenseData["Timestamp"] = recording.recording_date.timestamp();
         BrainSenseData["Info"] = recording.recording_info;
