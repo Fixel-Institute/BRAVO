@@ -243,6 +243,14 @@ class PatientCustomEvents(models.Model):
     class Meta:
         ordering = ['-event_time']
 
+class CustomAnnotations(models.Model):
+    deidentified_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    patient_deidentified_id = models.UUIDField(default=uuid.uuid4)
+
+    event_name = models.CharField(default="", max_length=255)
+    event_time = models.DateTimeField(default=timezone.now)
+    event_duration = models.FloatField(default=0)
+
 class BrainSenseRecording(models.Model):
     recording_id = models.UUIDField(default=uuid.uuid4, unique=True)
     device_deidentified_id = models.UUIDField(default=uuid.uuid4)
