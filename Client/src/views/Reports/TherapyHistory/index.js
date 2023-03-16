@@ -287,7 +287,19 @@ function TherapyHistory() {
                       ))}
                     </MDBox>
                     {Object.keys(therapyHistory[activeDevice].Therapy[activeTab]).map((key) => {
-                      const therapyList = therapyHistory[activeDevice].Therapy[activeTab][key];
+                      let therapyList = [];
+                      if (activeTab === "Pre-visit Therapy") {
+                        let availableTimestamp = therapyHistory[activeDevice].Therapy[activeTab][key].map((group) => group.TherapyDate);
+                        let firstSession = Math.min(...availableTimestamp);
+                        therapyList = therapyHistory[activeDevice].Therapy[activeTab][key].filter((group) => group.TherapyDate == firstSession)
+                      } else if (activeTab === "Post-visit Therapy") {
+                        let availableTimestamp = therapyHistory[activeDevice].Therapy[activeTab][key].map((group) => group.TherapyDate);
+                        let lastSession = Math.max(...availableTimestamp);
+                        therapyList = therapyHistory[activeDevice].Therapy[activeTab][key].filter((group) => group.TherapyDate == lastSession)
+                      } else {
+                        therapyList = therapyHistory[activeDevice].Therapy[activeTab][key];
+                      }
+
                       return (
                       <MDBox key={key} pr={2} pb={2}>
                         <Accordion>

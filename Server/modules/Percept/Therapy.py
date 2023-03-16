@@ -327,59 +327,66 @@ def extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveCon
     DeviceTimestamp = dict()
     for i in range(0,len(TherapyConfigurations)):
         if not TherapyConfigurations[i]["DeviceID"] in DeviceTimestamp.keys():
-            DeviceTimestamp[TherapyConfigurations[i]["DeviceID"]] = list()
+            DeviceTimestamp[TherapyConfigurations[i]["DeviceID"]] = {}
+    
+    # Session Timestamp
+    SessionTimestamp = {}
 
-    ExistingTimestamp = list()
+    # Sort Timestamp by DeviceID, TherapyType, and TherapyGroup
     for deviceID in DeviceTimestamp.keys():
         for i in range(len(TherapyConfigurations)):
             if TherapyConfigurations[i]["DeviceID"] == deviceID:
-                TimeDifferences = np.array([np.abs(TherapyConfigurations[i]["TherapyDate"] - time) for time in ExistingTimestamp])
-                Indexes = np.where(TimeDifferences < 3600*24)[0]
-                if len(Indexes > 0):
-                    TherapyConfigurations[i]["TherapyDate"] = ExistingTimestamp[Indexes[0]]
-                else:
-                    ExistingTimestamp.append(TherapyConfigurations[i]["TherapyDate"])
-
-                if not TherapyConfigurations[i]["TherapyDate"] in DeviceTimestamp[deviceID]:
-                    DeviceTimestamp[deviceID].append(TherapyConfigurations[i]["TherapyDate"])
+                if not TherapyConfigurations[i]["TherapyType"] in DeviceTimestamp[deviceID].keys():
+                    DeviceTimestamp[deviceID][TherapyConfigurations[i]["TherapyType"]] = []
+                if not TherapyConfigurations[i]["TherapyDate"] in DeviceTimestamp[deviceID][TherapyConfigurations[i]["TherapyType"]]:
+                    DeviceTimestamp[deviceID][TherapyConfigurations[i]["TherapyType"]].append(TherapyConfigurations[i]["TherapyDate"])
+        
+        for i in range(len(DeviceTimestamp[deviceID]["Past Therapy"])):
+            matchSession = np.where(np.abs(np.array(DeviceTimestamp[deviceID]["Pre-visit Therapy"]) - DeviceTimestamp[deviceID]["Past Therapy"][i]) < 3600*24)[0]
+            if len(matchSession) > 0:
+                continue
+            DeviceTimestamp[deviceID]["Pre-visit Therapy"].append(DeviceTimestamp[deviceID]["Past Therapy"][i])
+        DeviceTimestamp[deviceID]["Pre-visit Therapy"] = sorted(DeviceTimestamp[deviceID]["Pre-visit Therapy"])
 
     for deviceID in DeviceTimestamp.keys():
-        for nConfig in range(len(DeviceTimestamp[deviceID])):
-            if nConfig == 0:
-                lastMeasuredTimestamp = 0
-            else:
-                lastMeasuredTimestamp = DeviceTimestamp[deviceID][nConfig-1]
+        for typeName in DeviceTimestamp[deviceID].keys():
+            if typeName == "Post-visit Therapy":
+                continue
 
-            TherapyDutyPercent = dict()
-            for i in range(len(TherapyChangeLog)):
-                if str(TherapyChangeLog[i]["device"]) == deviceID:
-                    for k in range(len(TherapyChangeLog[i]["date_of_change"])):
-                        if lastMeasuredTimestamp < DeviceTimestamp[deviceID][nConfig]:
-                            if k > 0:
-                                if TherapyChangeLog[i]["previous_group"][k] == TherapyChangeLog[i]["new_group"][k-1] or TherapyChangeLog[i]["previous_group"][k] == -1:
-                                    if TherapyChangeLog[i]["date_of_change"][k]/1000000000 > lastMeasuredTimestamp:
-                                        if not TherapyChangeLog[i]["previous_group"][k] in TherapyDutyPercent.keys():
-                                            TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] = 0
-                                        if TherapyChangeLog[i]["date_of_change"][k]/1000000000 > DeviceTimestamp[deviceID][nConfig]:
-                                            TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] += (DeviceTimestamp[deviceID][nConfig]-lastMeasuredTimestamp)
-                                            lastMeasuredTimestamp = DeviceTimestamp[deviceID][nConfig]
-                                        else:
-                                            TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] += (TherapyChangeLog[i]["date_of_change"][k]/1000000000-lastMeasuredTimestamp)
-                                            lastMeasuredTimestamp = TherapyChangeLog[i]["date_of_change"][k]/1000000000
+            for timestamp in range(1, len(DeviceTimestamp[deviceID][typeName])):
+                if timestamp == 0:
+                    lastMeasuredTimestamp = 0
+                else:
+                    lastMeasuredTimestamp = DeviceTimestamp[deviceID][typeName][timestamp-1]
+
+                TherapyDutyPercent = dict()
+                for i in range(len(TherapyChangeLog)):
+                    if str(TherapyChangeLog[i]["device"]) == deviceID:
+                        if TherapyChangeLog[i]["date_of_change"][0]/1000000000 > lastMeasuredTimestamp:
+                            if not TherapyChangeLog[i]["previous_group"][0] in TherapyDutyPercent.keys():
+                                TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][0]] = 0
+                            if TherapyChangeLog[i]["date_of_change"][0]/1000000000 > DeviceTimestamp[deviceID][nConfig]:
+                                TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][0]] += (DeviceTimestamp[deviceID][typeName][timestamp]-lastMeasuredTimestamp)
+                                lastMeasuredTimestamp = DeviceTimestamp[deviceID][typeName][timestamp]
                             else:
+                                TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][0]] += (TherapyChangeLog[i]["date_of_change"][0]/1000000000-lastMeasuredTimestamp)
+                                lastMeasuredTimestamp = TherapyChangeLog[i]["date_of_change"][k]/1000000000
+
+                        for k in range(1, len(TherapyChangeLog[i]["date_of_change"])):
+                            if TherapyChangeLog[i]["previous_group"][k] == TherapyChangeLog[i]["new_group"][k-1] or TherapyChangeLog[i]["previous_group"][k] == -1:
                                 if TherapyChangeLog[i]["date_of_change"][k]/1000000000 > lastMeasuredTimestamp:
                                     if not TherapyChangeLog[i]["previous_group"][k] in TherapyDutyPercent.keys():
                                         TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] = 0
-                                    if TherapyChangeLog[i]["date_of_change"][k]/1000000000 > DeviceTimestamp[deviceID][nConfig]:
-                                        TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] += (DeviceTimestamp[deviceID][nConfig]-lastMeasuredTimestamp)
-                                        lastMeasuredTimestamp = DeviceTimestamp[deviceID][nConfig]
+                                    if TherapyChangeLog[i]["date_of_change"][k]/1000000000 > DeviceTimestamp[deviceID][typeName][timestamp]:
+                                        TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] += (DeviceTimestamp[deviceID][typeName][timestamp]-lastMeasuredTimestamp)
+                                        lastMeasuredTimestamp = DeviceTimestamp[deviceID][typeName][timestamp]
                                     else:
                                         TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][k]] += (TherapyChangeLog[i]["date_of_change"][k]/1000000000-lastMeasuredTimestamp)
                                         lastMeasuredTimestamp = TherapyChangeLog[i]["date_of_change"][k]/1000000000
 
-            for i in range(len(TherapyConfigurations)):
-                if TherapyConfigurations[i]["DeviceID"] == deviceID and TherapyConfigurations[i]["TherapyDate"] == DeviceTimestamp[deviceID][nConfig]:
-                    TherapyConfigurations[i]["TherapyDutyPercent"] = TherapyDutyPercent
+                for i in range(len(TherapyConfigurations)):
+                    if TherapyConfigurations[i]["DeviceID"] == deviceID and TherapyConfigurations[i]["TherapyDate"] == DeviceTimestamp[deviceID][typeName][timestamp] and TherapyConfigurations[i]["TherapyType"] == typeName:
+                        TherapyConfigurations[i]["TherapyDutyPercent"] = TherapyDutyPercent
 
     existingGroups = []
     for nConfig in range(len(TherapyConfigurations)):
@@ -387,11 +394,12 @@ def extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveCon
         if not int(therapy["TherapyDate"]) in TherapyData.keys():
             TherapyData[int(therapy["TherapyDate"])] = list()
         therapy["Overview"] = dict()
-        totalHours = np.sum([therapy["TherapyDutyPercent"][key] for key in therapy["TherapyDutyPercent"].keys()])
-        if not therapy["Therapy"]["GroupId"] in therapy["TherapyDutyPercent"].keys():
-            therapy["Overview"]["DutyPercent"] = "(0%)"
-        else:
-            therapy["Overview"]["DutyPercent"] = f"({therapy['TherapyDutyPercent'][therapy['Therapy']['GroupId']]/totalHours*100:.2f}%)"
+        if "TherapyDutyPercent" in therapy.keys():
+            totalHours = np.sum([therapy["TherapyDutyPercent"][key] for key in therapy["TherapyDutyPercent"].keys()])
+            if not therapy["Therapy"]["GroupId"] in therapy["TherapyDutyPercent"].keys():
+                therapy["Overview"]["DutyPercent"] = "(0%)"
+            else:
+                therapy["Overview"]["DutyPercent"] = f"({therapy['TherapyDutyPercent'][therapy['Therapy']['GroupId']]/totalHours*100:.2f}%)"
 
         therapy["Overview"]["GroupName"] = therapy["Therapy"]["GroupId"].replace("GroupIdDef.GROUP_","Group ")
 
@@ -423,6 +431,7 @@ def extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveCon
                         ContactName, ContactID = Percept.reformatElectrodeDef(contact["Electrode"])
                         if not ContactName == "CAN" or len(therapy['Therapy'][hemisphere]['Channel']) == 2:
                             contact["Electrode"] = ContactName + ContactPolarity
+
         key = str(therapy["TherapyDate"]) + "_" + therapy["Therapy"]["GroupId"] + "_" + therapy["TherapyType"] + "_" + TherapyConfigurations[nConfig]["DeviceID"]
         if not key in existingGroups:
             TherapyData[int(therapy["TherapyDate"])].append(therapy)
