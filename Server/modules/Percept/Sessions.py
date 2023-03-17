@@ -226,7 +226,7 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
 
     deviceID.save()
     session = models.PerceptSession(device_deidentified_id=deviceID.deidentified_id, session_source_filename=filename, session_date=SessionDate)
-    session.session_file_path = DATABASE_PATH + "sessions" + os.path.sep + str(session.device_deidentified_id)+"_"+str(session.deidentified_id)+".json"
+    session.session_file_path = "sessions" + os.path.sep + str(session.device_deidentified_id)+"_"+str(session.deidentified_id)+".json"
     sessionUUID = str(session.deidentified_id)
 
     # Process Therapy History
@@ -285,7 +285,9 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
         models.ImpedanceHistory(impedance_record=Data["Impedance"], device_deidentified_id=deviceID.deidentified_id, session_date=SessionDate).save()
 
     if NewDataFound:
-        os.rename(DATABASE_PATH + "cache" + os.path.sep + filename, session.session_file_path)
+        os.rename(DATABASE_PATH + "cache" + os.path.sep + filename, DATABASE_PATH + "sessions" + os.path.sep + session.session_file_path)
+        patient.last_change = datetime.now(tz=pytz.utc)
+        patient.save()
         session.save()
     else:
         os.remove(DATABASE_PATH + "cache" + os.path.sep + filename)
@@ -416,7 +418,7 @@ def viewSession(user, patient_id, session_id, authority):
     for device in availableDevices:
         if models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id, deidentified_id=str(session_id)).exists():
             session = models.PerceptSession.objects.filter(deidentified_id=session_id).first()
-            JSON = Percept.decodeEncryptedJSON(session.session_file_path, key)
+            JSON = Percept.decodeEncryptedJSON(DATABASE_PATH + session.session_file_path, key)
             Overview = processSessionFile(JSON)
 
             if not user.is_clinician:
@@ -467,7 +469,7 @@ def deleteDevice(device_id):
         models.TherapyHistory.objects.filter(source_file=str(session.deidentified_id)).delete()
         models.TherapyChangeLog.objects.filter(source_file=str(session.deidentified_id)).delete()
         try:
-            os.remove(session.session_file_path)
+            os.remove(DATABASE_PATH + session.session_file_path)
         except:
             pass
     Sessions.delete()
@@ -489,7 +491,7 @@ def deleteSessions(user, patient_id, session_ids, authority):
                 recordings.delete()
                 session = models.PerceptSession.objects.filter(deidentified_id=session_ids[i]).first()
                 try:
-                    os.remove(session.session_file_path)
+                    os.remove(DATABASE_PATH + session.session_file_path)
                 except:
                     pass
                 session.delete()

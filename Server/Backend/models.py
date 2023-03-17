@@ -72,15 +72,15 @@ class Patient(models.Model):
     diagnosis = models.CharField(default="", max_length=255)
     institute = models.CharField(default="", max_length=255)
     medical_record_number = models.CharField(default="", max_length=255)
+    birth_date = models.DateTimeField(default=timezone.now)
     tags = models.JSONField(default=list, null=False)
 
     research_study_id = models.JSONField(default=list, null=True)
-    patient_identifier_hashfield = models.CharField(default="", max_length=255)
-
-    birth_date = models.DateTimeField(default=timezone.now)
     device_deidentified_id = models.JSONField(default=list, null=True)
-
+    patient_identifier_hashfield = models.CharField(default="", max_length=255)
     deidentified_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
+    last_change = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return str(self.deidentified_id)
