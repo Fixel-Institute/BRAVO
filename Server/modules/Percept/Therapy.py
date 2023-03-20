@@ -370,7 +370,7 @@ def extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveCon
                                 lastMeasuredTimestamp = DeviceTimestamp[deviceID][typeName][timestamp]
                             else:
                                 TherapyDutyPercent[TherapyChangeLog[i]["previous_group"][0]] += (TherapyChangeLog[i]["date_of_change"][0]/1000000000-lastMeasuredTimestamp)
-                                lastMeasuredTimestamp = TherapyChangeLog[i]["date_of_change"][k]/1000000000
+                                lastMeasuredTimestamp = TherapyChangeLog[i]["date_of_change"][0]/1000000000
 
                         for k in range(1, len(TherapyChangeLog[i]["date_of_change"])):
                             if TherapyChangeLog[i]["previous_group"][k] == TherapyChangeLog[i]["new_group"][k-1] or TherapyChangeLog[i]["previous_group"][k] == -1:
