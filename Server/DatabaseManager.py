@@ -356,8 +356,10 @@ def processInput(argv):
           SessionFiles = models.PerceptSession.objects.filter(device_deidentified_id=argv[3]).all()
 
         for sessionFile in SessionFiles:
+          if not sessionFile.session_file_path.startswith("sessions/"):
+            sessionFile.session_file_path = "sessions/" + sessionFile.session_file_path.split(os.path.sep)[-1]
           try:
-            JSON = Percept.decodeEncryptedJSON(sessionFile.session_file_path, key)
+            JSON = Percept.decodeEncryptedJSON(DATABASE_PATH + sessionFile.session_file_path, key)
           except:
             print(sessionFile.session_file_path)
             continue
