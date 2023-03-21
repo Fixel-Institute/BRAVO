@@ -36,6 +36,7 @@ function TherapeuticPrediction() {
   const [recordingId, setRecordingId] = React.useState([]);
 
   const [data, setData] = React.useState([]);
+  const [configuration, setConfiguration] = React.useState({});
   const [predictionModel, setPredictionModel] = React.useState([]);
   const [predictionToRender, setPredictionToRender] = React.useState([]);
   const [dataToRender, setDataToRender] = React.useState(false);
@@ -61,6 +62,7 @@ function TherapeuticPrediction() {
         id: patientID,
         requestOverview: true
       }).then((response) => {
+        setContextState(dispatch, "therapeuticPredictionTableDate", null);
         setData(response.data);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -145,16 +147,18 @@ function TherapeuticPrediction() {
         centerFrequency: freq
       }).then((response) => {
         setLeftHemisphereBox(response.data.StimPSD);
-        for (var j in predictionModel) {
-          if (predictionModel[j].RecordingID == recordingId) {
-            for (var k in predictionModel[j]["Channels"]) {
-              if (predictionModel[j]["Channels"][k]["Hemisphere"].startsWith("Left")) {
-                predictionModel[j].Prediction[k] = response.data.PredictionModel;
+        setPredictionModel((models) => {
+          for (var j in models) {
+            if (models[j].RecordingID == recordingId) {
+              for (var k in models[j]["Channels"]) {
+                if (models[j]["Channels"][k]["Hemisphere"].startsWith("Left")) {
+                  models[j].Prediction[k] = response.data.PredictionModel;
+                }
               }
             }
           }
-        }
-        setPredictionModel([...predictionModel]);
+          return [...models]
+        });
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
@@ -267,14 +271,6 @@ function TherapeuticPrediction() {
                           <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
                             {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
                           </MDTypography>
-                          <MDBox display={"flex"} flexDirection={"column"}>
-                            <MDButton size="small" variant="contained" color="info" style={{marginBottom: 3}} onClick={() => toggleCardiacFilter()}>
-                              {dictionaryLookup(dictionary.BrainSenseStreaming.Figure.CardiacFilter, dataToRender.Info.CardiacFilter ? "Remove" : "Add", language)}
-                            </MDButton>
-                            <MDButton size="small" variant="contained" color="info">
-                              {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "Wavelet", language)}
-                            </MDButton>
-                          </MDBox>
                         </MDBox>
                       </Grid>
                       <Grid item xs={12}>

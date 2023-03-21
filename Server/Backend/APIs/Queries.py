@@ -656,6 +656,7 @@ class QueryPredictionModel(RestViews.APIView):
                         PredictionModel = models.PredictionModel.objects.filter(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"]).first()
                         PredictionModel.model_details = Features
                         PredictionModel.save()
+                        break
                     else:
                         Features = {"NoPrediction": True}
 

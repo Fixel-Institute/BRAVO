@@ -59,10 +59,11 @@ def extractFrequencyOfInterest(stream, channel):
         
         TargetFrequency = rangeSelection(stream["Spectrogram"][channel]["Frequency"], [5,50])
         maxModulation = np.max(ModulationIndex[TargetFrequency])
+        SelectedData = np.bitwise_and(stream["Spectrogram"][channel]["ConstantStimulation"], stream["Spectrogram"][channel]["Missing"] == 0)
         
         CorrelationIndex = np.zeros(stream["Spectrogram"][channel]["Frequency"].shape)
         for f in range(len(stream["Spectrogram"][channel]["Frequency"])):
-            CorrelationIndex[f], _ = stats.pearsonr(stream["Spectrogram"][channel]["Stimulation"][stream["Spectrogram"][channel]["ConstantStimulation"]], stream["Spectrogram"][channel]["Power"][f,:][stream["Spectrogram"][channel]["ConstantStimulation"]])
+            CorrelationIndex[f], _ = stats.pearsonr(stream["Spectrogram"][channel]["Stimulation"][SelectedData], stream["Spectrogram"][channel]["Power"][f,:][SelectedData])
         
         CorrelationIndex = np.power(CorrelationIndex,2)
         maxCorrelation = np.max(CorrelationIndex[TargetFrequency])
@@ -76,32 +77,39 @@ def extractFrequencyOfInterest(stream, channel):
         return stream["Spectrogram"][channel]["Frequency"][CombinedFeature == maxFeature][0], GoodnessOfFit
     return -1, -1
 
+def powerDecay(x, a, b, c):
+    return a * np.power(1/b, x) + c
+
 def extractModelParameters(stream, channel, centerFrequency):
     FrequencyOfInterest = rangeSelection(stream["Spectrogram"][channel]["Frequency"], [centerFrequency - 3, centerFrequency + 3])
-    constantStimulation = stream["Spectrogram"][channel]["ConstantStimulation"]
+    constantStimulation = np.bitwise_and(stream["Spectrogram"][channel]["ConstantStimulation"], stream["Spectrogram"][channel]["Missing"] == 0)
     StimulationAmplitude = stream["Spectrogram"][channel]["Stimulation"][constantStimulation]
-    BrainPower = np.mean(stream["Spectrogram"][channel]["logPower"][:,constantStimulation][FrequencyOfInterest], axis=0)
+    BrainPower = np.mean(stream["Spectrogram"][channel]["Power"][:,constantStimulation][FrequencyOfInterest], axis=0)
     
-    uniqueAmplitude = np.unique(StimulationAmplitude)
+    uniqueAmplitude = sorted(np.unique(StimulationAmplitude))
     simplifiedYData = []
     for k in range(len(uniqueAmplitude)):
-        simplifiedYData.append(np.median(BrainPower[StimulationAmplitude==uniqueAmplitude[k]]))
+        simplifiedYData.append(np.mean(BrainPower[StimulationAmplitude==uniqueAmplitude[k]]))
     
     xdata = np.linspace(np.min(StimulationAmplitude), np.max(StimulationAmplitude), 100)
     if len(uniqueAmplitude) >= 4:
-        coe = np.polyfit(uniqueAmplitude, simplifiedYData, 4)
+        #popt, pcov = optimize.curve_fit(powerDecay, StimulationAmplitude, BrainPower, maxfev=5000)
+        popt, pcov = optimize.curve_fit(powerDecay, uniqueAmplitude, simplifiedYData, maxfev=5000)
+        modeled_signal = powerDecay(xdata, *popt)
+        #coe = np.polyfit(uniqueAmplitude, simplifiedYData, 4)
+        #modeled_signal = np.polyval(coe, xdata)
         #coe = np.polyfit(StimulationAmplitude, BrainPower, 4)
     else:
         coe = np.polyfit(StimulationAmplitude, BrainPower, 4)
-        
-    modeled_signal = np.polyval(coe, xdata)
+        modeled_signal = np.polyval(coe, xdata)
+
     correlationCoe, p = stats.pearsonr(xdata, modeled_signal)
     
-    return {"OptimalFrequency": 1,
+    return {"OptimalFrequency": centerFrequency, "PowerDirection": simplifiedYData[-1] -  simplifiedYData[0],
         "ChangesDirection": np.sign(correlationCoe),
         "FittedEffect": correlationCoe*correlationCoe,
         "ChangesInPower": np.percentile(modeled_signal, 85) - np.percentile(modeled_signal, 15),
-        "FinalPower": np.percentile(modeled_signal, 5)}, xdata[modeled_signal < np.percentile(modeled_signal, 10)][0], [xdata[0], xdata[-1]], modeled_signal.tolist()
+        "FinalPower": np.percentile(modeled_signal, 5)}, xdata[modeled_signal <= np.percentile(modeled_signal, 10)][0], [xdata[0], xdata[-1]], modeled_signal.tolist()
 
 def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0):
     for channel in BrainSenseData["Channels"]:
@@ -122,7 +130,8 @@ def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0)
                 AmplitudeRange = [0,0]
                 ModeledSignal = np.zeros(100).tolist()
             
-            Features["Score"] = applyPredictionModel(Features)
+            #Features["Score"] = applyPredictionModel(Features)
+            Features["Score"] = 0
             Features["CenterFrequency"] = centerFrequency
             Features["PredictedAmplitude"] = PredictedAmplitude
             Features["AmplitudeRange"] = AmplitudeRange

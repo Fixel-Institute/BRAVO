@@ -160,6 +160,7 @@ def processRealtimeStreams(stream, cardiacFilter=False):
 
         # Wavelet Computation
         stream["Wavelet"][channel] = SPU.waveletTimeFrequency(stream["Filtered"][channel], freq=np.array(range(1,200))/2, ma=125, fs=250)
+        stream["Wavelet"][channel]["Missing"] = stream["Missing"][channel][::int(250/2)]
         stream["Wavelet"][channel]["Power"] = stream["Wavelet"][channel]["Power"][:,::int(250/2)]
         stream["Wavelet"][channel]["Time"] = stream["Wavelet"][channel]["Time"][::int(250/2)]
         stream["Wavelet"][channel]["Type"] = "Wavelet"
@@ -169,6 +170,10 @@ def processRealtimeStreams(stream, cardiacFilter=False):
         stream["Spectrogram"][channel] = SPU.defaultSpectrogram(stream["Filtered"][channel], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=250)
         stream["Spectrogram"][channel]["Type"] = "Spectrogram"
         stream["Spectrogram"][channel]["Time"] += stream["Time"][0]
+        stream["Spectrogram"][channel]["Missing"] = np.zeros(stream["Spectrogram"][channel]["Time"].shape, dtype=bool)
+        for i in range(len(stream["Spectrogram"][channel]["Missing"])):
+            if np.any(stream["Missing"][channel][rangeSelection(stream["Time"], [stream["Spectrogram"][channel]["Time"][i]-2, stream["Spectrogram"][channel]["Time"][i]+2])]):
+                stream["Spectrogram"][channel]["Missing"][i] = True
         del(stream["Spectrogram"][channel]["logPower"])
 
     return stream
@@ -301,6 +306,12 @@ def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=Fal
             BrainSenseData = processRealtimeStreams(BrainSenseData, cardiacFilter=cardiacFilter)
             Database.saveSourceFiles(BrainSenseData,recording.recording_type,info,recording.recording_id, recording.device_deidentified_id)
             recording.save()
+        
+        for channel in BrainSenseData["Channels"]:
+            if not "Missing" in BrainSenseData["Spectrogram"][channel].keys():
+                BrainSenseData = processRealtimeStreams(BrainSenseData, cardiacFilter=cardiacFilter)
+                Database.saveSourceFiles(BrainSenseData,recording.recording_type,info,recording.recording_id, recording.device_deidentified_id)
+                break
         
         for channel in BrainSenseData["Filtered"].keys():
             if not BrainSenseData["Filtered"][channel].shape == BrainSenseData[channel].shape:
@@ -635,17 +646,17 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
 
     if not "StimulationSeries" in locals():
         raise Exception("Data not available")
-
-    cIndex = 0;
+    
+    cIndex = 0
     StimulationEpochs = list()
     for i in range(1,len(StimulationSeries["Time"])):
-        StimulationDuration = StimulationSeries["Time"][i] - StimulationSeries["Time"][i-1]
-        if StimulationDuration < 7:
-            continue
-        cIndex += 1
+        cIndex += 1 
 
         if method == "Welch":
             timeSelection = rangeSelection(stream["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            timeSelection = np.bitwise_and(timeSelection, stream["Missing"][channel] == 0)
+            if np.sum(timeSelection) < 250 * 5:
+                continue
             StimulationEpoch = stream["Filtered"][channel][timeSelection]
             fxx, pxx = signal.welch(StimulationEpoch, fs=250, nperseg=250 * 1, noverlap=250 * 0.5, nfft=250 * 2, scaling="density")
             StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i], "Frequency": fxx, "PSD": pxx})
@@ -653,10 +664,15 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
 
         elif method == "Spectrogram":
             timeSelection = rangeSelection(stream["Spectrogram"][channel]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            timeSelection = np.bitwise_and(timeSelection, stream["Spectrogram"][channel]["Missing"] == 0)
+            if np.sum(timeSelection) < 2 * 5:
+                continue
             StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i], "Frequency": stream["Spectrogram"][channel]["Frequency"], "PSD": np.mean(stream["Spectrogram"][channel]["Power"][:,timeSelection],axis=1)})
 
         elif method == "Wavelet":
             timeSelection = rangeSelection(stream["Wavelet"][channel]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            if np.sum(timeSelection) < 250 * 5:
+                continue
             StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i], "Frequency": stream["Wavelet"][channel]["Frequency"], "PSD": np.mean(stream["Wavelet"][channel]["Power"][:,timeSelection],axis=1)})
 
         StimulationEpochs[-1]["TimeSelection"] = timeSelection
@@ -678,8 +694,10 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
         timeSelection = StimulationEpochs[i]["TimeSelection"]
 
         if method == "Wavelet":
+            timeSelection = np.bitwise_and(timeSelection, stream["Missing"][channel] == 0)
             StimulationEpochs[i]["SpectralFeatures"] = stream["Wavelet"][channel]["Power"][:,timeSelection]
         else:
+            timeSelection = np.bitwise_and(timeSelection, stream["Spectrogram"][channel]["Missing"] == 0)
             StimulationEpochs[i]["SpectralFeatures"] = stream["Spectrogram"][channel]["Power"][:,timeSelection]
 
         StimulationEpochs[i]["SpectralFeatures"] = np.mean(StimulationEpochs[i]["SpectralFeatures"][frequencySelection,:],axis=0)

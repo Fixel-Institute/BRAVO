@@ -33,7 +33,7 @@ import MDProgress from "components/MDProgress";
 
 function TherapeuticPredictionTable({data, getRecordingData, children}) {
   const [controller, dispatch] = usePlatformContext();
-  const { language } = controller;
+  const { language, therapeuticPredictionTableDate } = controller;
 
   const [selectedDate, setSelectedDate] = React.useState([]);
   const [availableDates, setAvailableDates] = React.useState([]);
@@ -81,12 +81,13 @@ function TherapeuticPredictionTable({data, getRecordingData, children}) {
 
     if (uniqueDates.length > 0) {
       setAvailableDates(uniqueDates);
-      setViewDate(uniqueDates[0]);
+      if (!therapeuticPredictionTableDate) setViewDate(uniqueDates[0]);
     }
   }, [data]);
   
   const setViewDate = (date) => {
-    setSelectedDate(date);
+    //setSelectedDate(date);
+    setContextState(dispatch, "therapeuticPredictionTableDate", date);
 
     var collectiveData = [];
     for (var i = 0; i < data.length; i++) {
@@ -213,11 +214,14 @@ function TherapeuticPredictionTable({data, getRecordingData, children}) {
     <>
       <MDBox p={2}>
         <Autocomplete
-          value={selectedDate}
+          value={therapeuticPredictionTableDate}
           options={availableDates}
           onChange={(event, value) => setViewDate(value)}
           getOptionLabel={(option) => {
             return option.label || "";
+          }}
+          isOptionEqualToValue={(option, value) => {
+            return option.value == value.value;
           }}
           renderInput={(params) => (
             <FormField
@@ -398,7 +402,7 @@ function TherapeuticPredictionTable({data, getRecordingData, children}) {
                 </TableCell>
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                   <MDButton variant={"contained"} color="info" onClick={() => getRecordingData(recording.RecordingID)} style={{padding: 0}}>
-                      {dictionary.PatientOverview.PatientInformation.View[language]}
+                    {dictionary.PatientOverview.PatientInformation.View[language]}
                   </MDButton>
                 </TableCell>
               </TableRow>

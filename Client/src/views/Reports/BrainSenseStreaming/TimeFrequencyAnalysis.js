@@ -144,7 +144,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
         linewidth: 3,
         color: stimulationLineColor,
         shape: "hv",
-        hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)}<br>  %{x} <extra></extra>`,
+        hovertemplate: ` ${stimulation.Name} %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)}<br>  %{x} <extra></extra>`,
       }, ax[ax.length-1])
     }
 

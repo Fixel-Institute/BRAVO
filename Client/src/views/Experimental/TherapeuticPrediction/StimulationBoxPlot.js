@@ -42,7 +42,8 @@ function StimulationBoxPlot({dataToRender, channelInfos, predictionTrend, height
     var maxSignal = 0;
     for (var j in data) {
       const xdata = Array(data[j].SpectralFeatures.length).fill(0).map((value, index) => data[j].Stimulation);
-      const ydata = Array(data[j].SpectralFeatures.length).fill(0).map((value, index) => 10*Math.log10(data[j]["SpectralFeatures"][index]));
+      //const ydata = Array(data[j].SpectralFeatures.length).fill(0).map((value, index) => 10*Math.log10(data[j]["SpectralFeatures"][index]));
+      const ydata = Array(data[j].SpectralFeatures.length).fill(0).map((value, index) => data[j]["SpectralFeatures"][index]);
       fig.box(xdata, ydata, {
         width: 0.2,
         hovertemplate: `${data[j]["Stimulation"].toFixed(1)} mA %{y:.2f} log(μV<sup>2</sup>/Hz) <extra></extra>`,
