@@ -121,8 +121,13 @@ class UserAuth(RestViews.APIView):
                 login(request, user)
                 refresh = RefreshToken.for_user(user)
                 refresh["user"] = str(user.unique_user_id)
+
+                access = refresh.access_token
+                if "Persistent" in request.data:
+                    access.set_exp(lifetime=datetime.timedelta(weeks= 520))
+
                 return Response(status=200, data={
-                    "access": str(refresh.access_token),
+                    "access": str(access),
                     "refresh": str(refresh),
                     "user": Database.extractUserInfo(user)
                 })
