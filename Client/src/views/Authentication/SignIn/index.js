@@ -37,14 +37,13 @@ export default function SignIn() {
     SessionController.authenticate(authInfo.email, authInfo.password, rememberMe).then((response) => {
       SessionController.setUser({
         ...response.data.user,
-        expireAt: response.data.expiry
       });
-      SessionController.setAuthToken(response.data.token);
+      SessionController.setAuthToken(response.data.access);
+      SessionController.setRefreshToken(response.data.refresh);
       SessionController.syncSession();
       setAuthInfo({...authInfo, password: ""});
       setContextState(dispatch, "user", {
         ...response.data.user,
-        expireAt: response.data.expiry
       });
     }).catch((error) => {
       SessionController.displayError(error, setAlert);

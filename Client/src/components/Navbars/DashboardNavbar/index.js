@@ -85,7 +85,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
     };
     client.onopen = () => {
       client.send(JSON.stringify({
-        "Authorization": SessionController.getAuthToken()
+        "Authorization": SessionController.getRefreshToken()
       }));
     };
     client.onclose = () => {

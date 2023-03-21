@@ -7,9 +7,6 @@ from rest_framework import permissions
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authentication import BasicAuthentication
 
-from knox.views import LoginView as KnoxLoginView
-from knox.auth import TokenAuthentication
-
 import pathlib, json
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
 
@@ -52,7 +49,7 @@ class UserRegister(RestViews.APIView):
 
         return Response(status=400)
 
-class UserLogin(KnoxLoginView):
+class UserLogin(RestViews.APIView):
     authentication_classes = [BasicAuthentication]
 
     def post(self, request, format=None):

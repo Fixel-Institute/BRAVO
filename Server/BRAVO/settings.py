@@ -78,7 +78,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'knox',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'rest_framework',
     'channels',
@@ -117,13 +118,13 @@ TEMPLATES = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'knox.auth.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ]
 }
 
-REST_KNOX = {
-    "TOKEN_TTL": datetime.timedelta(hours=1),
-    "AUTO_REFRESH": False
+SIMPLE_JWT = {
+    "REFRESH_TOKEN_LIFETIME": datetime.timedelta(hours=4),
+    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(minutes=1),
 }
 
 ASGI_APPLICATION = 'BRAVO.asgi.application'

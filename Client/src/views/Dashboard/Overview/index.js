@@ -95,7 +95,7 @@ export default function DashboardOverview() {
     };
     client.onopen = () => {
       client.send(JSON.stringify({
-        "Authorization": SessionController.getAuthToken()
+        "Authorization": SessionController.getRefreshToken()
       }));
     };
     client.onclose = () => {

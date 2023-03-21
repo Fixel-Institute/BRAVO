@@ -12,7 +12,7 @@ import { dictionary, dictionaryLookup } from "assets/translation";
 
 export default function DatabaseLayout({children}) {
   const [controller, dispatch] = usePlatformContext();
-  const { language, sessionState } = controller;
+  const { language, authExpired } = controller;
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -35,7 +35,7 @@ export default function DatabaseLayout({children}) {
             handleConfirm={handleTimeout}/>)
       }
     });
-  }, [pathname, sessionState]);
+  }, [pathname, authExpired]);
 
   return <>
     <DashboardLayout>

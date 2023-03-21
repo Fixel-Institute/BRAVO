@@ -63,8 +63,8 @@ export default function App() {
     SessionController.verifyServerAddress(server).then(async (connectionState) => {
       let sessionStates = {};
       if (connectionState) {
-        let authToken = localStorage.getItem("accessToken") || "";
-        await SessionController.verifyAuthToken(authToken);
+        let refreshToken = localStorage.getItem("refreshToken") || "";
+        await SessionController.verifyToken(refreshToken);
         sessionStates = await SessionController.syncSession();
       } else if (server === "") {
         // Regardless of condition, reset Auth Token if we cannot connect to the first serverAddress in cache.
@@ -85,22 +85,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user.expireAt) {
-      setContextState(dispatch, "sessionState", "active");
-      SessionController.setSession("sessionState", "active");
-      
-      let authWatchdog = setInterval(() => {
-        const now = new Date();
-        if (new Date(user.expireAt) < now) {
-          setContextState(dispatch, "sessionState", "expired");
-          SessionController.setSession("sessionState", "expired");
-        }
-      }, 1000);
-  
-      return () => {
-        clearInterval(authWatchdog);
-      };
-    }
+    let authWatchdog = setInterval(() => {
+      if (SessionController.getRefreshToken() === "") return;
+      SessionController.refreshAuthToken().then((response) => {
+        if (response.status != 200) setContextState(dispatch, "authExpired", new Date());
+      });
+    }, 10000);
+
+    return () => {
+      clearInterval(authWatchdog);
+    };
   }, [user])
 
   // Setting page scroll to 0 when changing the route

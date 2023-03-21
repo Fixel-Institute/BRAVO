@@ -16,14 +16,23 @@ export const SessionController = (function () {
   let session = {language: "en"};
   let user = {};
   let authToken = "";
+  let refreshToken = "";
 
   const setAuthToken = (token) => {
     authToken = token;
-    localStorage.setItem("accessToken", authToken);
   };
 
   const getAuthToken = () => {
     return authToken;
+  };
+
+  const setRefreshToken = (token) => {
+    refreshToken = token;
+    localStorage.setItem("refreshToken", refreshToken);
+  };
+
+  const getRefreshToken = () => {
+    return refreshToken;
   };
 
   const setServer = (address) => {
@@ -44,7 +53,7 @@ export const SessionController = (function () {
       timeout: timeout,
       responseType: responseType,
       headers: {
-        "Authorization": authToken === "" ? null : "Token " + authToken,
+        "Authorization": authToken === "" ? null : "Bearer " + authToken,
         ...config,
       }
     });
@@ -99,17 +108,30 @@ export const SessionController = (function () {
     return connectionStatus;
   };
 
-  const verifyAuthToken = async (token) => {
+  const refreshAuthToken = async () => {
+    if (refreshToken === "") return {status: 500};
+
+    try {
+      const refreshResponse = await query("/api/authRefresh", {
+        refresh: refreshToken
+      });
+      setAuthToken(refreshResponse.data.access);
+      return refreshResponse;
+    } catch(error) {
+      setAuthToken("");
+      setRefreshToken("");
+      return error;
+    }
+  };
+
+  const verifyToken = async (token) => {
     // Token can be empty, which is common if you are not logged in.
     if (token === "") return;
 
-    authToken = token;
-    try {
-      await query("/api/handshake", {}, {}, 2000);
-    } catch (error) {
-      if (error.response.status == 401) {
-        setAuthToken("");
-      }
+    refreshToken = token;
+    const response = await refreshAuthToken();
+    if (response.status !== 200) {
+      setRefreshToken("");
     }
   };
 
@@ -159,7 +181,7 @@ export const SessionController = (function () {
   };
 
   const handShake = async () => {
-    if (Object.keys(user).length === 0) {
+    if (Object.keys(user).length === 0 || refreshToken === "") {
       return false;
     }
     
@@ -185,7 +207,9 @@ export const SessionController = (function () {
   };
 
   const logout = () => {
-    return query("/api/logout");
+    return query("/api/logout", {
+      refresh: refreshToken,
+    });
   };
 
   const nullifyUser = () => {
@@ -194,6 +218,9 @@ export const SessionController = (function () {
     authToken = "";
     if (localStorage.getItem("accessToken")) {
       localStorage.setItem("accessToken", authToken);
+    }
+    if (localStorage.getItem("refreshToken")) {
+      localStorage.setItem("refreshToken", refreshToken);
     }
     if (localStorage.getItem("sessionContext")) {
       localStorage.setItem("sessionContext", session);
@@ -231,12 +258,15 @@ export const SessionController = (function () {
   return {
     setAuthToken: setAuthToken,
     getAuthToken: getAuthToken,
+    setRefreshToken: setRefreshToken,
+    getRefreshToken: getRefreshToken,
+    refreshAuthToken: refreshAuthToken,
     setServer: setServer,
     getServer: getServer,
     getConnectionStatus: getConnectionStatus,
 
     verifyServerAddress: verifyServerAddress,
-    verifyAuthToken: verifyAuthToken,
+    verifyToken: verifyToken,
 
     query: query,
     displayError: displayError,

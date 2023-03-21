@@ -16,9 +16,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import AuthenticationFailed
 
-from knox.auth import TokenAuthentication
-from knox.views import LoginView as KnoxLoginView
-from knox.views import LogoutView as KnoxLogoutView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from modules import Database
 from Backend import models
@@ -35,13 +33,13 @@ def validateEmail(email):
 
 def ValidateAuthToken(token):
     try:
-        knoxAuth = TokenAuthentication()
-        user, _ = knoxAuth.authenticate_credentials(token.encode())
+        refresh = RefreshToken(token)
+        user = models.PlatformUser.objects.get(unique_user_id= refresh.get("user"))
         return user
     except AuthenticationFailed:
         return None
 
-class UserRegister(KnoxLoginView):
+class UserRegister(RestViews.APIView):
     """ User Registration (Web Account Only).
 
     **POST**: ``/api/registration``
@@ -93,7 +91,7 @@ class UserRegister(KnoxLoginView):
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
-class UserAuth(KnoxLoginView):
+class UserAuth(RestViews.APIView):
     """ User Authentication (Web Account Only).
 
     **POST**: ``/api/authenticate``
@@ -121,56 +119,30 @@ class UserAuth(KnoxLoginView):
                     models.UserConfigurations(user_id=user.unique_user_id).save()
 
                 login(request, user)
-                authResponse = super(UserAuth, self).post(request, format=None)
-                authResponse.data.update({
+                refresh = RefreshToken.for_user(user)
+                refresh["user"] = str(user.unique_user_id)
+                return Response(status=200, data={
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
                     "user": Database.extractUserInfo(user)
                 })
-                return Response(status=200, data=authResponse.data)
             else:
                 return Response(status=400, data={"code": ERROR_CODE["INCORRECT_PASSWORD_OR_USERNAME"]})
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
-class UserAuthPermanent(KnoxLoginView):
-    """ User Authentication (Web Account Only).
-
-    **POST**: ``/api/authenticatePermanent``
-
-    Args:
-      Email (string): Email address also serves as unique username.
-      Password (string): Password of the account. Database will hash the password for security. 
-        User may also choose to perform end-to-end encryption during transmission if they desire.
-
-    Returns:
-      Response Code 200 if success or 400 if error. Response Body contains authentication token and user object.
-    """
-
+class UserTokenRefresh(RestViews.APIView):
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
-    
-    def get_token_ttl(self):
-        return None
-
     def post(self, request):
-        if "Email" in request.data and "Password" in request.data:
-            user = authenticate(request, username=request.data["Email"], password=request.data["Password"])
-            if user is not None:
-                if user.is_mobile:
-                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-
-                if not models.UserConfigurations.objects.filter(user_id=user.unique_user_id).exists():
-                    models.UserConfigurations(user_id=user.unique_user_id).save()
-
-                login(request, user)
-                authResponse = super(UserAuthPermanent, self).post(request, format=None)
-                authResponse.data.update({
-                    "user": Database.extractUserInfo(user)
-                })
-                return Response(status=200, data=authResponse.data)
-            else:
-                return Response(status=400, data={"code": ERROR_CODE["INCORRECT_PASSWORD_OR_USERNAME"]})
-
-        return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+        try:
+            refresh = RefreshToken(token=request.data.get("refresh"))
+            refresh.check_exp()
+            return Response(status=200, data={
+                "access": str(refresh.access_token),
+            })
+        except:
+            return Response(status=401)
 
 class FetchAuthorizedInstitute(RestViews.APIView):
     """ NOT IMPLEMENTED
@@ -181,10 +153,13 @@ class FetchAuthorizedInstitute(RestViews.APIView):
     def post(self, request):
         return Response(status=200, data={"institutes": Database.extractInstituteInfo()})
 
-class UserSignout(KnoxLogoutView):
+class UserSignout(RestViews.APIView):
     """ User logout while detroying the authentication token.
 
     **POST**: ``/api/logout``
+
+    Args:
+      refresh (string): the refresh-token for persistent connection.
 
     Returns:
       Response Code 204.
@@ -193,8 +168,17 @@ class UserSignout(KnoxLogoutView):
     permission_classes = [IsAuthenticated,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
-        logout(request)
-        return super(UserSignout, self).post(request, format=None)
+        if not "refresh" in request.data:
+            return Response(status=403)
+        
+        try: 
+            refresh = RefreshToken(token=request.data.get("refresh"))
+            logout(request)
+            refresh.blacklist()
+            return Response(status=204)
+        except Exception as e:
+            print(e)
+            return Response(status=401)
 
 class Handshake(RestViews.APIView):
     """ Confirming that the BRAVO server exist.

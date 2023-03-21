@@ -7,7 +7,7 @@ urlpatterns = [
 	path('handshake', Auth.Handshake.as_view()),
 	path('registration', Auth.UserRegister.as_view()),
 	path('authenticate', Auth.UserAuth.as_view()),
-	path('authenticatePermanent', Auth.UserAuthPermanent.as_view()),
+	path('authRefresh', Auth.UserTokenRefresh.as_view()),
 	path('logout', Auth.UserSignout.as_view()), 
 	#path('authorizedInstitute', Auth.FetchAuthorizedInstitute.as_view()), 
 	

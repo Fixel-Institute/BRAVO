@@ -1,14 +1,10 @@
 from django.urls import path
 from django.conf import settings
 
-from knox import views as KnoxViews
-
 from . import Wearable, Auth, Speech
 
 urlpatterns = [
 	path('auth/login', Auth.UserLogin.as_view()),
-	path('auth/logout', KnoxViews.LogoutView.as_view()),
-	path('auth/logoutall', KnoxViews.LogoutAllView.as_view()),
 	path('auth/refresh', Auth.UserRefresh.as_view()),
 
 	path('wearable/requestPairing', Wearable.RequestPairingDevice.as_view()),
