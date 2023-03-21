@@ -7,6 +7,11 @@ from rest_framework import permissions
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authentication import BasicAuthentication
 
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from modules import Database
+
+import datetime
 import pathlib, json
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
 
@@ -44,8 +49,18 @@ class UserRegister(RestViews.APIView):
                 user = User.objects.create_user(email=request.data["Email"], name=request.data["Name"], password=request.data["Password"])
                 user.is_mobile = True
                 user.save()
-                
-                return Response(status=200)
+
+                refresh = RefreshToken.for_user(user)
+                refresh["user"] = str(user.unique_user_id)
+
+                access = refresh.access_token
+                access.set_exp(lifetime=datetime.timedelta(weeks= 520))
+
+                return Response(status=200, data={
+                    "access": str(access),
+                    "refresh": str(refresh),
+                    "user": Database.extractUserInfo(user)
+                })
 
         return Response(status=400)
 
@@ -53,8 +68,25 @@ class UserLogin(RestViews.APIView):
     authentication_classes = [BasicAuthentication]
 
     def post(self, request, format=None):
-        if request.user.is_mobile:
-            return super(UserLogin, self).post(request, format=None)
+        if "Email" in request.data and "Password" in request.data:
+            user = authenticate(request, username=request.data["Email"], password=request.data["Password"])
+            if user is not None:
+                if not user.is_mobile:
+                    return Response(status=400)
+
+                login(request, user)
+                refresh = RefreshToken.for_user(user)
+                refresh["user"] = str(user.unique_user_id)
+
+                access = refresh.access_token
+                access.set_exp(lifetime=datetime.timedelta(weeks= 520))
+                return Response(status=200, data={
+                    "access": str(access),
+                    "refresh": str(refresh),
+                    "user": Database.extractUserInfo(user)
+                })
+            else:
+                return Response(status=400)
         return Response(status=401)
 
 class UserRefresh(RestViews.APIView):

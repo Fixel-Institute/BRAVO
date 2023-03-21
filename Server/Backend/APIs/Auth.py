@@ -83,11 +83,14 @@ class UserRegister(RestViews.APIView):
                 user = authenticate(request, username=request.data["Email"], password=request.data["Password"])
                 login(request, user)
 
-                authResponse = super(UserRegister, self).post(request, format=None)
-                authResponse.data.update({
+                refresh = RefreshToken.for_user(user)
+                refresh["user"] = str(user.unique_user_id)
+                access = refresh.access_token
+                return Response(status=200, data={
+                    "access": str(access),
+                    "refresh": str(refresh),
                     "user": Database.extractUserInfo(user)
                 })
-                return Response(status=200, data=authResponse.data)
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
