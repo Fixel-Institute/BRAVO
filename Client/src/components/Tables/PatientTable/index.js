@@ -28,7 +28,12 @@ const PatientTable = ({data}) => {
 
   const navigate = useNavigate();
 
-  const viewPerPage = 10;
+  const viewPerPage = 20;
+  const [sortedData, setSortedData] = useState([]);
+  const [sortType, setSortType] = useState({
+    key: "PatientTableName",
+    direction: 1
+  });
   const [displayData, setDisplayData] = useState([]);
   const [paginationControl, setPagination] = useState({
     currentPage: 0,
@@ -63,6 +68,21 @@ const PatientTable = ({data}) => {
     });
   };
 
+  const sortPatientList = (col) => {
+    console.log(sortType)
+    setSortType((currentType) => {
+      if (col == currentType.key) {
+        currentType.direction *= -1; 
+      } else {
+        currentType = {
+          key: col,
+          direction: 1
+        }
+      }
+      return currentType
+    });
+  }
+
   return (
     <MDBox style={{overflowX: "auto"}}>
       <Table size="small">
@@ -71,7 +91,7 @@ const PatientTable = ({data}) => {
             {["PatientTableName", "PatientTableDiagnosis", "PatientTableDevice", "PatientTableLastVisit"].map((col) => {
               return (
                 <TableCell key={col} variant="head" style={{width: "25%", minWidth: 200, verticalAlign: "bottom", paddingBottom: 0, paddingTop: 0}}>
-                  <MDTypography variant="span" fontSize={12} fontWeight={"bold"} style={{cursor: "pointer"}} onClick={()=>console.log({col})}>
+                  <MDTypography variant="span" fontSize={12} fontWeight={"bold"} style={{cursor: "pointer"}} onClick={()=>sortPatientList(col)}>
                     {dictionaryLookup(dictionary.Dashboard, col, language)}
                   </MDTypography>
                 </TableCell>

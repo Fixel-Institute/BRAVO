@@ -199,15 +199,12 @@ def extractPatientTableRow(user, patient):
             patient.save()
             continue
 
-        if device.device_name == "":
-            device.device_name = id
-
         daysSinceImplant = np.round((datetime.now(tz=pytz.utc) - device.implant_date).total_seconds() / (3600*24))
         if device.device_name == "":
             deviceName = device.getDeviceSerialNumber(key)
         else:
             deviceName = device.device_name
-        
+
         info["DaysSinceImplant"].append({"Name": deviceName, "Days": daysSinceImplant})
         if device.device_last_seen > lastTimestamp:
             lastTimestamp = device.device_last_seen

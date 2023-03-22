@@ -55,7 +55,7 @@ export default function MuiAlertDialog({title, message, denyButton, cancelButton
 // Declaring default props for DefaultNavbar
 MuiAlertDialog.defaultProps = {
   title: "Alert",
-  message: "Alert",
+  message: "Unknown Error",
   open: true,
   cancelButton: false,
   denyButton: false,

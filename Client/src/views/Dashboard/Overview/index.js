@@ -149,6 +149,7 @@ export default function DashboardOverview() {
             state = state && (
               patient.FirstName.toLowerCase().includes(optionLower) || 
               patient.LastName.toLowerCase().includes(optionLower) || 
+              patient.DaysSinceImplant.filter((device) => device.Name.toLowerCase().includes(optionLower)).length > 0 || 
               diagnosis.includes(optionLower)
             );
           }
