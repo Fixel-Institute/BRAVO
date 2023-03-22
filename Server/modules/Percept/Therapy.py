@@ -341,12 +341,14 @@ def extractTherapyDetails(TherapyConfigurations, TherapyChangeLog=[], resolveCon
                 if not TherapyConfigurations[i]["TherapyDate"] in DeviceTimestamp[deviceID][TherapyConfigurations[i]["TherapyType"]]:
                     DeviceTimestamp[deviceID][TherapyConfigurations[i]["TherapyType"]].append(TherapyConfigurations[i]["TherapyDate"])
         
-        for i in range(len(DeviceTimestamp[deviceID]["Past Therapy"])):
-            matchSession = np.where(np.abs(np.array(DeviceTimestamp[deviceID]["Pre-visit Therapy"]) - DeviceTimestamp[deviceID]["Past Therapy"][i]) < 3600*24)[0]
-            if len(matchSession) > 0:
-                continue
-            DeviceTimestamp[deviceID]["Pre-visit Therapy"].append(DeviceTimestamp[deviceID]["Past Therapy"][i])
-        DeviceTimestamp[deviceID]["Pre-visit Therapy"] = sorted(DeviceTimestamp[deviceID]["Pre-visit Therapy"])
+        if "Past Therapy" in DeviceTimestamp[deviceID].keys() and "Pre-visit Therapy" in DeviceTimestamp[deviceID].keys():
+            for i in range(len(DeviceTimestamp[deviceID]["Past Therapy"])):
+                matchSession = np.where(np.abs(np.array(DeviceTimestamp[deviceID]["Pre-visit Therapy"]) - DeviceTimestamp[deviceID]["Past Therapy"][i]) < 3600*24)[0]
+                if len(matchSession) > 0:
+                    continue
+                DeviceTimestamp[deviceID]["Pre-visit Therapy"].append(DeviceTimestamp[deviceID]["Past Therapy"][i])
+        
+            DeviceTimestamp[deviceID]["Pre-visit Therapy"] = sorted(DeviceTimestamp[deviceID]["Pre-visit Therapy"])
 
     for deviceID in DeviceTimestamp.keys():
         for typeName in DeviceTimestamp[deviceID].keys():
