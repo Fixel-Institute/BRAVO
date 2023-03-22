@@ -224,7 +224,15 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
 
   const clearQueue = (type) => {
     if (type == "All") {
-      setQueueState({...queueState, queues:[], show: false});
+      SessionController.query("/api/queryProcessingQueue", {
+        clearQueue: "All",
+      }).then((response) => {
+        if (response.status == 200) {
+          setQueueState({...queueState, queues:[], show: false});
+        }
+      }).catch((error) => {
+        SessionController.displayError(error,setAlert);
+      })
     } else if (type == "Complete") {
       SessionController.query("/api/queryProcessingQueue", {
         clearQueue: "Complete",

@@ -39,6 +39,8 @@ function UploadDialog({show, deidentified, onCancel}) {
     }).then((response) => {
       const newPatient = response.data;
 
+      const batchSessionId = uuidv4() + new Date().toISOString();
+
       const myDropzone = dropzoneRef.current.dropzone;
       myDropzone.on("processing", function() {
         this.options.autoProcessQueue = true;
@@ -46,6 +48,7 @@ function UploadDialog({show, deidentified, onCancel}) {
       myDropzone.on("sendingmultiple", function(file, xhr, formData) {
         formData.append("deviceId", response.data.deviceID);
         formData.append("patientId", response.data.newPatient.ID);
+        formData.append("batchSessionId", batchSessionId);  
       });
       myDropzone.on("success", function(file, response) {
         this.removeFile(file);
@@ -57,7 +60,9 @@ function UploadDialog({show, deidentified, onCancel}) {
       });
       myDropzone.on("complete", function(file, response) {
         if (myDropzone.getUploadingFiles().length === 0 && myDropzone.getQueuedFiles().length === 0) {
-          SessionController.query("/api/requestProcessing").then((response) => {
+          SessionController.query("/api/requestProcessing", {
+            batchSessionId: batchSessionId
+          }).then((response) => {
             if (myDropzone.getRejectedFiles().length === 0) onCancel();
           });
         }
@@ -76,7 +81,6 @@ function UploadDialog({show, deidentified, onCancel}) {
     });
 
     const batchSessionId = uuidv4() + new Date().toISOString();
-    console.log(batchSessionId)
 
     if (batchUpload) {
       myDropzone.on("sending", function(file, xhr, formData) { 
@@ -109,10 +113,16 @@ function UploadDialog({show, deidentified, onCancel}) {
     myDropzone.processQueue();
   }
 
+  const cancelUpload = () => {
+    const myDropzone = dropzoneRef.current.dropzone;
+    myDropzone.removeAllFiles();
+    onCancel();
+  };
+
   const dropzoneRef = createRef();
 
   return <>
-  <Dialog open={show} onClose={onCancel}>
+  <Dialog open={show} onClose={cancelUpload}>
     <MDBox px={2} pt={2}>
       <MDTypography variant="h5">
         {deidentified ? dictionary.SessionUpload.ResearchTitle[language] : dictionary.SessionUpload.ClinicTitle[language]} 
@@ -223,7 +233,7 @@ function UploadDialog({show, deidentified, onCancel}) {
       </DialogContent>
     )}
     <DialogActions>
-      <MDButton color="secondary" onClick={() => onCancel()}>Cancel</MDButton>
+      <MDButton color="secondary" onClick={() => cancelUpload}>Cancel</MDButton>
       <MDButton color="info" onClick={() => (deidentified && !batchUpload) ? uploadSessionsDeidentified() : uploadSessions()}>Upload</MDButton>
     </DialogActions>
   </Dialog>

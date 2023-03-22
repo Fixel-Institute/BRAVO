@@ -110,7 +110,13 @@ class QueryProcessingQueue(RestViews.APIView):
     def post(self, request):
         if "clearQueue" in request.data:
             if request.data["clearQueue"] == "All":
-                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id).delete()
+                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id)
+                for queue in queues:
+                    try:
+                        os.remove(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"])
+                    except:
+                        pass
+                    queue.delete()
             else:
                 queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, state=request.data["clearQueue"]).delete()
             return Response(status=200)

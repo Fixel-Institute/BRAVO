@@ -1,8 +1,9 @@
-import { createRef, useState } from "react";
+import React, { createRef, useState } from "react";
 
 import {
   Autocomplete,
   Grid,
+  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -22,14 +23,18 @@ import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
 import { dictionary, dictionaryLookup } from "assets/translation";
 
-export default function UploadDialog({availableDevices, onCancel}) {
+export default function UploadDialog({show, availableDevices, onCancel}) {
   const [controller, dispatch] = usePlatformContext();
   const { user, language, patientID } = controller;
 
   const [deidentifiedInfo, setDeidentifiedInfo] = useState({patientId: "", studyId: "", diagnosis: "", deviceName: ""});
   const [decryptionKey, setDecryptionKey] = useState("");
-  const [selectedDevice, setSelectedDevice] = useState(availableDevices[0]);
-  
+  const [selectedDevice, setSelectedDevice] = useState({label: "New Device", value: "NewDevice"});
+
+  React.useEffect(() => {
+    if (availableDevices.length > 0) setSelectedDevice(availableDevices[0]);
+  }, [availableDevices])
+
   const uploadSessionsDeidentified = () => {
     const myDropzone = dropzoneRef.current.dropzone;
     let deviceId = selectedDevice.value;
@@ -37,12 +42,15 @@ export default function UploadDialog({availableDevices, onCancel}) {
       deviceId = uuidv4();
     }
 
+    const batchSessionId = uuidv4() + new Date().toISOString();
+
     myDropzone.on("processing", function() {
       this.options.autoProcessQueue = true;
     });
     myDropzone.on("sending", function(file, xhr, formData) {
       formData.append("deviceId", deviceId);  
-      formData.append("patientId", patientID);  
+      formData.append("patientId", patientID);
+      formData.append("batchSessionId", batchSessionId);
     });
     myDropzone.on("success", function(file, response) {
       this.removeFile(file);
@@ -54,7 +62,9 @@ export default function UploadDialog({availableDevices, onCancel}) {
     });
     myDropzone.on("complete", function(file, response) {
       if (myDropzone.getUploadingFiles().length === 0 && myDropzone.getQueuedFiles().length === 0) {
-        SessionController.query("/api/requestProcessing").then((response) => {
+        SessionController.query("/api/requestProcessing", {
+          batchSessionId: batchSessionId
+        }).then((response) => {
           if (myDropzone.getRejectedFiles().length === 0) onCancel();
         });
       }
@@ -62,9 +72,16 @@ export default function UploadDialog({availableDevices, onCancel}) {
     myDropzone.processQueue();
   }
 
+  const cancelUpload = () => {
+    const myDropzone = dropzoneRef.current.dropzone;
+    myDropzone.removeAllFiles();
+    onCancel();
+  };
+
   const dropzoneRef = createRef();
 
   return <>
+  <Dialog open={show} onClose={cancelUpload}>
     <MDBox px={2} pt={2}>
       <MDTypography variant="h5">
         {"Upload New JSON Session Files"} 
@@ -77,6 +94,9 @@ export default function UploadDialog({availableDevices, onCancel}) {
             value={selectedDevice}
             options={[...availableDevices, {label: "New Device", value: "NewDevice"}]}
             onChange={(event, value) => setSelectedDevice(value)}
+            isOptionEqualToValue={(option, value) => {
+              return option.value == value.value;
+            }}
             renderInput={(params) => (
               <FormField
                 {...params}
@@ -105,8 +125,9 @@ export default function UploadDialog({availableDevices, onCancel}) {
       </MDBox>
     </DialogContent>
     <DialogActions>
-      <MDButton color="secondary" onClick={() => onCancel()}>Cancel</MDButton>
+      <MDButton color="secondary" onClick={() => cancelUpload()}>Cancel</MDButton>
       <MDButton color="info" onClick={() => uploadSessionsDeidentified()}>Upload</MDButton>
     </DialogActions>
+  </Dialog>
   </>
 }

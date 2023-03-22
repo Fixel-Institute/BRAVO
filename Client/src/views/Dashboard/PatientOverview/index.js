@@ -567,9 +567,8 @@ export default function PatientOverview() {
         </MDBox>
       </MDBox>
 
-      <Dialog open={Boolean(uploadNewJson.show)} onClose={() => setUploadNewJson({show: false})}>
-        <UploadDialog availableDevices={patientInfo.Devices ? patientInfo.Devices.map((device) => ({label: device.ID, value: device.ID})) : []} onCancel={() => setUploadNewJson({show: false})} />
-      </Dialog>
+      <UploadDialog show={uploadNewJson.show} availableDevices={patientInfo.Devices ? patientInfo.Devices.map((device) => ({label: device.DeviceName, value: device.ID})) : []} onCancel={() => setUploadNewJson({show: false})} />
+
     </DatabaseLayout>
   );
 };
