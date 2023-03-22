@@ -7,7 +7,7 @@ import dateutil
 import time
 
 import websocket
-from BRAVO import asgi
+from BRAVO import wsgi
 
 from Backend import models
 from modules.Percept import Sessions
@@ -71,6 +71,7 @@ def processJSONUploads():
                     print(e)
                     #print("Socket Not Active")
             else:
+                print(ProcessingResult)
                 queue.state = "Error"
                 queue.save()
 
