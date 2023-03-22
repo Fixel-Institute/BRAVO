@@ -285,7 +285,7 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
         models.ImpedanceHistory(impedance_record=Data["Impedance"], device_deidentified_id=deviceID.deidentified_id, session_date=SessionDate).save()
 
     if NewDataFound:
-        os.rename(DATABASE_PATH + "cache" + os.path.sep + filename, DATABASE_PATH + "sessions" + os.path.sep + session.session_file_path)
+        os.rename(DATABASE_PATH + "cache" + os.path.sep + filename, DATABASE_PATH + session.session_file_path)
         patient.last_change = datetime.now(tz=pytz.utc)
         patient.save()
         session.save()

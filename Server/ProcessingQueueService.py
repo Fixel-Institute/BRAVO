@@ -13,20 +13,15 @@ from Backend import models
 from modules.Percept import Sessions
 from modules import Database
 
-def on_open(wsapp):
-    print("on_open")
-    wsapp.send(json.dumps({
-        "Authorization": os.environ["ENCRYPTION_KEY"],
-        "PersistentConnection": True
-    }))
-
 def processJSONUploads():
     ws = websocket.WebSocket()
     if models.ProcessingQueue.objects.filter(state="InProgress").exists():
-        BatchQueues = models.ProcessingQueue.objects.filter(state="InProgress").all()
+        BatchQueues = models.ProcessingQueue.objects.filter(state="InProgress").order_by("datetime").all()
         for queue in BatchQueues:
             if not models.ProcessingQueue.objects.filter(state="InProgress", queue_id=queue.queue_id).exists():
                 continue
+            queue.state = "Processing"
+            queue.save()
             
             print(f"Start Processing {queue.descriptor['filename']}")
             newPatient = None
@@ -79,24 +74,5 @@ def processJSONUploads():
                 queue.state = "Error"
                 queue.save()
 
-def on_close(wsapp, event, state):
-    print("socket closed")
-
-def on_error(ws, error):
-    print("socket error")
-    print(error)
-
-def on_message(ws, message):
-    processJSONUploads()
-
 if __name__ == '__main__':
     processJSONUploads()
-    while True:
-        wsapp = websocket.WebSocketApp("ws://localhost:3001/socket/notification",
-            on_open=on_open,
-            on_close=on_close,
-            on_error=on_error,
-            on_message=on_message,
-        )
-        wsapp.run_forever()
-        time.sleep(5)

@@ -97,7 +97,7 @@ export default function UploadDialog({availableDevices, onCancel}) {
           autoDiscover: false,
           autoProcessQueue: false,
           uploadMultiple: true,
-          headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
+          headers: { 'Authorization': "Bearer " + SessionController.getAuthToken() },
           parallelUploads: 50,
           maxFiles: 50
         }} ref={dropzoneRef}>

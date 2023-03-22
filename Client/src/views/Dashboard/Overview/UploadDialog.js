@@ -9,6 +9,8 @@ import {
   TextField,
 } from "@mui/material";
 
+import { v4 as uuidv4 } from 'uuid';
+
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";
@@ -73,9 +75,17 @@ function UploadDialog({show, deidentified, onCancel}) {
       this.options.autoProcessQueue = false;
     });
 
+    const batchSessionId = uuidv4() + new Date().toISOString();
+    console.log(batchSessionId)
+
     if (batchUpload) {
       myDropzone.on("sending", function(file, xhr, formData) { 
-        formData.append("decryptionKey", decryptionKey);  
+        formData.append("decryptionKey", decryptionKey);
+        formData.append("batchSessionId", batchSessionId);  
+      });
+    } else {
+      myDropzone.on("sending", function(file, xhr, formData) { 
+        formData.append("batchSessionId", batchSessionId);  
       });
     }
 
@@ -89,7 +99,9 @@ function UploadDialog({show, deidentified, onCancel}) {
     });
     myDropzone.on("complete", function(file, response) {
       if (myDropzone.getUploadingFiles().length === 0 && myDropzone.getQueuedFiles().length === 0) {
-        SessionController.query("/api/requestProcessing").then((response) => {
+        SessionController.query("/api/requestProcessing", {
+          batchSessionId: batchSessionId
+        }).then((response) => {
           if (myDropzone.getRejectedFiles().length === 0) onCancel();
         });
       }
@@ -184,7 +196,7 @@ function UploadDialog({show, deidentified, onCancel}) {
             autoDiscover: false,
             autoProcessQueue: false,
             uploadMultiple: true,
-            headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
+            headers: { 'Authorization': "Bearer " + SessionController.getAuthToken() },
             parallelUploads: 50,
             maxFiles: batchUpload ? 2000 : 50
           }} ref={dropzoneRef}>
@@ -202,7 +214,7 @@ function UploadDialog({show, deidentified, onCancel}) {
             autoDiscover: false,
             autoProcessQueue: false,
             uploadMultiple: true,
-            headers: { 'Authorization': "Token " + SessionController.getAuthToken() },
+            headers: { 'Authorization': "Bearer " + SessionController.getAuthToken() },
             parallelUploads: 50,
             maxFiles: 2000
           }} ref={dropzoneRef}>

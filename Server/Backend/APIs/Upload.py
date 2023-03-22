@@ -60,6 +60,60 @@ class DeidentificationTable(RestViews.APIView):
             exists = models.DeidentifiedPatientTable.objects.filter(researcher_id=request.user.unique_user_id).exists()
             return Response(status=200, data={"Exist": exists})
 
+def processJSONUploads(BatchQueues):
+    ws = websocket.WebSocket()
+    for queue in BatchQueues:
+        print(f"Start Processing {queue.descriptor['filename']}")
+        newPatient = None
+        ErrorMessage = ""
+        ProcessingResult = ""
+        try:
+            user = models.PlatformUser.objects.get(unique_user_id=queue.owner)
+            if user.is_clinician:
+                ProcessingResult, newPatient, _ = Sessions.processPerceptJSON(user, queue.descriptor["filename"]) 
+            else:
+                if "device_deidentified_id" in queue.descriptor:
+                    ProcessingResult, _, _ = Sessions.processPerceptJSON(user, queue.descriptor["filename"], device_deidentified_id=queue.descriptor["device_deidentified_id"])
+                elif "passkey" in queue.descriptor:
+                    table = Database.getDeidentificationLookupTable(user, queue.descriptor["passkey"])
+                    ProcessingResult, newPatient, _ = Sessions.processPerceptJSON(user, queue.descriptor["filename"], lookupTable=table)
+
+        except Exception as e:
+            ErrorMessage = str(e)
+            print(ErrorMessage)
+
+        print(f"End Processing {queue.descriptor['filename']}")
+        if ProcessingResult == "Success":
+            queue.state = "Complete"
+            queue.save()
+            try:
+                ws.connect("ws://localhost:3001/socket/notification")
+                ws.send(json.dumps({
+                    "NotificationType": "TaskComplete",
+                    "TaskUser": str(queue.owner),
+                    "TaskID": str(queue.queue_id),
+                    "Authorization": os.environ["ENCRYPTION_KEY"],
+                    "State": "Complete",
+                    "Message": ErrorMessage,
+                }))
+
+                if newPatient:
+                    newPatient = Database.extractPatientTableRow(str(queue.owner), newPatient)
+                    ws.send(json.dumps({
+                        "NotificationType": "NewPatient",
+                        "TaskUser": str(queue.owner),
+                        "NewPatient": newPatient,
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                    }))
+
+                ws.close()
+            except Exception as e:
+                print(e)
+                #print("Socket Not Active")
+        else:
+            queue.state = "Error"
+            queue.save()
+
 class SessionUpload(RestViews.APIView):
     """ Upload JSON Session File.
 
@@ -90,15 +144,16 @@ class SessionUpload(RestViews.APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         for key in request.data.keys():
-            if not (key.startswith("file") or key == "deviceId" or key == "patientId" or key == "decryptionKey"):
+            if not (key.startswith("file") or key == "deviceId" or key == "patientId" or key == "decryptionKey" or key == "batchSessionId"):
                 return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
         if request.user.is_clinician:
             for key in request.data.keys():
                 if key.startswith("file"):
                     rawBytes = request.data[key].read()
-                    queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
-                        "filename": request.data[key].name
+                    queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="WaitToStart", descriptor={
+                        "filename": request.data[key].name,
+                        "batchSessionId": request.data["batchSessionId"]
                     })
                     Sessions.saveCacheJSON(request.data[key].name, rawBytes)
                     queueItem.save()
@@ -151,15 +206,8 @@ class RequestProcessingQueue(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        ws = websocket.WebSocket()
-        ws.connect("ws://localhost:3001/socket/notification")
-        ws.send(json.dumps({
-            "NotificationType": "RequestProcessing",
-            "Authorization": os.environ["ENCRYPTION_KEY"]
-        }))
-        ws.close()
+        models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, state="WaitToStart", descriptor__batchSessionId=request.data["batchSessionId"]).update(state="InProgress")
         return Response(status=200)
-
 
 class SessionRemove(RestViews.APIView):
     """ Delete JSON Session File.
