@@ -17,12 +17,12 @@ class BRAVOPlatformRequest:
         self.__Password = password
         self.__Server = server
         
-        form = {"Email": username, "Password": password}
+        form = {"Email": username, "Password": password, "Persistent": True}
         headers = {"Content-Type": "application/json"}
         response = requests.post(self.__Server + "/api/authenticate", json.dumps(form), headers=headers)
         if response.status_code == 200:
             payload = response.json()
-            self.__Headers = {"Content-Type": "application/json", "Authorization": f"Token {payload['token']}"} 
+            self.__Headers = {"Content-Type": "application/json", "Authorization": f"Bearer {payload['access']}"} 
         else:
             print(response.content)
             raise Exception(f"Network Error: {response.status_code}")
