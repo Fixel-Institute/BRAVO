@@ -155,7 +155,6 @@ def queryMontageData(user, devices, timestamps, authority):
                     continue
 
                 stream = Database.loadSourceDataPointer(recording.recording_datapointer)
-                print(stream.keys())
                 if not "Spectrums" in stream.keys():
                     stream = processMontageStreams(stream)
                     Database.saveSourceFiles(stream,recording.recording_type,"Combined",recording.recording_id, recording.device_deidentified_id)

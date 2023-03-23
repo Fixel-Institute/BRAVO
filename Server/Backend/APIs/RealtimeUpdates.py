@@ -83,10 +83,6 @@ class NotificationSystem(AsyncWebsocketConsumer):
                     return
                 return await self.close()
             
-            if self.scope["authorization"]:
-                if self.scope["user"] == "LocalAdmin":
-                    print(request)
-    
     async def request_processing_queue(self, event):
         await self.send(text_data=json.dumps({
             "Notification": "ProcessQueue",

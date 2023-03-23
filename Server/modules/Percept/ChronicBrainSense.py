@@ -405,11 +405,9 @@ def processCircadianPower(LFPTrends, therapyInfo, timezoneOffset=0):
 
             if "SensingSetup" in Therapy.keys():
                 if Therapy['Frequency'] == therapyInfo["Frequency"] and Therapy['SensingSetup']['FrequencyInHertz'] == therapyInfo["FrequencyInHertz"] and f"E{therapyInfo['Channel']}" in Therapy["Channel"]:
-                    print(Therapy["Channel"])
                     CircadianPowers["Power"].extend(LFPTrends[i]["Power"][j])
                     CircadianPowers["Timestamp"].extend(LFPTrends[i]["Timestamp"][j])
             
-        
         if len(CircadianPowers["Power"]) > 0:
             CircadianPowers["Suggestion"] = list()
             Timestamp = (np.array(CircadianPowers["Timestamp"])-timezoneOffset) % (24*60*60)

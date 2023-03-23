@@ -473,7 +473,6 @@ def mergeRealtimeStreamData(recordings):
                 
     Therapies = uniqueList(Therapies)
     if len(Therapies) > 1:
-        print(Therapies)
         return False
     
     CombinedData = copy.deepcopy(BrainSenseData[0])
