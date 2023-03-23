@@ -103,6 +103,7 @@ class UserAuth(RestViews.APIView):
       Email (string): Email address also serves as unique username.
       Password (string): Password of the account. Database will hash the password for security. 
         User may also choose to perform end-to-end encryption during transmission if they desire.
+      Persistent (Boolean): If the token's expiration date should be extremely long or not.
 
     Returns:
       Response Code 200 if success or 400 if error. Response Body contains authentication token and user object.
@@ -127,6 +128,7 @@ class UserAuth(RestViews.APIView):
 
                 access = refresh.access_token
                 if "Persistent" in request.data:
+                    refresh.set_exp(lifetime=datetime.timedelta(weeks= 520))
                     access.set_exp(lifetime=datetime.timedelta(weeks= 520))
 
                 return Response(status=200, data={
@@ -149,7 +151,8 @@ class UserTokenRefresh(RestViews.APIView):
             return Response(status=200, data={
                 "access": str(refresh.access_token),
             })
-        except:
+        except Exception as e:
+            print(e)
             return Response(status=401)
 
 class FetchAuthorizedInstitute(RestViews.APIView):

@@ -195,11 +195,7 @@ export const SessionController = (function () {
   };
 
   const authenticate = (username, password, rememberMe) => {
-    if (rememberMe) {
-      return query("/api/authenticatePermanent", {Email: username, Password: password});
-    } else {
-      return query("/api/authenticate", {Email: username, Password: password});
-    }
+    return query("/api/authenticate", {Email: username, Password: password, Persistent: rememberMe ? true : null});
   };
 
   const register = (username, email, password, institute) => {

@@ -124,7 +124,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": datetime.timedelta(hours=4),
-    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(minutes=1),
+    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(minutes=5),
 }
 
 ASGI_APPLICATION = 'BRAVO.asgi.application'

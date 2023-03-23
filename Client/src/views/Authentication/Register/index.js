@@ -40,7 +40,8 @@ export default function Register() {
     if (agree) {
       SessionController.register(authInfo.username, authInfo.email, authInfo.password, authInfo.email).then((response) => {
         SessionController.setUser(response.data.user);
-        SessionController.setAuthToken(response.data.token);
+        SessionController.setAuthToken(response.data.access);
+        SessionController.setRefreshToken(response.data.refresh); 
         SessionController.syncSession();
         setAuthInfo({...authInfo, password: ""});
         setContextState(dispatch, "user", response.data.user);
