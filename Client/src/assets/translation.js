@@ -311,6 +311,32 @@ export const dictionary = {
       zh: "下一页"
     }
   },
+  ResearchAccess: {
+    AccessTable: {
+      en: "Patient Access Table",
+      zh: "Patient Access Table"
+    },
+    PatientTableName: {
+      en: "Patient Name",
+      zh: "Patient Name"
+    },
+    PatientTableDiagnosis: {
+      en: "Diagnosis",
+      zh: "Diagnosis"
+    },
+    UploaderInfo: {
+      en: "Uploader",
+      zh: "Uploader"
+    },
+    SharedInfo: {
+      en: "Shared with",
+      zh: "Shared with"
+    },
+    AddViewAccess: {
+      en: "Add View Access",
+      zh: "Add View Access"
+    }
+  },
   PatientOverview: {
     EditPatientInfo: {
       en: "Edit Patient Information",
@@ -334,7 +360,7 @@ export const dictionary = {
     },
     DeletePatient: {
       en: "Delete Patient Entry",
-      zh: "修改病人信息"
+      zh: "删除病人数据"
     },
     DeviceTable: {
       DeviceType: {
@@ -817,6 +843,10 @@ export const dictionary = {
       en: "Patient Lookup Table",
       zh: "Patient Lookup Table"
     },
+    "access-permissions": {
+      en: "Access Permission List",
+      zh: "Access Permission List"
+    },
     reports: {
       en: "Reports",
       zh: "汇报"
@@ -898,6 +928,10 @@ export const dictionary = {
     PatientLookupTable: {
       en: "Patient Lookup Table",
       zh: "Patient Lookup Table"
+    },
+    ShareResearchAccess: {
+      en: "Access Permission List",
+      zh: "Access Permission List"
     },
     Reports: {
       en: "Reports",

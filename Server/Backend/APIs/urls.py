@@ -23,8 +23,10 @@ urlpatterns = [
 
 	path('updatePatientInformation', UpdateRecordings.PatientInformationUpdate.as_view()),
 	path('updateBrainSenseStream', UpdateRecordings.BrainSenseStreamUpdate.as_view()),
+	path('updatePatientAccess', UpdateRecordings.UpdatePatientAccess.as_view()),
 
 	path('queryDatabaseInfo', Queries.QueryDatabaseInfo.as_view()),
+	path('queryPatientAccessTable', Queries.QueryPatientAccessTable.as_view()),
 	path('queryPatients', Queries.QueryPatientList.as_view()),
 	path('queryPatientInfo', Queries.QueryPatientInfo.as_view()),
 	path('queryProcessingQueue', Queries.QueryProcessingQueue.as_view()),

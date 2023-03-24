@@ -61,6 +61,22 @@ class QueryPatientList(RestViews.APIView):
         Patients = Database.extractPatientList(request.user)
         return Response(status=200, data=Patients)
 
+class QueryPatientAccessTable(RestViews.APIView):
+    """ Query list of accessible patients in database.
+
+    **POST**: ``/api/queryPatientAccessTable``
+
+    Returns:
+      Response Code 200.
+      Response Body contains list of patient object with access information. 
+    """
+
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        Patients = Database.extractPatientAccessTable(request.user)
+        return Response(status=200, data=Patients)
+
 class QueryPatientInfo(RestViews.APIView):
     """ Query detailed patient information.
 
@@ -336,7 +352,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
 
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
-                if not request.data["recordingId"] in Authority["Permission"]:
+                if not request.data["recordingId"] in [str(id) for id in Authority["Permission"]]:
                     return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
                 BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
@@ -619,7 +635,8 @@ class QueryPredictionModel(RestViews.APIView):
             data = list()
             for stimulationSide in BrainSenseData["Stimulation"]:
                 if len(np.unique(stimulationSide["Amplitude"])) > 3:
-                    if not models.PredictionModel.objects.filter(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"]).exists():
+                    #if not models.PredictionModel.objects.filter(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"]).exists():
+                    if True:
                         Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
                         PredictionModel = models.PredictionModel(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"], model_details=Features)
                         PredictionModel.save()

@@ -235,3 +235,59 @@ class BrainSenseStreamUpdate(RestViews.APIView):
                 return Response(status=200)
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+
+class UpdatePatientAccess(RestViews.APIView):
+    """ Update Patient Access Table.
+
+    Currently only recording contact change is implemented because this is the only information not stored in Percept JSON. 
+    
+    **POST**: ``/api/updatePatientAccess``
+
+    Args:
+      requestData (uuid): Device Unique Identifier.
+      updateRecordingContactType (uuid): BrainSense Recording Unique Identifier.
+      contactIndex (int): Indicate for Left/Right hemisphere.
+      contactType (string): Contact Type (Segment, Ring, A/B/C)
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+    """
+
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        if "createLink" in request.data and "patientList" in request.data:
+            for patientId in request.data["patientList"]:
+                if not Database.verifyAccess(request.user, patientId) == 1:
+                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            shareLink = ''.join(random.choice(string.ascii_uppercase) for i in range(32))
+            models.ResearchAccessShareLink(share_link=shareLink, authorized_patient_list=request.data["patientList"], expiration_time=datetime.datetime.fromtimestamp(datetime.datetime.now().timestamp() + 3600)).save()
+            return Response(status=200, data={
+                "shareLink": shareLink
+            })
+        
+        elif "requestAccess" in request.data and "accessCode" in request.data:
+            if not models.ResearchAccessShareLink.objects.filter(share_link=request.data["accessCode"], expiration_time__gt=datetime.datetime.now()).exists():
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            access = models.ResearchAccessShareLink.objects.filter(share_link=request.data["accessCode"], expiration_time__gt=datetime.datetime.now()).first()
+            for patientId in access.authorized_patient_list:
+                Database.AuthorizeResearchAccess(request.user, request.user.unique_user_id, patientId, True)
+                Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="TherapyHistory")
+                Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="BrainSenseSurvey")
+                Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="BrainSenseStream")
+                Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="IndefiniteStream")
+                Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="ChronicLFPs")
+
+            access.delete()
+            return Response(status=200)
+        
+        elif "deleteAccess" in request.data and "patientId" in request.data and "authorizedId" in request.data:
+            if not Database.verifyAccess(request.user, request.data["patientId"]) == 1:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            Database.AuthorizeResearchAccess(request.user, request.data["authorizedId"], request.data["patientId"], False)
+            return Response(status=200)
+         
+        return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})

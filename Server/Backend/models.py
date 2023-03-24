@@ -86,16 +86,22 @@ class Patient(models.Model):
         return str(self.deidentified_id)
 
     def getPatientFirstName(self, key):
-        secureEncoder = Fernet(key)
-        return secureEncoder.decrypt(self.first_name.encode("utf-8")).decode("utf-8")
+        try:
+            secureEncoder = Fernet(key)
+            return secureEncoder.decrypt(self.first_name.encode("utf-8")).decode("utf-8")
+        except:
+            return self.first_name
 
     def setPatientFirstName(self, first_name, key):
         secureEncoder = Fernet(key)
         self.first_name = secureEncoder.encrypt(first_name.encode('utf_8')).decode("utf-8")
 
     def getPatientLastName(self, key):
-        secureEncoder = Fernet(key)
-        return secureEncoder.decrypt(self.last_name.encode("utf-8")).decode("utf-8")
+        try:
+            secureEncoder = Fernet(key)
+            return secureEncoder.decrypt(self.last_name.encode("utf-8")).decode("utf-8")
+        except:
+            return self.last_name
 
     def setPatientLastName(self, last_name, key):
         secureEncoder = Fernet(key)
@@ -104,9 +110,12 @@ class Patient(models.Model):
     def getPatientMRN(self, key):
         if self.medical_record_number == "":
             return ""
-        secureEncoder = Fernet(key)
-        return secureEncoder.decrypt(self.medical_record_number.encode("utf-8")).decode("utf-8")
-
+        try:
+            secureEncoder = Fernet(key)
+            return secureEncoder.decrypt(self.medical_record_number.encode("utf-8")).decode("utf-8")
+        except:
+            return self.medical_record_number
+        
     def setPatientMRN(self, mrn, key):
         secureEncoder = Fernet(key)
         self.medical_record_number = secureEncoder.encrypt(mrn.encode("utf-8")).decode("utf-8")
@@ -125,11 +134,16 @@ class SearchTags(models.Model):
     tag_name = models.CharField(default="", max_length=255)
     tag_type = models.CharField(default="Patient", max_length=255)
     institute = models.CharField(default="", max_length=255)
-    
+
 class DeidentifiedPatientTable(models.Model):
     researcher_id = models.UUIDField(default=uuid.uuid1)
     lookup_table = models.TextField(default="", max_length=999999)
 
+class ResearchAccessShareLink(models.Model):
+    authorized_patient_list = models.JSONField(default=list)
+    share_link = models.CharField(default="", max_length=64)
+    expiration_time = models.DateTimeField(default=timezone.now)
+    
 class DeidentifiedPatientID(models.Model):
     researcher_id = models.UUIDField(default=uuid.uuid1)
     authorized_patient_id = models.UUIDField(default=uuid.uuid4)

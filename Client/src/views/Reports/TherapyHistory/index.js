@@ -208,7 +208,7 @@ function TherapyHistory() {
       dataToRender.data = impedanceLogs.map((data) => {
         try {
           if (therapyHistory[activeDevice].Device != data.device) return null;
-          return {timestamps: data.session_date, value: impedanceMode === "Monopolar" ? data.log.Left[impedanceMode][point.y] : data.log.Left[impedanceMode][point.y][point.x]};
+          return {timestamps: data.session_date, value: impedanceMode === "Monopolar" ? data.log.Right[impedanceMode][point.y] : data.log.Right[impedanceMode][point.y][point.x]};
         } catch (error) {
           return null;
         }

@@ -160,7 +160,7 @@ def AuthorizeRecordingAccess(user, researcher_id, patient_id, recording_id="", r
             else:
                 DeidentifiedPatientID = models.DeidentifiedPatientID.objects.get(researcher_id=researcher_id, authorized_patient_id=patient_id)
                 TimeRange = [datetime.fromtimestamp(timestamp) for timestamp in DeidentifiedPatientID.authorized_time_range[recording_type]]
-                AvailableDevices = models.PerceptDevice.objects.filter(patient_deidentified_id=patient_id, authority_level="Clinic", authority_user=user.institute).all()
+                AvailableDevices = models.PerceptDevice.objects.filter(patient_deidentified_id=patient_id).all()
                 for device in AvailableDevices:
                     AvailableRecordings = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type=recording_type, recording_date__gte=TimeRange[0], recording_date__lte=TimeRange[1]).order_by("-recording_date").all()
                     for recording in AvailableRecordings:
@@ -306,7 +306,8 @@ def verifyAccess(user, patient_id):
 def verifyPermission(user, patient_id, authority, access_type):
     if authority["Level"] == 1:
         return [0, 0]
-
+    
+    # If given all access
     if access_type == "TherapyHistory" and models.ResearchAuthorizedAccess.objects.filter(researcher_id=user.unique_user_id, authorized_patient_id=patient_id, authorized_recording_type="TherapyHistory").exists():
         DeidentifiedPatientID = models.DeidentifiedPatientID.objects.get(researcher_id=user.unique_user_id, authorized_patient_id=patient_id)
         TimeRange = DeidentifiedPatientID.authorized_time_range
@@ -359,6 +360,51 @@ def extractPatientList(user):
             patient = models.Patient.objects.filter(deidentified_id=deidentified_patient.deidentified_id, institute=user.unique_user_id).first()
             info = extractPatientTableRow(user, patient)
             PatientInfo.append(info)
+
+    PatientInfo = sorted(PatientInfo, key=lambda patient: patient["LastName"]+", "+patient["FirstName"])
+    return PatientInfo
+
+def extractPatientAccessTable(user):
+    PatientInfo = list()
+    if user.is_admin or user.is_clinician:
+        researcherIds = {}
+        patients = models.Patient.objects.filter(institute=user.institute).all()
+    else:
+        patients = models.Patient.objects.filter(institute=user.email).all()
+
+    for patient in patients:
+        info = extractPatientTableRow(user, patient)
+        AuthorizedUsers = []
+        if models.DeidentifiedPatientID.objects.filter(authorized_patient_id=info["ID"]).exists():
+            AuthorizedUsers = models.DeidentifiedPatientID.objects.filter(authorized_patient_id=info["ID"]).values("researcher_id").all()
+            AuthorizedUsers = [str(user["researcher_id"]) for user in AuthorizedUsers]
+            for userId in AuthorizedUsers:
+                if not userId in researcherIds.keys():
+                    researcherIds[userId] = models.PlatformUser.objects.filter(unique_user_id=userId).first()
+        
+        PatientInfo.append({
+            "ID": info["ID"],
+            "FirstName": info["FirstName"],
+            "LastName": info["LastName"],
+            "Diagnosis": info["Diagnosis"],
+            "Uploader": user.institute if (user.is_admin or user.is_clinician) else user.email,
+            "Authorized": [{"Email": researcherIds[userId].email, "ID": userId} for userId in AuthorizedUsers]
+        })
+    
+    DeidentifiedPatientID = models.DeidentifiedPatientID.objects.filter(researcher_id=user.unique_user_id).all()
+    for deidentified_patient in DeidentifiedPatientID:
+        deidentified = models.Patient.objects.filter(deidentified_id=deidentified_patient.deidentified_id).first()
+        patient = extractAccess(user, deidentified_patient.authorized_patient_id)
+        info = extractPatientTableRow(user, deidentified)
+
+        PatientInfo.append({
+            "ID": info["ID"],
+            "FirstName": info["FirstName"],
+            "LastName": info["LastName"],
+            "Diagnosis": info["Diagnosis"],
+            "Uploader": patient.institute,
+            "Authorized": []
+        })
 
     PatientInfo = sorted(PatientInfo, key=lambda patient: patient["LastName"]+", "+patient["FirstName"])
     return PatientInfo

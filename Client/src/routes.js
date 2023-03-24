@@ -23,6 +23,7 @@
 // BRAVO Platform Layouts
 import DashboardOverview from "views/Dashboard/Overview";
 import PatientLookupTable from "views/Dashboard/PatientLookupTable";
+import ResearchAccessView from "views/Dashboard/ShareResearchAccess";
 import PatientOverview from "views/Dashboard/PatientOverview";
 import SurveyList from "views/Survey/Overview";
 import TherapyHistory from "views/Reports/TherapyHistory";
@@ -47,7 +48,7 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import PersonIcon from '@mui/icons-material/Person';
 import BiotechIcon from '@mui/icons-material/Biotech';
-import { AccessAlarm, People, Article } from "@mui/icons-material";
+import { AccessAlarm, People, Article, IosShare } from "@mui/icons-material";
 
 import { experimentalRoutes } from "views/Experimental/plugins";
 
@@ -59,6 +60,17 @@ const routes = [
     component: <DashboardOverview />,
     route: "/dashboard",
     icon: <DashboardIcon/>,
+    noCollapse: true,
+    identified: true,
+    deidentified: true
+  },
+  {
+    type: "collapse",
+    name: "ShareResearchAccess",
+    key: "access-permissions",
+    component: <ResearchAccessView />,
+    route: "/access-permissions",
+    icon: <IosShare/>,
     noCollapse: true,
     identified: true,
     deidentified: true
