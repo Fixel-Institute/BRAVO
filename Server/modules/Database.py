@@ -242,7 +242,7 @@ def extractPatientInfo(user, patientUniqueID):
         deviceInfo["Location"] = device.device_location
         if device.device_name == "":
             if not (user.is_admin or user.is_clinician):
-                deviceInfo["DeviceName"] = id
+                deviceInfo["DeviceName"] = device.deidentified_id
             else:
                 deviceInfo["DeviceName"] = device.getDeviceSerialNumber(key)
         else:
