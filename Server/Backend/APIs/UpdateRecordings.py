@@ -79,6 +79,7 @@ class PatientInformationUpdate(RestViews.APIView):
         "updatePatientInfo": "(uuid)",
         "updateDeviceID": "(uuid)",
         "newDeviceName": "(string)",
+        "leadAnnotations": "[(string)]"
       }
 
     **Update Patient Information**
@@ -158,6 +159,8 @@ class PatientInformationUpdate(RestViews.APIView):
                 if request.data["updateDeviceID"] in patient.device_deidentified_id:
                     device = models.PerceptDevice.objects.get(deidentified_id=request.data["updateDeviceID"])
                     device.device_name = request.data["newDeviceName"]
+                    for index in range(len(device.device_lead_configurations)):
+                        device.device_lead_configurations[index]["CustomName"] = request.data["leadAnnotations"][index]
                     device.save()
                     return Response(status=200)
 

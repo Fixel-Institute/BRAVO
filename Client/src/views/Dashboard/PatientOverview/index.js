@@ -57,7 +57,7 @@ export default function PatientOverview() {
 
   const [patientInfo, setPatientInfo] = useState(false);
   const [editPatientInfo, setEditPatientInfo] = useState({show: false});
-  const [editDeviceInfo, setEditDeviceInfo] = useState({show: false});
+  const [editDeviceInfo, setEditDeviceInfo] = useState({LeadInfo: [], show: false});
   const [uploadNewJson, setUploadNewJson] = useState({show: false});
   const [addNewDevice, setAddNewDevice] = useState({show: false});
   const [availableTags, setAvailableTags] = useState([]);
@@ -134,14 +134,21 @@ export default function PatientOverview() {
   const updateDeviceInformation = () => {
     SessionController.query("/api/updatePatientInformation", {
       updatePatientInfo: patientID,
-      newDeviceName: editDeviceInfo.DeviceName,
       updateDeviceID: editDeviceInfo.DeviceID,
+      newDeviceName: editDeviceInfo.DeviceName,
+      leadAnnotations: editDeviceInfo.LeadInfo.map((lead) => lead.CustomName),
     }).then(() => {
       setPatientInfo({...patientInfo, Devices: patientInfo.Devices.map((device) => {
         if (device.ID != editDeviceInfo.DeviceID) return device
         return {
           ...device,
-          DeviceName: editDeviceInfo.DeviceName
+          DeviceName: editDeviceInfo.DeviceName,
+          Leads: device.Leads.map((lead, index) => {
+            return {
+              ...lead,
+              CustomName: editDeviceInfo.LeadInfo[index].CustomName
+            }
+          })
         };
       })});
       setEditDeviceInfo({...editDeviceInfo, show: false});
@@ -400,7 +407,7 @@ export default function PatientOverview() {
                               {lead.ElectrodeType}
                             </MDTypography>
                             <MDTypography style={{marginBottom: 0, marginTop: 0}} align="center" fontSize={11}>
-                              {lead.TargetLocation}
+                              {lead.CustomName}
                             </MDTypography>
                           </MDBox>
                           })}
@@ -428,7 +435,7 @@ export default function PatientOverview() {
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="Edit Device" placement="top">
-                              <IconButton variant="contained" color="info" onClick={() => setEditDeviceInfo({...editDeviceInfo, DeviceName: device.DeviceName, DeviceID: device.ID, show: true})}>
+                              <IconButton variant="contained" color="info" onClick={() => setEditDeviceInfo({...editDeviceInfo, LeadInfo: device.Leads, DeviceName: device.DeviceName, DeviceID: device.ID, show: true})}>
                                 <i className="fa-solid fa-pen" style={{fontSize: 10}}></i>
                               </IconButton>
                             </Tooltip>
@@ -443,7 +450,7 @@ export default function PatientOverview() {
               <Dialog open={editDeviceInfo.show} onClose={() => setEditDeviceInfo({...editDeviceInfo, show: false})}>
                 <MDBox px={2} pt={2}>
                   <MDTypography variant="h5">
-                    Edit Device Name
+                    Edit Device Information
                   </MDTypography>
                   <MDTypography variant="h5">
                     {`(${editDeviceInfo.DeviceID})`}
@@ -455,12 +462,29 @@ export default function PatientOverview() {
                       <TextField
                         variant="standard"
                         margin="dense"
+                        label="Device Name"
                         placeholder="Device Name"
                         value={editDeviceInfo.DeviceName}
                         onChange={(event) => setEditDeviceInfo({...editDeviceInfo, DeviceName: event.target.value})}
                         fullWidth
                       />
                     </Grid>
+                    {editDeviceInfo.LeadInfo.map((lead, index) => (
+                      <Grid item xs={6}>
+                        <TextField
+                          variant="standard"
+                          margin="dense"
+                          label={`Lead #${index+1}`}
+                          placeholder="editDeviceInfo"
+                          value={lead.CustomName}
+                          onChange={(event) => setEditDeviceInfo({...editDeviceInfo, LeadInfo: editDeviceInfo.LeadInfo.map((oldLead, oldIndex) => {
+                            if (index == oldIndex) return {...oldLead, CustomName: event.target.value};
+                            return oldLead;
+                          })})}
+                          fullWidth
+                        />
+                      </Grid>
+                    ))}
                   </Grid>
                 </DialogContent>
                 <DialogActions>

@@ -194,6 +194,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                 for lead in leads:
                     if lead["TargetLocation"].startswith(hemisphere.replace("HemisphereLocationDef.","")):
                         LFPTrends[-1]["Hemisphere"] = lead["TargetLocation"]
+                        LFPTrends[-1]["CustomName"] = lead["CustomName"]
 
                 LFPTimestamps = ChronicLFPs["DateTime"]
                 LFPPowers = ChronicLFPs["LFP"]

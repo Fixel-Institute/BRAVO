@@ -216,9 +216,12 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
 
             if data["Duration"] < 5:
                 continue
-
+            
             data["RecordingID"] = recording.recording_id
-            data["DeviceName"] = device.device_name
+            DeviceName = device.device_name
+            if DeviceName == "":
+                DeviceName = device.getDeviceSerialNumber(key)
+            data["DeviceName"] = DeviceName
             data["DeviceID"] = device.deidentified_id
             data["DeviceLocation"] = device.device_location
             data["Channels"] = list()
@@ -247,7 +250,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                 contacts, hemisphere = Percept.reformatChannelName(channel)
                 for lead in leads:
                     if lead["TargetLocation"].startswith(hemisphere):
-                        data["Channels"].append({"Hemisphere": lead["TargetLocation"], "Contacts": contacts, "Type": lead["ElectrodeType"]})
+                        data["Channels"].append({"Hemisphere": lead["TargetLocation"], "CustomName": lead["CustomName"], "Contacts": contacts, "Type": lead["ElectrodeType"]})
                         if lead["ElectrodeType"].startswith("SenSight"):
                             data["ContactTypes"].append(["Ring","Segment A","Segment B","Segment C","Segment AB","Segment BC","Segment AC"])
                         else:

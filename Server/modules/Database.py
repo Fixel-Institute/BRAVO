@@ -232,13 +232,13 @@ def extractPatientInfo(user, patientUniqueID):
 
     info["Devices"] = list()
     info["Tags"] = patient.tags
-    deviceIDs = patient.device_deidentified_id
+    availableDevices = getPerceptDevices(user, patientUniqueID, {
+        "Level": verifyAccess(user, patientUniqueID),
+    })
 
-    for id in deviceIDs:
+    for device in availableDevices:
         deviceInfo = dict()
-        device = models.PerceptDevice.objects.get(deidentified_id=id)
-
-        deviceInfo["ID"] = id
+        deviceInfo["ID"] = device.deidentified_id
         deviceInfo["Location"] = device.device_location
         if device.device_name == "":
             if not (user.is_admin or user.is_clinician):
@@ -272,6 +272,12 @@ def getPerceptDevices(user, patientUniqueID, authority):
         availableDevices = models.PerceptDevice.objects.filter(patient_deidentified_id=patientUniqueID).all()
         for device in availableDevices:
             device.serial_number = str(device.deidentified_id)
+
+    if availableDevices:
+        for device in availableDevices:
+            for configuration in device.device_lead_configurations:
+                if not "CustomName" in configuration.keys():
+                    configuration["CustomName"] = configuration["TargetLocation"]
 
     return availableDevices
 
