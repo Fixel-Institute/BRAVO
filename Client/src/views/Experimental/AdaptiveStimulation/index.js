@@ -29,9 +29,7 @@ function AdaptiveStimulation() {
   const [data, setData] = useState(false);
 
   const [eventList, setEventList] = useState([]);
-  const [circadianData, setCircadianData] = useState({});
-  const [eventLockedPowerData, setEventLockedPowerData] = useState({});
-  const [eventPSDData, setEventPSDData] = useState({});
+  const [availableDevice, setAvailableDevices] = useState({current: null, list: []});
 
   const [alert, setAlert] = useState(null);
 
@@ -45,13 +43,20 @@ function AdaptiveStimulation() {
         requestData: true, 
         timezoneOffset: new Date().getTimezoneOffset()*60
       }).then((response) => {
-        if (response.data.ChronicData.length > 0) setData(response.data);
+        if (response.data.ChronicData.length > 0) {
+          setData(response.data.ChronicData);
+          setAvailableDevices({
+            current: response.data.ChronicData[0].Device,
+            list: response.data.ChronicData.map((channel) => channel.Device).filter((value, index, array) => array.indexOf(value) === index)
+          });
+        };
         setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
     }
   }, [patientID]);
+
 
   useEffect(() => {
     
@@ -74,8 +79,24 @@ function AdaptiveStimulation() {
                         </MDTypography>
                       </MDBox>
                     </Grid>
+                    <Grid item xs={12}>
+                      <MDBox p={2}>
+                        <Autocomplete
+                          value={availableDevice.current}
+                          options={availableDevice.list}
+                          onChange={(event, value) => setAvailableDevices({...availableDevice, current: value})}
+                          renderInput={(params) => (
+                            <FormField
+                              {...params}
+                              label={dictionary.BrainSenseStreaming.Table.TableTitle[language]}
+                              InputLabelProps={{ shrink: true }}
+                            />
+                          )}
+                        />
+                      </MDBox>
+                    </Grid>
                     <Grid item xs={12} lg={12}>
-                      {data ? <AdaptivePowerTrend dataToRender={data} height={800} events={eventList} figureTitle={"AdaptivePowerTrend"}/> : null}
+                      {data ? <AdaptivePowerTrend dataToRender={data} selectedDevice={availableDevice.current} height={800} events={eventList} figureTitle={"AdaptivePowerTrend"}/> : null}
                     </Grid>
                   </Grid>
                 </Card>

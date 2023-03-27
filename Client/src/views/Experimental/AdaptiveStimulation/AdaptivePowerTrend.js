@@ -10,7 +10,7 @@ import { PlotlyRenderManager } from "graphing-utility/Plotly";
 import { dictionary, dictionaryLookup } from "assets/translation";
 import { usePlatformContext } from "context";
 
-function AdaptivePowerTrend({dataToRender, events, height, figureTitle}) {
+function AdaptivePowerTrend({dataToRender, selectedDevice, height, figureTitle}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
@@ -29,9 +29,14 @@ function AdaptivePowerTrend({dataToRender, events, height, figureTitle}) {
         
         fig.setYlim([0, 5], ax[i*2+1]);
 
-        const [side, target] = data[i].Hemisphere.split(" ");
-        const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)}`;
-        fig.setSubtitle(`${titleText}`,ax[i*2]);
+        if (data[i].Hemisphere === data[i].CustomName) {
+          const [side, target] = data[i].Hemisphere.split(" ");
+          const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)}`;
+          fig.setSubtitle(`${titleText}`,ax[i*2]);
+        } else {
+          fig.setSubtitle(`${data[i].CustomName}`,ax[i*2]);
+        }
+        
         fig.setSubtitle(`${dictionaryLookup(dictionary.FigureStandardText, "Stimulation", language)}`,ax[i*2+1]);
       }
 
@@ -76,8 +81,10 @@ function AdaptivePowerTrend({dataToRender, events, height, figureTitle}) {
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    if (dataToRender) handleGraphing(dataToRender.ChronicData);
-  }, [dataToRender, language]);
+    if (dataToRender) {
+      handleGraphing(dataToRender.filter((channel) => channel.Device == selectedDevice));
+    };
+  }, [dataToRender, selectedDevice, language]);
 
   const onResize = useCallback(() => {
     fig.refresh();
