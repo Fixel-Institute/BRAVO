@@ -25,7 +25,13 @@ function EventLockedPower({dataToRender, selector, events, height, figureTitle})
       var ax = fig.subplots(1, 1, {sharex: true, sharey: true});
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.Time, "Minutes", language)})`, {fontSize: 15});
       fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "AU", language)})`, {fontSize: 15});
-      fig.setLegend();
+      fig.setLegend({
+        xanchor: "left",
+        yanchor: "top",
+        x: 0,
+        y: 1,
+        orientation: "h"
+      });
 
       fig.setLayoutProps({
         hovermode: "x"

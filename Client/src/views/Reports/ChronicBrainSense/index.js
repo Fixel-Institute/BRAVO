@@ -31,6 +31,7 @@ function ChronicBrainSense() {
   const { patientID, language } = controller;
 
   const [data, setData] = useState(false);
+  const [availableDevice, setAvailableDevices] = useState({current: null, list: []});
 
   const [eventList, setEventList] = useState([]);
   const [circadianData, setCircadianData] = useState({});
@@ -49,7 +50,13 @@ function ChronicBrainSense() {
         requestData: true, 
         timezoneOffset: new Date().getTimezoneOffset()*60
       }).then((response) => {
-        if (response.data.ChronicData.length > 0) setData(response.data);
+        if (response.data.ChronicData.length > 0) {
+          setData(response.data);
+          setAvailableDevices({
+            current: response.data.ChronicData[0].Device,
+            list: response.data.ChronicData.map((channel) => channel.Device).filter((value, index, array) => array.indexOf(value) === index)
+          });
+        }
         setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -61,12 +68,14 @@ function ChronicBrainSense() {
     const options = [];
     for (var i = 0; i < data.length; i++) {
       for (var j = 0; j < data[i]["CircadianPowers"].length; j++) {
-        options.push({
-          label: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["CircadianPowers"][j]["Therapy"],
-          hemisphere: data[i]["Device"] + " " + data[i]["Hemisphere"],
-          therapyName: data[i]["CircadianPowers"][j]["Therapy"],
-          value: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["CircadianPowers"][j]["Therapy"]
-        });
+        if (data[i]["CircadianPowers"][j]["Power"].length > 144*3) {
+          options.push({
+            label: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["CircadianPowers"][j]["Therapy"],
+            hemisphere: data[i]["Device"] + " " + data[i]["Hemisphere"],
+            therapyName: data[i]["CircadianPowers"][j]["Therapy"],
+            value: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["CircadianPowers"][j]["Therapy"]
+          });
+        }
       }
     }
 
@@ -179,6 +188,22 @@ function ChronicBrainSense() {
                       <>
                         <Grid item xs={12}>
                           <MDBox p={2}>
+                            <Autocomplete
+                              value={availableDevice.current}
+                              options={availableDevice.list}
+                              onChange={(event, value) => setAvailableDevices({...availableDevice, current: value})}
+                              renderInput={(params) => (
+                                <FormField
+                                  {...params}
+                                  label={dictionary.ChronicBrainSense.Select.Device[language]}
+                                  InputLabelProps={{ shrink: true }}
+                                />
+                              )}
+                            />
+                          </MDBox>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <MDBox p={2}>
                             <MDTypography variant={"h6"} fontSize={24}>
                               {dictionary.ChronicBrainSense.Figure.FigureTitle[language]}
                             </MDTypography>
@@ -188,7 +213,7 @@ function ChronicBrainSense() {
                           </MDBox>
                         </Grid>
                         <Grid item xs={12} lg={12}>
-                          <ChronicPowerTrend dataToRender={data} height={800} events={eventList} figureTitle={"ChronicPowerTrend"}/>
+                          <ChronicPowerTrend dataToRender={data} height={800} selectedDevice={availableDevice.current} events={eventList} figureTitle={"ChronicPowerTrend"}/>
                         </Grid>
                       </>
                     ) : (

@@ -225,6 +225,7 @@ def queryTherapyConfigurations(user, patientUniqueID, authority, therapyType="Pa
             TherapyInfo["TherapyType"] = therapy.therapy_type
             TherapyInfo["LogID"] = str(therapy.history_log_id)
             TherapyInfo["Therapy"] = therapy.therapy_details
+            TherapyInfo["LeadInfo"] = device.device_lead_configurations
 
             if TherapyInfo["TherapyDate"] > authority["Permission"][0]:
                 if authority["Permission"][1] > 0 and TherapyInfo["TherapyDate"] < authority["Permission"][1]:

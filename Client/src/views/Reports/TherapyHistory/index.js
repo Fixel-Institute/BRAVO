@@ -7,6 +7,7 @@ import {
   IconButton,
   Dialog,
   DialogContent,
+  DialogActions,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -93,6 +94,59 @@ function TherapyHistory() {
     setTherapyHistory(therapyHistory);
   }, [data, language]);
 
+  const showAdaptiveSettings = (therapy) => {
+    console.log(therapy)
+    setAlert(
+      <Dialog open={true} onClose={() => setAlert(null)}>
+        <MDBox px={2} pt={2}>
+          <MDTypography variant="h5">
+            {"Adaptive Configurations"} 
+          </MDTypography>
+        </MDBox>
+        <DialogContent>
+          <MDBox px={2} pt={2}>
+            <MDTypography variant="h6" fontSize={15}>
+              {"Adaptive Mode Configuration:"} 
+            </MDTypography>
+            <MDTypography variant="p" fontSize={12}>
+              {therapy.Mode.endsWith("SINGLE_THRESHOLD_DIRECT") ? "Single Threshold" : ""} 
+            </MDTypography>
+            <MDTypography variant="p" fontSize={12}>
+              {therapy.Mode.endsWith("DUAL_THRESHOLD_DIRECT") ? "Dual Threshold" : ""} 
+            </MDTypography>
+          </MDBox>
+          <MDBox px={2}>
+            <MDTypography variant="h6" fontSize={15}>
+              {"Detection Blanking:"} 
+            </MDTypography>
+            <MDTypography variant="p" fontSize={12}>
+              {therapy.DetectionBlankingDurationInMilliSeconds} {"ms"}
+            </MDTypography>
+          </MDBox>
+          <MDBox px={2}>
+            <MDTypography variant="h6" fontSize={15}>
+              {"Ramping Time (Up/Down):"} 
+            </MDTypography>
+            <MDTypography variant="p" fontSize={12}>
+              {therapy.RampUpTime} {"ms"} {"/"} {therapy.RampDownTime} {"ms"} 
+            </MDTypography>
+          </MDBox>
+          <MDBox px={2}>
+            <MDTypography variant="h6" fontSize={15}>
+              {"Threshold Onset Duration (Up/Down):"} 
+            </MDTypography>
+            <MDTypography variant="p" fontSize={12}>
+              {therapy.Mode.endsWith("SINGLE_THRESHOLD_DIRECT") ? `${therapy.LowerThresholdOnsetInMilliSeconds} ms` : `${therapy.LowerThresholdOnsetInMilliSeconds} ms / ${therapy.UpperThresholdOnsetInMilliSeconds} ms`}
+            </MDTypography>
+          </MDBox>
+        </DialogContent>
+        <DialogActions>
+          <MDButton color="secondary" onClick={() => setAlert(null)}>{"Close"}</MDButton>
+        </DialogActions>
+      </Dialog>
+    )
+  }
+
   const formatTherapySettings = (therapy, type, color) => {
     if (type == "Contacts") {
       if (therapy.Mode == "Interleaving") {
@@ -152,9 +206,11 @@ function TherapyHistory() {
             <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
               {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
             </MDTypography>
-            <MDBox display={"flex"} flexDirection={"column"} ml={2}>
+            <MDBox display={"flex"} flexDirection={"column"} ml={2} style={{cursor: "pointer"}} onClick={() => {
+              showAdaptiveSettings(therapy.AdaptiveSetup);
+            }}>
               <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
-                {"Adaptive DBS Disabled"}
+                {"Sense Only"}
               </MDTypography>
             </MDBox>
           </MDBox>
@@ -165,13 +221,21 @@ function TherapyHistory() {
             <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
               {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
             </MDTypography>
-            <MDBox display={"flex"} flexDirection={"column"} ml={2}>
-              <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
-                {"Threshold at: "} {`[${therapy.LFPThresholds[0]} , ${therapy.LFPThresholds[1]}]`}
-              </MDTypography>
-              <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
-                {"Stimulation Range at: "} {`[${therapy.CaptureAmplitudes[0]} , ${therapy.CaptureAmplitudes[1]}]`}
-              </MDTypography>
+            <MDBox display={"flex"} flexDirection={"column"} ml={2} style={{cursor: "pointer"}} onClick={() => {
+              showAdaptiveSettings(therapy.AdaptiveSetup);
+            }}>
+              {therapy.AdaptiveSetup.Bypass ? (
+                <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+                  {"Adaptive Sense Only"}
+                </MDTypography>
+              ) : (
+                <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+                  {therapy.AdaptiveSetup.Status === "ADBSStatusDef.RUNNING" ? "Adaptive Enabled" : ""}
+                  {therapy.AdaptiveSetup.Status === "ADBSStatusDef.SUSPENDED" ? "Adaptive Suspended" : ""}
+                  {therapy.AdaptiveSetup.Status === "ADBSStatusDef.DISABLED" ? "Adaptive Stim Only" : ""}
+                </MDTypography>
+              )}
+              
             </MDBox>
           </MDBox>
           );
@@ -299,6 +363,7 @@ function TherapyHistory() {
                       } else {
                         therapyList = therapyHistory[activeDevice].Therapy[activeTab][key];
                       }
+                      let leadInfo = therapyList[0].LeadInfo;
 
                       return (
                       <MDBox key={key} pr={2} pb={2}>
@@ -311,9 +376,33 @@ function TherapyHistory() {
                             </MDTypography>
                           </AccordionSummary>
                           <AccordionDetails>
+                            <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} px={2}>
+                              {leadInfo.map((lead) => {
+                                if (lead.TargetLocation.startsWith("Left")) {
+                                  return <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} px={2}>
+                                    <MDBadge badgeContent="L" color={"info"} size={"xs"} container sx={{marginRight: 1}} />
+                                    <MDBox>
+                                      <MDTypography fontWeight={"medium"} fontSize={15} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+                                        {lead.CustomName}
+                                      </MDTypography>
+                                    </MDBox>
+                                  </MDBox>
+                                } else {
+                                  return <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} px={2}>
+                                    <MDBadge badgeContent="R" color={"error"} size={"xs"} container sx={{marginRight: 1}} />
+                                    <MDBox>
+                                      <MDTypography fontWeight={"medium"} fontSize={15} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+                                        {lead.CustomName}
+                                      </MDTypography>
+                                    </MDBox>
+                                  </MDBox>
+                                }
+                              })}
+                            </MDBox>
                             <Table>
                               <TableBody>
                                 {therapyList.map((therapy) => {
+                                  //console.log(therapy)
                                   return <TableRow key={therapy.LogID}>
                                     <TableCell>
                                       <MDTypography fontWeight={"bold"} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
