@@ -51,6 +51,7 @@ if not MODE == "PRODUCTION":
     CSRF_TRUSTED_ORIGINS = ['http://localhost:3000', 'https://uf-bravo.jcagle.solutions', 'http://' + os.environ.get('SERVER_ADDRESS')]
     SECURE_PROXY_SSL_HEADER = ()
     SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+    CORS_ALLOW_ALL_ORIGINS = True
 else:
     DEBUG = False
     BASE_URL = 'https://' + os.environ.get('SERVER_ADDRESS')
