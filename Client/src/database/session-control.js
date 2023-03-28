@@ -75,6 +75,10 @@ export const SessionController = (function () {
             break;
           }
         }
+        if (errorMessage == dictionary.ErrorMessage.UNKNOWN_ERROR[session.language]) {
+          console.log(ERRORCODE);
+          console.log(error.response.data);
+        }
       } else if (error.response.status == 401) {
         setAuthToken("");
         errorMessage = dictionary.ErrorMessage["CONNECTION_TIMEDOUT"][session.language]

@@ -627,6 +627,10 @@ export const dictionary = {
   },
   ChronicBrainSense: {
     Select: {
+      Device: {
+        en: "Select Device to View",
+        zh: "Select Device to View"
+      },
       Channel: {
         en: "Select Channel to View",
         zh: "查看频道"
@@ -725,7 +729,10 @@ export const dictionary = {
   },
   AdaptiveStimulation: {
     Table: {
-
+      SelectDevice: {
+        en: "Select Device",
+        zh: "Select Device"
+      },
     },
     Figure: {
       ChronicAdaptive: {

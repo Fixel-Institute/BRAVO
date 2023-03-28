@@ -22,14 +22,19 @@ export default function MuiAlertDialog({title, message, denyButton, cancelButton
       sx={{
         padding: 15
       }}
+      PaperProps={{
+        style: {
+          padding: 15
+        }
+      }}
     >
       <DialogTitle>
-        <MDTypography align="center" fontSize={30}>
+        <MDTypography align="center" fontSize={24}>
           {title}
         </MDTypography>
       </DialogTitle>
       <DialogContent sx={{paddingLeft: 5, paddingRight: 5}}>
-        <DialogContentText>
+        <DialogContentText sx={{textAlign: "center"}}>
           <MDTypography variant="p" align="center" fontSize={20}>
             {message}
           </MDTypography>

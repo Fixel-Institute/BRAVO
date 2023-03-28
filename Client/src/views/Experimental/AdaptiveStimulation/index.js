@@ -88,7 +88,7 @@ function AdaptiveStimulation() {
                           renderInput={(params) => (
                             <FormField
                               {...params}
-                              label={dictionary.BrainSenseStreaming.Table.TableTitle[language]}
+                              label={dictionary.AdaptiveStimulation.Table.SelectDevice[language]}
                               InputLabelProps={{ shrink: true }}
                             />
                           )}
