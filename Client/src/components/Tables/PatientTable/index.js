@@ -69,7 +69,6 @@ const PatientTable = ({data}) => {
   };
 
   const sortPatientList = (col) => {
-    console.log(sortType)
     setSortType((currentType) => {
       if (col == currentType.key) {
         currentType.direction *= -1; 

@@ -95,7 +95,6 @@ function TherapyHistory() {
   }, [data, language]);
 
   const showAdaptiveSettings = (therapy) => {
-    console.log(therapy)
     setAlert(
       <Dialog open={true} onClose={() => setAlert(null)}>
         <MDBox px={2} pt={2}>
@@ -402,7 +401,6 @@ function TherapyHistory() {
                             <Table>
                               <TableBody>
                                 {therapyList.map((therapy) => {
-                                  //console.log(therapy)
                                   return <TableRow key={therapy.LogID}>
                                     <TableCell>
                                       <MDTypography fontWeight={"bold"} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
