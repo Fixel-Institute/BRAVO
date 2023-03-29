@@ -1,15 +1,11 @@
 import os, sys
 from datetime import datetime
 import pytz
+from pathlib import Path
 
 import uuid
 import json
 
-from BRAVO import asgi
-from Backend import models
-from modules.Percept import Sessions
-
-from decoder import Percept
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 key = os.environ.get('ENCRYPTION_KEY')
@@ -17,6 +13,11 @@ key = os.environ.get('ENCRYPTION_KEY')
 def processInput(argv):
   if len(argv) > 1:
     if argv[1] == "Clean":
+      from BRAVO import asgi
+      from Backend import models
+      from modules.Percept import Sessions
+      from decoder import Percept
+
       if argv[2] == "All":
         Patients = models.Patient.objects.all()
         for patient in Patients:
@@ -27,8 +28,59 @@ def processInput(argv):
             device.delete()
           patient.delete()
         return True
+    
+    elif argv[1] == "SetupBRAVO":
+      import socket
+      from cryptography import fernet
+      BASE_DIR = Path(__file__).resolve().parent
+      if os.path.exists(os.path.join(BASE_DIR, '.env')):
+        print("Environment Variable Exist, cannot perform fresh installation.")
+        return True
+      
+      config = dict()
+      databasePath = input("Please enter the full path to the desired folder as database storage [Default: $SCRIPT_DIR/Server/BRAVOStorage/]: ")
+      if not databasePath == "":
+        config["DATASERVER_PATH"] = databasePath
+      else:
+        config["DATASERVER_PATH"] = os.path.join(BASE_DIR, 'BRAVOStorage')
+      print(config["DATASERVER_PATH"].endswith(os.path.sep))
+      if not config["DATASERVER_PATH"].endswith(os.path.sep):
+        config["DATASERVER_PATH"] += os.path.sep
+      os.makedirs(config["DATASERVER_PATH"], exist_ok=True)
+
+      config["PYTHON_UTILITY"] = os.path.join(BASE_DIR, 'modules' + os.path.sep + "python-scripts")
+      config["STATIC_ROOT"] = os.path.join(BASE_DIR, 'static')
+      config["ENCRYPTION_KEY"] = fernet.Fernet.generate_key().decode("utf-8")
+      config["SECRET_KEY"] = "django-insecure-" + fernet.Fernet.generate_key().decode("utf-8")
+
+      try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        localAddress = s.getsockname()[0]
+        s.close()
+      except:
+        localAddress = "127.0.1.1"
+
+      serverAddress = input(f"Please enter the public IP address if available [Default: Local Address {localAddress}]: ")
+      if not serverAddress == "":
+        config["SERVER_ADDRESS"] = serverAddress
+        config["CLIENT_ADDRESS"] = "https://" + serverAddress
+      else:
+        config["SERVER_ADDRESS"] = localAddress
+        config["CLIENT_ADDRESS"] = "http://" + localAddress
+
+      config["MODE"] = "DEBUG"
+      
+      with open(os.path.join(BASE_DIR, '.env'), "w+") as file:
+        json.dump(config, file)
+        
+      return True
 
     elif argv[1] == "MigrateFromV1":
+      from BRAVO import asgi
+      from Backend import models
+      from modules.Percept import Sessions
+      from decoder import Percept
 
       OLD_DATABASE_PATH = argv[2]
 
@@ -286,6 +338,11 @@ def processInput(argv):
       return True
 
     elif argv[1] == "Merge":
+      from BRAVO import asgi
+      from Backend import models
+      from modules.Percept import Sessions
+      from decoder import Percept
+
       if argv[2] == "Patient":
         PatientID = argv[3]
         PatientID2 = argv[4]
@@ -314,6 +371,11 @@ def processInput(argv):
         return True
 
     elif argv[1] == "Refresh":
+      from BRAVO import asgi
+      from Backend import models
+      from modules.Percept import Sessions
+      from decoder import Percept
+
       if argv[2] == "TherapyHistory":
         if argv[3] == "All":
           SessionFiles = models.PerceptSession.objects.all()
