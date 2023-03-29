@@ -418,7 +418,7 @@ def processInput(argv):
 
         for sessionFile in SessionFiles:
           try:
-            JSON = Percept.decodeEncryptedJSON(sessionFile.session_file_path, key)
+            JSON = Percept.decodeEncryptedJSON(DATABASE_PATH + sessionFile.session_file_path, key)
           except:
             print(sessionFile.session_file_path)
             continue
