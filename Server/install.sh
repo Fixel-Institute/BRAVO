@@ -1,6 +1,9 @@
 # Set our current working directory as the SCRIPT_DIR
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+cd SCRIPT_DIR
+git submodule update --init --recursive
+
 # Install Dependencies with Apt
 sudo apt-get update
 sudo apt-get install python3-pip libjpeg-dev libjpeg8-dev libpng-dev nginx python3-virtualenv libmysqlclient-dev mysql-server docker.io
