@@ -21,7 +21,7 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
     fig.clearData();
 
     var axisTitles = []
-    for (var k = 0; k < data.length; k++)
+    for (let k = 0; k < data.length; k++)
     {
       const [side, target] = data[k].Hemisphere.split(" ");
       const title = data[k]["Device"] + ` (${dictionaryLookup(dictionary.FigureStandardText, side, language)}) ${dictionaryLookup(dictionary.BrainRegions, target, language)}`;
@@ -31,7 +31,7 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
     if (fig.fresh) {
       var ax = fig.subplots(data.length*2, 1, {sharex: true, sharey: true});
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15}, ax[ax.length-1]);
-       for (var i in data) {
+       for (let i in data) {
         fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "AU", language)})`, {fontSize: 15}, ax[i*2]);
         fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Amplitude", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)})`, {fontSize: 15}, ax[i*2+1]);
         
@@ -68,13 +68,13 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
       });
     }
 
-    for (var i = 0; i < data.length; i++) {
+    for (let i = 0; i < data.length; i++) {
       const eventData = {};
-      for (var name of events) {
-        eventData[name] = {xdata: [], ydata: []};
+      for (let j = 0; j < events.length; j++) {
+        eventData[events[j]] = {xdata: [], ydata: []};
       }
 
-      for (var j = 0; j < data[i].Timestamp.length; j++) {
+      for (let j = 0; j < data[i].Timestamp.length; j++) {
         var therapyString = ""
         if (data[i]["Therapy"][j].hasOwnProperty("TherapyOverview")) therapyString = data[i]["Therapy"][j]["TherapyOverview"]
 
@@ -91,7 +91,7 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
           hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
         }, ax[i*2+1]);
 
-        for (var k = 0; k < data[i].EventName[j].length; k++) {
+        for (let k = 0; k < data[i].EventName[j].length; k++) {
           if (Object.keys(eventData).includes(data[i].EventName[j][k])) {
             eventData[data[i].EventName[j][k]].xdata.push(data[i].EventTime[j][k]*1000);
             eventData[data[i].EventName[j][k]].ydata.push(data[i].EventPower[j][k]);
@@ -108,13 +108,13 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
       const increment = Math.floor(25 / events.length);
   
       const getColor = (name) => {
-        for (var i in events) {
-          if (name.startsWith(events[i])) return colors[i * increment];
+        for (let k = 0; k < events.length; k++) {
+          if (name.startsWith(events[k])) return colors[k * increment];
         }
         return colors[0];
       }
 
-      for (var j = 0; j < events.length; j++) {
+      for (let j = 0; j < events.length; j++) {
         fig.scatter(eventData[events[j]].xdata, eventData[events[j]].ydata, {
           color: getColor(events[j]),
           size: 5,
