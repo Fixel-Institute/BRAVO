@@ -14,3 +14,7 @@ source $SCRIPT_DIR/venv/bin/activate
 
 pip3 install -r requirements.txt
 
+# Setup Script 
+python3 manage.py SetupBRAVO
+python3 manage.py makemigrations Backend
+python3 manage.py migrate
