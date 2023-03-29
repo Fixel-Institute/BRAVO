@@ -187,3 +187,27 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Django DB Automatic Reconnect
+import importlib
+
+from django.conf import settings
+from django.db.backends.utils import CursorWrapper
+
+for name, config in settings.DATABASES.items():
+    module = importlib.import_module(config["ENGINE"] + ".base")
+
+    def ensure_connection(self):
+        if self.connection is not None:
+            try:
+                with CursorWrapper(self.create_cursor(), self) as cursor:
+                    cursor.execute("SELECT 1")
+                return
+            except Exception:
+                pass
+
+        with self.wrap_database_errors:
+            self.connect()
+
+    module.DatabaseWrapper.ensure_connection = ensure_connection
+    
