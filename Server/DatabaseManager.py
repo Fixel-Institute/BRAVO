@@ -73,7 +73,36 @@ def processInput(argv):
       
       with open(os.path.join(BASE_DIR, '.env'), "w+") as file:
         json.dump(config, file)
-        
+
+      import re, subprocess
+      with open("mysql.config", "r") as fid:
+        info = fid.readlines()
+      
+      databaseName = "BRAVOServer"
+      userName = "BRAVOAdmin"
+      hostName = "localhost"
+      dbPassword = "AdminPassword"
+
+      for line in info:
+        if "=" in line:
+          line = line.replace(" ","")
+          content = re.split("[\s]?=[\s]?", line)
+          
+          if len(content) == 2:
+            if content[0] == "database":
+              databaseName = content[1]
+            elif content[0] == "user":
+              userName = content[1]
+            elif content[0] == "host":
+              hostName = content[1]
+            elif content[0] == "password":
+              dbPassword = content[1]
+          
+      subprocess.run(["sudo","mysql", "-uroot", "-e", f"CREATE DATABASE {databaseName}"])
+      subprocess.run(["sudo","mysql", "-uroot", "-e", f"CREATE USER '{userName}'@'{hostName}' IDENTIFIED WITH mysql_native_password BY '{dbPassword}'"])
+      subprocess.run(["sudo","mysql", "-uroot", "-e", f"GRANT ALL PRIVILEGES ON {databaseName}.* TO '{userName}'@'{hostName}'"])
+      subprocess.run(["sudo","mysql", "-uroot", "-e", f"FLUSH PRIVILEGES"])
+      
       return True
 
     elif argv[1] == "MigrateFromV1":
