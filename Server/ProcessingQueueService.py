@@ -16,6 +16,7 @@ from modules import Database
 def processJSONUploads():
     ws = websocket.WebSocket()
     if models.ProcessingQueue.objects.filter(state="InProgress").exists():
+        print(datetime.datetime.now())
         BatchQueues = models.ProcessingQueue.objects.filter(state="InProgress").order_by("datetime").all()
         for queue in BatchQueues:
             if not models.ProcessingQueue.objects.filter(state="InProgress", queue_id=queue.queue_id).exists():
@@ -69,10 +70,10 @@ def processJSONUploads():
                     ws.close()
                 except Exception as e:
                     print(e)
-                    #print("Socket Not Active")
             else:
                 print(ProcessingResult)
                 queue.state = "Error"
+                queue.descriptor["Message"] = ErrorMessage
                 queue.save()
 
 if __name__ == '__main__':
