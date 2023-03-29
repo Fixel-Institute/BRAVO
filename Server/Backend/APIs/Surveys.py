@@ -238,7 +238,10 @@ class SubmitSurveyResults(RestViews.APIView):
                             if question["validation"] == "datetime_seconds_ymd":
                                 respondRow += datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + ","
                         else:
-                            respondRow += str(request.data["results"][page][questionId]) + ","
+                            if question["type"] == "text":
+                                respondRow += "\"" + str(request.data["results"][page][questionId]) + "\","
+                            else:
+                                respondRow += str(request.data["results"][page][questionId]) + ","
                 
                 resultingCSV += linkage.redcap_survey_name + "_complete"
                 respondRow += "2"
@@ -250,7 +253,7 @@ class SubmitSurveyResults(RestViews.APIView):
                     "type": "flat",
                     "overwriteBehavior": "normal",
                     "forceAutoNumber": False,
-                    "data": resultingCSV + "\n" + respondRow.replace("\n", "<br>")
+                    "data": resultingCSV + "\n" + respondRow
                 })
 
                 if response.status_code == 200:
