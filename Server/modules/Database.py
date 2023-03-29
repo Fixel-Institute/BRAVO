@@ -177,20 +177,24 @@ def AuthorizeRecordingAccess(user, researcher_id, patient_id, recording_id="", r
             if models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_id=recording_id).exists():
                 models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_id=recording_id).all().delete()
 
-def extractPatientTableRow(user, patient):
+def extractPatientTableRow(user, patient, deidentifiedId=None):
     key = os.environ.get('ENCRYPTION_KEY')
 
-    info = dict()
-    info["FirstName"] = patient.getPatientFirstName(key)
-    info["LastName"] = patient.getPatientLastName(key)
-    info["Diagnosis"] = patient.diagnosis
-    info["MRN"] = patient.getPatientMRN(key)
-    info["DOB"] = patient.birth_date.timestamp()
-    info["Institute"] = patient.institute
-    info["Tags"] = patient.tags
-    info["DaysSinceImplant"] = []
-    lastTimestamp = datetime.fromtimestamp(0, tz=pytz.utc)
+    if deidentifiedId:
+        info = extractPatientTableRow(user, deidentifiedId)
+    else:
+        info = dict()
+        info["FirstName"] = patient.getPatientFirstName(key)
+        info["LastName"] = patient.getPatientLastName(key)
+        info["Diagnosis"] = patient.diagnosis
+        info["MRN"] = patient.getPatientMRN(key)
+        info["DOB"] = patient.birth_date.timestamp()
+        info["Institute"] = patient.institute
+        info["Tags"] = patient.tags
+        info["DaysSinceImplant"] = []
+        info["ID"] = str(patient.deidentified_id)
 
+    lastTimestamp = datetime.fromtimestamp(0, tz=pytz.utc)
     deviceIDs = patient.device_deidentified_id
     for id in deviceIDs:
         device = models.PerceptDevice.objects.filter(deidentified_id=id).first()
@@ -210,30 +214,34 @@ def extractPatientTableRow(user, patient):
             lastTimestamp = device.device_last_seen
 
     info["LastSeen"] = lastTimestamp.timestamp()
-    info["ID"] = str(patient.deidentified_id)
     return info
 
-def extractPatientInfo(user, patientUniqueID):
+def extractPatientInfo(user, patientUniqueID, deidentifiedId=None):
     key = os.environ.get('ENCRYPTION_KEY')
+
     patient = models.Patient.objects.get(deidentified_id=patientUniqueID)
 
-    info = dict()
-    info["FirstName"] = patient.getPatientFirstName(key)
-    info["LastName"] = patient.getPatientLastName(key)
-    if user.is_clinician:
-        info["Name"] = info["FirstName"] + " " + info["LastName"]
+    if deidentifiedId:
+        info = extractPatientInfo(user, deidentifiedId)
     else:
-        info["Name"] = info["FirstName"] + " (" + info["LastName"] + ")"
+        info = dict()
+        info["FirstName"] = patient.getPatientFirstName(key)
+        info["LastName"] = patient.getPatientLastName(key)
+        if user.is_clinician:
+            info["Name"] = info["FirstName"] + " " + info["LastName"]
+        else:
+            info["Name"] = info["FirstName"] + " (" + info["LastName"] + ")"
 
-    info["Diagnosis"] = patient.diagnosis
-    info["MRN"] = patient.getPatientMRN(key)
-    info["DOB"] = patient.birth_date
-    info["Institute"] = patient.institute
+        info["Diagnosis"] = patient.diagnosis
+        info["MRN"] = patient.getPatientMRN(key)
+        info["DOB"] = patient.birth_date
+        info["Institute"] = patient.institute
 
-    info["Devices"] = list()
-    info["Tags"] = patient.tags
+        info["Devices"] = list()
+        info["Tags"] = patient.tags
+
     availableDevices = getPerceptDevices(user, patientUniqueID, {
-        "Level": verifyAccess(user, patientUniqueID),
+        "Level": 2 if deidentifiedId else 1,
     })
 
     for device in availableDevices:
@@ -298,7 +306,7 @@ def verifyAccess(user, patient_id):
     if not (user.is_clinician or user.is_admin):
         if models.DeidentifiedPatientID.objects.filter(researcher_id=user.unique_user_id, deidentified_id=patient_id):
             return 2
-        elif models.Patient.objects.filter(deidentified_id=patient_id).exists():
+        elif models.Patient.objects.filter(deidentified_id=patient_id, institute=user.institute).exists():
             return 1
         else:
             return 0
@@ -349,23 +357,16 @@ def verifyPermission(user, patient_id, authority, access_type):
 
 def extractPatientList(user):
     PatientInfo = list()
-    if user.is_admin or user.is_clinician:
-        patients = models.Patient.objects.filter(institute=user.institute).all()
-        for patient in patients:
-            info = extractPatientTableRow(user, patient)
-            PatientInfo.append(info)
+    patients = models.Patient.objects.filter(institute=user.institute).all()
+    for patient in patients:
+        info = extractPatientTableRow(user, patient)
+        PatientInfo.append(info)
 
-    else:
-        patients = models.Patient.objects.filter(institute=user.email).all()
-        for patient in patients:
-            info = extractPatientTableRow(user, patient)
-            PatientInfo.append(info)
-        
-        DeidentifiedPatientID = models.DeidentifiedPatientID.objects.filter(researcher_id=user.unique_user_id).all()
-        for deidentified_patient in DeidentifiedPatientID:
-            patient = models.Patient.objects.filter(deidentified_id=deidentified_patient.deidentified_id, institute=user.unique_user_id).first()
-            info = extractPatientTableRow(user, patient)
-            PatientInfo.append(info)
+    DeidentifiedPatientID = models.DeidentifiedPatientID.objects.filter(researcher_id=user.unique_user_id).all()
+    for deidentified_patient in DeidentifiedPatientID:
+        patient = models.Patient.objects.filter(deidentified_id=deidentified_patient.deidentified_id, institute=user.unique_user_id).first()
+        info = extractPatientTableRow(user, models.Patient.objects.filter(deidentified_id=deidentified_patient.authorized_patient_id).first(), deidentifiedId=patient)
+        PatientInfo.append(info)
 
     PatientInfo = sorted(PatientInfo, key=lambda patient: patient["LastName"]+", "+patient["FirstName"])
     return PatientInfo
@@ -402,7 +403,7 @@ def extractPatientAccessTable(user):
         deidentified = models.Patient.objects.filter(deidentified_id=deidentified_patient.deidentified_id).first()
         patient = extractAccess(user, deidentified_patient.authorized_patient_id)
         info = extractPatientTableRow(user, deidentified)
-
+        
         PatientInfo.append({
             "ID": info["ID"],
             "FirstName": info["FirstName"],

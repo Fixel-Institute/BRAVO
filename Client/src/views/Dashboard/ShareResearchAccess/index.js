@@ -153,7 +153,7 @@ export default function ResearchAccessView() {
                 <MDButton variant={"contained"} color={"success"} style={{marginLeft: 10}} onClick={() => {
                   setPatientsToExport((patientsToExport) => {
                     for (let patient of filteredPatients) {
-                      if (!patientsToExport.includes(patient.ID)) patientsToExport.push(patient.ID);
+                      if (!patientsToExport.includes(patient.ID) && patient.Uploader == user.Institute) patientsToExport.push(patient.ID);
                     }
                     return [...patientsToExport];
                   });
@@ -195,7 +195,7 @@ export default function ResearchAccessView() {
                       {filteredPatients.map((patient) => {
                         return <TableRow key={patient.ID}>
                           <TableCell style={{paddingBottom: 1, display: "flex", flexDirection: "row", borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>
-                            <Checkbox label={"Merge"} checked={patientsToExport.includes(patient.ID)} style={{padding: 0, paddingRight: 5}} onClick={() => {
+                            <Checkbox label={"Merge"} checked={patientsToExport.includes(patient.ID)} disabled={user.Institute != patient.Uploader} style={{padding: 0, paddingRight: 5}} onClick={() => {
                               setPatientsToExport((patientsToExport) => {
                                 if (patientsToExport.includes(patient.ID)) patientsToExport = patientsToExport.filter((id) => id != patient.ID);
                                 else patientsToExport.push(patient.ID);

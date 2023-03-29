@@ -105,7 +105,7 @@ class QueryPatientInfo(RestViews.APIView):
 
         elif Authority["Level"] == 2:
             PatientInfo = Database.extractAccess(request.user, request.data["id"])
-            deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
+            deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id, deidentifiedId=PatientInfo.deidentified_id)
             Patient = Database.extractPatientInfo(request.user, PatientInfo.deidentified_id)
             Patient["Devices"] = deidentification["Devices"]
             Patient["AvailableTags"] = Database.extractTags("Patient", request.user.email)
