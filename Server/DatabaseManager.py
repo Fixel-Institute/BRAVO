@@ -90,19 +90,19 @@ def processInput(argv):
           
           if len(content) == 2:
             if content[0] == "database":
-              databaseName = content[1]
+              databaseName = content[1].replace("\n","")
             elif content[0] == "user":
-              userName = content[1]
+              userName = content[1].replace("\n","")
             elif content[0] == "host":
-              hostName = content[1]
+              hostName = content[1].replace("\n","")
             elif content[0] == "password":
-              dbPassword = content[1]
+              dbPassword = content[1].replace("\n","")
           
       subprocess.run(["sudo","mysql", "-uroot", "-e", f"CREATE DATABASE {databaseName}"])
       subprocess.run(["sudo","mysql", "-uroot", "-e", f"CREATE USER '{userName}'@'{hostName}' IDENTIFIED WITH mysql_native_password BY '{dbPassword}'"])
       subprocess.run(["sudo","mysql", "-uroot", "-e", f"GRANT ALL PRIVILEGES ON {databaseName}.* TO '{userName}'@'{hostName}'"])
       subprocess.run(["sudo","mysql", "-uroot", "-e", f"FLUSH PRIVILEGES"])
-      
+
       return True
 
     elif argv[1] == "MigrateFromV1":
