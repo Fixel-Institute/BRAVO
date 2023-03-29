@@ -467,7 +467,7 @@ Deployment in Windows can be done primarily through VS Code integrated with WSL.
 Once you open BRAVO Folder through WSL, you may observe the following indication that you are in WSL environment.
 
 .. image:: images/VSCodeWSL.png
-  :target: images/VSCodeWSL.png
+  :target: _images/VSCodeWSL.png
   :width: 400
 
 We have created a sample ``.vscode/tasks.json`` file that describe standard deployment scripts for you. 
@@ -498,7 +498,7 @@ check ``System Preferences`` on MacOS and you should see a new option is now ava
 Click on MySQL to ensure that it is currently active. You can turn off/on the server manually or to set MySQL to start when computer startup.
 
 .. image:: images/MySQL_MacOS.png
-  :target: images/MySQL_MacOS.png
+  :target: _images/MySQL_MacOS.png
   :width: 1280
 
 You will also need docker and redis for Django Channels. 
@@ -508,7 +508,7 @@ To install Redis, you can call ``docker pull redis`` in MacOS Terminal.
 Confirm redis is installed by checking "Images" in Docker Desktop. 
  
 .. image:: images/DockerDesktop_Redis.png
-  :target: images/DockerDesktop_Redis.png
+  :target: _images/DockerDesktop_Redis.png
   :width: 1280
 
 You now have all the software requirement (except Apache/NGINX, which will not be covered here 

@@ -29,7 +29,7 @@ can be HTTP as well. However, if you are using the publically available `UF BRAV
 the endpoint has to be SSL secured. Check :ref:`SSLCertificateTutorial` for how to make your own server SSL certificate. 
 
 .. image:: images/DatabaseModification.png
-  :target: images/DatabaseModification.png
+  :target: _images/DatabaseModification.png
   :width: 400
 
 Language Modification
@@ -39,7 +39,7 @@ The BRAVO Platform uses React library for creating dynamic single page website. 
 are dynamically generated, including text. See :ref:`languageDocumentation` for how you can edit the translation dictionary.
 
 .. image:: images/LanguageSelector.png
-  :target: images/LanguageSelector.png
+  :target: _images/LanguageSelector.png
   :width: 400
 
 Authentication 
@@ -54,7 +54,7 @@ Account Registration
 Account Registration interface can be seen below.
 
 .. image:: images/Register.png
-  :target: images/Register.png
+  :target: _images/Register.png
   :width: 400
 
 A basic registration process that require the user to input their first and last name. 
@@ -82,7 +82,7 @@ Your credential will be stored as a simple JSON Web Token that will be used for 
 The default timeout of the token is 4 hours. 
 
 .. image:: images/Login.png
-  :target: images/Login.png
+  :target: _images/Login.png
   :width: 400
 
 If you enable "Remember me" option, the token requested from the server will have extremely long expiration 
@@ -95,7 +95,7 @@ Patient Table is the first interface available to the user once logged in.
 A typical patient table containing more than 200 patients is shown below.
 
 .. image:: images/PatientTable.png
-  :target: images/PatientTable.png
+  :target: _images/PatientTable.png
   :width: 800
 
 The clinician view will display patient's name, diagnosis, device name, 
@@ -122,7 +122,7 @@ Diagnosis and deidentifiered device name can be left as blank. Once all set, dro
 All files in the upload box will be associated with the specific deidentified patient created. 
 
 .. image:: images/DeidentificationUpload.png
-  :target: images/DeidentificationUpload.png
+  :target: _images/DeidentificationUpload.png
   :width: 400
 
 Once clicking ``Upload``, a new row will be insert to the deidentified patient table. 
@@ -132,7 +132,7 @@ User may also opt to use the Batch Upload option with identified JSON file.
 The server will deidentify all identified file based on a simple encrypted lookup table upload by the user. 
 
 .. image:: images/BatchDeidentificationUpload.png
-  :target: images/BatchDeidentificationUpload.png
+  :target: _images/BatchDeidentificationUpload.png
   :width: 400
 
 More details on the encrypted lookup table can be found in `Patient Lookup Table`_ section. 
@@ -156,14 +156,14 @@ The Patient Lookup Table tab is a route only available on "Researcher Account".
 By the default, the page will only tell user if there is an existing Lookup Table on the server for your account or not.
 
 .. image:: images/DeidentificationTable.png
-  :target: images/DeidentificationTable.png
+  :target: _images/DeidentificationTable.png
   :width: 400
 
 If a table does not exist or you wish to update the table, you can use the "Add Table Here" option, which will bring up the 
 upload dialog like below: 
 
 .. image:: images/DeidentificationTableUploadDialog.png
-  :target: images/DeidentificationTableUploadDialog.png
+  :target: _images/DeidentificationTableUploadDialog.png
   :width: 400
 
 In the upload dialog, you must enter a secure passcode for your lookup table because your lookup table will contain PHI. 
@@ -187,7 +187,7 @@ table using a password you provided. Error will be returned if password is incor
 user must reenter the password when the page is refreshed. 
 
 .. image:: images/DeidentificationTableView.png
-  :target: images/DeidentificationTableView.png
+  :target: _images/DeidentificationTableView.png
   :width: 800
 
 Deidentified View-Only Access (Beta Testing)
@@ -202,7 +202,7 @@ If access code is added successfully, the user can navigate back to Dashboard an
 string is the deidentified ID of the patient they have access to.
 
 .. image:: images/AccessPermissionTable.png
-  :target: images/AccessPermissionTable.png
+  :target: _images/AccessPermissionTable.png
   :width: 800
 
 The view-only access granted by this process allow them to view data or export data, but cannot add new data nor modify information currently on the server. This is also a one-time permission, meaning that 
@@ -223,7 +223,7 @@ Electrode name and targets are information stored in Percept Device, which will 
 These information will be automatically populated as long as they are not removed from JSON file.
 
 .. image:: images/PatientOverview.png
-  :target: images/PatientOverview.png
+  :target: _images/PatientOverview.png
   :width: 800
 
 .. admonition:: Future Updates
@@ -239,7 +239,7 @@ A pop-up dialog will be shown to user with existing patient information. Edit th
 then click ``UPDATE`` will prompt a database update.
 
 .. image:: images/EditPatientInformation.png
-  :target: images/EditPatientInformation.png
+  :target: _images/EditPatientInformation.png
   :width: 400
 
 Clicking ``DELETE`` will remove all data associated with this patient ID. 
@@ -252,7 +252,7 @@ A pop-up dialog will be shown to user with existing patient information. Edit th
 then click ``UPDATE`` will prompt a database update.
 
 .. image:: images/EditDeviceInformation.png
-  :target: images/EditDeviceInformation.png
+  :target: _images/EditDeviceInformation.png
   :width: 400
 
 .. _Upload JSON Files:
@@ -261,7 +261,7 @@ Upload JSON Data (Research-Only)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. image:: images/ResearchUploadJSON.png
-  :target: images/ResearchUploadJSON.png
+  :target: _images/ResearchUploadJSON.png
   :width: 400
 
 "Upload New Sessions" is where the Research account should upload their data. 
@@ -308,7 +308,7 @@ Therapy History provide user an overview of all the past therapy configurations 
 These information are primarily extracted from ``GroupHistory`` and ``Groups`` JSON Fields in the Session file. 
 
 .. image:: images/TherapyHistory.png
-  :target: images/TherapyHistory.png
+  :target: _images/TherapyHistory.png
 
 Therapy Change Log
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -361,7 +361,7 @@ Hovering over the heatmap will show the exact impedance value.
 Clicking on the heatmap corresponding to the contact-pair of interest will bring up a small figure indicating the Impedance History over time as recorded in the aggregated history. 
 
 .. image:: images/ImpedanceTable.png
-  :target: images/ImpedanceTable.png
+  :target: _images/ImpedanceTable.png
 
 .. _BrainSense Survey:
 
@@ -373,7 +373,7 @@ It is stored in the Session JSON file as ``LfpMontageTimeDomain`` JSON Field.
 Each recording contains about 20 seconds time-domain recording recorded at 250Hz sampling rate. 
 
 .. image:: images/BrainSenseSurvey.png
-  :target: images/BrainSenseSurvey.png
+  :target: _images/BrainSenseSurvey.png
 
 BrainSense Surveys are snapshots of neural activity at the time of recording. 
 We aggregated the Surveys collected over the span of patient's visit at the institute to inform 
@@ -402,7 +402,7 @@ This allow user to visually identify disappearance and emergence of certain brai
 For example, in figure below we can see that an changes in recorded signal between July to October 2021. 
 
 .. image:: images/PSDAcrossTime.png
-  :target: images/PSDAcrossTime.png
+  :target: _images/PSDAcrossTime.png
   :width: 400
 
 .. _BrainSense Streaming:
@@ -420,15 +420,15 @@ parameters to see effect of stimulation on the brain signal.
 For multi-channel recordings without stimulation, user may refer to `Indefinite Streaming`_ section.
 
 .. image:: images/BrainSenseStreaming1.png
-  :target: images/BrainSenseStreaming1.png
+  :target: _images/BrainSenseStreaming1.png
   :width: 800
 
 .. image:: images/BrainSenseStreaming2.png
-  :target: images/BrainSenseStreaming2.png
+  :target: _images/BrainSenseStreaming2.png
   :width: 800
 
 .. image:: images/BrainSenseStreaming3.png
-  :target: images/BrainSenseStreaming3.png
+  :target: _images/BrainSenseStreaming3.png
   :width: 800
 
 Select Recording to View
@@ -455,7 +455,7 @@ All figures provided in the graph are interactive with x-axis alignment fixed.
 All time are presented based on user's local timezone. Screenshot taken from Version 1.0 but overall capability has not changed in 2.0.
 
 .. image:: images/BrainSenseStreamingSummary1.png
-  :target: images/BrainSenseStreamingSummary1.png
+  :target: _images/BrainSenseStreamingSummary1.png
   :width: 800
 
 Time alignemnt with bilataral recording can be easily identified via Red Box 3 in below figure. 
@@ -464,7 +464,7 @@ turned on for Left and Right separately. The alignment shows that the stimulatio
 in stimulation parameters. 
 
 .. image:: images/BrainSenseStreamingSummary2.png
-  :target: images/BrainSenseStreamingSummary2.png
+  :target: _images/BrainSenseStreamingSummary2.png
   :width: 800
 
 User may choose to export the raw data. 
@@ -474,7 +474,7 @@ Timestamp are provided as UTC timestamp in seconds.
 Aligned stimulation values are provided for identification of stimulation period. 
 
 .. image:: images/BrainSenseStreamingSummary3.png
-  :target: images/BrainSenseStreamingSummary3.png
+  :target: _images/BrainSenseStreamingSummary3.png
   :width: 800
 
 The basic summary uses default short-time Fourier Transform (Spectrogram) method to generate Time-Frequency Analysis. 
@@ -486,11 +486,11 @@ below figures show the performance of the cardiac filter.
 It selectively remove signal without altering stimulation artifact spikes. 
 
 .. image:: images/StreamingCardiacOFF.png
-  :target: images/StreamingCardiacOFF.png
+  :target: _images/StreamingCardiacOFF.png
   :width: 800
 
 .. image:: images/StreamingCardiacON.png
-  :target: images/StreamingCardiacON.png
+  :target: _images/StreamingCardiacON.png
   :width: 800
 
 Effect of Stimulation
@@ -511,7 +511,7 @@ In exchange for that, the device allows simultaneous recording up to 6 channels 
 and E00-E03). We align all recordings collected at the same time and perform quick time-frequency analysis display to the user.
 
 .. image:: images/IndefiniteStreaming1.png
-  :target: images/IndefiniteStreaming1.png
+  :target: _images/IndefiniteStreaming1.png
   :width: 800
 
 The recording selection is performed through toggle buttons. 
@@ -523,19 +523,19 @@ The toggle selection actually allow multiple selection. User can select multiple
 and visualize them on the same time-axis. Segment without data will be leave as blank.
 
 .. image:: images/IndefiniteStreaming2.png
-  :target: images/IndefiniteStreaming2.png
+  :target: _images/IndefiniteStreaming2.png
   :width: 800
 
 .. image:: images/IndefiniteStreaming3.png
-  :target: images/IndefiniteStreaming3.png
+  :target: _images/IndefiniteStreaming3.png
   :width: 800
 
 .. image:: images/IndefiniteStreaming4.png
-  :target: images/IndefiniteStreaming4.png
+  :target: _images/IndefiniteStreaming4.png
   :width: 800
 
 .. image:: images/IndefiniteStreaming5.png
-  :target: images/IndefiniteStreaming5.png
+  :target: _images/IndefiniteStreaming5.png
   :width: 800
 
 Since there are no extra label provided by neurostimulator. User may use external label such as biosensors or 
@@ -553,7 +553,7 @@ field. The LFP Trend Log divides recording into Left/Right hemisphere, and group
 Each sample contains a timestamp, a LFP measurment (integer, arbituary unit), and instananeous stimulation amplitude measurement. 
 
 .. image:: images/ChronicLFP.png
-  :target: images/ChronicLFP.png
+  :target: _images/ChronicLFP.png
   :width: 800
 
 .. note::
@@ -646,7 +646,7 @@ Session Overview View
 ---------------------------------------------
 
 .. image:: images/SessionOverviewPage.png
-  :target: images/SessionOverviewPage.png
+  :target: _images/SessionOverviewPage.png
   :width: 800
 
 The session overview page will display the device name and date at which the JSON session is recorded. 
@@ -657,6 +657,6 @@ Using "Format for EMR" option can generate a simple table listing basic therapeu
 such as shown below
 
 .. image:: images/SessionSummary.png
-  :target: images/SessionSummary.png
+  :target: _images/SessionSummary.png
   :width: 800
 
