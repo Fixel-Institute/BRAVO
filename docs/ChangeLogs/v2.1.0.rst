@@ -1,4 +1,4 @@
-Version 2.1.0 (Developmental)
+Version 2.1.0
 ===============================================
 
 Overview
@@ -9,7 +9,60 @@ and Adaptive DBS configurations. Changes made to v2.0.0 will be outlined in the 
 Major Changes 
 ---------------------------------------------
 
+.. topic:: 1. Use of Simple JWT instead of DjangoRestKnox package
+
+  Use of Simple JSON Web Token (JWT) makes authentication check easier than the less adjustable DjangoRestKnox package. 
+  Modification using JWT will lead to a database change and database update is required. 
+
+  With JWT, a constant Watchdog Application will be running in background to handle token refresh.
+
+.. topic:: 2. Data Upload Pipeline Modification
+
+  Instead of a one-file-at-a-time upload/process pipeline implemented in 1.0 and 2.0, the new upload pipeline utilized a 
+  processing-queue procedure. Batch upload of all files will be stored in the cache location and a processing queue object 
+  will be created in database. A background cron-task will be running periodically to check the queue to see which file need
+  to be processed. This modification will allow less wait time for users and avoid website update interruptions. 
+
+.. topic:: 3. Therapy History object Updated with adaptive DBS
+
+  With new aDBS feature available on the Medtronic Percept Device, data processing pipeline is updated with new code to extract 
+  important parameters from aDBS setups, including Threshold, Ramping, and Bypass parameters. 
+  This information will be displayed in Therapy History page, and the aDBS performance will be displayed in Chronic BrainSense page.
+
+  Due to the change in object, user will need to refresh TherapyHistory object using ``DatabaseManager.py`` script. 
+
+.. topic:: 4. Therapy History object Updated with adaptive DBS
+
+  With new aDBS feature available on the Medtronic Percept Device, data processing pipeline is updated with new code to extract 
+  important parameters from aDBS setups, including Threshold, Ramping, and Bypass parameters. 
+
+  This information will be displayed in Therapy History page, and the aDBS performance will be displayed in Chronic BrainSense page.
+
+.. topic:: 5. Experimental Analysis Page are now Dynamically Populated
+
+  To further help modular development of customized analysis scripts, we implemented procedure that add Experimental analysis page to 
+  the Patient Overview Page by creating a ``route.js`` descriptor in each Experimental page. 
+
+  The client frontend now actively search for folders inside "Experimental" folder and populate design and route information using the ``route.js`` descriptor.
+  Now user can share customized analysis to each other by simply adding new view folders to the Experimental folder without interfereing with main developmen pipeline.
+
+.. topic:: 6. Data Sharing Pipeline
+
+  Previously in 1.0 BRAVO_SSR, the admin can choose patients/recordings to share with others. Here, we re-implemented the process with modification 
+  to the one-time access code. Any user can manually select patients to be shared in deidentified condition. The receiver can view all data available at the time of sharing 
+  but cannot edit. 
 
 Minor Changes 
 ---------------------------------------------
+
+.. topic:: 1. DatabaseManager can merge multiple patients into one
+
+  In the event that new device has a wrong patient name, and the automatic processing script failed to recognize them as the same patient, 2 separate patient entries will be created. 
+  Now user can simply obtain the deidnetification id from both instances and merge them using DatabaseManager.py script. 
+
+.. topic:: 2. Custom Name can be added to electrodes. 
+
+  Some patients may have bilateral DBS device, and Medtronic Percept device force users to utilize the "Left/Right" nomenclature, leading to sometime the Hemisphere definition does not 
+  match the real hemisphere definition anatomically. We allow custom name editing to ensure that the display name is accurate if the user define the electrode location manually. 
+
 
