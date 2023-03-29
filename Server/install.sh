@@ -22,3 +22,7 @@ python3 manage.py migrate
 # Beaware, if you run install.sh as root, this will show up as root crontab and not user-crontab. This will lead to permission error in the future
 (crontab -l ; echo "* * * * * bash $SCRIPT_DIR/ProcessingQueueJob.sh >> $SCRIPT_DIR/ProcessingQueueLog.txt")| crontab -
 (crontab -l ; echo "* * * * * bash $SCRIPT_DIR/JWTTokenBlacklistCleanup.sh")| crontab -
+
+# Start Cron-Task
+sudo systemctl start cron
+sudo systemctl enable cron 
