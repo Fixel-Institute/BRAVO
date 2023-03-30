@@ -1,23 +1,15 @@
-import TherapeuticPrediction from "views/Experimental/TherapeuticPrediction";
-import MultipleSegmentAnalysis from "views/Experimental/MultipleSegmentAnalysis";
-import PatientEvents from "views/Experimental/PatientEvents";
-import CircadianThreshold from "views/Experimental/CircadianThreshold";
-import ImageVisualization from "views/Experimental/ImageVisualization";
-import WearableStream from "views/Experimental/WearableStream";
+/**
+=========================================================
+* UF BRAVO Platform
+=========================================================
 
-import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
-import FlashAutoIcon from '@mui/icons-material/FlashAuto';
-import PhotoIcon from '@mui/icons-material/Photo';
-import WatchIcon from '@mui/icons-material/Watch';
+* Copyright 2023 by Jackson Cagle, Fixel Institute
+* The source code is made available under a Creative Common NonCommercial ShareAlike License (CC BY-NC-SA 4.0) (https://creativecommons.org/licenses/by-nc-sa/4.0/) 
 
-import { 
-  AccessAlarm, 
-  BatchPrediction,
-  Timeline,
-  Watch, 
-  Photo, 
-  FlashAuto, 
-} from "@mui/icons-material";
+ =========================================================
+
+* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+*/
 
 const enabledPlugins = [
   "TherapeuticPrediction",
@@ -32,18 +24,3 @@ const enabledPlugins = [
 export const experimentalRoutes = enabledPlugins.map((plugin) => {
   return require("views/Experimental/" + plugin + "/route.js").default;
 });
-
-/*
-export const experimentalRoutes = [
-  {
-  },
-  {
-  },
-  {
-  },,
-  {
-  },
-  {
-  },
-]
-*/
