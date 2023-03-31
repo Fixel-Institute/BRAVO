@@ -161,8 +161,10 @@ def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0)
                 AmplitudeRange = [0,0]
                 ModeledSignal = np.zeros(100).tolist()
             
-            #Features["Score"] = applyPredictionModel(Features)
-            Features["Score"] = 0
+            if "Features" in Features.keys():
+                Features["Score"] = applyPredictionModel(Features["Features"])
+            else:
+                Features["Score"] = 0
             Features["CenterFrequency"] = centerFrequency
             Features["PredictedAmplitude"] = PredictedAmplitude
             Features["AmplitudeRange"] = AmplitudeRange
@@ -172,8 +174,12 @@ def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0)
     return dict()
 
 def applyPredictionModel(RecordingFeatures):
-    Features = np.array([RecordingFeatures[key] for key in RecordingFeatures.keys()])
-    with open(RESOURCES + os.path.sep + "ForestModel.rfc", "rb") as file:
-        forest = pickle.load(file)
-    Probability = forest.predict_proba(Features.reshape(1,-1))[0][1]
+    #Features = np.array([RecordingFeatures[key] for key in RecordingFeatures.keys()])
+    Features = np.array(RecordingFeatures)
+    if not os.path.exists(RESOURCES + os.path.sep + "Classifier.model"):
+        return 0
+    
+    with open(RESOURCES + os.path.sep + "Classifier.model", "rb") as file:
+        clf = pickle.load(file)
+    Probability = clf.predict_proba(Features.reshape(1,-1))[0][1]
     return Probability
