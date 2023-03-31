@@ -109,24 +109,35 @@ def extractModelParameters(stream, channel, centerFrequency):
     uniqueAmplitude = sorted(np.unique(StimulationAmplitude))
     simplifiedYData = []
     for k in range(len(uniqueAmplitude)):
-        simplifiedYData.append(np.mean(BrainPower[StimulationAmplitude==uniqueAmplitude[k]]))
+        simplifiedYData.append(np.median(BrainPower[StimulationAmplitude==uniqueAmplitude[k]]))
     
     xdata = np.linspace(np.min(StimulationAmplitude), np.max(StimulationAmplitude), 100)
     if len(uniqueAmplitude) >= 4:
-        #popt, pcov = optimize.curve_fit(powerDecay, StimulationAmplitude, BrainPower, maxfev=5000)
         popt, pcov = optimize.curve_fit(powerDecay, uniqueAmplitude, simplifiedYData, maxfev=5000)
         modeled_signal = powerDecay(xdata, *popt)
-        #coe = np.polyfit(uniqueAmplitude, simplifiedYData, 4)
-        #modeled_signal = np.polyval(coe, xdata)
-        #coe = np.polyfit(StimulationAmplitude, BrainPower, 4)
     else:
         coe = np.polyfit(StimulationAmplitude, BrainPower, 4)
         modeled_signal = np.polyval(coe, xdata)
 
     correlationCoe, p = stats.pearsonr(xdata, modeled_signal)
     
+    Features = []
+    # 100-pt Modeled Signal
+    Features.extend((modeled_signal/simplifiedYData[0]).tolist())
+    # Minimum Therapy Amplitude
+    Features.append(uniqueAmplitude[0])
+    # Max Therapy Amplitude
+    Features.append(uniqueAmplitude[-1])
+    # Center Frequency
+    Features.append(centerFrequency)
+    # Goodness of Fit
+    Features.append(correlationCoe*correlationCoe)
+    # Absolute Power Changes
+    Features.append(simplifiedYData[-1]-simplifiedYData[0])
+    
     return {"OptimalFrequency": centerFrequency, "PowerDirection": simplifiedYData[-1] -  simplifiedYData[0],
         "ChangesDirection": np.sign(correlationCoe),
+        "Features": Features,
         "FittedEffect": correlationCoe*correlationCoe,
         "ChangesInPower": np.percentile(modeled_signal, 85) - np.percentile(modeled_signal, 15),
         "FinalPower": np.percentile(modeled_signal, 5)}, xdata[modeled_signal <= np.percentile(modeled_signal, 10)][0], [xdata[0], xdata[-1]], modeled_signal.tolist()
