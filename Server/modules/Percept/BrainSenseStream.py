@@ -705,8 +705,8 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
 
     for i in range(len(StimulationEpochs)):
         StimulationEpochs[i]["CenterFrequency"] = centerFrequency
-        timeSelection = StimulationEpochs[i]["TimeSelection"]
-
+        timeSelection = np.bitwise_and(StimulationEpochs[i]["TimeSelection"], stream["Spectrogram"][channel]["Missing"] == 0)
+        
         if method == "Wavelet":
             timeSelection = np.bitwise_and(timeSelection, stream["Missing"][channel] == 0)
             StimulationEpochs[i]["SpectralFeatures"] = stream["Wavelet"][channel]["Power"][:,timeSelection]

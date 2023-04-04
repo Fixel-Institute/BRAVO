@@ -134,13 +134,17 @@ def extractModelParameters(stream, channel, centerFrequency):
     Features.append(correlationCoe*correlationCoe)
     # Absolute Power Changes
     Features.append(simplifiedYData[-1]-simplifiedYData[0])
+
+    spline = interpolate.CubicSpline(uniqueAmplitude, simplifiedYData)
+    modeled_signal = spline(xdata)
+    threshold = 0.05 * (np.max(modeled_signal) - np.min(modeled_signal)) + np.min(modeled_signal)
     
     return {"OptimalFrequency": centerFrequency, "PowerDirection": simplifiedYData[-1] -  simplifiedYData[0],
         "ChangesDirection": np.sign(correlationCoe),
         "Features": Features,
         "FittedEffect": correlationCoe*correlationCoe,
         "ChangesInPower": np.percentile(modeled_signal, 85) - np.percentile(modeled_signal, 15),
-        "FinalPower": np.percentile(modeled_signal, 5)}, xdata[modeled_signal <= np.percentile(modeled_signal, 10)][0], [xdata[0], xdata[-1]], modeled_signal.tolist()
+        "FinalPower": np.percentile(modeled_signal, 5)}, xdata[modeled_signal <= threshold][0], [xdata[0], xdata[-1]], modeled_signal.tolist()
 
 def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0):
     for channel in BrainSenseData["Channels"]:
@@ -155,6 +159,11 @@ def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0)
             
             if centerFrequency > 0:
                 Features, PredictedAmplitude, AmplitudeRange, ModeledSignal = extractModelParameters(BrainSenseData, channel, centerFrequency)
+                if Features["ChangesDirection"] > 0:
+                    Features = { "OptimalFrequency": -1, "ChangesDirection": 1, "FittedEffect": 0, "ChangesInPower": 0, "FinalPower": 0 }
+                    PredictedAmplitude = 0
+                    AmplitudeRange = [0,0]
+                    ModeledSignal = np.zeros(100).tolist()
             else:
                 Features = { "OptimalFrequency": -1, "ChangesDirection": 1, "FittedEffect": 0, "ChangesInPower": 0, "FinalPower": 0 }
                 PredictedAmplitude = 0

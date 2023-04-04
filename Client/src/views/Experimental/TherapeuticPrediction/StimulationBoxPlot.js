@@ -36,7 +36,7 @@ function StimulationBoxPlot({dataToRender, channelInfos, predictionTrend, height
       fig.subplots(1, 1, {sharey: false, sharex: false});
 
       fig.setXlim([-0.5, 5.5]);
-      fig.setYlim([-20, 15]);
+      fig.setYlim([0, 5]);
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Stimulation", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)})`, {fontSize: 15});
       fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "dB", language)})`, {fontSize: 15});
 
@@ -67,7 +67,7 @@ function StimulationBoxPlot({dataToRender, channelInfos, predictionTrend, height
 
     if (modeledSignals) {
       const xdata = Array(modeledSignals.length).fill(0).map((value, index) => (modeledRange[1]-modeledRange[0])/modeledSignals.length*index + modeledRange[0])
-      const ydata = Array(modeledSignals.length).fill(0).map((value, index) => 2+modeledSignals[index]);
+      const ydata = Array(modeledSignals.length).fill(0).map((value, index) => modeledSignals[index]);
       
       fig.plot(xdata, ydata, {
         linewidth: 5,
