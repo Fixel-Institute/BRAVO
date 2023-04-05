@@ -26,6 +26,7 @@ import json
 import datetime
 import dateutil
 import time
+from cryptography.fernet import Fernet
 
 import websocket
 from BRAVO import wsgi
@@ -33,6 +34,9 @@ from BRAVO import wsgi
 from Backend import models
 from modules.Percept import Sessions
 from modules import Database
+from decoder import Percept
+
+DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
 def processJSONUploads():
     ws = websocket.WebSocket()
@@ -49,6 +53,15 @@ def processJSONUploads():
             newPatient = None
             ErrorMessage = ""
             ProcessingResult = ""
+
+            try:
+                JSON = Percept.decodeEncryptedJSON(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"], os.environ.get('ENCRYPTION_KEY'))
+            except:
+                queue.state = "Error"
+                queue.descriptor["Message"] = "JSON Format Error"
+                queue.save()
+                continue
+
             try:
                 user = models.PlatformUser.objects.get(unique_user_id=queue.owner)
                 if user.is_clinician:
@@ -96,6 +109,8 @@ def processJSONUploads():
                 queue.state = "Error"
                 queue.descriptor["Message"] = ErrorMessage
                 queue.save()
+                
+                Sessions.saveCacheJSON(queue.descriptor["filename"], json.dumps(JSON))
 
 if __name__ == '__main__':
     processJSONUploads()
