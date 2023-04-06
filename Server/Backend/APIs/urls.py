@@ -56,6 +56,7 @@ urlpatterns = [
 	path('queryMultipleSegmentComparison', Queries.QueryMultipleSegmentComparison.as_view()),
 	path('queryPatientEvents', Queries.QueryPatientEvents.as_view()),
 	path('queryAdaptiveGroups', Queries.QueryAdaptiveGroups.as_view()),
+  path('queryAdaptiveStimulation', Queries.QueryAdaptiveStimulation.as_view()),
 	path('queryCircadianPower', Queries.QueryCircadianPower.as_view()),
 
 	path('queryImageDirectory', Queries.QueryImageModelDirectory.as_view()),

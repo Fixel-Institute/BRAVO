@@ -27,7 +27,7 @@ from django.http import HttpResponse
 from Backend import models
 
 from modules import Database, ImageDatabase
-from modules.Percept import Therapy, Sessions, BrainSenseSurvey, BrainSenseEvent, BrainSenseStream, IndefiniteStream, ChronicBrainSense, TherapeuticPrediction
+from modules.Percept import Therapy, Sessions, BrainSenseSurvey, BrainSenseEvent, BrainSenseStream, IndefiniteStream, ChronicBrainSense, TherapeuticPrediction, AdaptiveStimulation
 from utility.PythonUtility import uniqueList
 import json
 import numpy as np
@@ -554,6 +554,52 @@ class QueryChronicBrainSense(RestViews.APIView):
             data["ChronicData"] = ChronicBrainSense.processChronicLFPs(data["ChronicData"], int(request.data["timezoneOffset"]))
             data["EventPSDs"] = BrainSenseEvent.processEventPSDs(data["EventPSDs"])
 
+            return Response(status=200, data=data)
+
+        return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+
+class QueryAdaptiveStimulation(RestViews.APIView):
+    """ Query all Chronic BrainSense Data.
+
+    The Chronic BrainSense data includes single power-band recorded using BrainSense-enabled group,
+    patient-reported events and event power spectrums. 
+
+    **POST**: ``/api/queryAdaptiveStimulation``
+
+    Args:
+      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+      requestData (boolean): Always true to request data.
+      timezoneOffset (int): seconds offset compare to Universal Time Coordinate. 
+        You can request this value from your browser through ``new Date().getTimezoneOffset()*60``.
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body contains Chronic BrainSense and Event PSDs. 
+    """
+
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        if "requestData" in request.data and "timezoneOffset" in request.data:
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+            if Authority["Level"] == 0:
+                return Response(status=404)
+
+            elif Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
+                PatientID = request.data["id"]
+
+            elif Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
+                Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "ChronicLFPs")
+                PatientID = PatientInfo.authorized_patient_id
+
+            data = dict()
+            TherapyHistory = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
+            data["ChronicData"] = ChronicBrainSense.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)
+            data["ChronicData"] = AdaptiveStimulation.processAdaptiveDutyCycle(data["ChronicData"], int(request.data["timezoneOffset"]))
             return Response(status=200, data=data)
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})

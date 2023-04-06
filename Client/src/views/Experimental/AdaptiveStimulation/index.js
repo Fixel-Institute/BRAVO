@@ -51,7 +51,7 @@ function AdaptiveStimulation() {
       navigate("/dashboard", {replace: false});
     } else {
       setAlert(<LoadingProgress/>);
-      SessionController.query("/api/queryChronicBrainSense", {
+      SessionController.query("/api/queryAdaptiveStimulation", {
         id: patientID, 
         requestData: true, 
         timezoneOffset: new Date().getTimezoneOffset()*60

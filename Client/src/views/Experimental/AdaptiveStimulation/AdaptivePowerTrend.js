@@ -38,9 +38,10 @@ function AdaptivePowerTrend({dataToRender, selectedDevice, height, figureTitle})
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15}, ax[ax.length-1]);
        for (var i in data) {
         fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "AU", language)})`, {fontSize: 15}, ax[i*2]);
-        fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Amplitude", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)})`, {fontSize: 15}, ax[i*2+1]);
+        //fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Amplitude", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)})`, {fontSize: 15}, ax[i*2+1]);
+        fig.setYlabel(`Percent On Time (%)`, {fontSize: 15}, ax[i*2+1]);
         
-        fig.setYlim([0, 5], ax[i*2+1]);
+        fig.setYlim([0, 100], ax[i*2+1]);
 
         if (data[i].Hemisphere === data[i].CustomName) {
           const [side, target] = data[i].Hemisphere.split(" ");
@@ -74,12 +75,13 @@ function AdaptivePowerTrend({dataToRender, selectedDevice, height, figureTitle})
           hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
         }, ax[i*2]);
 
-        fig.plot(timeArray, data[i]["Amplitude"][j], {
-          linewidth: 0.5,
-          color: "#AA0000",
-          hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
-        }, ax[i*2+1]);
-
+        if (data[i]["DutyCycle"][j].length > 0) {
+          fig.plot(timeArray, data[i]["DutyCycle"][j], {
+            linewidth: 0.5,
+            color: "#AA0000",
+            hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f}% <extra></extra>"
+          }, ax[i*2+1]);  
+        }
       }
     }
 
