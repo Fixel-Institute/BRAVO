@@ -92,17 +92,21 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
         if (data[i]["Therapy"][j].hasOwnProperty("TherapyOverview")) therapyString = data[i]["Therapy"][j]["TherapyOverview"]
 
         var timeArray = Array(data[i]["Timestamp"][j].length).fill(0).map((value, index) => new Date(data[i]["Timestamp"][j][index]*1000));
-        fig.plot(timeArray, data[i]["Power"][j], {
-          linewidth: 2,
-          color: "#000000",
-          hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
-        }, ax[i*2]);
+        if (data[i]["Power"][j].length > 0) {
+          fig.plot(timeArray, data[i]["Power"][j], {
+            linewidth: 2,
+            color: "#000000",
+            hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
+          }, ax[i*2]);
+        }
 
-        fig.plot(timeArray, data[i]["Amplitude"][j], {
-          linewidth: 0.5,
-          color: "#AA0000",
-          hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
-        }, ax[i*2+1]);
+        if (data[i]["Amplitude"][j].length > 0) {
+          fig.plot(timeArray, data[i]["Amplitude"][j], {
+            linewidth: 0.5,
+            color: "#AA0000",
+            hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
+          }, ax[i*2+1]);
+        }
 
         for (let k = 0; k < data[i].EventName[j].length; k++) {
           if (Object.keys(eventData).includes(data[i].EventName[j][k])) {

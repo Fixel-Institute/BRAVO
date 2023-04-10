@@ -229,15 +229,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                 LFPTrends[-1]["EventPower"] = list()
 
                 # Remove Outliers
-                LFPSelection = LFPPowers < np.median(LFPPowers) + np.std(LFPPowers)*6
-                LFPTimestamps = LFPTimestamps[LFPSelection]
-                LFPPowers = LFPPowers[LFPSelection]
-                StimulationAmplitude = StimulationAmplitude[LFPSelection]
-
-                LFPTrends[-1]["PowerRange"] = [0,0]
-
-                # Remove Outliers
-                LFPSelection = LFPPowers < np.median(LFPPowers) + np.std(LFPPowers)*6
+                LFPSelection = LFPPowers < (np.median(LFPPowers) + np.std(LFPPowers)*6)
                 LFPTimestamps = LFPTimestamps[LFPSelection]
                 LFPPowers = LFPPowers[LFPSelection]
                 StimulationAmplitude = StimulationAmplitude[LFPSelection]
@@ -260,7 +252,8 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                                 TherapyDetails = LFPTrends[-1]["Therapy"][-1][hemisphere.replace("HemisphereLocationDef.","")+"Hemisphere"]
                                 if "AdaptiveSetup" in TherapyDetails.keys():
                                     if "Bypass" in TherapyDetails["AdaptiveSetup"].keys():
-                                        LFPTrends[-1]["Power"][-1] = np.zeros(FiltPower.shape).tolist()
+                                        #LFPTrends[-1]["Power"][-1] = []
+                                        pass
                                 
                                 if np.percentile(FiltPower,5) < LFPTrends[-1]["PowerRange"][0]:
                                     LFPTrends[-1]["PowerRange"][0] = np.percentile(FiltPower,5)
@@ -347,7 +340,7 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
                 else:
                     TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS {Therapy['Channel']} @ {0}Hz"
 
-                if TherapyOverview == therapy:
+                if TherapyOverview == therapy and len(LFPTrends[i]["Power"][j]) > 0:
                     LFPTrends[i]["CircadianPowers"][-1]["Power"].extend(LFPTrends[i]["Power"][j])
                     LFPTrends[i]["CircadianPowers"][-1]["Timestamp"].extend(LFPTrends[i]["Timestamp"][j])
 
