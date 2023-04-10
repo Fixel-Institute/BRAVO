@@ -252,10 +252,16 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                             if np.any(rangeSelected):
                                 LFPTrends[-1]["Timestamp"].append(LFPTimestamps[rangeSelected])
                                 #FiltPower = signal.filtfilt(b,a,LFPPowers[rangeSelected])
-                                FiltPower = np.array(LFPPowers[rangeSelected]).tolist()
-                                LFPTrends[-1]["Power"].append(FiltPower)
+                                FiltPower = np.array(LFPPowers[rangeSelected])
+                                LFPTrends[-1]["Power"].append(FiltPower.tolist())
                                 LFPTrends[-1]["Amplitude"].append(np.array(StimulationAmplitude[rangeSelected]).tolist())
                                 LFPTrends[-1]["Therapy"].append(copy.deepcopy(therapy["therapy"][i]))
+
+                                TherapyDetails = LFPTrends[-1]["Therapy"][-1][hemisphere.replace("HemisphereLocationDef.","")+"Hemisphere"]
+                                if "AdaptiveSetup" in TherapyDetails.keys():
+                                    if "Bypass" in TherapyDetails["AdaptiveSetup"].keys():
+                                        LFPTrends[-1]["Power"][-1] = np.zeros(FiltPower.shape).tolist()
+                                
                                 if np.percentile(FiltPower,5) < LFPTrends[-1]["PowerRange"][0]:
                                     LFPTrends[-1]["PowerRange"][0] = np.percentile(FiltPower,5)
                                 if np.percentile(FiltPower,95) > LFPTrends[-1]["PowerRange"][1]:

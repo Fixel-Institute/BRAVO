@@ -64,13 +64,25 @@ function AdaptivePowerTrend({dataToRender, selectedDevice, height, figureTitle})
     }
     
     for (var i = 0; i < data.length; i++) {
+      let hemisphereName = "RightHemisphere";
+      if (data[i].Hemisphere.startsWith("Left")) {
+        hemisphereName = "LeftHemisphere";
+      }
+      
       for (var j = 0; j < data[i].Timestamp.length; j++) {
         var therapyString = ""
-        if (data[i]["Therapy"][j].hasOwnProperty("TherapyOverview")) therapyString = data[i]["Therapy"][j]["TherapyOverview"]
+        let therapyInfo = data[i]["Therapy"][j][hemisphereName];
+
+        if (data[i]["Therapy"][j].hasOwnProperty("TherapyOverview")) {
+          therapyString = data[i]["Therapy"][j]["TherapyOverview"]
+        } else {
+          if (therapyInfo.AmplitudeThreshold) therapyString = `${therapyInfo.Channel} ${therapyInfo.Frequency}Hz ${therapyInfo.PulseWidth}µS ${therapyInfo.AmplitudeThreshold[0]}-${therapyInfo.AmplitudeThreshold[1]}mA`;
+          else therapyString = `${therapyInfo.Channel} ${therapyInfo.Frequency}Hz ${therapyInfo.PulseWidth}µS ${therapyInfo.Amplitude}mA`;
+        }
 
         var timeArray = Array(data[i]["Timestamp"][j].length).fill(0).map((value, index) => new Date(data[i]["Timestamp"][j][index]*1000));
         fig.plot(timeArray, data[i]["Power"][j], {
-          linewidth: 2,
+          linewidth: 1,
           color: "#000000",
           hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
         }, ax[i*2]);
@@ -81,6 +93,24 @@ function AdaptivePowerTrend({dataToRender, selectedDevice, height, figureTitle})
             color: "#AA0000",
             hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f}% <extra></extra>"
           }, ax[i*2+1]);  
+        }
+
+        if (therapyInfo.hasOwnProperty("LFPThresholds")) {
+          if (!(therapyInfo.LFPThresholds[0] == 20 && therapyInfo.LFPThresholds[1] == 30 && therapyInfo.CaptureAmplitudes[0] == 0 && therapyInfo.CaptureAmplitudes[1] == 0)) {
+            fig.plot([timeArray[0],timeArray[timeArray.length-1]], [therapyInfo.LFPThresholds[0],therapyInfo.LFPThresholds[0]], {
+              linewidth: 2,
+              color: "#f50057",
+              hovertemplate: "<extra></extra>"
+            }, ax[i*2]);
+
+            if (therapyInfo.LFPThresholds[0] != therapyInfo.LFPThresholds[1]) {
+              fig.plot([timeArray[0],timeArray[timeArray.length-1]], [therapyInfo.LFPThresholds[1],therapyInfo.LFPThresholds[1]], {
+                linewidth: 2,
+                color: "#1100AA",
+                hovertemplate: "<extra></extra>"
+              }, ax[i*2]);
+            }
+          }
         }
       }
     }
