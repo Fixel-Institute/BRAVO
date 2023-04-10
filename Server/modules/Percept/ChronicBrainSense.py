@@ -252,8 +252,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                                 TherapyDetails = LFPTrends[-1]["Therapy"][-1][hemisphere.replace("HemisphereLocationDef.","")+"Hemisphere"]
                                 if "AdaptiveSetup" in TherapyDetails.keys():
                                     if "Bypass" in TherapyDetails["AdaptiveSetup"].keys():
-                                        #LFPTrends[-1]["Power"][-1] = []
-                                        pass
+                                        LFPTrends[-1]["Power"][-1] = []
                                 
                                 if np.percentile(FiltPower,5) < LFPTrends[-1]["PowerRange"][0]:
                                     LFPTrends[-1]["PowerRange"][0] = np.percentile(FiltPower,5)
