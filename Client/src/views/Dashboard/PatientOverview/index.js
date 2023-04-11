@@ -60,6 +60,7 @@ import { dictionary } from "assets/translation";
 import {
   experimentalRoutes
 } from "views/Experimental/plugins";
+import MuiAlertDialog from "components/MuiAlertDialog";
 
 const filter = createFilterOptions();
 
@@ -99,15 +100,27 @@ export default function PatientOverview() {
   }, [patientID]);
 
   const removeDevice = (deviceId) => {
-    SessionController.query("/api/deleteSessionFiles", {
-      deleteDevice: true,
-      patientId: patientID,
-      deviceId: deviceId
-    }).then(() => {
-      setPatientInfo({...patientInfo, Devices: patientInfo.Devices.filter((device) => device.ID != deviceId)});
-    }).catch((error) => {
-      SessionController.displayError(error, setAlert);
-    });
+    setAlert(<MuiAlertDialog 
+      title={"Remove Device"}
+      message={"Are you sure you want to delete the device entry and all associated data?"}
+      confirmText={"YES"}
+      denyText={"NO"}
+      denyButton
+      handleClose={() => setAlert(null)}
+      handleDeny={() => setAlert(null)}
+      handleConfirm={() => {
+        SessionController.query("/api/deleteSessionFiles", {
+          deleteDevice: true,
+          patientId: patientID,
+          deviceId: deviceId
+        }).then(() => {
+          setPatientInfo({...patientInfo, Devices: patientInfo.Devices.filter((device) => device.ID != deviceId)});
+          setAlert(null);
+        }).catch((error) => {
+          SessionController.displayError(error, setAlert);
+        });
+      }}
+    />)
   };
 
   const removePatient = () => {
@@ -189,6 +202,7 @@ export default function PatientOverview() {
 
   return (
     <DatabaseLayout>
+      {alert}
       <MDBox py={3}>
         {patientInfo ? (
         <MDBox mb={3}>

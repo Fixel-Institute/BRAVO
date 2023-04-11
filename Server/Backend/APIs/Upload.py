@@ -262,7 +262,7 @@ class SessionRemove(RestViews.APIView):
 
         if "deletePatient" in request.data:
             deidentification = Database.extractPatientInfo(request.user, request.data["patientId"])
-            DeviceIDs = [deidentification["Devices"][i]["ID"] for i in range(len(deidentification["Devices"]))]
+            DeviceIDs = [str(deidentification["Devices"][i]["ID"]) for i in range(len(deidentification["Devices"]))]
 
             for device in DeviceIDs:
                 device = models.PerceptDevice.objects.filter(deidentified_id=device).first()
@@ -275,7 +275,7 @@ class SessionRemove(RestViews.APIView):
         
         elif "deleteDevice" in request.data:
             deidentification = Database.extractPatientInfo(request.user, request.data["patientId"])
-            DeviceIDs = [deidentification["Devices"][i]["ID"] for i in range(len(deidentification["Devices"]))]
+            DeviceIDs = [str(deidentification["Devices"][i]["ID"]) for i in range(len(deidentification["Devices"]))]
             if not request.data["deviceId"] in DeviceIDs:
                 return Response(status=404)
 

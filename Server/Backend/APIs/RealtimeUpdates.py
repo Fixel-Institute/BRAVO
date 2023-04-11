@@ -54,8 +54,6 @@ class NotificationSystem(AsyncWebsocketConsumer):
             except ValueError:
                 return await self.close()
             
-            print(request)
-
             # Authorization Flows
             if not self.scope["authorization"] and "Authorization" in request.keys():
                 token = request["Authorization"]
