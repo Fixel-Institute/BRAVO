@@ -205,7 +205,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                   const [side, target] = channel.Hemisphere.split(" ");
                   leftHemisphere = <>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
-                      {dictionaryLookup(dictionary.FigureStandardText, side, language)} {dictionaryLookup(dictionary.BrainRegions, target, language)}
+                      {channel.CustomName!=channel.Hemisphere ? channel.CustomName : dictionaryLookup(dictionary.FigureStandardText, side, language) + " " + dictionaryLookup(dictionary.BrainRegions, target, language)}
                     </MDTypography>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
                       {formatSegmentString(channel.Contacts)} {"@ " + recording.Therapy.Left.RateInHertz + " Hz " + recording.Therapy.Left.PulseWidthInMicroSecond + " μS"}
@@ -215,7 +215,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                   const [side, target] = channel.Hemisphere.split(" ");
                   rightHemisphere = <>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
-                      {dictionaryLookup(dictionary.FigureStandardText, side, language)} {dictionaryLookup(dictionary.BrainRegions, target, language)}
+                      {channel.CustomName!=channel.Hemisphere ? channel.CustomName : dictionaryLookup(dictionary.FigureStandardText, side, language) + " " + dictionaryLookup(dictionary.BrainRegions, target, language)}
                     </MDTypography>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
                       {formatSegmentString(channel.Contacts)} {"@ " + recording.Therapy.Right.RateInHertz + " Hz " + recording.Therapy.Right.PulseWidthInMicroSecond + " μS"}

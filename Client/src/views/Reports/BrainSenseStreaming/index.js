@@ -241,15 +241,57 @@ function BrainSenseStreaming() {
     if (!adaptiveState) {
       return null;
     }
-
+    
     return (
       <MDBox px={3} pb={3}>
         <MDTypography variant={"h5"} fontSize={24}>
           {dictionaryLookup(dictionary.BrainSenseStreaming.Table, "AdaptiveMode", language)}
         </MDTypography>
-        <MDTypography variant={"h5"} fontSize={18}>
-          {dictionaryLookup(dictionary.BrainSenseStreaming.Table, "StreamingTableLeftHemisphere", language)}
-        </MDTypography>
+        <MDBox display={"flex"} flexDirection={"row"}>
+          {therapy.Left ? (
+            <MDBox flexDirection={"column"}>
+              <MDTypography variant={"h5"} fontSize={18}>
+                {dictionaryLookup(dictionary.BrainSenseStreaming.Table, "StreamingTableLeftHemisphere", language)}
+              </MDTypography>
+              <MDTypography variant={"h6"} fontSize={15}>
+                {dictionaryLookup(dictionary.BrainSenseStreaming.Table, therapy.Left.AdaptiveTherapyStatus, language)}
+              </MDTypography>
+              <MDTypography variant={"h6"} fontSize={18}>
+                {"Closed-Loop Threshold: "} {}
+              </MDTypography>
+            </MDBox>
+          ) : null}
+          {therapy.Right ? (
+            <MDBox pt={2} flexDirection={"column"}>
+              <MDTypography variant={"h5"} fontSize={21}>
+                {channelInfos.filter((channel) => {
+                  return channel.Hemisphere.startsWith("Right");
+                }).map((channel) => {
+                  return channel.CustomName;
+                })[0]}
+              </MDTypography>
+              <MDTypography variant={"h6"} fontSize={18}>
+                {dictionaryLookup(dictionary.BrainSenseStreaming.Table, therapy.Right.AdaptiveTherapyStatus, language)}
+              </MDTypography>
+              <MDTypography variant={"p"} fontSize={18}>
+                {"Closed-Loop Threshold: "} {therapy.Right.UpperLfpThreshold == therapy.Right.LowerLfpThreshold ? `Single Threshold - ${therapy.Right.LowerLfpThreshold}` : `Dual Threshold - ${therapy.Right.LowerLfpThreshold} / ${therapy.Right.UpperLfpThreshold}`}
+                <br/>
+              </MDTypography>
+              <MDTypography variant={"p"} fontSize={15}>
+                {"Ramp Up Time: "} {`${therapy.Right.TransitionUpInMilliSeconds}ms`} <br/>
+              </MDTypography>
+              <MDTypography variant={"p"} fontSize={15}>
+                {"Ramp Down Time: "} {`${therapy.Right.TransitionDownInMilliSeconds}ms`} <br/>
+              </MDTypography>
+              <MDTypography variant={"p"} fontSize={15}>
+                {"Onset Duration: "} {`${therapy.Right.UpperThresholdOnsetInMilliSeconds}ms`} <br/>
+              </MDTypography>
+              <MDTypography variant={"p"} fontSize={15}>
+                {"Termination Duration: "} {`${therapy.Right.LowerThresholdOnsetInMilliSeconds}ms`} <br/>
+              </MDTypography>
+            </MDBox>
+          ) : null}
+        </MDBox>
       </MDBox>
     );
   }

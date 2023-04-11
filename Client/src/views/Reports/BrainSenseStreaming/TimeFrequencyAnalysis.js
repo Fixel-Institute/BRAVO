@@ -31,6 +31,9 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
   const handleGraphing = (data) => {
     fig.clearData();
 
+    console.log(data)
+
+    let yLimCap = 5000;
     if (fig.fresh) {
       if (data.Channels.length == 2) {
         let ax = fig.subplots(7, 1, {sharey: false, sharex: true});
@@ -47,10 +50,17 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
 
         for (var i in data.Channels) {
           const [side, target] = channelInfos[i].Hemisphere.split(" ");
-          const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
-          fig.setSubtitle(`${titleText}`,ax[i*3]);
-          fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "TimeFrequencyAnalysis", language)}`,ax[i*3 + 1]);
-          fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "PowerChannel", language)} ${data.Info.Therapy[side].FrequencyInHertz} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)} `,ax[i*3 + 2]);
+          if (channelInfos[i].Hemisphere == channelInfos[i].CustomName) {
+            const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
+            fig.setSubtitle(`${titleText}`,ax[i*3]);
+            fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "TimeFrequencyAnalysis", language)}`,ax[i*3 + 1]);
+            fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "PowerChannel", language)} ${data.Info.Therapy[side].FrequencyInHertz} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)} `,ax[i*3 + 2]);
+          } else {
+            const titleText = `${channelInfos[i].CustomName} E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
+            fig.setSubtitle(`${titleText}`,ax[i*3]);
+            fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "TimeFrequencyAnalysis", language)}`,ax[i*3 + 1]);
+            fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "PowerChannel", language)} ${data.Info.Therapy[side].FrequencyInHertz} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)} `,ax[i*3 + 2]);
+          }
         }
         fig.setSubtitle(`${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "Stimulation", language)}`,ax[6]);
 
@@ -65,10 +75,17 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
           fig.setYlim([0, 5000], ax[2+i*3]);
           
           const [side, target] = channelInfos[i].Hemisphere.split(" ");
-          const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
-          fig.setSubtitle(`${titleText}`,ax[i*3]);
-          fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "TimeFrequencyAnalysis", language)}`,ax[i*3 + 1]);
-          fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "PowerChannel", language)} ${data.Info.Therapy[side].FrequencyInHertz} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)} `,ax[i*3 + 2]);
+          if (channelInfos[i].Hemisphere == channelInfos[i].CustomName) {
+            const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
+            fig.setSubtitle(`${titleText}`,ax[i*3]);
+            fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "TimeFrequencyAnalysis", language)}`,ax[i*3 + 1]);
+            fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "PowerChannel", language)} ${data.Info.Therapy[side].FrequencyInHertz} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)} `,ax[i*3 + 2]);
+          } else {
+            const titleText = `${channelInfos[i].CustomName} E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
+            fig.setSubtitle(`${titleText}`,ax[i*3]);
+            fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "TimeFrequencyAnalysis", language)}`,ax[i*3 + 1]);
+            fig.setSubtitle(`${titleText} ${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "PowerChannel", language)} ${data.Info.Therapy[side].FrequencyInHertz} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)} `,ax[i*3 + 2]);
+          }
         }
         fig.setSubtitle(`${dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "Stimulation", language)}`,ax[3]);
 
@@ -110,6 +127,21 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
               linewidth: 2,
               hovertemplate: `  %{y:.2f}<extra></extra>`,
             }, ax[i*3 + 2]);
+
+            if (powerband.Power.some((value) => value > yLimCap)) {
+              yLimCap = Math.max(powerband.Power);
+              yLimCap = Math.ceil(yLimCap / 5000) * 5000;
+              fig.setYlim([0, yLimCap], ax[2]);
+            }
+  
+            const [side, target] = channelInfos[i].Hemisphere.split(" ");
+            if (data.Info.Therapy[side].AdaptiveTherapyStatus == "ADBSStatusDef.RUNNING" || data.Info.Therapy[side].AdaptiveTherapyStatus == "ADBSStatusDef.SUSPENDED") {
+              fig.plot([timeArray[0],timeArray[timeArray.length-1]], [data.Info.Therapy[side].LowerLfpThreshold, data.Info.Therapy[side].LowerLfpThreshold], {
+                linewidth: 2,
+                color: "r",
+                hovertemplate: `  %{y:.2f}<extra></extra>`,
+              }, ax[i*3 + 2]);
+            }
           }
         }
       }
@@ -140,6 +172,21 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
             linewidth: 2,
             hovertemplate: `  %{y:.2f}<extra></extra>`,
           }, ax[2]);
+
+          if (powerband.Power.some((value) => value > yLimCap)) {
+            yLimCap = Math.max(powerband.Power);
+            yLimCap = Math.ceil(yLimCap / 5000) * 5000;
+            fig.setYlim([0, yLimCap], ax[2]);
+          }
+
+          const [side, target] = channelInfos[i].Hemisphere.split(" ");
+          if (data.Info.Therapy[side].AdaptiveTherapyStatus == "ADBSStatusDef.RUNNING" || data.Info.Therapy[side].AdaptiveTherapyStatus == "ADBSStatusDef.SUSPENDED") {
+            fig.plot([timeArray[0],timeArray[timeArray.length-1]], [data.Info.Therapy[side].LowerLfpThreshold, data.Info.Therapy[side].LowerLfpThreshold], {
+              linewidth: 2,
+              color: "r",
+              hovertemplate: `  %{y:.2f}<extra></extra>`,
+            }, ax[2]);
+          }
         }
       }
     }
@@ -156,7 +203,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
       fig.plot(timeArray, stimulation.Amplitude, {
         linewidth: 3,
         color: stimulationLineColor,
-        shape: "hv",
+        shape: "vh",
         hovertemplate: ` ${stimulation.Name} %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)}<br>  %{x} <extra></extra>`,
       }, ax[ax.length-1])
     }
