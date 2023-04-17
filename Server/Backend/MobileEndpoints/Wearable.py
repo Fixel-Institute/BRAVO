@@ -133,6 +133,12 @@ class UploadRecording(RestViews.APIView):
         rawBytes = request.data["file"].read()
         header = rawBytes[:80].decode("utf-8")
 
+        if header[5:].strip() == "AppleWatch":
+            filename = "AppleWatch" + os.path.sep + "ExternalSensor_" + request.data["file"].name
+            with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
+                file.write(rawBytes)
+            return Response(status=200)
+
         availableDevice = models.ExternalSensorPairing.objects.filter(device_mac=header[5:].strip(), paired=True).first()
         if not availableDevice:
             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
