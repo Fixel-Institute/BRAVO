@@ -911,6 +911,25 @@ class PlotlyRenderManager {
   }
 
   /**
+   * Call to clear axis trends
+   */
+  clearAxes(ax=null) {
+    if (!ax) {
+      ax = this.gca;
+    } else {
+      if (this.ax.includes(ax)) {
+        this.gca = ax;
+      } else {
+        console.log("WARNING: Ax Not Found");
+        ax = this.gca;
+      }
+    }
+
+    this.traces = this.traces.filter((trace) => !(trace.xaxis == this.gca.xaxis && trace.yaxis == this.gca.yaxis));
+    console.log(this.traces)
+  }
+
+  /**
    * Call to clear figure
    */
   purge() {
