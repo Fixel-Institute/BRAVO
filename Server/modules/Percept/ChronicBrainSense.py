@@ -229,7 +229,13 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                 LFPTrends[-1]["EventPower"] = list()
 
                 # Remove Outliers
-                LFPSelection = LFPPowers < (np.median(LFPPowers) + np.std(LFPPowers)*6)
+                LFPSelection = np.abs(LFPPowers) < 1e6
+                LFPTimestamps = LFPTimestamps[LFPSelection]
+                LFPPowers = LFPPowers[LFPSelection]
+                StimulationAmplitude = StimulationAmplitude[LFPSelection]
+
+                # Remove Outliers
+                LFPSelection = np.abs(LFPPowers) < (np.median(LFPPowers) + np.std(LFPPowers)*6)
                 LFPTimestamps = LFPTimestamps[LFPSelection]
                 LFPPowers = LFPPowers[LFPSelection]
                 StimulationAmplitude = StimulationAmplitude[LFPSelection]
@@ -242,14 +248,18 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                         for i in range(len(therapy["date_of_change"])-1):
                             rangeSelected = rangeSelection(LFPTimestamps,[therapy["date_of_change"][i]/1000000000,therapy["date_of_change"][i+1]/1000000000])
                             if np.any(rangeSelected):
+                                try:
+                                    TherapyDetails = therapy["therapy"][i][hemisphere.replace("HemisphereLocationDef.","")+"Hemisphere"]
+                                except:
+                                    continue
+                                
                                 LFPTrends[-1]["Timestamp"].append(LFPTimestamps[rangeSelected])
                                 #FiltPower = signal.filtfilt(b,a,LFPPowers[rangeSelected])
                                 FiltPower = np.array(LFPPowers[rangeSelected])
                                 LFPTrends[-1]["Power"].append(FiltPower.tolist())
                                 LFPTrends[-1]["Amplitude"].append(np.array(StimulationAmplitude[rangeSelected]).tolist())
                                 LFPTrends[-1]["Therapy"].append(copy.deepcopy(therapy["therapy"][i]))
-
-                                TherapyDetails = LFPTrends[-1]["Therapy"][-1][hemisphere.replace("HemisphereLocationDef.","")+"Hemisphere"]
+                                
                                 if "AdaptiveSetup" in TherapyDetails.keys():
                                     if "Bypass" in TherapyDetails["AdaptiveSetup"].keys():
                                         LFPTrends[-1]["Power"][-1] = []
@@ -262,7 +272,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                                 ChronicEvents = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id,
                                                     event_time__gt=datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc), event_time__lt=datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc)).all()
                                 ChronicEvents = pd.DataFrame.from_records(ChronicEvents.values("event_name", "event_time"))
-                                if "event_name" in ChronicEvents.keys():
+                                if "event_name" in ChronicEvents.keys() and len(LFPTrends[-1]["Power"][-1]) > 0:
                                     LFPTrends[-1]["EventName"].append(ChronicEvents["event_name"])
                                     LFPTrends[-1]["EventTime"].append([time.timestamp() for time in ChronicEvents["event_time"]])
                                     LFPTrends[-1]["EventPower"].append([LFPTrends[-1]["Power"][-1][findClosest(LFPTrends[-1]["Timestamp"][-1], time)[1]] for time in LFPTrends[-1]["EventTime"][-1]])
@@ -401,8 +411,11 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
             LFPTrends[i]["CircadianPowers"][-1]["AveragePower"] = LFPTrends[i]["CircadianPowers"][-1]["AveragePower"].tolist()
             LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"] = LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"].tolist()
             LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"] = (LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"] + timezoneOffset).tolist()
-
-            LFPTrends[i]["CircadianPowers"][-1]["PowerRange"] = [np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],5),np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],95)]
+            
+            if len(LFPTrends[i]["CircadianPowers"][-1]["Power"]) > 0:
+                LFPTrends[i]["CircadianPowers"][-1]["PowerRange"] = [np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],5),np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],95)]
+            else:
+                LFPTrends[i]["CircadianPowers"][-1]["PowerRange"] = [0,0]
     return LFPTrends
 
 def processCircadianPower(LFPTrends, therapyInfo, timezoneOffset=0):
