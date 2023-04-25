@@ -26,30 +26,24 @@ import Footer from "components/Footers/OnePageFooter";
 
 export default function OnePageLayout({ image, wide, children }) {
   return (
-    <PageLayout>
+    <PageLayout sx={{
+      backgroundImage: ({ functions: { linearGradient, rgba }, palette: { gradients } }) =>
+        image &&
+        `${linearGradient(
+          rgba(gradients.dark.main, 0.6),
+          rgba(gradients.dark.state, 0.6)
+        )}, url(${image})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+    }}>
       <DefaultNavbar
         routes={[]}
         transparent
         light
       />
-      <MDBox
-        position="absolute"
-        width="100%"
-        minHeight="100vh"
-        sx={{
-          backgroundImage: ({ functions: { linearGradient, rgba }, palette: { gradients } }) =>
-            image &&
-            `${linearGradient(
-              rgba(gradients.dark.main, 0.6),
-              rgba(gradients.dark.state, 0.6)
-            )}, url(${image})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
-      <MDBox px={1} width="100%" height="100vh" mx="auto">
-        <Grid container spacing={1} justifyContent="center" alignItems="center" height="100%">
+      <MDBox px={1} display="flex" width="100%" minHeight="90vh" mx="auto">
+        <Grid container spacing={1} justifyContent="center" alignItems="center" height="100%" mt={"auto"} mb={"auto"}>
           {!wide ? (
             <Grid item xs={11} md={8} lg={6} xl={3}>
               {children}

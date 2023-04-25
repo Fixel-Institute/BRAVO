@@ -40,7 +40,8 @@ export default function HomePage() {
       <Card sx={{
         paddingTop: 5,
         paddingBottom: 5,
-        marginBottom: 5,
+        marginTop: 15,
+        marginBottom: 15,
         borderRadius: "30px", 
         backgroundColor: "#AAAAAA77"
       }}>
