@@ -100,6 +100,8 @@ def queryTherapyHistory(user, patientUniqueID, authority):
     TherapyHistoryContext = list()
     if not authority["Permission"]:
         return TherapyHistoryContext
+    
+    ImpedanceHistory = queryImpedanceHistory(user, patientUniqueID, authority)
 
     availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
     for device in availableDevices:
@@ -151,7 +153,11 @@ def queryTherapyHistory(user, patientUniqueID, authority):
                 
                 else:
                     TherapyChangeData["therapy"].append(BriefTherapy)
-
+                
+                dateDiff, impedanceIndex = np.argmin(np.abs(np.array([impedanceLog["session_date"] for impedanceLog in ImpedanceHistory]) - TherapyChangeData["date_of_change"][i]/1000000000))
+                TherapyChangeData["therapy"][-1]["Impedance"] = ImpedanceHistory[impedanceIndex]
+                TherapyChangeData["therapy"][-1]["Impedance"]["TimeDifference"] = dateDiff
+                
             for i in range(len(TherapyHistory["therapy_date"])):
                 if TherapyHistory["therapy_date"][i].timestamp() > TherapyChangeData["date_of_change"][-1]/1000000000 and (TherapyHistory["therapy_date"][i].timestamp() < authority["Permission"][1] or authority["Permission"][1] == 0):
                     TherapyChangeData["date_of_change"].append(TherapyHistory["therapy_date"][i].timestamp()*1000000000)
@@ -176,6 +182,10 @@ def queryTherapyHistory(user, patientUniqueID, authority):
                     
                     else:
                         TherapyChangeData["therapy"].append(BriefTherapy)
+                        
+                    dateDiff, impedanceIndex = np.argmin(np.abs(np.array([impedanceLog["session_date"] for impedanceLog in ImpedanceHistory]) - TherapyChangeData["date_of_change"][i]/1000000000))
+                    TherapyChangeData["therapy"][-1]["Impedance"] = ImpedanceHistory[impedanceIndex]
+                    TherapyChangeData["therapy"][-1]["Impedance"]["TimeDifference"] = dateDiff
 
             TherapyHistoryContext.append(TherapyChangeData)
 

@@ -548,6 +548,7 @@ class QueryChronicBrainSense(RestViews.APIView):
 
             data = dict()
             TherapyHistory = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
+            ImpedanceHistory = Therapy.queryImpedanceHistory(request.user, PatientID, Authority)
             data["ChronicData"] = ChronicBrainSense.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)
             data["EventPSDs"] = BrainSenseEvent.queryPatientEventPSDs(request.user, PatientID, TherapyHistory, Authority)
 
