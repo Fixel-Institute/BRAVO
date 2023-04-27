@@ -113,8 +113,12 @@ def extractModelParameters(stream, channel, centerFrequency):
     
     xdata = np.linspace(np.min(StimulationAmplitude), np.max(StimulationAmplitude), 100)
     if len(uniqueAmplitude) >= 4:
-        popt, pcov = optimize.curve_fit(powerDecay, uniqueAmplitude, simplifiedYData, maxfev=5000)
-        modeled_signal = powerDecay(xdata, *popt)
+        try:
+            popt, pcov = optimize.curve_fit(powerDecay, uniqueAmplitude, simplifiedYData, maxfev=5000)
+            modeled_signal = powerDecay(xdata, *popt)
+        except:
+            coe = np.polyfit(StimulationAmplitude, BrainPower, 4)
+            modeled_signal = np.polyval(coe, xdata)
     else:
         coe = np.polyfit(StimulationAmplitude, BrainPower, 4)
         modeled_signal = np.polyval(coe, xdata)

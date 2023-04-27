@@ -154,9 +154,9 @@ def queryTherapyHistory(user, patientUniqueID, authority):
                 else:
                     TherapyChangeData["therapy"].append(BriefTherapy)
                 
-                dateDiff, impedanceIndex = np.argmin(np.abs(np.array([impedanceLog["session_date"] for impedanceLog in ImpedanceHistory]) - TherapyChangeData["date_of_change"][i]/1000000000))
-                TherapyChangeData["therapy"][-1]["Impedance"] = ImpedanceHistory[impedanceIndex]
-                TherapyChangeData["therapy"][-1]["Impedance"]["TimeDifference"] = dateDiff
+                if TherapyChangeData["therapy"][-1] and len(ImpedanceHistory) > 0:
+                    impedanceIndex = np.argmin(np.abs(np.array([impedanceLog["session_date"] for impedanceLog in ImpedanceHistory]) - TherapyChangeData["date_of_change"][i]/1000000000))
+                    TherapyChangeData["therapy"][-1]["Impedance"] = ImpedanceHistory[impedanceIndex]
                 
             for i in range(len(TherapyHistory["therapy_date"])):
                 if TherapyHistory["therapy_date"][i].timestamp() > TherapyChangeData["date_of_change"][-1]/1000000000 and (TherapyHistory["therapy_date"][i].timestamp() < authority["Permission"][1] or authority["Permission"][1] == 0):
@@ -182,10 +182,10 @@ def queryTherapyHistory(user, patientUniqueID, authority):
                     
                     else:
                         TherapyChangeData["therapy"].append(BriefTherapy)
-                        
-                    dateDiff, impedanceIndex = np.argmin(np.abs(np.array([impedanceLog["session_date"] for impedanceLog in ImpedanceHistory]) - TherapyChangeData["date_of_change"][i]/1000000000))
-                    TherapyChangeData["therapy"][-1]["Impedance"] = ImpedanceHistory[impedanceIndex]
-                    TherapyChangeData["therapy"][-1]["Impedance"]["TimeDifference"] = dateDiff
+                    
+                    if TherapyChangeData["therapy"][-1] and len(ImpedanceHistory) > 0:
+                        impedanceIndex = np.argmin(np.abs(np.array([impedanceLog["session_date"] for impedanceLog in ImpedanceHistory]) - TherapyHistory["therapy_date"][i].timestamp()))
+                        TherapyChangeData["therapy"][-1]["Impedance"] = ImpedanceHistory[impedanceIndex]
 
             TherapyHistoryContext.append(TherapyChangeData)
 
