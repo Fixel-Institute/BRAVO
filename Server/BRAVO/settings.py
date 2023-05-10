@@ -146,7 +146,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [(os.environ.get('REDIS_HOST'), 6379)],
             "capacity": 1500,  # default 100
             "expiry": 10,  # default 60
         },
@@ -156,15 +156,32 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'OPTIONS': {
-            'read_default_file': os.path.join(BASE_DIR, 'mysql.config'),
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
-        },
+BRAVODatabase = os.environ.get('BRAVO_DATABASE')
+if BRAVODatabase:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('BRAVO_DATABASE'),
+            'USER': os.environ.get('BRAVO_DATABASE_USER'),
+            'PASSWORD': os.environ.get('BRAVO_DATABASE_PASSWORD'),
+            'HOST': os.environ.get('BRAVO_DATABASE_HOST'),
+            'PORT': os.environ.get('BRAVO_DATABASE_PORT'),
+            'PROTOCOL': "tcp",
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'OPTIONS': {
+                'read_default_file': os.path.join(BASE_DIR, 'mysql.config'),
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+            },
+        }
+    }
 
 
 # Password validation
