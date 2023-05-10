@@ -96,6 +96,7 @@ export default function InertiaSensorViewer() {
             },
             sleepState: {
               time: [],
+              timeEnd: [],
               value: []
             }
           };
@@ -145,7 +146,9 @@ export default function InertiaSensorViewer() {
                 break;
               case 130:
                 dataStruct.sleepState.value.push(binaryLoader.getUint8(currentIndex + 1, true));
+                let timeRange = binaryLoader.getUint16(currentIndex + 2, true);
                 dataStruct.sleepState.time.push(new Date(binaryLoader.getFloat64((currentIndex + 8), true)*1000));
+                dataStruct.sleepState.timeEnd.push(new Date(binaryLoader.getFloat64((currentIndex + 8), true)*1000 + timeRange*1000));
                 currentIndex += 16;
                 break;
               default: 
@@ -196,16 +199,15 @@ export default function InertiaSensorViewer() {
         }}
       >
         <Card
-        onClick={handleUploadClicked} 
-        onDragOver={(event) => event.preventDefault()}
-        onDragEnter={(event) => event.preventDefault()}
-        onDrop={(event) => {
-          fileInputRef.current.files = event.dataTransfer.files;
-          console.log(fileInputRef.current.files);
-          handleFileSelection();
-
-          event.preventDefault();
-        }}
+          onClick={handleUploadClicked} 
+          onDragOver={(event) => event.preventDefault()}
+          onDragEnter={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            fileInputRef.current.files = event.dataTransfer.files;
+            console.log(fileInputRef.current.files);
+            handleFileSelection();
+            event.preventDefault();
+          }}
         sx={{
           borderRadius: "30px", 
           minHeight: "300px",

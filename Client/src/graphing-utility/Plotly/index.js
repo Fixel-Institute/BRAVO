@@ -894,7 +894,7 @@ class PlotlyRenderManager {
       Plotly.newPlot(this.divName, this.traces, this.layout, {
         responsive: true, locale: this.locale,
         toImageButtonOptions: {
-          format: 'svg', // one of png, svg, jpeg, webp
+          format: 'png', // one of png, svg, jpeg, webp
           scale: 1
         }
       });
@@ -903,7 +903,7 @@ class PlotlyRenderManager {
       Plotly.react(this.divName, this.traces, this.layout, {
         responsive: true, locale: this.locale,
         toImageButtonOptions: {
-          format: 'svg', // one of png, svg, jpeg, webp
+          format: 'png', // one of png, svg, jpeg, webp
           scale: 1
         }
       });

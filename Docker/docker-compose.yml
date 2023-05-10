@@ -1,0 +1,63 @@
+version: "3.9"
+services:
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "Florida1"
+      MYSQL_DATABASE: "BRAVOServer"
+      MYSQL_USER: "BRAVOAdmin"
+      MYSQL_PASSWORD: "AdminPassword"
+    ports:
+      - '3306:3306'
+    volumes:
+      - SQLDatabase:/var/lib/mysql
+    networks:
+      - backend
+  
+  redis:
+    image: redis:5
+    restart: always
+    ports:
+      - '6379:6379'
+    networks:
+      - backend
+  
+  bravo-server:
+    image: bravo-server
+    restart: on-failure
+
+    environment:
+      BRAVO_DATABASE: "BRAVOServer"
+      BRAVO_DATABASE_USER: "BRAVOAdmin"
+      BRAVO_DATABASE_PASSWORD: "AdminPassword"
+      BRAVO_DATABASE_HOST: "mysql"
+      BRAVO_DATABASE_PORT: "3306"
+
+      REDIS_HOST: "redis"
+      ENCRYPTION_KEY: "O6sHoRxTt3dYohP0kndr6rvFl8ebxZbELT9wKI2FICk="
+      SECRET_KEY: "django-insecure-v#aagfodpaihopfda#$$%()I*()RETGEDRF*()a+"
+      SERVER_ADDRESS: "127.0.0.1"
+      CLIENT_ADDRESS: "http://127.0.0.1:3000"
+      MODE: "DEBUG"
+
+    stdin_open: true
+    tty: true
+    depends_on:
+      - mysql
+    volumes:
+      - BRAVOStorage:/usr/src/BRAVO/BRAVOStorage
+    networks:
+      - backend
+    ports:
+      - '3001:3001'
+    command: >
+      bash -c "env >> /etc/environment && cron && python3 manage.py migrate && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  SQLDatabase:
+  BRAVOStorage: 

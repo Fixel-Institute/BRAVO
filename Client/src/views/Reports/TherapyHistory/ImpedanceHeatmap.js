@@ -32,7 +32,7 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
     fig.clearData();
 
     if (fig.fresh) {
-      let ax = fig.subplots(1, 2, {sharey: false, sharex: false, colSpacing: 0.05});
+      fig.subplots(1, 2, {sharey: false, sharex: false, colSpacing: 0.05});
     }
 
     let ax = fig.getAxes();

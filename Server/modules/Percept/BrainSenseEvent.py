@@ -106,7 +106,7 @@ def queryPatientEventPSDsByTime(user, patientUniqueID, timeRange, authority):
                                 PatientEventPSDs[-1]["EventTime"].append(EventTimestamp)
                                 break
 
-    i = 0;
+    i = 0
     while i < len(PatientEventPSDs):
         if not "Hemisphere" in PatientEventPSDs[i]:
             del(PatientEventPSDs[i])
