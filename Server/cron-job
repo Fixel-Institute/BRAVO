@@ -1,0 +1,2 @@
+* * * * * bash /usr/src/BRAVO/ProcessingQueueJob.sh >> /usr/src/BRAVO/ProcessingQueueLog.txt 2>&1
+0 0 * * * bash /usr/src/BRAVO/JWTTokenBlacklistCleanup.sh
