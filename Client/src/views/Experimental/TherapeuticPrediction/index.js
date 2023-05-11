@@ -157,7 +157,8 @@ function TherapeuticPrediction() {
         id: patientID,
         recordingId: recordingId,
         channel: channelName,
-        centerFrequency: freq
+        centerFrequency: freq,
+        stimulationReference: "Ipsilateral"
       }).then((response) => {
         setLeftHemisphereBox(response.data.StimPSD);
         setPredictionModel((models) => {
@@ -186,7 +187,8 @@ function TherapeuticPrediction() {
         id: patientID,
         recordingId: recordingId,
         channel: channelName,
-        centerFrequency: freq
+        centerFrequency: freq,
+        stimulationReference: "Ipsilateral"
       }).then((response) => {
         setRightHemisphereBox(response.data.StimPSD);
         for (var j in predictionModel) {

@@ -281,10 +281,6 @@ class QueryBrainSenseStreaming(RestViews.APIView):
 
     **Request update on power spectrum data for rendering**
 
-    .. Note::
-      
-      Version 1.0.0 support ipsilateral/contralateral request, but 2.0.0-alpha has not implemented it yet. 
-    
     ``channel`` is the Medtronic convention of channel identification, which is usually CONTACT_CONTACT_HEMISPHERE (i.e.: ZERO_TWO_LEFT)
 
     This is a faster operation than request BrainSense Streaming Recording using ``requestFrequency`` because
@@ -298,6 +294,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
         "recordingId": "(uuid)",
         "channel": "(string)",
         "centerFrequency": "(int)",
+        "stimulationReference": "(string)",
       }
 
     **Update BrainSense Streaming result with or without cardiac filter**
@@ -385,7 +382,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
                 BrainSenseData["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData)
-                StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=request.data["centerFrequency"])
+                StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
                 return Response(status=200, data=StimPSD)
 
             elif Authority["Level"] == 2:
@@ -399,7 +396,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
                 BrainSenseData["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData)
-                StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=request.data["centerFrequency"])
+                StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
                 return Response(status=200, data=StimPSD)
 
         elif "updateCardiacFilter" in request.data:

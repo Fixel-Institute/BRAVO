@@ -522,7 +522,7 @@ def mergeRealtimeStreamData(recordings):
     
     return True
 
-def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies=[0,0]):
+def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies=[0,0], stimulationReference="Ipsilateral"):
     """ Process BrainSense Streaming Data to be used for Plotly rendering.
 
     This function takes the processRealtimeStreams BrainSense Stream object and further process it for frontend rendering system.
@@ -569,9 +569,9 @@ def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies
             data[channel]["Spectrogram"]["ColorRange"] = [-10,20]
 
         if options["PSDMethod"]["value"] == "Time-Frequency Analysis":
-            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=centerFrequencies[counter])
+            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["SpectrogramMethod"]["value"], stim_label=stimulationReference, centerFrequency=centerFrequencies[counter])
         else:
-            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["PSDMethod"]["value"], stim_label="Ipsilateral", centerFrequency=centerFrequencies[counter])
+            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["PSDMethod"]["value"], stim_label=stimulationReference, centerFrequency=centerFrequencies[counter])
         counter += 1
 
     return data
