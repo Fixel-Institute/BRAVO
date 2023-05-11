@@ -211,7 +211,7 @@ export const SessionController = (function () {
   };
 
   const authenticate = (username, password, rememberMe) => {
-    return query("/api/authenticate", {Email: username, Password: password, Persistent: rememberMe ? true : null});
+    return query("/api/authenticate", {Email: username, Password: password, Persistent: rememberMe ? true : false});
   };
 
   const register = (username, email, password, institute) => {
