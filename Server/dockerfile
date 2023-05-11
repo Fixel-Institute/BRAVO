@@ -1,6 +1,6 @@
 FROM ubuntu:20.04
 
-ENV DATASERVER_PATH=/usr/src/BRAVO/BRAVOStorage
+ENV DATASERVER_PATH=/usr/src/BRAVO/BRAVOStorage/
 ENV PYTHONPATH=/usr/src/BRAVO/modules/python-scripts
 
 WORKDIR /usr/src/BRAVO

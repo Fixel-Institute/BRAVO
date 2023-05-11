@@ -3,6 +3,8 @@ FROM node:lts-slim
 WORKDIR /usr/src/BRAVOClient
 COPY . .
 
+RUN npm install
+
 EXPOSE 3000
 
 CMD ["npm","start"]

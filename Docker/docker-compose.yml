@@ -44,7 +44,8 @@ services:
     stdin_open: true
     tty: true
     depends_on:
-      - mysql, redis
+      - mysql
+      - redis
     volumes:
       - BRAVOStorage:/usr/src/BRAVO/BRAVOStorage
     networks:
