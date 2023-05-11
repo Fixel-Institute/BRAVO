@@ -246,7 +246,7 @@ function UploadDialog({show, deidentified, onCancel}) {
       </DialogContent>
     )}
     <DialogActions>
-      <MDButton color="secondary" onClick={() => cancelUpload}>Cancel</MDButton>
+      <MDButton color="secondary" onClick={() => cancelUpload()}>Cancel</MDButton>
       <MDButton color="info" onClick={() => (deidentified && !batchUpload) ? uploadSessionsDeidentified() : uploadSessions()}>Upload</MDButton>
     </DialogActions>
   </Dialog>

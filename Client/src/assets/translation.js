@@ -556,6 +556,10 @@ export const dictionary = {
       AdaptiveMode: {
         en: "Adaptive Parameters",
         zh: "Adaptive Parameters"
+      },
+      Reference: {
+        en: "Stimulation Reference",
+        zh: "Stimulation Reference"
       }
     },
     Figure: {

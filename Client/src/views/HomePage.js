@@ -47,7 +47,7 @@ export default function HomePage() {
       }}>
         <CardContent>
           <MDTypography variant={"h2"} color={"black"} align={"center"} fontSize={48}>
-            {"Brain Recording And Visualization Online"}
+            {"Brain Recording Analysis and Visualization Online"}
           </MDTypography>
           <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24}>
             {"University of Florida, Fixel Institute for Neurological Diseases"}
@@ -63,9 +63,9 @@ export default function HomePage() {
             {"Host: " + (server || (window.location.protocol + "//" + window.location.hostname))}
           </MDTypography>
           <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
-            {"Current Frontend Version: 2.1.0"}
+            {"Current Frontend Version: 2.1.1"}
             <br></br>
-            {"Compatible Backend Version: 2.1.0"}
+            {"Compatible Backend Version: 2.1.1"}
           </MDTypography>
         </CardContent>
       </Card>
