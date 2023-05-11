@@ -211,7 +211,11 @@ function BrainSenseStreaming() {
                 break;
               }
             }
-            csvData += "," + dataToRender["Stimulation"][k]["Amplitude"][l-1];
+            if (l == dataToRender["Stimulation"][k]["Amplitude"].length) {
+              csvData += "," + dataToRender["Stimulation"][k]["Amplitude"][l-1];
+            } else {
+              csvData += "," + dataToRender["Stimulation"][k]["Amplitude"][l];
+            }
           }
         }
       }

@@ -392,7 +392,7 @@ def queryMultipleSegmentComparison(user, recordingIds, authority):
                 if not StimulationSeries["Name"] in SegmentSummaries.keys():
                     SegmentSummaries[StimulationSeries["Name"]] = []
 
-                cIndex = 0;
+                cIndex = 0
                 for i in range(1,len(StimulationSeries["Time"])):
                     StimulationDuration = StimulationSeries["Time"][i] - StimulationSeries["Time"][i-1]
                     if StimulationDuration < 5:
