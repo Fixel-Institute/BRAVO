@@ -47,6 +47,7 @@ const PatientTable = ({data}) => {
     key: "PatientTableName",
     direction: 1
   });
+
   const [displayData, setDisplayData] = useState([]);
   const [paginationControl, setPagination] = useState({
     currentPage: 0,
@@ -54,6 +55,12 @@ const PatientTable = ({data}) => {
   });
 
   useEffect(() => {
+    setSortedData(data);
+    setSortType({
+      key: "PatientTableName",
+      direction: 1
+    });
+
     if (paginationControl.totalPages != Math.ceil(data.length / viewPerPage)) {
       SessionController.setPageIndex("PatientTable", 0);
       setPagination({currentPage: 0, totalPages: Math.ceil(data.length / viewPerPage)});
@@ -69,8 +76,45 @@ const PatientTable = ({data}) => {
   }, [data]);
 
   useEffect(() => {
-    setDisplayData(data.slice(paginationControl.currentPage * viewPerPage, paginationControl.currentPage * viewPerPage + viewPerPage));
-  }, [paginationControl]);
+    setDisplayData(sortedData.slice(paginationControl.currentPage * viewPerPage, paginationControl.currentPage * viewPerPage + viewPerPage));
+  }, [paginationControl, sortedData]);
+
+  useEffect(() => {
+    console.log(sortType)
+    switch (sortType.key) {
+      case "PatientTableName": 
+        if (sortType.direction == 1) {
+          setSortedData([...data.sort((a,b) => (a.LastName + ", " + a.FirstName).localeCompare(b.LastName + ", " + b.FirstName))]);
+        } else {
+          setSortedData([...data.sort((a,b) => (b.LastName + ", " + b.FirstName).localeCompare(a.LastName + ", " + a.FirstName))]);
+        }
+        break;
+      case "PatientTableDiagnosis": 
+        if (sortType.direction == 1) {
+          setSortedData([...data.sort((a,b) => (a.Diagnosis).localeCompare(b.Diagnosis))]);
+        } else {
+          setSortedData([...data.sort((a,b) => (b.Diagnosis).localeCompare(a.Diagnosis))]);
+        }
+        break;
+      case "PatientTableLastVisit": 
+        if (sortType.direction == 1) {
+          setSortedData([...data.sort((a,b) => (a.LastSeen) - (b.LastSeen))]);
+        } else {
+          setSortedData([...data.sort((a,b) => (b.LastSeen) - (a.LastSeen))]);
+        }
+        break;
+      case "PatientTableLastModified": 
+        if (sortType.direction == 1) {
+          setSortedData([...data.sort((a,b) => (a.LastChange) - (b.LastChange))]);
+        } else {
+          setSortedData([...data.sort((a,b) => (b.LastChange) - (a.LastChange))]);
+        }
+        break;
+      default:
+        setSortedData([...data]);
+        break
+    }
+  }, [sortType]);
 
   const viewPatientData = (id) => {
     SessionController.setPatientID(id).then((result) => {
@@ -91,16 +135,16 @@ const PatientTable = ({data}) => {
           direction: 1
         }
       }
-      return currentType
+      return {...currentType}
     });
-  }
+  };
 
   return (
     <MDBox style={{overflowX: "auto"}}>
       <Table size="small">
         <TableHead sx={{display: "table-header-group"}}>
           <TableRow>
-            {["PatientTableName", "PatientTableDiagnosis", "PatientTableDevice", "PatientTableLastVisit"].map((col) => {
+            {["PatientTableName", "PatientTableDiagnosis", "PatientTableDevice", "PatientTableLastVisit", "PatientTableLastModified"].map((col) => {
               return (
                 <TableCell key={col} variant="head" style={{width: "25%", minWidth: 200, verticalAlign: "bottom", paddingBottom: 0, paddingTop: 0}}>
                   <MDTypography variant="span" fontSize={12} fontWeight={"bold"} style={{cursor: "pointer"}} onClick={()=>sortPatientList(col)}>
@@ -139,6 +183,11 @@ const PatientTable = ({data}) => {
                 <TableCell style={{paddingBottom: 1, borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>
                   <MDTypography variant="p" fontSize={12} style={{marginBottom: 0}}>
                     {new Date(patient.LastSeen * 1000).toLocaleString(language, SessionController.getDateTimeOptions("DateFull"))}
+                  </MDTypography>
+                </TableCell>
+                <TableCell style={{paddingBottom: 1, borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>
+                  <MDTypography variant="p" fontSize={12} style={{marginBottom: 0}}>
+                    {new Date(patient.LastChange * 1000).toLocaleString(language, SessionController.getDateTimeOptions("DateFull"))}
                   </MDTypography>
                 </TableCell>
                 <TableCell style={{paddingBottom: 1, borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>

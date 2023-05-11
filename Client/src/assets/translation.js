@@ -198,6 +198,10 @@ export const dictionary = {
       en: "Last Visit Date",
       zh: "最后会诊时间"
     },
+    PatientTableLastModified: {
+      en: "Last Modified Date",
+      zh: "最后上传时间"
+    },
     PatientTablePrevious: {
       en: "PREVIOUS",
       zh: "上一页"
