@@ -44,15 +44,27 @@ services:
     stdin_open: true
     tty: true
     depends_on:
-      - mysql
+      - mysql, redis
     volumes:
       - BRAVOStorage:/usr/src/BRAVO/BRAVOStorage
     networks:
       - backend
+      - frontend
     ports:
       - '3001:3001'
     command: >
-      bash -c "env >> /etc/environment && cron && python3 manage.py migrate && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
+      bash -c "env >> /etc/environment && python3 manage.py migrate && cron && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
+
+  bravo-client:
+    image: bravo-client
+    restart: on-failure
+
+    depends_on:
+      - bravo-server
+    networks:
+      - frontend
+    ports:
+      - '3000:3000'
 
 networks:
   frontend:
