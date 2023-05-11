@@ -117,7 +117,7 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
         return "Decoding Error: " + filename, None, None
 
     SessionDate = datetime.fromtimestamp(Percept.estimateSessionDateTime(JSON),tz=pytz.utc)
-    if user.is_clinician or user.is_admin:
+    if (user.is_admin or user.is_clinician):
         deviceID = models.PerceptDevice.objects.filter(device_identifier_hashfield=deviceHashfield, authority_level="Clinic", authority_user=user.institute).first()
     elif lookupTable:
         deviceID = models.PerceptDevice.objects.filter(device_identifier_hashfield=deviceHashfield, authority_level="Research", authority_user=user.email).first()
@@ -178,7 +178,7 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
 
             LeadConfigurations.append(LeadConfiguration)
 
-        if user.is_clinician or user.is_admin:
+        if (user.is_admin or user.is_clinician):
             deviceID = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, authority_level="Clinic", authority_user=user.institute, serial_number=DeviceSerialNumber, device_type=DeviceType, implant_date=ImplantDate, device_location=NeurostimulatorLocation, device_lead_configurations=LeadConfigurations, device_last_seen=datetime.fromtimestamp(0, tz=pytz.utc))
         else:
             deviceID = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, authority_level="Research", authority_user=user.email, serial_number=DeviceSerialNumber, device_type=DeviceType, implant_date=ImplantDate, device_location=NeurostimulatorLocation, device_lead_configurations=LeadConfigurations, device_last_seen=datetime.fromtimestamp(0, tz=pytz.utc))
@@ -372,7 +372,7 @@ def processSessionFile(JSON):
 
     if lastMeasuredTimestamp == 0:
         lastMeasuredTimestamp = datetime.fromisoformat(Overview["Overall"]["DeviceInformation"]["ImplantDate"][:-1]+"+00:00").timestamp()
-
+    
     if "TherapyChangeHistory" in Overview["Therapy"].keys():
         if SessionDate > Overview["Therapy"]["TherapyChangeHistory"][-1]["DateTime"].timestamp():
             Overview["Therapy"]["TherapyChangeHistory"].append({"DateTime": datetime.fromtimestamp(SessionDate), "OldGroupId": Overview["Therapy"]["TherapyChangeHistory"][-1]["NewGroupId"], "NewGroupId": Overview["Therapy"]["TherapyChangeHistory"][-1]["NewGroupId"]})
@@ -441,13 +441,18 @@ def viewSession(user, patient_id, session_id, authority):
             JSON = Percept.decodeEncryptedJSON(DATABASE_PATH + session.session_file_path, key)
             Overview = processSessionFile(JSON)
 
-            if not user.is_clinician:
+            if not (user.is_admin or user.is_clinician):
                 Overview["Overall"]["PatientInformation"]["PatientFirstName"] = "Deidentified FirstName"
                 Overview["Overall"]["PatientInformation"]["PatientLastName"] = "Deidentified LastName"
                 Overview["Overall"]["PatientInformation"]["Diagnosis"] = "Unknown"
                 Overview["Overall"]["PatientInformation"]["PatientId"] = "Unknown"
                 Overview["Overall"]["PatientInformation"]["PatientDateOfBirth"] = "Unknown"
                 Overview["Overall"]["DeviceInformation"]["NeurostimulatorSerialNumber"] = "Unknown"
+                
+                # Deidentification of Dates
+                Overview["Overall"]["DeviceInformation"]["ImplantDate"] = datetime.fromisoformat(Overview["Overall"]["DeviceInformation"]["ImplantDate"][:-1]+"+00:00").timestamp() + 15*24*3600
+                Overview["Overall"]["DeviceInformation"]["ImplantDate"] = datetime.fromtimestamp(Overview["Overall"]["DeviceInformation"]["ImplantDate"]).isoformat() + "Z"
+
             return Overview
     return {}
 
@@ -459,10 +464,14 @@ def queryAvailableSessionFiles(user, patient_id, authority):
         availableSessions = models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id).all()
         for session in availableSessions:
             sessionInfo = dict()
-            if not device.device_name == "":
-                sessionInfo["DeviceName"] = device.device_name
+            if device.device_name == "":
+                if not (user.is_admin or user.is_clinician):
+                    sessionInfo["DeviceName"] = str(device.deidentified_id)
+                else:
+                    sessionInfo["DeviceName"] = device.getDeviceSerialNumber(key)
             else:
-                sessionInfo["DeviceName"] = device.getDeviceSerialNumber(key)
+                sessionInfo["DeviceName"] = device.device_name
+            
             sessionInfo["SessionFilename"] = session.session_file_path.split(os.path.sep)[-1]
             sessionInfo["SessionID"] = session.deidentified_id
             sessionInfo["SessionTimestamp"] = session.session_date.timestamp()

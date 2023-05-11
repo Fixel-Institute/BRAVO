@@ -207,6 +207,7 @@ def extractPatientTableRow(user, patient, deidentifiedId=None):
         info["Tags"] = patient.tags
         info["DaysSinceImplant"] = []
         info["ID"] = str(patient.deidentified_id)
+        info["LastChange"] = patient.last_change.timestamp()
 
     lastTimestamp = datetime.fromtimestamp(0, tz=pytz.utc)
     deviceIDs = patient.device_deidentified_id
@@ -217,9 +218,16 @@ def extractPatientTableRow(user, patient, deidentifiedId=None):
             patient.save()
             continue
 
-        daysSinceImplant = np.round((datetime.now(tz=pytz.utc) - device.implant_date).total_seconds() / (3600*24))
+        if not (user.is_admin or user.is_clinician):
+            daysSinceImplant = np.round((datetime.now(tz=pytz.utc) - device.implant_date).total_seconds() / (3600*24)) - 15
+        else:
+            daysSinceImplant = np.round((datetime.now(tz=pytz.utc) - device.implant_date).total_seconds() / (3600*24))
+            
         if device.device_name == "":
-            deviceName = device.getDeviceSerialNumber(key)
+            if not (user.is_admin or user.is_clinician):
+                deviceName = str(device.deidentified_id)
+            else:
+                deviceName = device.getDeviceSerialNumber(key)
         else:
             deviceName = device.device_name
 
@@ -241,7 +249,7 @@ def extractPatientInfo(user, patientUniqueID, deidentifiedId=None):
         info = dict()
         info["FirstName"] = patient.getPatientFirstName(key)
         info["LastName"] = patient.getPatientLastName(key)
-        if user.is_clinician:
+        if (user.is_admin or user.is_clinician):
             info["Name"] = info["FirstName"] + " " + info["LastName"]
         else:
             info["Name"] = info["FirstName"] + " (" + info["LastName"] + ")"
@@ -271,7 +279,11 @@ def extractPatientInfo(user, patientUniqueID, deidentifiedId=None):
             deviceInfo["DeviceName"] = device.device_name
 
         deviceInfo["DeviceType"] = device.device_type
-        deviceInfo["ImplantDate"] = device.implant_date.timestamp()
+        if not (user.is_admin or user.is_clinician):
+            deviceInfo["ImplantDate"] = device.implant_date.timestamp()+15*3600*24
+        else:
+            deviceInfo["ImplantDate"] = device.implant_date.timestamp()
+
         deviceInfo["LastSeenDate"] = device.device_last_seen.timestamp()
         deviceInfo["EOLDate"] = device.device_eol_date.timestamp()
         deviceInfo["Leads"] = device.device_lead_configurations
@@ -286,7 +298,7 @@ def extractTags(typeName, institute):
 def getPerceptDevices(user, patientUniqueID, authority):
     availableDevices = None
     if authority["Level"] == 1:
-        if user.is_clinician or user.is_admin:
+        if (user.is_admin or user.is_clinician):
             availableDevices = models.PerceptDevice.objects.filter(patient_deidentified_id=patientUniqueID, authority_level="Clinic", authority_user=user.institute).all()
         else:
             availableDevices = models.PerceptDevice.objects.filter(patient_deidentified_id=patientUniqueID, authority_level="Research", authority_user=user.email).all()
@@ -387,7 +399,7 @@ def extractPatientList(user):
 
 def extractPatientAccessTable(user):
     PatientInfo = list()
-    if user.is_admin or user.is_clinician:
+    if (user.is_admin or user.is_clinician):
         researcherIds = {}
         patients = models.Patient.objects.filter(institute=user.institute).all()
     else:

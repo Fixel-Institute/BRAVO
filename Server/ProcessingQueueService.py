@@ -64,7 +64,7 @@ def processJSONUploads():
 
             try:
                 user = models.PlatformUser.objects.get(unique_user_id=queue.owner)
-                if user.is_clinician:
+                if (user.is_admin or user.is_clinician):
                     ProcessingResult, newPatient, _ = Sessions.processPerceptJSON(user, queue.descriptor["filename"]) 
                 else:
                     if "device_deidentified_id" in queue.descriptor:

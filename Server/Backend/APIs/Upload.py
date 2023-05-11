@@ -167,7 +167,7 @@ class SessionUpload(RestViews.APIView):
             if not (key.startswith("file") or key == "deviceId" or key == "patientId" or key == "decryptionKey" or key == "batchSessionId"):
                 return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
-        if request.user.is_clinician:
+        if (request.user.is_admin or request.user.is_clinician):
             for key in request.data.keys():
                 if key.startswith("file"):
                     rawBytes = request.data[key].read()

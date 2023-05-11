@@ -132,7 +132,7 @@ class PatientInformationUpdate(RestViews.APIView):
                 if not isNewPatient:
                     return Response(status=404)
 
-                if not request.user.is_clinician:
+                if not (request.user.is_admin or request.user.is_clinician):
                     serial_number = "".join(random.choices(string.ascii_uppercase + string.digits, k=32))
                     device = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, serial_number=serial_number, device_name=request.data["DeviceName"], device_location="")
                     device.device_eol_date = datetime.datetime.fromtimestamp(0, tz=pytz.utc)
@@ -157,7 +157,7 @@ class PatientInformationUpdate(RestViews.APIView):
                 return Response(status=404)
 
             patient = models.Patient.objects.get(deidentified_id=request.data["updatePatientInfo"])
-            if "saveDeviceID" in request.data and not request.user.is_clinician:
+            if "saveDeviceID" in request.data and not (request.user.is_admin or request.user.is_clinician):
                 serial_number = "".join(random.choices(string.ascii_uppercase + string.digits, k=32))
                 device = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, serial_number=serial_number, device_name=request.data["saveDeviceID"], device_location=request.data["newDeviceLocation"])
                 device.device_eol_date = datetime.datetime.fromtimestamp(0, tz=pytz.utc)
@@ -184,7 +184,7 @@ class PatientInformationUpdate(RestViews.APIView):
                 patient.tags = request.data["Tags"]
                 patient.save()
 
-                if request.user.is_clinician:
+                if (request.user.is_admin or request.user.is_clinician):
                   for i in range(len(request.data["Tags"])):
                       models.SearchTags.objects.get_or_create(tag_name=request.data["Tags"][i], tag_type="Patient", institute=request.user.institute)
                 else:
@@ -216,7 +216,7 @@ class BrainSenseStreamUpdate(RestViews.APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         if "updateRecordingContactType" in request.data:
-            if request.user.is_admin or request.user.is_clinician:
+            if (request.user.is_admin or request.user.is_clinician):
                 if not models.PerceptDevice.objects.filter(deidentified_id=request.data["requestData"], authority_level="Clinic", authority_user=request.user.institute).exists():
                   return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
             else:

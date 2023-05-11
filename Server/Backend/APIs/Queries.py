@@ -651,7 +651,7 @@ class QueryPredictionModel(RestViews.APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         # Force Error
-        if not request.user.is_clinician:
+        if not (request.user.is_admin or request.user.is_clinician):
             return Response(status=400, data={"code": ERROR_CODE["NOT_AVAILABLE_TO_DEMO"]})
 
         if "requestOverview" in request.data:
@@ -751,7 +751,7 @@ class QueryMultipleSegmentComparison(RestViews.APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         # Force Error
-        if not request.user.is_clinician:
+        if not (request.user.is_admin or request.user.is_clinician):
             return Response(status=400, data={"code": ERROR_CODE["NOT_AVAILABLE_TO_DEMO"]})
 
         Authority = {}
