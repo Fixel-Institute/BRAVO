@@ -4,7 +4,7 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: "Florida1"
+      MYSQL_ROOT_PASSWORD: "ROOTPASSWORD"
       MYSQL_DATABASE: "BRAVOServer"
       MYSQL_USER: "BRAVOAdmin"
       MYSQL_PASSWORD: "AdminPassword"
@@ -24,7 +24,7 @@ services:
       - backend
   
   bravo-server:
-    image: bravo-server
+    image: jcagle95/bravo-server
     restart: on-failure
 
     environment:
@@ -57,7 +57,7 @@ services:
       bash -c "env >> /etc/environment && python3 manage.py migrate && cron && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
 
   bravo-client:
-    image: bravo-client
+    image: jcagle95/bravo-client
     restart: on-failure
 
     depends_on:
