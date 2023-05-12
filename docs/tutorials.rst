@@ -11,3 +11,4 @@ analysis. These capabilities often require server manager to handle stuff at the
   Tutorials/SSLCertificateForBRAVOServer.rst
   Tutorials/TwilioService.rst
   Tutorials/ImageRenderer.rst
+  Tutorials/DockerGuide.rst

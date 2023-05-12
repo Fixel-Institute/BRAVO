@@ -62,6 +62,13 @@ Only the main packages will be shown below.
    The packages listed above contain developmental features and may not be 100% neccessary for the basic usage. 
    A trimmed version may be created in the future if some packages are not used anymore.
 
+Docker Installation
+------------------------------------------------
+
+Docker Images (Beta) are created for Client and Server component of the BRAVO Platform. Using Containerized Docker Images 
+allow easier setup of BRAVO Platform in local computer for Windows and Mac. A Docker Compose file is created for people to pull/launch containeraized program 
+via commandline easily. A guide of how to use Docker is shown in :doc:`Docker Container Tutorials </Tutorials/DockerGuide>`
+
 React Frontend Installation Guide
 ------------------------------------------------
 
@@ -399,9 +406,10 @@ An example environment file looks like the following.
   {
     "DATASERVER_PATH": "/home/ubuntu/DataStorage/",
     "PYTHON_UTILITY": "/home/ubuntu/BRAVO/Server/modules/python-scripts",
-    "ENCRYPTION_KEY": "4LLHi6IJ0PRdneDJo48kCcBf3tHTLRXQ_tyKfttDIm0=",
+    "ENCRYPTION_KEY": "uCskkPv8pVyF9r0tSXQs2hvD7YYs-eS8nP7pkwz0vps=",
+    "SECRET_KEY": "django-insecure-v#a8t(pk6jhgdkujyrkuoiyrfkuyk4&)+jjkhfg(!ea+",
     "SERVER_ADDRESS": "bravo-server.jcagle.solutions",
-    "CLIENT_ADDRESS": "bravo-client.jcagle.solutions",
+    "CLIENT_ADDRESS": "https://bravo-client.jcagle.solutions",
     "MODE": "DEBUG"
   }
 
@@ -418,7 +426,7 @@ An example environment file looks like the following.
 
 .. topic:: ENCRYPTION_KEY
 
-  Fernet Cryptography, it is recommended to generate this string in Python using the following code.
+  Fernet Cryptography key, it is recommended to generate this string in Python using the following code.
 
 .. code-block:: python
   
@@ -436,7 +444,7 @@ An example environment file looks like the following.
 
   The server address to access the Python Server. 
   This can be the same as your React Frontend address (CLIENT_ADDRESS) if you setup Proxy for it.
-  If not, configure both string to the correct path.
+  If not, configure both string to the correct path. The client address must include HTTP or HTTPS prefix. 
 
 .. topic:: MODE
 
@@ -575,9 +583,10 @@ An example environment file looks like the following.
   {
     "DATASERVER_PATH": "/home/ubuntu/DataStorage/",
     "PYTHON_UTILITY": "/home/ubuntu/BRAVO/Server/modules/python-scripts",
-    "ENCRYPTION_KEY": "4LLHi6IJ0PRdneDJo48kCcBf3tHTLRXQ_tyKfttDIm0=",
+    "ENCRYPTION_KEY": "uCskkPv8pVyF9r0tSXQs2hvD7YYs-eS8nP7pkwz0vps=",
+    "SECRET_KEY": "django-insecure-v#a8t(pk6jhgdkujyrkuoiyrfkuyk4&)+jjkhfg(!ea+",
     "SERVER_ADDRESS": "bravo-server.jcagle.solutions",
-    "CLIENT_ADDRESS": "bravo-client.jcagle.solutions",
+    "CLIENT_ADDRESS": "https://bravo-client.jcagle.solutions",
     "MODE": "DEBUG"
   }
 
@@ -594,7 +603,7 @@ An example environment file looks like the following.
 
 .. topic:: ENCRYPTION_KEY
 
-  Fernet Cryptography, it is recommended to generate this string in Python using the following code.
+  Fernet Cryptography key, it is recommended to generate this string in Python using the following code.
 
 .. code-block:: python
   
@@ -612,7 +621,7 @@ An example environment file looks like the following.
 
   The server address to access the Python Server. 
   This can be the same as your React Frontend address (CLIENT_ADDRESS) if you setup Proxy for it.
-  If not, configure both string to the correct path.
+  If not, configure both string to the correct path. The client address must include HTTP or HTTPS prefix. 
 
 .. topic:: MODE
 

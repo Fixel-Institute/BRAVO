@@ -1,0 +1,38 @@
+Version 2.1.1
+===============================================
+
+Overview
+---------------------------------------------
+UF Brain Recording and Analysis Visualization Online (BRAVO) Platform Version 2.1.1 is a minor update to v2.1.0. The primary changes is the 
+inclusion of containeraized program for Docker Desktop. 
+
+Major Changes 
+---------------------------------------------
+
+.. topic:: 1. Docker Image for Self-Contained Program
+
+  Docker Images are created for Client and Server component of the BRAVO Platform. A Docker Compose file is created for people to pull/launch containeraized program 
+  via commandline easily. A guide of how to use Docker is shown in :doc:`Docker Container Tutorials </Tutorials/DockerGuide>`
+
+Minor Changes 
+---------------------------------------------
+
+.. topic:: 1. Adaptive DBS Parameter Extraction from Therapy History
+
+  Therapy History will now extract aDBS parameters alongside with normal therapy configurations. 
+  aDBS configuration will contain information about threshold, onset/offset duration, and signal bypassing. 
+
+.. topic:: 2. Adaptive DBS Parameter for Chronic BrainSense
+
+  Chronic BrainSense page will now omit data collected during aDBS Bypass condition (noted as `GangedToHemisphere` in Medtronic JSON file). 
+  Stimulation amplitude is shown alongside of Chronic BrainSense data. Multi-device will be a selectable input toggle. 
+
+.. topic:: 3. User can give electrode and target customized name
+
+  User can configure name for electrode, because Medtronic Percept is only capable of doing Left/Right hemisphere, 
+  sometime device may have name different from standard Left/Right annotation.
+
+.. topic:: 4. BrainSense Streaming now includes toggle to use contralateral hemisphere stimulation label for PSD computation.
+
+  An old feature from v1.0 is making its way back. We can now toggle the display to show PSD in BrainSense Streaming page in different parsing condition, 
+  such as using contralateral stimulation label. 

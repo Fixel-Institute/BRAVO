@@ -10,10 +10,6 @@ The image visualization pipeline is built based on a side project that intend to
 `ImageVisualization3D Github Repo <https://github.com/Fixel-Institute/ImageVisualization3D>`_. The detail demo 
 and description can be found at README.md in the repository. 
 
-.. admonition:: Roadmap
-
-  The capability is expected to be more mature by v2.1.0 as it is one of the main capabilities to be worked on for v2.1.0
-
 Data Structure
 -------------------------------------------
 

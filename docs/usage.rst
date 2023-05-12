@@ -102,6 +102,9 @@ The clinician view will display patient's name, diagnosis, device name,
 and last accessed session file for each patient. A search bar is available to user (top right of the table). 
 Filterable keywords include 1) Name, 2) Diagnosis, and 3) Device Name. 
 
+The Patient Table column header is clickable and allow user to sort table by column. Most commonly used is "Last Modified Date" which indicate 
+the last day a session related to that patient is uploaded. 
+
 .. admonition:: Development
   
   The Patient Table also contains tagging system, where user may assign tags to each study participants in `Edit Patient Information`_ page. 
@@ -500,6 +503,16 @@ In the effect of stimulation presentation, the platform will automatically segme
 level of stimulation and calculate average power spectrum for different stimulation amplitudes. 
 The segments are sorted with increasing amplitude and color gradient indicate a changes of brain signal with 
 increasing Stimulation.
+
+User may toggle the Stimulation Reference to self or others, to use stimulation label from another electrode as the reference for segmenting. 
+
+.. image:: images/BrainSenseStreaming4.png
+  :target: _images/BrainSenseStreaming4.png
+  :width: 800
+
+.. image:: images/BrainSenseStreaming5.png
+  :target: _images/BrainSenseStreaming5.png
+  :width: 800
 
 .. _Indefinite Streaming:
 
