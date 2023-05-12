@@ -232,7 +232,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
             data["RecordingID"] = recording.recording_id
             DeviceName = device.device_name
             if DeviceName == "":
-                DeviceName = device.getDeviceSerialNumber(key)
+                DeviceName = str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key)
             data["DeviceName"] = DeviceName
             data["DeviceID"] = device.deidentified_id
             data["DeviceLocation"] = device.device_location

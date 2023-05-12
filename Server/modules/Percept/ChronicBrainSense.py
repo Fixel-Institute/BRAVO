@@ -101,7 +101,7 @@ def queryChronicLFPsByTime(user, patientUniqueID, timeRange, authority):
             if not recording == None:
                 ChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
                 if device.device_name == "":
-                    LFPTrends.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
+                    LFPTrends.append({"Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
                 else:
                     LFPTrends.append({"Device": device.device_name, "DeviceLocation": device.device_location})
 
@@ -207,7 +207,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
             if not recording == None:
                 ChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
                 if device.device_name == "":
-                    LFPTrends.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
+                    LFPTrends.append({"Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
                 else:
                     LFPTrends.append({"Device": device.device_name, "DeviceLocation": device.device_location})
 

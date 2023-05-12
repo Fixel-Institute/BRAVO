@@ -77,7 +77,7 @@ def queryImpedanceHistory(user, patientUniqueID, authority):
     for device in availableDevices:
         DeviceName = device.device_name
         if DeviceName == "":
-            DeviceName = device.getDeviceSerialNumber(key)
+            DeviceName = str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key)
         ImpedanceLogs = models.ImpedanceHistory.objects.filter(device_deidentified_id=device.deidentified_id).order_by("session_date").all()
         ImpedanceHistory.extend([{"session_date": log.session_date.timestamp(), "log": log.impedance_record, "device": DeviceName} for log in ImpedanceLogs])
     return ImpedanceHistory
@@ -109,7 +109,7 @@ def queryTherapyHistory(user, patientUniqueID, authority):
         TherapyChangeData["device"] = device.deidentified_id
         DeviceName = device.device_name
         if DeviceName == "":
-            DeviceName = device.getDeviceSerialNumber(key)
+            DeviceName = str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key)
         TherapyChangeData["device_name"] = DeviceName
         TherapyChangeHistory = models.TherapyChangeLog.objects.filter(device_deidentified_id=device.deidentified_id).order_by("date_of_change").all()
         if len(TherapyChangeHistory) > 0:
@@ -201,7 +201,7 @@ def queryAdaptiveGroupForThreshold(user, patientUniqueID, authority):
         TherapyHistoryObjs = models.TherapyHistory.objects.filter(device_deidentified_id=device.deidentified_id, therapy_type="Post-visit Therapy").order_by("-therapy_date").all()
         for therapy in TherapyHistoryObjs:
             if therapy.therapy_date == TherapyHistoryObjs[0].therapy_date:
-                TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location}
+                TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location}
                 TherapyInfo["TherapyDate"] = therapy.therapy_date.timestamp()
                 TherapyInfo["TherapyGroup"] = therapy.group_id
                 TherapyInfo["TherapyType"] = therapy.therapy_type
@@ -246,7 +246,7 @@ def queryTherapyConfigurations(user, patientUniqueID, authority, therapyType="Pa
 
         deviceName = device.device_name
         if deviceName == "":
-            deviceName = device.getDeviceSerialNumber(key)
+            deviceName = str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key)
 
         for therapy in TherapyHistoryObjs:
             TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": deviceName, "DeviceLocation": device.device_location}

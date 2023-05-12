@@ -128,7 +128,7 @@ def queryMontageDataOverview(user, patientUniqueID, authority):
 
             data = dict()
             if device.device_name == "":
-                data["DeviceName"] = device.getDeviceSerialNumber(key)
+                data["DeviceName"] = str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key)
             else:
                 data["DeviceName"] = device.device_name
             data["Timestamp"] = recording.recording_date.timestamp()

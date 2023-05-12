@@ -80,7 +80,7 @@ def queryPatientEventPSDsByTime(user, patientUniqueID, timeRange, authority):
             leads = device.device_lead_configurations
             for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
                 if device.device_name == "":
-                    PatientEventPSDs.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "EventTime": list(), "Therapy": list()})
+                    PatientEventPSDs.append({"Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "EventTime": list(), "Therapy": list()})
                 else:
                     PatientEventPSDs.append({"Device": device.device_name, "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "EventTime": list(), "Therapy": list()})
 
@@ -128,7 +128,7 @@ def queryPatientEventPSDs(user, patientUniqueID, TherapyHistory, authority):
             leads = device.device_lead_configurations
             for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
                 if device.device_name == "":
-                    PatientEventPSDs.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "Therapy": list()})
+                    PatientEventPSDs.append({"Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "Therapy": list()})
                 else:
                     PatientEventPSDs.append({"Device": device.device_name, "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "Therapy": list()})
 
@@ -220,7 +220,7 @@ def getAllPatientEvents(user, patientUniqueID, authority):
         EventPSDs = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id).all()
         if len(EventPSDs) > 0:
             if device.device_name == "":
-                PatientEventPSDs.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "EventTime": list()})
+                PatientEventPSDs.append({"Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "EventTime": list()})
             else:
                 PatientEventPSDs.append({"Device": device.device_name, "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "EventTime": list()})
 
