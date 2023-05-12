@@ -242,6 +242,12 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
                 LeadConfiguration["ElectrodeType"] = lead["Model"]
 
             LeadConfigurations.append(LeadConfiguration)
+
+        if len(LeadConfigurations) == len(deviceID.device_lead_configurations):
+            for i in range(len(LeadConfigurations)):
+                if "CustomName" in deviceID.device_lead_configurations[i].keys():
+                    LeadConfigurations[i]["CustomName"] = deviceID.device_lead_configurations[i]["CustomName"]
+
         deviceID.device_lead_configurations = LeadConfigurations
 
     deviceID.save()
