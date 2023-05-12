@@ -450,7 +450,7 @@ def viewSession(user, patient_id, session_id, authority):
                 Overview["Overall"]["DeviceInformation"]["NeurostimulatorSerialNumber"] = "Unknown"
                 
                 # Deidentification of Dates
-                Overview["Overall"]["DeviceInformation"]["ImplantDate"] = datetime.fromisoformat(Overview["Overall"]["DeviceInformation"]["ImplantDate"][:-1]+"+00:00").timestamp()
+                Overview["Overall"]["DeviceInformation"]["ImplantDate"] = datetime.fromisoformat(Overview["Overall"]["DeviceInformation"]["ImplantDate"][:-1]+"+00:00").timestamp() + 15*24*3600
                 Overview["Overall"]["DeviceInformation"]["ImplantDate"] = datetime.fromtimestamp(Overview["Overall"]["DeviceInformation"]["ImplantDate"]).isoformat() + "Z"
 
             return Overview

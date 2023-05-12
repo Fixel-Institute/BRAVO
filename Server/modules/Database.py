@@ -280,7 +280,7 @@ def extractPatientInfo(user, patientUniqueID, deidentifiedId=None):
 
         deviceInfo["DeviceType"] = device.device_type
         if not (user.is_admin or user.is_clinician):
-            deviceInfo["ImplantDate"] = device.implant_date.timestamp()
+            deviceInfo["ImplantDate"] = device.implant_date.timestamp()+15*3600*24
         else:
             deviceInfo["ImplantDate"] = device.implant_date.timestamp()
 
