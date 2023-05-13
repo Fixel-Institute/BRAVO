@@ -1,7 +1,7 @@
 # Set our current working directory as the SCRIPT_DIR
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-cd SCRIPT_DIR
+cd $SCRIPT_DIR
 git submodule update --init --recursive
 
 # Install Dependencies with Apt
