@@ -322,6 +322,14 @@ class ExternalRecording(models.Model):
     def __str__(self):
         return str(self.recording_id)
 
+class CombinedRecordingAnalysis(models.Model):
+    deidentified_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    device_deidentified_id = models.UUIDField(default=uuid.uuid4)
+    recording_list = models.JSONField(default=list, null=False)
+    recording_type = models.JSONField(default=list, null=False)
+    analysis_name = models.CharField(default="Default", max_length=255)
+    analysis_date = models.DateTimeField(default=timezone.now)
+
 class ExternalSensorPairing(models.Model):
     patient_deidentified_id = models.UUIDField(default=uuid.uuid4)
     device_mac = models.CharField(default="", max_length=64)

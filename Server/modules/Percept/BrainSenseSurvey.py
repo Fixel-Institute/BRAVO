@@ -36,7 +36,7 @@ from utility import SignalProcessingUtility as SPU
 
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveBrainSenseSurvey(deviceID, surveyList, sourceFile):
+def saveBrainSenseSurvey(deviceID, streamList, sourceFile):
     """ Save BrainSense Survey Data in Database Storage
 
     Args:
@@ -49,15 +49,52 @@ def saveBrainSenseSurvey(deviceID, surveyList, sourceFile):
     """
 
     NewRecordingFound = False
-    for survey in surveyList:
-        SurveyDate = datetime.fromtimestamp(Percept.getTimestamp(survey["FirstPacketDateTime"]), tz=pytz.utc)
-        recording_info = {"Channel": survey["Channel"]}
-        if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="BrainSenseSurvey", recording_date=SurveyDate, recording_info=recording_info).exists():
-            recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_date=SurveyDate, recording_type="BrainSenseSurvey", recording_info=recording_info, source_file=sourceFile)
-            filename = Database.saveSourceFiles(survey, "BrainSenseSurvey", survey["Channel"], recording.recording_id, recording.device_deidentified_id)
+    StreamDates = list()
+    for stream in streamList:
+        StreamDates.append(datetime.fromtimestamp(stream["FirstPacketDateTime"], tz=pytz.utc))
+    UniqueSessionDates = np.unique(StreamDates)
+
+    for date in UniqueSessionDates:
+        Recording = dict()
+        Recording["SamplingRate"] = streamList[0]["SamplingRate"]
+
+        StreamGroupIndexes = [datetime.fromtimestamp(stream["FirstPacketDateTime"], tz=pytz.utc) == date for stream in streamList]
+        Recording["ChannelNames"] = [streamList[i]["Channel"] for i in range(len(streamList)) if StreamGroupIndexes[i]]
+        
+        RecordingSize = [len(streamList[i]["Data"]) for i in range(len(streamList)) if StreamGroupIndexes[i]]
+        if len(np.unique(RecordingSize)) > 1:
+            print("Inconsistent Recording Size for BrainSense Survey")
+            maxSize = np.max(RecordingSize)
+            Recording["Data"] = np.zeros((maxSize, len(RecordingSize)))
+            Recording["Missing"] = np.ones((maxSize, len(RecordingSize)))
+            n = 0
+            for i in range(len(streamList)): 
+                if StreamGroupIndexes[i]:
+                    Recording["Data"][:RecordingSize[n], n] = streamList[i]["Data"]
+                    Recording["Missing"][:RecordingSize[n], n] = streamList[i]["Missing"]
+                    Recording["StartTime"] = date.timestamp()
+                    n += 1
+        else:
+            Recording["Data"] = np.zeros((RecordingSize[0], len(RecordingSize)))
+            Recording["Missing"] = np.ones((RecordingSize[0], len(RecordingSize)))
+            n = 0
+            for i in range(len(streamList)): 
+                if StreamGroupIndexes[i]:
+                    Recording["Data"][:, n] = streamList[i]["Data"]
+                    Recording["Missing"][:, n] = streamList[i]["Missing"]
+                    Recording["StartTime"] = date.timestamp()
+                    n += 1
+            
+        Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
+        recording_info = {"Channel": Recording["ChannelNames"]}
+
+        if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="BrainSenseSurvey", recording_date=date, recording_info=recording_info).exists():
+            recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_date=date, recording_type="BrainSenseSurvey", recording_info=recording_info, source_file=sourceFile)
+            filename = Database.saveSourceFiles(Recording, "BrainSenseSurvey", "Combined", recording.recording_id, recording.device_deidentified_id)
             recording.recording_datapointer = filename
             recording.save()
             NewRecordingFound = True
+            
     return NewRecordingFound
 
 def querySurveyResults(user, patientUniqueID, authority):

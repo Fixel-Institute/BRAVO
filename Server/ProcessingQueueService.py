@@ -110,7 +110,7 @@ def processJSONUploads():
                 queue.descriptor["Message"] = ErrorMessage
                 queue.save()
                 
-                Sessions.saveCacheJSON(queue.descriptor["filename"], json.dumps(JSON))
+                Sessions.saveCacheJSON(queue.descriptor["filename"], json.dumps(JSON).encode('utf-8'))
 
 if __name__ == '__main__':
     processJSONUploads()

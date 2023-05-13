@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 from cryptography.fernet import Fernet
 import hashlib
+import shutil
 
 from Backend import models
 from modules import Database
@@ -107,14 +108,18 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
 
     if JSON["DeviceInformation"]["Final"]["NeurostimulatorSerialNumber"] != "":
         DeviceSerialNumber = secureEncoder.encrypt(JSON["DeviceInformation"]["Final"]["NeurostimulatorSerialNumber"].encode("utf-8")).decode("utf-8")
+        deviceHashfield = hashlib.sha256(JSON["DeviceInformation"]["Final"]["NeurostimulatorSerialNumber"].encode("utf-8")).hexdigest()
     else:
-        DeviceSerialNumber = "Unknown"
-    deviceHashfield = hashlib.sha256(JSON["DeviceInformation"]["Final"]["NeurostimulatorSerialNumber"].encode("utf-8")).hexdigest()
-
+        DeviceSerialNumber = secureEncoder.encrypt("Unknown".encode("utf-8")).decode("utf-8")
+        deviceHashfield = hashlib.sha256("Unknown".encode("utf-8")).hexdigest()
+    
     try:
         Data = Percept.extractPerceptJSON(JSON)
     except:
         return "Decoding Error: " + filename, None, None
+    
+    if "ProcessFailure" in Data.keys():
+        shutil.copyfile(DATABASE_PATH + "cache" + os.path.sep + filename, DATABASE_PATH + "cache" + os.path.sep + "Failed_" + filename)
 
     SessionDate = datetime.fromtimestamp(Percept.estimateSessionDateTime(JSON),tz=pytz.utc)
     if (user.is_admin or user.is_clinician):
@@ -272,11 +277,15 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
     if "TherapyChangeHistory" in Data.keys():
         logToSave = list()
         for therapyChange in Data["TherapyChangeHistory"]:
-            TherapyObject = models.TherapyChangeLog.objects.filter(device_deidentified_id=deviceID.deidentified_id, date_of_change=therapyChange["DateTime"].astimezone(pytz.utc)).first()
-            if TherapyObject == None:
-                logToSave.append(models.TherapyChangeLog(device_deidentified_id=deviceID.deidentified_id, date_of_change=therapyChange["DateTime"].astimezone(pytz.utc),
-                                    previous_group=therapyChange["OldGroupId"], new_group=therapyChange["NewGroupId"], source_file=sessionUUID))
+            if not models.TherapyChangeLog.objects.filter(device_deidentified_id=deviceID.deidentified_id, date_of_change=therapyChange["DateTime"].astimezone(pytz.utc)).exists():
+                if not "TherapyStatus" in therapyChange.keys():
+                    logToSave.append(models.TherapyChangeLog(device_deidentified_id=deviceID.deidentified_id, date_of_change=therapyChange["DateTime"].astimezone(pytz.utc),
+                                        previous_group=therapyChange["OldGroupId"], new_group=therapyChange["NewGroupId"], source_file=sessionUUID))
+                else:
+                    logToSave.append(models.TherapyChangeLog(device_deidentified_id=deviceID.deidentified_id, date_of_change=therapyChange["DateTime"].astimezone(pytz.utc),
+                                        previous_group="TherapyChangeStatusDef.OFF" if therapyChange["TherapyStatus"] == "TherapyChangeStatusDef.ON" else "TherapyChangeStatusDef.ON", new_group=therapyChange["TherapyStatus"], source_file=sessionUUID))
                 NewDataFound = True
+                
         if len(logToSave) > 0:
             models.TherapyChangeLog.objects.bulk_create(logToSave, ignore_conflicts=True)
 
@@ -284,6 +293,7 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
     if "MontagesTD" in Data.keys():
         if BrainSenseSurvey.saveBrainSenseSurvey(deviceID.deidentified_id, Data["MontagesTD"], sessionUUID):
             NewDataFound = True
+            
     if "BaselineTD" in Data.keys():
         if BrainSenseSurvey.saveBrainSenseSurvey(deviceID.deidentified_id, Data["BaselineTD"], sessionUUID):
             NewDataFound = True
@@ -503,6 +513,7 @@ def deleteDevice(device_id):
     for session in Sessions:
         models.TherapyHistory.objects.filter(source_file=str(session.deidentified_id)).delete()
         models.TherapyChangeLog.objects.filter(source_file=str(session.deidentified_id)).delete()
+        models.TherapyChangeLog.objects.filter(device_deidentified_id=str(device_id)).delete()
         try:
             os.remove(DATABASE_PATH + session.session_file_path)
         except:

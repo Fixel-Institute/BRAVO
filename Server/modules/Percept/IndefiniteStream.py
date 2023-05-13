@@ -52,27 +52,49 @@ def saveMontageStreams(deviceID, streamList, sourceFile):
     NewRecordingFound = False
     StreamDates = list()
     for stream in streamList:
-        StreamDates.append(datetime.fromtimestamp(Percept.getTimestamp(stream["FirstPacketDateTime"]), tz=pytz.utc))
+        StreamDates.append(datetime.fromtimestamp(stream["FirstPacketDateTime"], tz=pytz.utc))
     UniqueSessionDates = np.unique(StreamDates)
 
     for date in UniqueSessionDates:
-        recording_data = dict()
-        for stream in streamList:
-            if datetime.fromtimestamp(Percept.getTimestamp(stream["FirstPacketDateTime"]), tz=pytz.utc) == date:
-                if len(recording_data.keys()) == 0:
-                    recording_data["Time"] = stream["Time"]
-                    recording_data["Missing"] = stream["Missing"]
-                    recording_data["Channels"] = list()
-                recording_data["Channels"].append(stream["Channel"])
-                recording_data[stream["Channel"]] = stream["Data"]
+        Recording = dict()
+        Recording["SamplingRate"] = streamList[0]["SamplingRate"]
 
-        recording_info = {"Channel": recording_data["Channels"]}
+        StreamGroupIndexes = [datetime.fromtimestamp(stream["FirstPacketDateTime"], tz=pytz.utc) == date for stream in streamList]
+        Recording["ChannelNames"] = [streamList[i]["Channel"] for i in range(len(streamList)) if StreamGroupIndexes[i]]
+        
+        RecordingSize = [len(streamList[i]["Data"]) for i in range(len(streamList)) if StreamGroupIndexes[i]]
+        if len(np.unique(RecordingSize)) > 1:
+            print("Inconsistent Recording Size for Indefinite Stream")
+            maxSize = np.max(RecordingSize)
+            Recording["Data"] = np.zeros((maxSize, len(RecordingSize)))
+            Recording["Missing"] = np.ones((maxSize, len(RecordingSize)))
+            n = 0
+            for i in range(len(streamList)): 
+                if StreamGroupIndexes[i]:
+                    Recording["Data"][:RecordingSize[n], n] = streamList[i]["Data"]
+                    Recording["Missing"][:RecordingSize[n], n] = streamList[i]["Missing"]
+                    Recording["StartTime"] = date.timestamp() + (streamList[i]["Ticks"][0]%1000)
+                    n += 1
+        else:
+            Recording["Data"] = np.zeros((RecordingSize[0], len(RecordingSize)))
+            Recording["Missing"] = np.ones((RecordingSize[0], len(RecordingSize)))
+            n = 0
+            for i in range(len(streamList)): 
+                if StreamGroupIndexes[i]:
+                    Recording["Data"][:, n] = streamList[i]["Data"]
+                    Recording["Missing"][:, n] = streamList[i]["Missing"]
+                    Recording["StartTime"] = date.timestamp() + (streamList[i]["Ticks"][0]%1000)
+                    n += 1
+            
+        Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
+        recording_info = {"Channel": Recording["ChannelNames"]}
+
         if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="IndefiniteStream", recording_date=date, recording_info=recording_info).exists():
             recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_date=date, source_file=sourceFile,
                                   recording_type="IndefiniteStream", recording_info=recording_info)
-            filename = Database.saveSourceFiles(recording_data, "IndefiniteStream", "Combined", recording.recording_id, recording.device_deidentified_id)
+            filename = Database.saveSourceFiles(Recording, "IndefiniteStream", "Combined", recording.recording_id, recording.device_deidentified_id)
             recording.recording_datapointer = filename
-            recording.recording_duration = recording_data["Time"][-1]
+            recording.recording_duration = Recording["Duration"]
             recording.save()
             NewRecordingFound = True
     return NewRecordingFound
