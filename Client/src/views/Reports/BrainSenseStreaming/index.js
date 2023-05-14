@@ -289,21 +289,21 @@ function BrainSenseStreaming() {
     }
     csvData += "\n";
   
-    for (var i = 0; i < dataToRender[dataToRender["Channels"][0]]["Time"].length; i++) {
-      csvData += dataToRender[dataToRender["Channels"][0]]["Time"][i] + dataToRender.Timestamp;
+    for (var i = 0; i < dataToRender.Stream[0]["Time"].length; i++) {
+      csvData += dataToRender.Stream[0]["Time"][i] + dataToRender.Timestamp;
       for (var j = 0; j < dataToRender["Channels"].length; j++) {
-        csvData += "," + dataToRender[dataToRender["Channels"][j]]["RawData"][i];
+        csvData += "," + dataToRender.Stream[j]["RawData"][i];
         for (var k = 0; k < dataToRender["Stimulation"].length; k++) {
           if (dataToRender["Stimulation"][k]["Name"] == dataToRender["Channels"][j]) {
             for (var l = 0; l < dataToRender["Stimulation"][k]["Amplitude"].length; l++) {
-              if (dataToRender["Stimulation"][k]["Time"][l] > dataToRender[dataToRender["Channels"][0]]["Time"][i]) {
+              if (dataToRender["Stimulation"][k]["Time"][l] >= dataToRender.Stream[j]["Time"][i]+dataToRender.Timestamp-dataToRender.PowerTimestamp) {
                 break;
               }
             }
-            if (l == dataToRender["Stimulation"][k]["Amplitude"].length) {
-              csvData += "," + dataToRender["Stimulation"][k]["Amplitude"][l-1];
-            } else {
+            if (l == 0) {
               csvData += "," + dataToRender["Stimulation"][k]["Amplitude"][l];
+            } else {
+              csvData += "," + dataToRender["Stimulation"][k]["Amplitude"][l-1];
             }
           }
         }

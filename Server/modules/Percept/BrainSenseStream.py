@@ -310,8 +310,9 @@ def processRealtimeStreams(stream, cardiacFilter=False):
             PrePeak = int(CardiacRate*0.25)
             PostPeak = int(CardiacRate*0.65)
             EKGMatrix = np.zeros((len(peaks)-2,PrePeak+PostPeak))
-            for i in range(1,len(peaks)-1):
-                EKGMatrix[i-1,:] = stream["TimeDomain"]["Filtered"][i][peaks[i]-PrePeak:peaks[i]+PostPeak]
+            for j in range(1,len(peaks)-1):
+                if peaks[j]+PostPeak < len(stream["TimeDomain"]["Filtered"][i]) and peaks[j]-PrePeak > 0:
+                    EKGMatrix[j-1,:] = stream["TimeDomain"]["Filtered"][i][peaks[j]-PrePeak:peaks[j]+PostPeak]
 
             EKGTemplate = np.mean(EKGMatrix,axis=0)
             EKGTemplate = EKGTemplate / (np.max(EKGTemplate)-np.min(EKGTemplate))
@@ -319,13 +320,13 @@ def processRealtimeStreams(stream, cardiacFilter=False):
             def EKGTemplateFunc(xdata, amplitude, offset):
                 return EKGTemplate * amplitude + offset
 
-            for i in range(len(peaks)):
-                if peaks[i]-PrePeak < 0:
+            for j in range(len(peaks)):
+                if peaks[j]-PrePeak < 0:
                     pass
-                elif peaks[i]+PostPeak >= len(stream["TimeDomain"]["Filtered"][i]) :
+                elif peaks[j]+PostPeak >= len(stream["TimeDomain"]["Filtered"][i]) :
                     pass
                 else:
-                    sliceSelection = np.arange(peaks[i]-PrePeak,peaks[i]+PostPeak)
+                    sliceSelection = np.arange(peaks[j]-PrePeak,peaks[j]+PostPeak)
                     params, covmat = optimize.curve_fit(EKGTemplateFunc, sliceSelection, stream["TimeDomain"]["Filtered"][i][sliceSelection])
                     stream["TimeDomain"]["Filtered"][i][sliceSelection] = stream["TimeDomain"]["Filtered"][i][sliceSelection] - EKGTemplateFunc(sliceSelection, *params)
 
@@ -758,7 +759,7 @@ def processRealtimeStreamStimulationAmplitude(stream):
     for StimulationSide in StimulationChannelIndexes:
         Stimulation = np.around(stream["Data"][:,StimulationSide],2)
         TimeArray = np.arange(len(Stimulation)) / stream["SamplingRate"]
-        indexOfChanges = np.where(np.abs(np.diff(Stimulation)) > 0)[0]-1
+        indexOfChanges = np.where(np.abs(np.diff(Stimulation)) > 0)[0]+1
         if len(indexOfChanges) == 0:
             indexOfChanges = np.insert(indexOfChanges,0,0)
         elif indexOfChanges[0] < 0:

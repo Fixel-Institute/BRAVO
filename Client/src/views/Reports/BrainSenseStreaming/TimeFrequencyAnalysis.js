@@ -203,7 +203,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
       fig.plot(timeArray, stimulation.Amplitude, {
         linewidth: 3,
         color: stimulationLineColor,
-        shape: "vh",
+        shape: "hv",
         hovertemplate: ` ${stimulation.Name} %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)}<br>  %{x} <extra></extra>`,
       }, ax[ax.length-1])
     }
