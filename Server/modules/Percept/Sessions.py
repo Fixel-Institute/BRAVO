@@ -492,7 +492,7 @@ def queryAvailableSessionFiles(user, patient_id, authority):
             sessionInfo["SessionID"] = session.deidentified_id
             sessionInfo["SessionTimestamp"] = session.session_date.timestamp()
             sessionInfo["AvailableRecording"] = {
-                "BrainSenseStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseStream").count(),
+                "BrainSenseStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseTimeDomainStream").count(),
                 "IndefiniteStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="IndefiniteStream").count(),
                 "BrainSenseSurvey": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseSurvey").count(),
                 "TherapyHistory": models.TherapyHistory.objects.filter(source_file=session.deidentified_id).count(),
@@ -514,6 +514,7 @@ def deleteDevice(device_id):
         models.TherapyHistory.objects.filter(source_file=str(session.deidentified_id)).delete()
         models.TherapyChangeLog.objects.filter(source_file=str(session.deidentified_id)).delete()
         models.TherapyChangeLog.objects.filter(device_deidentified_id=str(device_id)).delete()
+        models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=str(device_id)).delete()
         try:
             os.remove(DATABASE_PATH + session.session_file_path)
         except:

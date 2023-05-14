@@ -116,7 +116,7 @@ function BrainSenseStreaming() {
   const getRecordingData = (timestamp) => {
     var ChannelInfos = [];
     for (var i in data) {
-      if (data[i].RecordingID == timestamp) {
+      if (data[i].AnalysisID == timestamp) {
         ChannelInfos = data[i].Channels;
       }
     }
@@ -397,11 +397,11 @@ function BrainSenseStreaming() {
     setRightHemisphereBox(false);
     for (var i in dataToRender.Channels) {
       if (dataToRender.Channels[i].endsWith("LEFT")) {
-        setLeftHemispherePSD(dataToRender[dataToRender.Channels[i]].StimPSD);
-        setLeftHemisphereBox(dataToRender[dataToRender.Channels[i]].StimPSD);
+        setLeftHemispherePSD(dataToRender.Stream[i].StimPSD);
+        setLeftHemisphereBox(dataToRender.Stream[i].StimPSD);
       } else {
-        setRightHemispherePSD(dataToRender[dataToRender.Channels[i]].StimPSD);
-        setRightHemisphereBox(dataToRender[dataToRender.Channels[i]].StimPSD);
+        setRightHemispherePSD(dataToRender.Stream[i].StimPSD);
+        setRightHemisphereBox(dataToRender.Stream[i].StimPSD);
       }
     }
   }, [dataToRender]);

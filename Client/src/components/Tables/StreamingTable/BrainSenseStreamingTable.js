@@ -95,6 +95,8 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
       setAvailableDates(uniqueDates.sort((a,b) => b.time - a.time));
       setViewDate(uniqueDates[0]);
     }
+
+    console.log(data)
   }, [data])
   
   const setViewDate = (date) => {
@@ -224,7 +226,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                 }
               }
 
-              return <TableRow key={recording.RecordingID}>
+              return <TableRow key={recording.AnalysisID}>
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                   <MDTypography variant="h5" fontSize={15} style={{marginBottom: 0}}>
                     {new Date(recording.Timestamp*1000).toLocaleString(language)}
@@ -312,7 +314,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                   </MDTypography>
                 </TableCell>
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                  <MDButton variant={"contained"} color="info" onClick={() => getRecordingData(recording.RecordingID)} style={{padding: 0}}>
+                  <MDButton variant={"contained"} color="info" onClick={() => getRecordingData(recording.AnalysisID)} style={{padding: 0}}>
                       {dictionary.PatientOverview.PatientInformation.View[language]}
                   </MDButton>
                 </TableCell>

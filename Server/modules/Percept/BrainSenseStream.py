@@ -72,6 +72,8 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
             Recording["Data"][:,0] = StreamingTD[n]["Data"]
             Recording["Missing"] = np.zeros((len(StreamingTD[n]["Missing"]), 1))
             Recording["Missing"][:,0] = StreamingTD[n]["Missing"]
+            if StreamingTD[n]["Ticks"][0] > 3276800:
+                StreamingTD[n]["Ticks"][0] -= 3276800
             Recording["StartTime"] = StreamingTD[n]["FirstPacketDateTime"] + (StreamingTD[n]["Ticks"][0]%1000)/1000
             Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
             TimeDomainRecordings.append(Recording)
@@ -89,6 +91,8 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
             Recording["Data"][:,1] = StreamingTD[n+1]["Data"]
             Recording["Missing"][:,0] = StreamingTD[n]["Missing"]
             Recording["Missing"][:,1] = StreamingTD[n+1]["Missing"]
+            if StreamingTD[n]["Ticks"][0] > 3276800:
+                StreamingTD[n]["Ticks"][0] -= 3276800
             Recording["StartTime"] = StreamingTD[n]["FirstPacketDateTime"] + (StreamingTD[n]["Ticks"][0]%1000)/1000
             Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
             TimeDomainRecordings.append(Recording)
@@ -102,6 +106,8 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
             Recording["Data"][:,0] = StreamingTD[n]["Data"]
             Recording["Missing"] = np.zeros((len(StreamingTD[n]["Missing"]), 1))
             Recording["Missing"][:,0] = StreamingTD[n]["Missing"]
+            if StreamingTD[n]["Ticks"][0] > 3276800:
+                StreamingTD[n]["Ticks"][0] -= 3276800
             Recording["StartTime"] = StreamingTD[n]["FirstPacketDateTime"] + (StreamingTD[n]["Ticks"][0]%1000)/1000
             Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
             TimeDomainRecordings.append(Recording)
@@ -129,7 +135,9 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
             Recording["Missing"][:,:2] = StreamingPower[n]["Missing"]
             Recording["Missing"][:,2:] = StreamingPower[n]["Missing"]
 
-        Recording["StartTime"] = StreamingPower[n]["FirstPacketDateTime"] + (StreamingPower[n]["InitialTickInMs"])/1000
+        if StreamingPower[n]["InitialTickInMs"] > 3276800:
+            StreamingPower[n]["InitialTickInMs"] -= 3276800
+        Recording["StartTime"] = StreamingPower[n]["FirstPacketDateTime"] + (StreamingPower[n]["InitialTickInMs"]%1000)/1000
         Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
         Recording["Descriptor"] = {
             "Therapy": StreamingPower[n]["TherapySnapshot"]
@@ -272,14 +280,15 @@ def processRealtimeStreams(stream, cardiacFilter=False):
       Processed BrainSense TimeDomain structure
     """
 
-    stream["Wavelet"] = dict()
-    stream["Spectrogram"] = dict()
-    stream["Filtered"] = dict()
+    stream["TimeDomain"]["Wavelet"] = list()
+    stream["TimeDomain"]["Spectrogram"] = list()
+    stream["TimeDomain"]["Filtered"] = list()
 
-    for channel in stream["Channels"]:
-        [b,a] = signal.butter(5, np.array([1,100])*2/250, 'bp', output='ba')
-        stream["Filtered"][channel] = signal.filtfilt(b, a, stream[channel])
-        (channels, hemisphere) = Percept.reformatChannelName(channel)
+    for i in range(len(stream["TimeDomain"]["ChannelNames"])):
+        [b,a] = signal.butter(5, np.array([1,100])*2/stream["TimeDomain"]["SamplingRate"], 'bp', output='ba')
+        stream["TimeDomain"]["Filtered"].append(signal.filtfilt(b, a, stream["TimeDomain"]["Data"][:,i]))
+
+        (channels, hemisphere) = Percept.reformatChannelName(stream["TimeDomain"]["ChannelNames"][i])
         if hemisphere == "Left":
             StimulationSide = 0
         else:
@@ -287,9 +296,9 @@ def processRealtimeStreams(stream, cardiacFilter=False):
 
         if cardiacFilter:
             # Cardiac Filter
-            posPeaks,_ = signal.find_peaks(stream["Filtered"][channel], prominence=[10,200], distance=250*0.5)
+            posPeaks,_ = signal.find_peaks(stream["TimeDomain"]["Filtered"][i], prominence=[10,200], distance=stream["TimeDomain"]["SamplingRate"]*0.5)
             PosCardiacVariability = np.std(np.diff(posPeaks))
-            negPeaks,_ = signal.find_peaks(-stream["Filtered"][channel], prominence=[10,200], distance=250*0.5)
+            negPeaks,_ = signal.find_peaks(-stream["TimeDomain"]["Filtered"][i], prominence=[10,200], distance=stream["TimeDomain"]["SamplingRate"]*0.5)
             NegCardiacVariability = np.std(np.diff(negPeaks))
 
             if PosCardiacVariability < NegCardiacVariability:
@@ -302,7 +311,7 @@ def processRealtimeStreams(stream, cardiacFilter=False):
             PostPeak = int(CardiacRate*0.65)
             EKGMatrix = np.zeros((len(peaks)-2,PrePeak+PostPeak))
             for i in range(1,len(peaks)-1):
-                EKGMatrix[i-1,:] = stream["Filtered"][channel][peaks[i]-PrePeak:peaks[i]+PostPeak]
+                EKGMatrix[i-1,:] = stream["TimeDomain"]["Filtered"][i][peaks[i]-PrePeak:peaks[i]+PostPeak]
 
             EKGTemplate = np.mean(EKGMatrix,axis=0)
             EKGTemplate = EKGTemplate / (np.max(EKGTemplate)-np.min(EKGTemplate))
@@ -313,30 +322,32 @@ def processRealtimeStreams(stream, cardiacFilter=False):
             for i in range(len(peaks)):
                 if peaks[i]-PrePeak < 0:
                     pass
-                elif peaks[i]+PostPeak >= len(stream["Filtered"][channel]) :
+                elif peaks[i]+PostPeak >= len(stream["TimeDomain"]["Filtered"][i]) :
                     pass
                 else:
                     sliceSelection = np.arange(peaks[i]-PrePeak,peaks[i]+PostPeak)
-                    params, covmat = optimize.curve_fit(EKGTemplateFunc, sliceSelection, stream["Filtered"][channel][sliceSelection])
-                    stream["Filtered"][channel][sliceSelection] = stream["Filtered"][channel][sliceSelection] - EKGTemplateFunc(sliceSelection, *params)
+                    params, covmat = optimize.curve_fit(EKGTemplateFunc, sliceSelection, stream["TimeDomain"]["Filtered"][i][sliceSelection])
+                    stream["TimeDomain"]["Filtered"][i][sliceSelection] = stream["TimeDomain"]["Filtered"][i][sliceSelection] - EKGTemplateFunc(sliceSelection, *params)
 
         # Wavelet Computation
-        stream["Wavelet"][channel] = SPU.waveletTimeFrequency(stream["Filtered"][channel], freq=np.array(range(1,200))/2, ma=125, fs=250)
-        stream["Wavelet"][channel]["Missing"] = stream["Missing"][channel][::int(250/2)]
-        stream["Wavelet"][channel]["Power"] = stream["Wavelet"][channel]["Power"][:,::int(250/2)]
-        stream["Wavelet"][channel]["Time"] = stream["Wavelet"][channel]["Time"][::int(250/2)]
-        stream["Wavelet"][channel]["Type"] = "Wavelet"
-        del(stream["Wavelet"][channel]["logPower"])
+        stream["TimeDomain"]["Wavelet"].append(SPU.waveletTimeFrequency(stream["TimeDomain"]["Filtered"][i], freq=np.arange(0.5,100.5,0.5), ma=int(stream["TimeDomain"]["SamplingRate"]/2), fs=stream["TimeDomain"]["SamplingRate"]))
+        stream["TimeDomain"]["Wavelet"][i]["Missing"] = stream["TimeDomain"]["Missing"][:,i][::int(stream["TimeDomain"]["SamplingRate"]/2)]
+        stream["TimeDomain"]["Wavelet"][i]["Power"] = stream["TimeDomain"]["Wavelet"][i]["Power"][:,::int(stream["TimeDomain"]["SamplingRate"]/2)]
+        stream["TimeDomain"]["Wavelet"][i]["Time"] = stream["TimeDomain"]["Wavelet"][i]["Time"][::int(stream["TimeDomain"]["SamplingRate"]/2)]
+        stream["TimeDomain"]["Wavelet"][i]["Type"] = "Wavelet"
+        del(stream["TimeDomain"]["Wavelet"][i]["logPower"])
 
         # SFFT Computation
-        stream["Spectrogram"][channel] = SPU.defaultSpectrogram(stream["Filtered"][channel], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=250)
-        stream["Spectrogram"][channel]["Type"] = "Spectrogram"
-        stream["Spectrogram"][channel]["Time"] += stream["Time"][0]
-        stream["Spectrogram"][channel]["Missing"] = np.zeros(stream["Spectrogram"][channel]["Time"].shape, dtype=bool)
-        for i in range(len(stream["Spectrogram"][channel]["Missing"])):
-            if np.any(stream["Missing"][channel][rangeSelection(stream["Time"], [stream["Spectrogram"][channel]["Time"][i]-2, stream["Spectrogram"][channel]["Time"][i]+2])]):
-                stream["Spectrogram"][channel]["Missing"][i] = True
-        del(stream["Spectrogram"][channel]["logPower"])
+        stream["TimeDomain"]["Spectrogram"].append(SPU.defaultSpectrogram(stream["TimeDomain"]["Filtered"][i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=stream["TimeDomain"]["SamplingRate"]))
+        stream["TimeDomain"]["Spectrogram"][i]["Type"] = "Spectrogram"
+        stream["TimeDomain"]["Spectrogram"][i]["Time"] += 0 # TODO Check later
+        
+        TimeArray = np.arange(len(stream["TimeDomain"]["Filtered"][i])) / stream["TimeDomain"]["SamplingRate"]
+        stream["TimeDomain"]["Spectrogram"][i]["Missing"] = np.zeros(stream["TimeDomain"]["Spectrogram"][i]["Time"].shape, dtype=bool)
+        for j in range(len(stream["TimeDomain"]["Spectrogram"][i]["Missing"])):
+            if np.any(stream["TimeDomain"]["Missing"][rangeSelection(TimeArray, [stream["TimeDomain"]["Spectrogram"][i]["Time"][j]-2, stream["TimeDomain"]["Spectrogram"][i]["Time"][j]+2]), i]):
+                stream["TimeDomain"]["Spectrogram"][i]["Missing"][j] = True
+        del(stream["TimeDomain"]["Spectrogram"][i]["logPower"])
 
     return stream
 
@@ -361,25 +372,23 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
     includedRecording = list()
     availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
     for device in availableDevices:
-        allSurveys = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="BrainSenseStream").order_by("-recording_date").all()
-        if len(allSurveys) > 0:
+        allAnalysis = models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=device.deidentified_id, analysis_name="DefaultBrainSenseStreaming").order_by("-analysis_date").all()
+        if len(allAnalysis) > 0:
             leads = device.device_lead_configurations
 
-        for recording in allSurveys:
-            if not recording.recording_id in authority["Permission"] and authority["Level"] == 2:
+        for analysis in allAnalysis:
+            if not analysis.deidentified_id in authority["Permission"] and authority["Level"] == 2:
                 continue
 
             data = dict()
-            data["Timestamp"] = recording.recording_date.timestamp()
-            data["Duration"] = recording.recording_duration
+            data["Timestamp"] = analysis.analysis_date.timestamp()
 
             if data["Timestamp"] in includedRecording:
                 continue
 
-            if data["Duration"] < 5:
-                continue
-            
-            data["RecordingID"] = recording.recording_id
+            data["AnalysisID"] = str(analysis.deidentified_id)
+            data["RecordingIDs"] = analysis.recording_list
+
             DeviceName = device.device_name
             if DeviceName == "":
                 DeviceName = str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key)
@@ -389,25 +398,33 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
             data["Channels"] = list()
             data["ContactTypes"] = list()
 
-            if not "Therapy" in recording.recording_info:
-                if len(recording.recording_info["Channel"]) == 2:
-                    info = "Bilateral"
-                else:
-                    info = "Unilateral"
-                RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-                recording.recording_info["Therapy"] = RawData["Therapy"]
-                recording.save()
-            data["Therapy"] = recording.recording_info["Therapy"]
+            allRecordings = models.BrainSenseRecording.objects.filter(recording_id__in=analysis.recording_list)
+            for recording in allRecordings:
+                if recording.recording_type == "BrainSenseStreamPowerDomain":
+                    PowerRecording = recording
+                elif recording.recording_type == "BrainSenseStreamTimeDomain":
+                    TimeRecording = recording
 
-            Channels = recording.recording_info["Channel"]
-            if not "ContactType" in recording.recording_info:
-                recording.recording_info["ContactType"] = ["Ring" for channel in Channels]
-                recording.save()
-            if not len(recording.recording_info["ContactType"]) == len(Channels):
-                recording.recording_info["ContactType"] = ["Ring" for channel in Channels]
-                recording.save()
+            RawData = Database.loadSourceDataPointer(PowerRecording.recording_datapointer)
+            if not "Therapy" in PowerRecording.recording_info:
+                PowerRecording.recording_info["Therapy"] = RawData["Descriptor"]["Therapy"]
+                PowerRecording.save()
             
-            data["ContactType"] = recording.recording_info["ContactType"]
+            data["Therapy"] = PowerRecording.recording_info["Therapy"]
+            data["Duration"] = RawData["Duration"]
+
+            if RawData["Duration"] < 5:
+                continue
+            
+            Channels = TimeRecording.recording_info["Channel"]
+            if not "ContactType" in TimeRecording.recording_info:
+                TimeRecording.recording_info["ContactType"] = ["Ring" for channel in Channels]
+                TimeRecording.save()
+            if not len(TimeRecording.recording_info["ContactType"]) == len(Channels):
+                TimeRecording.recording_info["ContactType"] = ["Ring" for channel in Channels]
+                TimeRecording.save()
+            
+            data["ContactType"] = TimeRecording.recording_info["ContactType"]
             for channel in Channels:
                 contacts, hemisphere = Percept.reformatChannelName(channel)
                 for lead in leads:
@@ -447,48 +464,44 @@ def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=Fal
     if not authority["Permission"]:
         return BrainSenseData, RecordingID
 
-    recording = models.BrainSenseRecording.objects.filter(recording_id=recordingId, recording_type="BrainSenseStream").first()
+    analysis = models.CombinedRecordingAnalysis.objects.filter(deidentified_id=recordingId, analysis_name="DefaultBrainSenseStreaming").first()
 
-    if not recording == None:
+    if not analysis == None:
         if authority["Level"] == 2:
-            if not recording.recording_id in authority["Permission"]:
+            if not analysis.deidentified_id in authority["Permission"]:
                 return BrainSenseData, RecordingID
+            
+        allRecordings = models.BrainSenseRecording.objects.filter(recording_id__in=analysis.recording_list)
+        for recording in allRecordings:
+            if recording.recording_type == "BrainSenseStreamPowerDomain":
+                PowerRecording = recording
+            elif recording.recording_type == "BrainSenseStreamTimeDomain":
+                TimeRecording = recording
+        
+        BrainSenseData = dict()
+        BrainSenseData["Info"] = dict()
+        BrainSenseData["Info"].update(PowerRecording.recording_info)
+        BrainSenseData["Info"].update(TimeRecording.recording_info)
 
-        if len(recording.recording_info["Channel"]) == 2:
-            info = "Bilateral"
-        else:
-            info = "Unilateral"
+        BrainSenseData["TimeDomain"] = Database.loadSourceDataPointer(TimeRecording.recording_datapointer)
+        BrainSenseData["PowerDomain"] = Database.loadSourceDataPointer(PowerRecording.recording_datapointer)
+        
+        if not "CardiacFilter" in TimeRecording.recording_info:
+            TimeRecording.recording_info["CardiacFilter"] = cardiacFilter
+            TimeRecording.save()
 
-        BrainSenseData = Database.loadSourceDataPointer(recording.recording_datapointer)
-        BrainSenseData["Info"] = recording.recording_info
-
-        if not "CardiacFilter" in recording.recording_info:
-            recording.recording_info["CardiacFilter"] = cardiacFilter
-            recording.save()
-
-        if not "Spectrogram" in BrainSenseData.keys() or (refresh and not recording.recording_info["CardiacFilter"] == cardiacFilter):
-            recording.recording_info["CardiacFilter"] = cardiacFilter
+        if not "Spectrogram" in BrainSenseData["TimeDomain"].keys() or (refresh or not TimeRecording.recording_info["CardiacFilter"] == cardiacFilter):
+            TimeRecording.recording_info["CardiacFilter"] = cardiacFilter
             BrainSenseData = processRealtimeStreams(BrainSenseData, cardiacFilter=cardiacFilter)
-            Database.saveSourceFiles(BrainSenseData,recording.recording_type,info,recording.recording_id, recording.device_deidentified_id)
-            recording.save()
+            Database.saveSourceFiles(BrainSenseData["TimeDomain"], "BrainSenseStreamTimeDomain", "Raw", TimeRecording.recording_id, TimeRecording.device_deidentified_id)
+            TimeRecording.save()
         
-        for channel in BrainSenseData["Channels"]:
-            if not "Missing" in BrainSenseData["Spectrogram"][channel].keys():
-                BrainSenseData = processRealtimeStreams(BrainSenseData, cardiacFilter=cardiacFilter)
-                Database.saveSourceFiles(BrainSenseData,recording.recording_type,info,recording.recording_id, recording.device_deidentified_id)
-                break
-        
-        for channel in BrainSenseData["Filtered"].keys():
-            if not BrainSenseData["Filtered"][channel].shape == BrainSenseData[channel].shape:
-                recording.recording_info["CardiacFilter"] = cardiacFilter
-                BrainSenseData = processRealtimeStreams(BrainSenseData, cardiacFilter=cardiacFilter)
-                Database.saveSourceFiles(BrainSenseData,recording.recording_type,info,recording.recording_id, recording.device_deidentified_id)
-                recording.save()
+        BrainSenseData["Timestamp"] = analysis.analysis_date.timestamp();
+        BrainSenseData["Info"].update(PowerRecording.recording_info)
+        BrainSenseData["Info"].update(TimeRecording.recording_info)
 
-        BrainSenseData["Timestamp"] = recording.recording_date.timestamp();
-        BrainSenseData["Info"] = recording.recording_info;
-        RecordingID = recording.recording_id
-    return BrainSenseData, RecordingID
+        AnalysisID = analysis.deidentified_id
+    return BrainSenseData, AnalysisID
 
 def queryMultipleSegmentComparison(user, recordingIds, authority):
     """ Query Multiple Segment Comparison
@@ -690,38 +703,42 @@ def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies
       Returns processed data object with content sufficient for React.js to render Plotly graphs.
     """
     
-    stream["Stimulation"] = processRealtimeStreamStimulationAmplitude(stream)
-    stream["PowerBand"] = processRealtimeStreamPowerBand(stream)
-    data = dict()
-    data["Channels"] = stream["Channels"]
-    data["Stimulation"] = stream["Stimulation"]
-    data["PowerBand"] = stream["PowerBand"]
-    data["Info"] = stream["Info"]
-    data["Timestamp"] = stream["Timestamp"]
+    stream["PowerDomain"]["Stimulation"] = processRealtimeStreamStimulationAmplitude(stream["PowerDomain"])
+    stream["PowerDomain"]["PowerBand"] = processRealtimeStreamPowerBand(stream["PowerDomain"])
 
-    if len(centerFrequencies) < len(stream["Channels"]):
+    data = dict()
+    data["Channels"] = stream["TimeDomain"]["ChannelNames"]
+    data["Stimulation"] = stream["PowerDomain"]["Stimulation"]
+    data["PowerBand"] = stream["PowerDomain"]["PowerBand"]
+    data["Info"] = stream["Info"]
+    data["Timestamp"] = stream["TimeDomain"]["StartTime"]
+    data["PowerTimestamp"] = stream["PowerDomain"]["StartTime"]
+
+    if len(centerFrequencies) < len(stream["TimeDomain"]["ChannelNames"]):
         centerFrequencies.append(0)
-        
-    counter = 0
-    for channel in stream["Channels"]:
-        data[channel] = dict()
-        data[channel]["Time"] = stream["Time"]
-        data[channel]["RawData"] = stream["Filtered"][channel]
+    
+    data["Stream"] = list()
+    for counter in range(len(data["Channels"])):
+        data["Stream"].append(dict())
+        data["Stream"][counter]["RawData"] = stream["TimeDomain"]["Filtered"][counter]
+        data["Stream"][counter]["Time"] = np.arange(len(data["Stream"][counter]["RawData"]))/stream["TimeDomain"]["SamplingRate"]
+
         if options["SpectrogramMethod"]["value"] == "Spectrogram":
-            data[channel]["Spectrogram"] = copy.deepcopy(stream["Spectrogram"][channel])
-            data[channel]["Spectrogram"]["Power"][data[channel]["Spectrogram"]["Power"] == 0] = 1e-10
-            data[channel]["Spectrogram"]["Power"] = np.log10(data[channel]["Spectrogram"]["Power"])*10
-            data[channel]["Spectrogram"]["ColorRange"] = [-20,20]
+            data["Stream"][counter]["Spectrogram"] = copy.deepcopy(stream["TimeDomain"]["Spectrogram"][counter])
+            data["Stream"][counter]["Spectrogram"]["Power"][data["Stream"][counter]["Spectrogram"]["Power"] == 0] = 1e-10
+            data["Stream"][counter]["Spectrogram"]["Power"] = np.log10(data["Stream"][counter]["Spectrogram"]["Power"])*10
+            data["Stream"][counter]["Spectrogram"]["ColorRange"] = [-20,20]
+
         elif options["SpectrogramMethod"]["value"]  == "Wavelet":
-            data[channel]["Spectrogram"] = copy.deepcopy(stream["Wavelet"][channel])
-            data[channel]["Spectrogram"]["Power"][data[channel]["Spectrogram"]["Power"] == 0] = 1e-10
-            data[channel]["Spectrogram"]["Power"] = np.log10(data[channel]["Spectrogram"]["Power"])*10
-            data[channel]["Spectrogram"]["ColorRange"] = [-10,20]
+            data["Stream"][counter]["Spectrogram"] = copy.deepcopy(stream["TimeDomain"]["Wavelet"][counter])
+            data["Stream"][counter]["Spectrogram"]["Power"][data["Stream"][counter]["Spectrogram"]["Power"] == 0] = 1e-10
+            data["Stream"][counter]["Spectrogram"]["Power"] = np.log10(data["Stream"][counter]["Spectrogram"]["Power"])*10
+            data["Stream"][counter]["Spectrogram"]["ColorRange"] = [-10,20]
 
         if options["PSDMethod"]["value"] == "Time-Frequency Analysis":
-            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["SpectrogramMethod"]["value"], stim_label=stimulationReference, centerFrequency=centerFrequencies[counter])
+            data["Stream"][counter]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, data["Channels"][counter], method=options["SpectrogramMethod"]["value"], stim_label=stimulationReference, centerFrequency=centerFrequencies[counter])
         else:
-            data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["PSDMethod"]["value"], stim_label=stimulationReference, centerFrequency=centerFrequencies[counter])
+            data["Stream"][counter]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, data["Channels"][counter], method=options["PSDMethod"]["value"], stim_label=stimulationReference, centerFrequency=centerFrequencies[counter])
         counter += 1
 
     return data
@@ -730,29 +747,28 @@ def processRealtimeStreamStimulationAmplitude(stream):
     """ Process BrainSense Streaming Data to extract data segment at different stimulation amplitude.
 
     Args:
-      stream: processed BrainSense TimeDomain structure (see processRealtimeStreams function)
+      stream: processed BrainSense PowerDomain structure (see processRealtimeStreams function)
 
     Returns:
       Returns list of stimulation series.
     """
 
     StimulationSeries = list()
-    Hemisphere = ["Left","Right"]
-    for StimulationSide in range(2):
-        if Hemisphere[StimulationSide] in stream["Therapy"].keys():
-            Stimulation = np.around(stream["Stimulation"][:,StimulationSide],2)
-            indexOfChanges = np.where(np.abs(np.diff(Stimulation)) > 0)[0]-1
-            if len(indexOfChanges) == 0:
-                indexOfChanges = np.insert(indexOfChanges,0,0)
-            elif indexOfChanges[0] < 0:
-                indexOfChanges[0] = 0
-            else:
-                indexOfChanges = np.insert(indexOfChanges,0,0)
-            indexOfChanges = np.insert(indexOfChanges,len(indexOfChanges),len(Stimulation)-1)
-            for channelName in stream["Channels"]:
-                channels, hemisphere = Percept.reformatChannelName(channelName)
-                if hemisphere == Hemisphere[StimulationSide]:
-                    StimulationSeries.append({"Name": channelName, "Hemisphere": hemisphere, "Time": stream["Time"][indexOfChanges], "Amplitude": np.around(stream["Stimulation"][indexOfChanges,StimulationSide],2)})
+    StimulationChannelIndexes = [i for i in range(len(stream["ChannelNames"])) if stream["ChannelNames"][i].endswith("Stimulation")]
+    for StimulationSide in StimulationChannelIndexes:
+        Stimulation = np.around(stream["Data"][:,StimulationSide],2)
+        TimeArray = np.arange(len(Stimulation)) / stream["SamplingRate"]
+        indexOfChanges = np.where(np.abs(np.diff(Stimulation)) > 0)[0]-1
+        if len(indexOfChanges) == 0:
+            indexOfChanges = np.insert(indexOfChanges,0,0)
+        elif indexOfChanges[0] < 0:
+            indexOfChanges[0] = 0
+        else:
+            indexOfChanges = np.insert(indexOfChanges,0,0)
+        indexOfChanges = np.insert(indexOfChanges,len(indexOfChanges),len(Stimulation)-1)
+        ChannelName = stream["ChannelNames"][StimulationSide].replace(" Stimulation","")
+        channels, hemisphere = Percept.reformatChannelName(ChannelName)
+        StimulationSeries.append({"Name": ChannelName, "Hemisphere": hemisphere, "Time": TimeArray[indexOfChanges], "Amplitude": np.around(stream["Data"][indexOfChanges,StimulationSide],2)})
     return StimulationSeries
 
 def processRealtimeStreamPowerBand(stream):
@@ -761,22 +777,20 @@ def processRealtimeStreamPowerBand(stream):
     Additional filtering is done by performing zscore normalization. Outliers are removed. 
 
     Args:
-      stream: processed BrainSense TimeDomain structure (see processRealtimeStreams function)
+      stream: processed BrainSense PowerDomain structure (see processRealtimeStreams function)
 
     Returns:
       Returns list of stimulation series.
     """
 
     PowerSensing = list()
-    Hemisphere = ["Left","Right"]
-    for StimulationSide in range(2):
-        if Hemisphere[StimulationSide] in stream["Therapy"].keys():
-            Power = stream["PowerBand"][:,StimulationSide]
-            selectedData = np.abs(stats.zscore(Power)) < 3
-            for channelName in stream["Channels"]:
-                channels, hemisphere = Percept.reformatChannelName(channelName)
-                if hemisphere == Hemisphere[StimulationSide]:
-                    PowerSensing.append({"Name": channelName, "Time": stream["Time"][selectedData], "Power": stream["PowerBand"][selectedData,StimulationSide]})
+    PowerIndexes = [i for i in range(len(stream["ChannelNames"])) if stream["ChannelNames"][i].endswith("Power")]
+    for StimulationSide in PowerIndexes:
+        Power = stream["Data"][:,StimulationSide]
+        TimeArray = np.arange(len(Power)) / stream["SamplingRate"]
+        selectedData = np.abs(stats.zscore(Power)) < 3
+        ChannelName = stream["ChannelNames"][StimulationSide].replace(" Power","")
+        PowerSensing.append({"Name": ChannelName, "Time": TimeArray[selectedData], "Power": Power[selectedData]})
     return PowerSensing
 
 def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", stim_label="Ipsilateral", centerFrequency=0):
@@ -800,16 +814,19 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
     """
 
     if stim_label == "Ipsilateral":
-        for Stimulation in stream["Stimulation"]:
+        for Stimulation in stream["PowerDomain"]["Stimulation"]:
             if Stimulation["Name"] == channel:
                 StimulationSeries = Stimulation
     else:
-        for Stimulation in stream["Stimulation"]:
+        for Stimulation in stream["PowerDomain"]["Stimulation"]:
             if not Stimulation["Name"] == channel:
                 StimulationSeries = Stimulation
 
     if not "StimulationSeries" in locals():
         raise Exception("Data not available")
+    
+    TimeArray = np.arange(stream["TimeDomain"]["Data"].shape[0])/stream["TimeDomain"]["SamplingRate"]
+    DataIndex = [i for i in range(len(stream["TimeDomain"]["ChannelNames"])) if stream["TimeDomain"]["ChannelNames"][i] == channel][0]
     
     cIndex = 0
     StimulationEpochs = list()
@@ -817,27 +834,27 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
         cIndex += 1 
 
         if method == "Welch":
-            timeSelection = rangeSelection(stream["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
-            timeSelection = np.bitwise_and(timeSelection, stream["Missing"][channel] == 0)
+            timeSelection = rangeSelection(TimeArray,[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            timeSelection = np.bitwise_and(timeSelection, stream["TimeDomain"]["Missing"][:,DataIndex] == 0)
             if np.sum(timeSelection) < 250 * 5:
                 continue
-            StimulationEpoch = stream["Filtered"][channel][timeSelection]
-            fxx, pxx = signal.welch(StimulationEpoch, fs=250, nperseg=250 * 1, noverlap=250 * 0.5, nfft=250 * 2, scaling="density")
+            StimulationEpoch = stream["TimeDomain"]["Filtered"][DataIndex][timeSelection]
+            fxx, pxx = signal.welch(StimulationEpoch, fs=stream["TimeDomain"]["SamplingRate"], nperseg=250 * 1, noverlap=250 * 0.5, nfft=250 * 2, scaling="density")
             StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i], "Frequency": fxx, "PSD": pxx})
-            timeSelection = rangeSelection(stream["Spectrogram"][channel]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            timeSelection = rangeSelection(stream["TimeDomain"]["Spectrogram"][DataIndex]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
 
         elif method == "Spectrogram":
-            timeSelection = rangeSelection(stream["Spectrogram"][channel]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
-            timeSelection = np.bitwise_and(timeSelection, stream["Spectrogram"][channel]["Missing"] == 0)
+            timeSelection = rangeSelection(stream["TimeDomain"]["Spectrogram"][DataIndex]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            timeSelection = np.bitwise_and(timeSelection, stream["TimeDomain"]["Spectrogram"][DataIndex]["Missing"] == 0)
             if np.sum(timeSelection) < 2 * 5:
                 continue
-            StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i], "Frequency": stream["Spectrogram"][channel]["Frequency"], "PSD": np.mean(stream["Spectrogram"][channel]["Power"][:,timeSelection],axis=1)})
+            StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i], "Frequency": stream["TimeDomain"]["Spectrogram"][DataIndex]["Frequency"], "PSD": np.mean(stream["TimeDomain"]["Spectrogram"][DataIndex]["Power"][:,timeSelection],axis=1)})
 
         elif method == "Wavelet":
-            timeSelection = rangeSelection(stream["Wavelet"][channel]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            timeSelection = rangeSelection(stream["TimeDomain"]["Wavelet"][DataIndex]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
             if np.sum(timeSelection) < 250 * 5:
                 continue
-            StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i], "Frequency": stream["Wavelet"][channel]["Frequency"], "PSD": np.mean(stream["Wavelet"][channel]["Power"][:,timeSelection],axis=1)})
+            StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i], "Frequency": stream["TimeDomain"]["Wavelet"][DataIndex]["Frequency"], "PSD": np.mean(stream["TimeDomain"]["Wavelet"][DataIndex]["Power"][:,timeSelection],axis=1)})
 
         StimulationEpochs[-1]["TimeSelection"] = timeSelection
 
@@ -855,14 +872,14 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
 
     for i in range(len(StimulationEpochs)):
         StimulationEpochs[i]["CenterFrequency"] = centerFrequency
-        timeSelection = np.bitwise_and(StimulationEpochs[i]["TimeSelection"], stream["Spectrogram"][channel]["Missing"] == 0)
+        timeSelection = np.bitwise_and(StimulationEpochs[i]["TimeSelection"], stream["TimeDomain"]["Spectrogram"][DataIndex]["Missing"] == 0)
         
         if method == "Wavelet":
-            timeSelection = np.bitwise_and(timeSelection, stream["Missing"][channel] == 0)
-            StimulationEpochs[i]["SpectralFeatures"] = stream["Wavelet"][channel]["Power"][:,timeSelection]
+            timeSelection = np.bitwise_and(timeSelection, stream["TimeDomain"]["Missing"][:,DataIndex] == 0)
+            StimulationEpochs[i]["SpectralFeatures"] = stream["TimeDomain"]["Wavelet"][DataIndex]["Power"][:,timeSelection]
         else:
-            timeSelection = np.bitwise_and(timeSelection, stream["Spectrogram"][channel]["Missing"] == 0)
-            StimulationEpochs[i]["SpectralFeatures"] = stream["Spectrogram"][channel]["Power"][:,timeSelection]
+            timeSelection = np.bitwise_and(timeSelection, stream["TimeDomain"]["Spectrogram"][DataIndex]["Missing"] == 0)
+            StimulationEpochs[i]["SpectralFeatures"] = stream["TimeDomain"]["Spectrogram"][DataIndex]["Power"][:,timeSelection]
 
         StimulationEpochs[i]["SpectralFeatures"] = np.mean(StimulationEpochs[i]["SpectralFeatures"][frequencySelection,:],axis=0)
         del(StimulationEpochs[i]["TimeSelection"])
