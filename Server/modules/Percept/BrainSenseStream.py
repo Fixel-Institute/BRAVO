@@ -577,66 +577,6 @@ def queryMultipleSegmentComparison(user, recordingIds, authority):
             
     return SegmentSummaries
 
-def queryRealtimeStreamData(user, device, timestamp, authority, cardiacFilter=False, refresh=False):
-    """ Query BrainSense Streaming Data
-
-    This function will query BrainSense recording data based on provided Device ID and Timestamp of the recording.
-
-    Args:
-      user: BRAVO Platform User object. 
-      device:  Deidentified neurostimulator device ID as referenced in SQL Database. 
-      timestamp:  Unix timestamp at which the recording is collected.
-      authority: User permission structure indicating the type of access the user has.
-      cardiacFilter: Boolean indicator if the user want to apply cardiac filters (see processRealtimeStreams function)
-      refresh: Boolean indicator if the user want to use cache data or reprocess the data.
-
-    Returns:
-      Returns a tuple (BrainSenseData, RecordingID) where BrainSenseData is the BrainSense streaming data structure in Database and RecordingID is the 
-      deidentified id of the available data.
-    """
-
-    BrainSenseData = None
-    RecordingID = None
-    if authority["Level"] == 0:
-        return BrainSenseData, RecordingID
-
-    if not authority["Permission"]:
-        return BrainSenseData, RecordingID
-
-    recording_info = {"CardiacFilter": cardiacFilter}
-    if models.BrainSenseRecording.objects.filter(device_deidentified_id=device, recording_date=datetime.fromtimestamp(timestamp,tz=pytz.utc), recording_type="BrainSenseStream", recording_info__contains=recording_info).exists():
-        recording = models.BrainSenseRecording.objects.get(device_deidentified_id=device, recording_date=datetime.fromtimestamp(timestamp,tz=pytz.utc), recording_type="BrainSenseStream", recording_info__contains=recording_info)
-    else:
-        recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=device, recording_date=datetime.fromtimestamp(timestamp,tz=pytz.utc), recording_type="BrainSenseStream").first()
-
-    if not recording == None:
-        if authority["Level"] == 2:
-            if not recording.recording_id in authority["Permission"]:
-                return BrainSenseData, RecordingID
-
-        if len(recording.recording_info["Channel"]) == 2:
-            info = "Bilateral"
-        else:
-            info = "Unilateral"
-
-        BrainSenseData = Database.loadSourceDataPointer(recording.recording_datapointer)
-        BrainSenseData["Info"] = recording.recording_info;
-
-        if not "CardiacFilter" in recording.recording_info:
-            recording.recording_info["CardiacFilter"] = cardiacFilter
-            recording.save()
-
-        if not "Spectrogram" in BrainSenseData.keys() or (refresh and (not recording.recording_info["CardiacFilter"] == cardiacFilter)):
-            recording.recording_info["CardiacFilter"] = cardiacFilter
-            BrainSenseData = processRealtimeStreams(BrainSenseData, cardiacFilter=cardiacFilter)
-            Database.saveSourceFiles(BrainSenseData,recording.recording_type,info,recording.recording_id, recording.device_deidentified_id)
-            recording.save()
-
-        BrainSenseData["Timestamp"] = recording.recording_date.timestamp();
-        BrainSenseData["Info"] = recording.recording_info;
-        RecordingID = recording.recording_id
-    return BrainSenseData, RecordingID
-
 def mergeRealtimeStreamData(recordings):
     BrainSenseData = []
     Therapies = []

@@ -492,7 +492,7 @@ def queryAvailableSessionFiles(user, patient_id, authority):
             sessionInfo["SessionID"] = session.deidentified_id
             sessionInfo["SessionTimestamp"] = session.session_date.timestamp()
             sessionInfo["AvailableRecording"] = {
-                "BrainSenseStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseTimeDomainStream").count(),
+                "BrainSenseStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseStreamTimeDomain").count(),
                 "IndefiniteStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="IndefiniteStream").count(),
                 "BrainSenseSurvey": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseSurvey").count(),
                 "TherapyHistory": models.TherapyHistory.objects.filter(source_file=session.deidentified_id).count(),

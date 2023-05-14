@@ -288,101 +288,10 @@ def processInput(argv):
         batchResult.append(session)
       models.PerceptSession.objects.bulk_create(batchResult)
       
-      # Therapy History
-      connector.query("""
-      SELECT * FROM PerceptDashboard_therapyhistory;
-      """)
-      result = connector.store_result()
-      result = result.fetch_row(maxrows=0, how=1)
+      # Reprocess all Session File
+      # TODO - This will also apply to 2.x upgrade to 2.2 which will have completely 
+      # different data structure and improved extraction code.
 
-      batchResult = []
-      for i in range(len(result)):
-        history = models.TherapyHistory(
-          history_log_id=uuid.UUID(result[i]["history_log_id"].decode("utf-8")),
-          device_deidentified_id=uuid.UUID(result[i]["device_deidentified_id"].decode("utf-8")),
-          therapy_date=datetime.fromisoformat(result[i]["therapy_date"].decode("utf-8")).astimezone(tz=pytz.utc),
-          group_name=result[i]["group_name"].decode("utf-8"),
-          group_id=result[i]["group_id"].decode("utf-8"),
-          active_group=result[i]["active_group"].decode("utf-8") == "1",
-          therapy_type=result[i]["therapy_type"].decode("utf-8"),
-          therapy_details=json.loads(result[i]["therapy_details"].decode("utf-8")),
-          source_file=result[i]["source_file"].decode("utf-8"),
-        )
-        batchResult.append(history)
-      models.TherapyHistory.objects.bulk_create(batchResult)
-      
-      # Therapy Change Log
-      connector.query("""
-      SELECT * FROM PerceptDashboard_therapychangelog;
-      """)
-      result = connector.store_result()
-      result = result.fetch_row(maxrows=0, how=1)
-
-      batchResult = []
-      for i in range(len(result)):
-        history = models.TherapyChangeLog(
-          device_deidentified_id=uuid.UUID(result[i]["device_deidentified_id"].decode("utf-8")),
-          date_of_change=datetime.fromisoformat(result[i]["date_of_change"].decode("utf-8")).astimezone(tz=pytz.utc),
-          previous_group=result[i]["previous_group"].decode("utf-8"),
-          new_group=result[i]["new_group"].decode("utf-8"),
-          source_file=result[i]["source_file"].decode("utf-8"),
-        )
-        batchResult.append(history)
-      models.TherapyChangeLog.objects.bulk_create(batchResult)
-      
-      # Patient Custom Events
-      connector.query("""
-      SELECT * FROM PerceptDashboard_patientcustomevents;
-      """)
-      result = connector.store_result()
-      result = result.fetch_row(maxrows=0, how=1)
-
-      batchResult = []
-      for i in range(len(result)):
-        event = models.PatientCustomEvents(
-          deidentified_id=uuid.UUID(result[i]["deidentified_id"].decode("utf-8")),
-          device_deidentified_id=uuid.UUID(result[i]["device_deidentified_id"].decode("utf-8")),
-          event_name=result[i]["event_name"].decode("utf-8"),
-          event_time=datetime.fromisoformat(result[i]["event_time"].decode("utf-8")).astimezone(tz=pytz.utc),
-          sensing_exist=result[i]["sensing_exist"].decode("utf-8") == "1",
-          brainsense_psd=json.loads(result[i]["brainsense_psd"].decode("utf-8")),
-        )
-        batchResult.append(event)
-      models.PatientCustomEvents.objects.bulk_create(batchResult)
-      
-      # BrainSense Recording
-      connector.query("""
-      SELECT * FROM PerceptDashboard_brainsenserecording;
-      """)
-      result = connector.store_result()
-      result = result.fetch_row(maxrows=0, how=1)
-
-      batchResult = []
-      for i in range(len(result)):
-        deviceId = uuid.UUID(result[i]["device_deidentified_id"].decode("utf-8"))
-        recording = models.BrainSenseRecording(
-          recording_id=uuid.UUID(result[i]["recording_id"].decode("utf-8")),
-          device_deidentified_id=deviceId,
-          recording_type=result[i]["recording_type"].decode("utf-8"),
-          recording_date=datetime.fromisoformat(result[i]["recording_date"].decode("utf-8")).astimezone(tz=pytz.utc),
-          recording_info=json.loads(result[i]["recording_info"].decode("utf-8")),
-          recording_duration=float(result[i]["recording_duration"].decode("utf-8")),
-          recording_datapointer=str(deviceId) + "/" + result[i]["recording_datapointer"].decode("utf-8"),
-          source_file=result[i]["source_file"].decode("utf-8"),
-        )
-
-        try:
-            os.mkdir(DATABASE_PATH + "recordings" + os.path.sep + str(recording.device_deidentified_id))
-        except Exception:
-            pass
-
-        oldPath = OLD_DATABASE_PATH + "recordings/" + result[i]["recording_datapointer"].decode("utf-8")
-        newPath = DATABASE_PATH + "recordings/" + recording.recording_datapointer
-        shutil.copyfile(oldPath, newPath)
-
-        batchResult.append(recording)
-      models.BrainSenseRecording.objects.bulk_create(batchResult)
-      
       connector.close()
 
       return True
