@@ -114,10 +114,10 @@ def processMontageStreams(stream, method="spectrogram"):
     """
 
     [b,a] = signal.butter(5, np.array([1,100])*2/250, 'bp', output='ba')
-    stream["Spectrums"] = dict()
-    for channel in stream["Channels"]:
-        filtered = signal.filtfilt(b, a, stream[channel])
-        stream["Spectrums"][channel] = SPU.defaultSpectrogram(filtered, window=1.0, overlap=0.5,frequency_resolution=1, fs=250)
+    stream["Spectrums"] = []
+    for i in range(len(stream["ChannelNames"])):
+        filtered = signal.filtfilt(b, a, stream["Data"][:,i])
+        stream["Spectrums"].append(SPU.defaultSpectrogram(filtered, window=1.0, overlap=0.5,frequency_resolution=1, fs=stream["SamplingRate"]))
     return stream
 
 def queryMontageDataOverview(user, patientUniqueID, authority):
@@ -199,20 +199,22 @@ def queryMontageData(user, devices, timestamps, authority):
                 stream = Database.loadSourceDataPointer(recording.recording_datapointer)
                 if not "Spectrums" in stream.keys():
                     stream = processMontageStreams(stream)
-                    Database.saveSourceFiles(stream,recording.recording_type,"Combined",recording.recording_id, recording.device_deidentified_id)
+                    Database.saveSourceFiles(stream,"IndefiniteStream","Combined",recording.recording_id, recording.device_deidentified_id)
+
                 data = dict()
-                data["Timestamp"] = recording.recording_date.timestamp()
-                data["Time"] = stream["Time"]
+                data["Timestamp"] = stream["StartTime"]
                 data["DeviceID"] = devices[i]
-                data["Channels"] = stream["Channels"]
+                data["Channels"] = stream["ChannelNames"]
                 data["ChannelNames"] = list()
-                for channel in stream["Channels"]:
+                for channel in stream["ChannelNames"]:
                     contacts, hemisphere = Percept.reformatChannelName(channel)
                     for lead in leads:
                         if lead["TargetLocation"].startswith(hemisphere):
                             data["ChannelNames"].append(lead["TargetLocation"] + f" E{contacts[0]:02}-E{contacts[1]:02}")
-                for channel in stream["Channels"]:
-                    data[channel] = stream[channel]
+
+                data["Stream"] = []
+                for j in range(len(stream["ChannelNames"])):
+                    data["Stream"].append(stream["Data"][:,j].tolist())
                 data["Spectrums"] = stream["Spectrums"]
                 BrainSenseData.append(data)
     return BrainSenseData

@@ -65,18 +65,18 @@ function TimeFrequencyFigure({dataToRender, height, figureTitle}) {
 
     for (var i in data) {
       for (var j in data[i].Channels) {
-        var timeArray = Array(data[i].Spectrums[data[i].Channels[j]].Time.length).fill(0).map((value, index) => new Date(data[i].Timestamp*1000 + data[i].Spectrums[data[i].Channels[j]].Time[index]*1000));
+        var timeArray = Array(data[i].Spectrums[j].Time.length).fill(0).map((value, index) => new Date(data[i].Timestamp*1000 + data[i].Spectrums[j].Time[index]*1000));
         for (var k in ax) {
           if (!ax[k].title) {
             ax[k].title = data[i].Channels[j];
-            fig.surf(timeArray, data[i].Spectrums[data[i].Channels[j]].Frequency, data[i].Spectrums[data[i].Channels[j]].logPower, {
+            fig.surf(timeArray, data[i].Spectrums[j].Frequency, data[i].Spectrums[j].logPower, {
               zlim: [-20, 20],
               coloraxis: "coloraxis",
               hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)}<br>  %{x} <br>  %{z:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "dB", language)} <extra></extra>`,
             }, ax[k]);
             break;
           } else if (ax[k].title == data[i].Channels[j]) {
-            fig.surf(timeArray, data[i].Spectrums[data[i].Channels[j]].Frequency, data[i].Spectrums[data[i].Channels[j]].logPower, {
+            fig.surf(timeArray, data[i].Spectrums[j].Frequency, data[i].Spectrums[j].logPower, {
               zlim: [-20, 20],
               coloraxis: "coloraxis",
               hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)}<br>  %{x} <br>  %{z:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "dB", language)} <extra></extra>`,
