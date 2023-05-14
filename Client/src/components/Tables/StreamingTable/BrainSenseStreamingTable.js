@@ -113,7 +113,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
 
   const setStimMode = (recordingID, index, event) => {
     for (var i in displayData) {
-      if (displayData[i].RecordingID == recordingID) {
+      if (displayData[i].RecordingIDs == recordingID) {
         displayData[i].ContactType[index] = event.target.value;
         SessionController.query("/api/updateBrainSenseStream", {
           requestData: displayData[i].DeviceID,
@@ -265,7 +265,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                             labelId={"left-hemisphere-stim-mode-label"}
                             label={dictionary.BrainSenseStreaming.Table.StimMode[language]}
                             value={recording.ContactType[0]}
-                            onChange={(event) => setStimMode(recording.RecordingID, 0, event)}
+                            onChange={(event) => setStimMode(recording.RecordingIDs, 0, event)}
                             sx={{
                               paddingY: "6px"
                             }}

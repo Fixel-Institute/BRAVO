@@ -73,7 +73,9 @@ def saveMontageStreams(deviceID, streamList, sourceFile):
                 if StreamGroupIndexes[i]:
                     Recording["Data"][:RecordingSize[n], n] = streamList[i]["Data"]
                     Recording["Missing"][:RecordingSize[n], n] = streamList[i]["Missing"]
-                    Recording["StartTime"] = date.timestamp() + (streamList[i]["Ticks"][0]%1000)
+                    if streamList[i]["Ticks"][0] > 3276800:
+                        streamList[i]["Ticks"][0] -= 3276800
+                    Recording["StartTime"] = date.timestamp() + (streamList[i]["Ticks"][0]%1000)/1000
                     n += 1
         else:
             Recording["Data"] = np.zeros((RecordingSize[0], len(RecordingSize)))
@@ -83,7 +85,9 @@ def saveMontageStreams(deviceID, streamList, sourceFile):
                 if StreamGroupIndexes[i]:
                     Recording["Data"][:, n] = streamList[i]["Data"]
                     Recording["Missing"][:, n] = streamList[i]["Missing"]
-                    Recording["StartTime"] = date.timestamp() + (streamList[i]["Ticks"][0]%1000)
+                    if streamList[i]["Ticks"][0] > 3276800:
+                        streamList[i]["Ticks"][0] -= 3276800
+                    Recording["StartTime"] = date.timestamp() + (streamList[i]["Ticks"][0]%1000)/1000
                     n += 1
             
         Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]

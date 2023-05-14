@@ -417,14 +417,14 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                 continue
             
             Channels = TimeRecording.recording_info["Channel"]
-            if not "ContactType" in TimeRecording.recording_info:
-                TimeRecording.recording_info["ContactType"] = ["Ring" for channel in Channels]
-                TimeRecording.save()
-            if not len(TimeRecording.recording_info["ContactType"]) == len(Channels):
-                TimeRecording.recording_info["ContactType"] = ["Ring" for channel in Channels]
-                TimeRecording.save()
+            if not "ContactType" in PowerRecording.recording_info:
+                PowerRecording.recording_info["ContactType"] = ["Ring" for channel in Channels]
+                PowerRecording.save()
+            if not len(PowerRecording.recording_info["ContactType"]) == len(Channels):
+                PowerRecording.recording_info["ContactType"] = ["Ring" for channel in Channels]
+                PowerRecording.save()
             
-            data["ContactType"] = TimeRecording.recording_info["ContactType"]
+            data["ContactType"] = PowerRecording.recording_info["ContactType"]
             for channel in Channels:
                 contacts, hemisphere = Percept.reformatChannelName(channel)
                 for lead in leads:

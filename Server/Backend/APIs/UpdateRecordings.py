@@ -223,7 +223,7 @@ class BrainSenseStreamUpdate(RestViews.APIView):
                 if not models.PerceptDevice.objects.filter(deidentified_id=request.data["requestData"], authority_level="Research", authority_user=request.user.email).exists():
                   return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
-            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=request.data["requestData"], recording_id=request.data["updateRecordingContactType"], recording_type="BrainSenseStream").first()
+            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=request.data["requestData"], recording_id__in=request.data["updateRecordingContactType"], recording_type="BrainSenseStreamPowerDomain").first()
             recording.recording_info["ContactType"][request.data["contactIndex"]] = request.data["contactType"]
             recording.save()
             return Response(status=200)
