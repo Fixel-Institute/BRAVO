@@ -119,10 +119,17 @@ def queryTherapyHistory(user, patientUniqueID, authority):
             DateSelection = pd.to_datetime(TherapyChangeHistory["date_of_change"]).view(np.int64) > authority["Permission"][0]*1000000000
             if authority["Permission"][1] > 0:
                 DateSelection = np.bitwise_and(DateSelection, pd.to_datetime(TherapyChangeHistory["date_of_change"]).view(np.int64) < authority["Permission"][1]*1000000000)
-            TherapyChangeData["date_of_change"] = TherapyChangeHistory["date_of_change"].values[DateSelection].tolist()
-            TherapyChangeData["previous_group"] = TherapyChangeHistory["previous_group"].values[DateSelection].tolist()
-            TherapyChangeData["new_group"] = TherapyChangeHistory["new_group"].values[DateSelection].tolist()
+            TherapyGroupSelection = [not TherapyChangeHistory["previous_group"][i].startswith("TherapyChangeStatusDef") for i in range(len(TherapyChangeHistory["previous_group"]))]
+            TherapyChangeData["date_of_change"] = TherapyChangeHistory["date_of_change"].values[np.bitwise_and(DateSelection, TherapyGroupSelection)].tolist()
+            TherapyChangeData["previous_group"] = TherapyChangeHistory["previous_group"].values[np.bitwise_and(DateSelection, TherapyGroupSelection)].tolist()
+            TherapyChangeData["new_group"] = TherapyChangeHistory["new_group"].values[np.bitwise_and(DateSelection, TherapyGroupSelection)].tolist()
             
+            TherapyChangeData["date_of_status"] = TherapyChangeHistory["date_of_change"].values[np.bitwise_and(DateSelection, [not i for i in TherapyGroupSelection])].tolist()
+            TherapyChangeData["new_status"] = TherapyChangeHistory["new_group"].values[np.bitwise_and(DateSelection, [not i for i in TherapyGroupSelection])].tolist()
+            TherapyChangeData["previous_status"] = TherapyChangeHistory["previous_group"].values[np.bitwise_and(DateSelection, [not i for i in TherapyGroupSelection])].tolist()
+            TherapyChangeData["previous_status"] = [i == "TherapyChangeStatusDef.ON" for i in TherapyChangeData["previous_status"]]
+            TherapyChangeData["new_status"] = [i == "True" for i in TherapyChangeData["new_status"]]
+
             VisitTimestamps = np.unique(TherapyHistory["therapy_date"])
             for i in range(len(VisitTimestamps)):
                 SessionTime = VisitTimestamps[i].timestamp() * 1000000000

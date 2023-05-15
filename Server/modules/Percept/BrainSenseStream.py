@@ -288,12 +288,6 @@ def processRealtimeStreams(stream, cardiacFilter=False):
         [b,a] = signal.butter(5, np.array([1,100])*2/stream["TimeDomain"]["SamplingRate"], 'bp', output='ba')
         stream["TimeDomain"]["Filtered"].append(signal.filtfilt(b, a, stream["TimeDomain"]["Data"][:,i]))
 
-        (channels, hemisphere) = Percept.reformatChannelName(stream["TimeDomain"]["ChannelNames"][i])
-        if hemisphere == "Left":
-            StimulationSide = 0
-        else:
-            StimulationSide = 1
-
         if cardiacFilter:
             # Cardiac Filter
             posPeaks,_ = signal.find_peaks(stream["TimeDomain"]["Filtered"][i], prominence=[10,200], distance=stream["TimeDomain"]["SamplingRate"]*0.5)

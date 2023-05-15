@@ -47,23 +47,18 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
       fig.setTitle(dictionaryLookup(dictionary.TherapyHistory.Figure, "TherapyChangeLog", language));
     }
 
-    for (var i = 0; i < data.length; i++)
-    {
+    for (var i = 0; i < data.length; i++) {
       var xdata = []
       var ydata = []
-      for (var j = 0; j < data[i]["new_group"].length; j++)
-      {
-        if (j == 0 || data[i]["previous_group"][j] == "GroupIdDef.GROUP_UNKNOWN")
-        {
+      for (var j = 0; j < data[i]["new_group"].length; j++) {
+        if (j == 0 || data[i]["previous_group"][j] == "GroupIdDef.GROUP_UNKNOWN") {
           var date = new Date(data[i]["date_of_change"][j]/1000000)
           xdata.push(date,date)
           if (data[i]["new_group"][j] == "GroupIdDef.GROUP_A") ydata.push(0,0)
           else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_B") ydata.push(1,1)
           else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_C") ydata.push(2,2)
           else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_D") ydata.push(3,3)
-        }
-        else if (j > 0 && data[i]["previous_group"][j] != data[i]["new_group"][j-1])
-        {
+        } else if (j > 0 && data[i]["previous_group"][j] != data[i]["new_group"][j-1]) {
           xdata.push(new Date(data[i]["date_of_change"][j]/1000000))
           ydata.push(null)
           xdata.push(new Date(data[i]["date_of_change"][j]/1000000))
@@ -71,9 +66,7 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
           else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_B") ydata.push(1)
           else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_C") ydata.push(2)
           else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_D") ydata.push(3)
-        }
-        else
-        {
+        } else {
           xdata.push(new Date(data[i]["date_of_change"][j]/1000000))
           if (data[i]["new_group"][j] == "GroupIdDef.GROUP_A") ydata.push(0)
           else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_B") ydata.push(1)
@@ -81,7 +74,7 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
           else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_D") ydata.push(3)
         }
       }
-
+      
       fig.plot(xdata, ydata, {
         type: 'scatter',
         mode: 'lines',
@@ -89,6 +82,32 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
         hovertemplate: "  %{x} <br>  %{y} <extra></extra>",
         name: data[i]["device_name"]
       });
+
+      let therapyStatusDate = data[i]["date_of_status"].map((value) => new Date(value/1000000));
+      let newTherapyStatus = data[i]["new_status"].map((value)=> value ? 3.5 : -0.5);
+
+      if (newTherapyStatus[0] == 3.5) {
+        /*
+        fig.addShadedArea([xdata[0], therapyStatusDate[0]], {
+          color: "#FF0000"
+        });
+        */
+      }
+      for (let j = 0; j < newTherapyStatus.length; j++) {
+        if (newTherapyStatus[j] == -0.5) {
+          if (j == newTherapyStatus.length-1) {
+            /*
+            fig.addShadedArea([therapyStatusDate[j], new Date(data[i]["date_of_change"][data[i]["date_of_change"].length-1]/1000000)], {
+              color: "#FF0000"
+            });
+            */
+          } else {
+            fig.addShadedArea([therapyStatusDate[j], therapyStatusDate[j+1]], {
+              color: "#FF0000"
+            });
+          }
+        }
+      }
     }
 
     if (!data) {
