@@ -63,9 +63,9 @@ export default function HomePage() {
             {"Host: " + (server || (window.location.protocol + "//" + window.location.hostname))}
           </MDTypography>
           <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
-            {"Current Frontend Version: 2.1.1"}
+            {"Current Frontend Version: 2.2.0"}
             <br></br>
-            {"Compatible Backend Version: 2.1.1"}
+            {"Compatible Backend Version: 2.2.0"}
           </MDTypography>
         </CardContent>
       </Card>
