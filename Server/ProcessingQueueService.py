@@ -48,17 +48,19 @@ def processJSONUploads():
                 continue
             queue.state = "Processing"
             queue.save()
-            
+
             print(f"Start Processing {queue.descriptor['filename']}")
             newPatient = None
             ErrorMessage = ""
             ProcessingResult = ""
+            
 
             try:
                 JSON = Percept.decodeEncryptedJSON(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"], os.environ.get('ENCRYPTION_KEY'))
             except:
                 queue.state = "Error"
                 queue.descriptor["Message"] = "JSON Format Error"
+                print(queue.descriptor["Message"])
                 queue.save()
                 continue
 
@@ -105,7 +107,7 @@ def processJSONUploads():
                 except Exception as e:
                     print(e)
             else:
-                print(ProcessingResult)
+                print(ErrorMessage)
                 queue.state = "Error"
                 queue.descriptor["Message"] = ErrorMessage
                 queue.save()

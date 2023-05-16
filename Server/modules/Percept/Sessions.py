@@ -119,8 +119,10 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
         return "Decoding Error: " + filename, None, None
     
     if "ProcessFailure" in Data.keys():
+        print(Data["ProcessFailure"])
         shutil.copyfile(DATABASE_PATH + "cache" + os.path.sep + filename, DATABASE_PATH + "cache" + os.path.sep + "Failed_" + filename)
-
+        return "Process Error: " + filename, None, None
+        
     SessionDate = datetime.fromtimestamp(Percept.estimateSessionDateTime(JSON),tz=pytz.utc)
     if (user.is_admin or user.is_clinician):
         deviceID = models.PerceptDevice.objects.filter(device_identifier_hashfield=deviceHashfield, authority_level="Clinic", authority_user=user.institute).first()

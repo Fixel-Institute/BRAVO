@@ -194,13 +194,24 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
                 i += 1
                 continue
 
+            if Timeskip < -1:
+                print("Timeskip is negative. Failure in identifying StartTime?")
+                i += 1
+                continue
+
             # To Merge
             nSampleSkipped = int(Timeskip * TimeDomainRecordings[i]["SamplingRate"])
+            if nSampleSkipped < 0: 
+                nSampleSkipped = 0
+                
             TimeDomainRecordings[i-1]["Data"] = np.concatenate((TimeDomainRecordings[i-1]["Data"], np.zeros((nSampleSkipped, TimeDomainRecordings[i-1]["Data"].shape[1])), TimeDomainRecordings[i]["Data"]))
             TimeDomainRecordings[i-1]["Missing"] = np.concatenate((TimeDomainRecordings[i-1]["Missing"], np.ones((nSampleSkipped, TimeDomainRecordings[i-1]["Missing"].shape[1])), TimeDomainRecordings[i]["Missing"]))
             TimeDomainRecordings[i-1]["Duration"] = TimeDomainRecordings[i]["StartTime"] + TimeDomainRecordings[i]["Duration"] - TimeDomainRecordings[i-1]["StartTime"]
 
             nSampleSkipped = int(Timeskip * PowerDomainRecordings[i]["SamplingRate"])
+            if nSampleSkipped < 0: 
+                nSampleSkipped = 0
+
             FillingData = np.zeros((nSampleSkipped, PowerDomainRecordings[i-1]["Data"].shape[1]))
             FillingData[:, StimulationChannelIndexes] = StartAmplitude
             PowerDomainRecordings[i-1]["Data"] = np.concatenate((PowerDomainRecordings[i-1]["Data"], FillingData, PowerDomainRecordings[i]["Data"]))
@@ -242,22 +253,27 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
             recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="BrainSenseStreamPowerDomain", recording_date=recording_date, recording_info__Channel=PowerDomainRecordings[i]["ChannelNames"]).first()
             PowerDomainRecordingModel.append(recording)
 
-    if NewRecordingFound:
-        for i in range(len(TimeDomainRecordings)):
-            recording_date = datetime.fromtimestamp(TimeDomainRecordings[i]["StartTime"]).astimezone(tz=pytz.utc)
-            CorrespondingRecordingFound = False
-            for j in range(len(PowerDomainRecordings)):
-                if PowerDomainRecordings[j]["StartTime"]+PowerDomainRecordings[j]["Duration"] >= TimeDomainRecordings[i]["StartTime"]:
-                    if PowerDomainRecordings[j]["StartTime"] <= TimeDomainRecordings[i]["StartTime"] + TimeDomainRecordings[i]["Duration"]:
-                        if CorrespondingRecordingFound:
-                            raise Exception("Multiple Corresponding Power Channel?")
-
-                        if not models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=deviceID, analysis_name="DefaultBrainSenseStreaming", analysis_date=recording_date).exists():
-                            recording_list = [str(TimeDomainRecordingModel[i].recording_id), str(PowerDomainRecordingModel[j].recording_id)]
-                            recording_type = ["BrainSenseRecording", "BrainSenseRecording"]
-                            models.CombinedRecordingAnalysis(device_deidentified_id=deviceID, analysis_name="DefaultBrainSenseStreaming", analysis_date=recording_date, 
-                                                                        recording_list=recording_list, recording_type=recording_type).save()
-                            CorrespondingRecordingFound = True
+    for i in range(len(TimeDomainRecordings)):
+        recording_date = datetime.fromtimestamp(TimeDomainRecordings[i]["StartTime"]).astimezone(tz=pytz.utc)
+        CorrespondingRecordingFound = False
+        for j in range(len(PowerDomainRecordings)):
+            LatestStartTime = np.max((PowerDomainRecordings[j]["StartTime"], TimeDomainRecordings[i]["StartTime"]))
+            EarliestEndTime = np.min((PowerDomainRecordings[j]["StartTime"] + PowerDomainRecordings[j]["Duration"], TimeDomainRecordings[i]["StartTime"] + TimeDomainRecordings[i]["Duration"]))
+            ShortestDuration = np.min((PowerDomainRecordings[j]["Duration"], TimeDomainRecordings[i]["Duration"]))
+            if LatestStartTime <= EarliestEndTime:
+                Overlap = (EarliestEndTime - LatestStartTime) / ShortestDuration
+                if Overlap > 0.7 and Overlap < 1.3:
+                    if CorrespondingRecordingFound:
+                        raise Exception("Multiple Corresponding Power Channel?")
+                
+                    if not models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=deviceID, analysis_name="DefaultBrainSenseStreaming", analysis_date=recording_date).exists():
+                        recording_list = [str(TimeDomainRecordingModel[i].recording_id), str(PowerDomainRecordingModel[j].recording_id)]
+                        recording_type = ["BrainSenseRecording", "BrainSenseRecording"]
+                        models.CombinedRecordingAnalysis(device_deidentified_id=deviceID, analysis_name="DefaultBrainSenseStreaming", analysis_date=recording_date, 
+                                                                    recording_list=recording_list, recording_type=recording_type).save()
+                        CorrespondingRecordingFound = True
+                else:
+                    print(f"Matching Data with low overlap: {Overlap} - {ShortestDuration}")
     
     return NewRecordingFound
 
