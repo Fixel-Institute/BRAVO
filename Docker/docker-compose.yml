@@ -24,7 +24,7 @@ services:
       - backend
   
   bravo-server:
-    image: jcagle95/bravo-server:2.1.1
+    image: jcagle95/bravo-server:2.2.0
     restart: on-failure
 
     environment:
@@ -57,7 +57,7 @@ services:
       bash -c "env >> /etc/environment && python3 manage.py migrate && cron && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
 
   bravo-client:
-    image: jcagle95/bravo-client:2.1.1
+    image: jcagle95/bravo-client:2.2.0
     restart: on-failure
 
     depends_on:
