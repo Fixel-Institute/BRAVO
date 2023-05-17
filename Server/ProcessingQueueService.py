@@ -29,7 +29,7 @@ import time
 from cryptography.fernet import Fernet
 
 import websocket
-from BRAVO import wsgi
+from BRAVO import asgi
 
 from Backend import models
 from modules.Percept import Sessions
@@ -54,7 +54,6 @@ def processJSONUploads():
             ErrorMessage = ""
             ProcessingResult = ""
             
-
             try:
                 JSON = Percept.decodeEncryptedJSON(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"], os.environ.get('ENCRYPTION_KEY'))
             except:

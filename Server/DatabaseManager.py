@@ -27,7 +27,6 @@ from pathlib import Path
 import uuid
 import json
 
-
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 key = os.environ.get('ENCRYPTION_KEY')
 
@@ -129,8 +128,10 @@ def processInput(argv):
     elif argv[1] == "MigrateFromV1":
       from BRAVO import asgi
       from Backend import models
-      from modules.Percept import Sessions
+      from modules.Percept import Sessions, Therapy, BrainSenseSurvey, BrainSenseStream, BrainSenseEvent, IndefiniteStream, ChronicBrainSense
       from decoder import Percept
+      
+      from modules import Database
 
       OLD_DATABASE_PATH = argv[2]
 
@@ -289,10 +290,80 @@ def processInput(argv):
       models.PerceptSession.objects.bulk_create(batchResult)
       
       # Reprocess all Session File
-      # TODO - This will also apply to 2.x upgrade to 2.2 which will have completely 
+      # This is the same as 2.1.x upgrade to 2.2 which will have completely 
       # different data structure and improved extraction code.
 
+      # Require to run ProcessingQueueJob after migration.
+      users = models.PlatformUser.objects.all()
+      Authority = {"Level": 1}
+      for user in users:
+        if user.is_admin or user.is_clinician:
+          Patients = models.Patient.objects.filter(institute=user.institute).all()
+        else:
+          Patients = models.Patient.objects.filter(institute=user.email).all()
+
+        for patient in Patients:
+          availableDevices = Database.getPerceptDevices(user, patient.deidentified_id, Authority)
+          for device in availableDevices:
+            availableSessions = models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id).all()
+            for session in availableSessions:
+              try:
+                shutil.copyfile(DATABASE_PATH + session.session_file_path,(DATABASE_PATH + session.session_file_path).replace("/sessions/","/cache/"))
+                models.ProcessingQueue(owner=user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
+                    "filename": session.session_file_path.split("/")[-1],
+                    "device_deidentified_id": str(device.deidentified_id)
+                }).save()
+                Sessions.deleteSessions(user, patient.deidentified_id, [str(session.deidentified_id)], Authority)
+
+              except Exception as e:
+                print(e)
+
       connector.close()
+
+      return True
+    
+    elif argv[1] == "MigrateFromV2.1":
+      # Require to run ProcessingQueueJob after migration.
+      
+      from BRAVO import asgi
+      from Backend import models
+      from modules.Percept import Sessions, Therapy, BrainSenseSurvey, BrainSenseStream, BrainSenseEvent, IndefiniteStream, ChronicBrainSense
+      from decoder import Percept
+      import shutil
+      
+      from modules import Database
+      DATABASE_PATH = os.environ.get('DATASERVER_PATH')
+
+      users = models.PlatformUser.objects.all()
+      Authority = {"Level": 1}
+      for user in users:
+        if user.is_admin or user.is_clinician:
+          Patients = models.Patient.objects.filter(institute=user.institute).all()
+        else:
+          Patients = models.Patient.objects.filter(institute=user.email).all()
+
+        for patient in Patients:
+          availableDevices = Database.getPerceptDevices(user, patient.deidentified_id, Authority)
+          for device in availableDevices:
+            availableSessions = models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id).all()
+            for session in availableSessions:
+              try:
+                shutil.copyfile(DATABASE_PATH + session.session_file_path,(DATABASE_PATH + session.session_file_path).replace("/sessions/","/cache/"))
+                models.ProcessingQueue(owner=user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
+                    "filename": session.session_file_path.split("/")[-1],
+                    "device_deidentified_id": str(device.deidentified_id)
+                }).save()
+                Sessions.deleteSessions(user, patient.deidentified_id, [str(session.deidentified_id)], Authority)
+
+              except Exception as e:
+                print(e)
+    
+      # Cleanup Database
+      models.CombinedRecordingAnalysis.objects.delete()
+      models.TherapyChangeLog.objects.delete()
+      models.TherapyHistory.objects.delete()
+      models.ImpedanceHistory.objects.delete()
+      models.BrainSenseRecording.objects.delete()
 
       return True
 
