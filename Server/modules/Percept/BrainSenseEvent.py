@@ -58,8 +58,8 @@ def saveBrainSenseEvents(deviceID, LfpFrequencySnapshotEvents, sourceFile):
             SensingExist = True
             EventData = event["LfpFrequencySnapshotEvents"]
 
-        if not models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist).exists():
-            customEvent = models.PatientCustomEvents(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist)
+        if not models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist, source_file=sourceFile).exists():
+            customEvent = models.PatientCustomEvents(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist, source_file=sourceFile)
             if SensingExist:
                 customEvent.brainsense_psd = EventData
             batchStorage.append(customEvent)

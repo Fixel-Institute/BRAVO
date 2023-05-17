@@ -84,6 +84,11 @@ def saveBrainSenseSurvey(deviceID, streamList, sourceFile):
                     Recording["Missing"][:, n] = streamList[i]["Missing"]
                     Recording["StartTime"] = date.timestamp()
                     n += 1
+        
+        if "PSD" in streamList[i].keys():
+            Recording["Descriptor"] = {
+                "MedtronicPSD": streamList[i]["PSD"]
+            }
             
         Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
         recording_info = {"Channel": Recording["ChannelNames"]}

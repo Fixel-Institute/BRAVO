@@ -62,6 +62,9 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
     TimeDomainRecordings = []
     PowerDomainRecordings = []
 
+    StreamingTD.sort(key=lambda element: element["FirstPacketDateTime"] + len(element["Data"])/element["SamplingRate"])
+    StreamingPower.sort(key=lambda element: element["FirstPacketDateTime"] + len(element["Power"])/element["SamplingRate"])
+
     n = 0
     while n < len(StreamingTD):
         if n+1 >= len(StreamingTD):
@@ -80,17 +83,25 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
             n += 1
 
         elif StreamingTD[n]["FirstPacketDateTime"] == StreamingTD[n+1]["FirstPacketDateTime"]:
-            if not len(StreamingTD[n]["Data"]) == len(StreamingTD[n]["Data"]):
-                raise Exception("Simultaneous Recording but Inconsistent Data Size")
             Recording = dict()
             Recording["SamplingRate"] = StreamingTD[n]["SamplingRate"]
             Recording["ChannelNames"] = [StreamingTD[n]["Channel"], StreamingTD[n+1]["Channel"]]
-            Recording["Data"] = np.zeros((len(StreamingTD[n]["Data"]), 2))
-            Recording["Missing"] = np.zeros((len(StreamingTD[n]["Missing"]), 2))
-            Recording["Data"][:,0] = StreamingTD[n]["Data"]
-            Recording["Data"][:,1] = StreamingTD[n+1]["Data"]
-            Recording["Missing"][:,0] = StreamingTD[n]["Missing"]
-            Recording["Missing"][:,1] = StreamingTD[n+1]["Missing"]
+            
+            if not len(StreamingTD[n]["Data"]) == len(StreamingTD[n+1]["Data"]):
+                Recording["Data"] = np.zeros((np.max((len(StreamingTD[n]["Data"]),len(StreamingTD[n+1]["Data"]))), 2))
+                Recording["Missing"] = np.ones((np.max((len(StreamingTD[n]["Data"]),len(StreamingTD[n+1]["Data"]))), 2))
+                Recording["Data"][:len(StreamingTD[n]["Data"]),0] = StreamingTD[n]["Data"]
+                Recording["Data"][:len(StreamingTD[n+1]["Data"]),1] = StreamingTD[n+1]["Data"]
+                Recording["Missing"][:len(StreamingTD[n]["Data"]),0] = StreamingTD[n]["Missing"]
+                Recording["Missing"][:len(StreamingTD[n+1]["Data"]),1] = StreamingTD[n+1]["Missing"]
+            else:
+                Recording["Data"] = np.zeros((len(StreamingTD[n]["Data"]), 2))
+                Recording["Missing"] = np.ones((len(StreamingTD[n]["Missing"]), 2))
+                Recording["Data"][:,0] = StreamingTD[n]["Data"]
+                Recording["Data"][:,1] = StreamingTD[n+1]["Data"]
+                Recording["Missing"][:,0] = StreamingTD[n]["Missing"]
+                Recording["Missing"][:,1] = StreamingTD[n+1]["Missing"]
+
             if StreamingTD[n]["Ticks"][0] > 3276800:
                 StreamingTD[n]["Ticks"][0] -= 3276800
             Recording["StartTime"] = StreamingTD[n]["FirstPacketDateTime"] + (StreamingTD[n]["Ticks"][0]%1000)/1000

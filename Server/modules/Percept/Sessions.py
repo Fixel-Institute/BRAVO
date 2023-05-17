@@ -272,8 +272,8 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
 
     if "TherapyHistory" in Data.keys():
         for i in range(len(Data["TherapyHistory"])):
-            SessionDate = datetime.fromtimestamp(Percept.getTimestamp(Data["TherapyHistory"][i]["DateTime"]),tz=pytz.utc)
-            if Therapy.saveTherapySettings(deviceID.deidentified_id, Data["TherapyHistory"][i]["Therapy"], SessionDate, "Past Therapy", sessionUUID):
+            HistorySessionDate = datetime.fromtimestamp(Percept.getTimestamp(Data["TherapyHistory"][i]["DateTime"]),tz=pytz.utc)
+            if Therapy.saveTherapySettings(deviceID.deidentified_id, Data["TherapyHistory"][i]["Therapy"], HistorySessionDate, "Past Therapy", sessionUUID):
                 NewDataFound = True
 
     if "TherapyChangeHistory" in Data.keys():
@@ -320,7 +320,10 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
             NewDataFound = True
 
     if "Impedance" in Data.keys():
-        models.ImpedanceHistory(impedance_record=Data["Impedance"], device_deidentified_id=deviceID.deidentified_id, session_date=SessionDate).save()
+        for impedanceData in Data["Impedance"]:
+            if not models.ImpedanceHistory.objects.filter(impedance_record=impedanceData, device_deidentified_id=deviceID.deidentified_id, session_date=SessionDate).exists():
+                models.ImpedanceHistory(impedance_record=impedanceData, device_deidentified_id=deviceID.deidentified_id, session_date=SessionDate).save()
+                NewDataFound = True
 
     if NewDataFound:
         os.rename(DATABASE_PATH + "cache" + os.path.sep + filename, DATABASE_PATH + session.session_file_path)
@@ -512,11 +515,13 @@ def deleteDevice(device_id):
     recordings.delete()
 
     Sessions = models.PerceptSession.objects.filter(device_deidentified_id=device_id).all()
+    models.TherapyChangeLog.objects.filter(device_deidentified_id=str(device_id)).delete()
     for session in Sessions:
         models.TherapyHistory.objects.filter(source_file=str(session.deidentified_id)).delete()
         models.TherapyChangeLog.objects.filter(source_file=str(session.deidentified_id)).delete()
-        models.TherapyChangeLog.objects.filter(device_deidentified_id=str(device_id)).delete()
+        models.PatientCustomEvents.objects.filter(source_file=str(session.deidentified_id)).delete()
         models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=str(device_id)).delete()
+        models.ImpedanceHistory.objects.filter(session_date=session.session_date).delete()
         try:
             os.remove(DATABASE_PATH + session.session_file_path)
         except:
@@ -531,6 +536,7 @@ def deleteSessions(user, patient_id, session_ids, authority):
             if models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id, deidentified_id=str(session_ids[i])).exists():
                 models.TherapyHistory.objects.filter(source_file=str(session_ids[i])).delete()
                 models.TherapyChangeLog.objects.filter(source_file=str(session_ids[i])).delete()
+                models.PatientCustomEvents.objects.filter(source_file=str(session_ids[i])).delete()
                 recordings = models.BrainSenseRecording.objects.filter(source_file=str(session_ids[i])).all()
                 for recording in recordings:
                     try:
@@ -539,6 +545,7 @@ def deleteSessions(user, patient_id, session_ids, authority):
                         pass
                 recordings.delete()
                 session = models.PerceptSession.objects.filter(deidentified_id=session_ids[i]).first()
+                models.ImpedanceHistory.objects.filter(session_date=session.session_date).delete()
                 try:
                     os.remove(DATABASE_PATH + session.session_file_path)
                 except:
