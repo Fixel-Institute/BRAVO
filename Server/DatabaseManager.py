@@ -359,11 +359,11 @@ def processInput(argv):
                 print(e)
     
       # Cleanup Database
-      models.CombinedRecordingAnalysis.objects.delete()
-      models.TherapyChangeLog.objects.delete()
-      models.TherapyHistory.objects.delete()
-      models.ImpedanceHistory.objects.delete()
-      models.BrainSenseRecording.objects.delete()
+      models.CombinedRecordingAnalysis.objects.all().delete()
+      models.TherapyChangeLog.objects.all().delete()
+      models.TherapyHistory.objects.all().delete()
+      models.ImpedanceHistory.objects.all().delete()
+      models.BrainSenseRecording.objects.all().delete()
 
       return True
 
