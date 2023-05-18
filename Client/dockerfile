@@ -1,10 +1,6 @@
-FROM node:lts-slim
+FROM nginx:alpine
 
-WORKDIR /usr/src/BRAVOClient
-COPY . .
+COPY ./build /usr/share/nginx/html
+COPY ./deploy-nginx.conf /etc/nginx/conf.d/default.conf
 
-RUN npm install
-
-EXPOSE 3000
-
-CMD ["npm","start"]
+EXPOSE 80
