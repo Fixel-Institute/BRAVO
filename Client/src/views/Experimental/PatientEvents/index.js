@@ -131,7 +131,7 @@ function PatientEvents() {
                           return (
                           <MDBox key={key} mx={2} px={2}
                             style={{cursor: "pointer", background: eventList[key].color, borderRadius: 10}} 
-                            onClick={() => console.log("test")}
+                            onClick={() => {}}
                           >
                             <MDTypography fontWeight={"bold"} fontSize={15} color={"white"}>{key}</MDTypography>
                           </MDBox>

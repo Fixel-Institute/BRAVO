@@ -204,7 +204,6 @@ export default function InertiaSensorViewer() {
           onDragEnter={(event) => event.preventDefault()}
           onDrop={(event) => {
             fileInputRef.current.files = event.dataTransfer.files;
-            console.log(fileInputRef.current.files);
             handleFileSelection();
             event.preventDefault();
           }}

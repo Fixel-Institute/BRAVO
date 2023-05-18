@@ -65,6 +65,7 @@ function TherapyHistory() {
   const [therapyHistory, setTherapyHistory] = React.useState({});
   const [impedanceLogs, setImpedanceLogs] = React.useState({});
   const [impedanceMode, setImpedanceMode] = React.useState("Bipolar");
+  const [dataToRender, setDataToRender] = React.useState(null);
 
   const [alert, setAlert] = React.useState(null);
   const [activeTab, setActiveTab] = React.useState(null);
@@ -93,13 +94,14 @@ function TherapyHistory() {
     for (var i in therapyTimestamp) {
       for (var j in data[therapyTimestamp[i]]) {
         if (!Object.keys(therapyHistory).includes(data[therapyTimestamp[i]][j].DeviceID)) {
-          therapyHistory[data[therapyTimestamp[i]][j].DeviceID] = {Device: data[therapyTimestamp[i]][j].Device, Therapy: {"Past Therapy": {}, "Pre-visit Therapy": {}, "Post-visit Therapy": {}}};
+          therapyHistory[data[therapyTimestamp[i]][j].DeviceID] = {Device: data[therapyTimestamp[i]][j].Device, Lead: null, Therapy: {"Past Therapy": {}, "Pre-visit Therapy": {}, "Post-visit Therapy": {}}};
         }
         const dateString = new Date(data[therapyTimestamp[i]][j].TherapyDate*1000).toLocaleDateString(language, {dateStyle: "full"});
         if (!Object.keys(therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy[data[therapyTimestamp[i]][j].TherapyType]).includes(dateString)) {
           therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy[data[therapyTimestamp[i]][j].TherapyType][dateString] = [];
         }
         therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy[data[therapyTimestamp[i]][j].TherapyType][dateString].push(data[therapyTimestamp[i]][j]);
+        therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Lead = data[therapyTimestamp[i]][j].LeadInfo;
       }
     }
     setActiveDevice(Object.keys(therapyHistory)[0]);
@@ -278,7 +280,11 @@ function TherapyHistory() {
           return null;
         }
       }).filter((value) => value);
-
+      for (let i in therapyHistory[activeDevice].Lead) {
+        if (therapyHistory[activeDevice].Lead[i].TargetLocation.startsWith("Left")) {
+          dataToRender.title = `${therapyHistory[activeDevice].Device} ${therapyHistory[activeDevice].Lead[i].CustomName} `;
+        }
+      }
     } else {
       // This is Right Side
       dataToRender.data = impedanceLogs.map((data) => {
@@ -289,29 +295,38 @@ function TherapyHistory() {
           return null;
         }
       }).filter((value) => value);
+      for (let i in therapyHistory[activeDevice].Lead) {
+        if (therapyHistory[activeDevice].Lead[i].TargetLocation.startsWith("Right")) {
+          dataToRender.title = `${therapyHistory[activeDevice].Device} ${therapyHistory[activeDevice].Lead[i].CustomName} `;
+        }
+      }
+    }
+
+    if (impedanceMode === "Monopolar") {
+      dataToRender.title += `Contact ${point.yaxis.ticktext.filter((value, index) => point.yaxis.tickvals[index] == point.y)[0]} `
+    } else {
+      dataToRender.title += `Contact ${point.yaxis.ticktext.filter((value, index) => point.yaxis.tickvals[index] == point.y)[0]}-${point.xaxis.ticktext.filter((value, index) => point.xaxis.tickvals[index] == point.x)[0]} `
     }
 
     dataToRender.point = point;
-
-    setAlert(<>
-      <Dialog 
-        sx={{ color: '#FFFFFF', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        PaperProps={{
-          sx: { minWidth: 800 }
-        }}
-        open={true}
-        onClose={() => setAlert(null)}
-      >
-        <MDBox p={5} display={"flex"} alignItems={"center"} flexDirection={"column"} >
-          <ImpedanceHistory dataToRender={dataToRender} height={400} figureTitle={"Impedance History"} />
-        </MDBox>
-      </Dialog>
-    </>);
+    setDataToRender(dataToRender);
   } 
 
   return (
     <DatabaseLayout>
       {alert}
+      <Dialog 
+        sx={{ color: '#FFFFFF', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        PaperProps={{
+          sx: { minWidth: 800 }
+        }}
+        open={Boolean(dataToRender)}
+        onClose={() => setDataToRender(null)}
+      >
+        <MDBox p={5} display={"flex"} alignItems={"center"} flexDirection={"column"} >
+          <ImpedanceHistory dataToRender={dataToRender} height={400} figureTitle={"Impedance History"} />
+        </MDBox>
+      </Dialog>
       <MDBox py={2}>
         <Grid container spacing={2}>
           {changeLogs.length > 0 ? (

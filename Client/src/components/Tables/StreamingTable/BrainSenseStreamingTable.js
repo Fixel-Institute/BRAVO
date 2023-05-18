@@ -95,8 +95,6 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
       setAvailableDates(uniqueDates.sort((a,b) => b.time - a.time));
       setViewDate(uniqueDates[0]);
     }
-
-    console.log(data)
   }, [data])
   
   const setViewDate = (date) => {

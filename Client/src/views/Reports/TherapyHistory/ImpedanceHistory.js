@@ -39,7 +39,7 @@ function ImpedanceHistory({dataToRender, height, figureTitle}) {
       fig.setXlabel("Time (local time)", {fontSize: 15}, ax[ax.length-1]);
       
       fig.setYlabel(dictionaryLookup(dictionary.TherapyHistory.Figure, "Impedance", language), {fontSize: 15});
-      fig.setTitle(dictionaryLookup(dictionary.TherapyHistory.Figure, "ImpedanceHistory", language));
+      fig.setTitle(data.title + dictionaryLookup(dictionary.TherapyHistory.Figure, "ImpedanceHistory", language));
     }
     
     let impedanceHistoryValues = data.data.map((item) => item.value);
@@ -55,7 +55,8 @@ function ImpedanceHistory({dataToRender, height, figureTitle}) {
       marker: {
         color: "#FF0000",
         size: 5
-      }
+      },
+      hovertemplate: `  Impedance: %{y:d} <extra></extra>`,
     });
 
     if (!data) {

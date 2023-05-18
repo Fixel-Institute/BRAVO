@@ -497,7 +497,7 @@ export default function PatientOverview() {
                       />
                     </Grid>
                     {editDeviceInfo.LeadInfo.map((lead, index) => (
-                      <Grid item xs={6}>
+                      <Grid key={lead.TargetLocation} item xs={6}>
                         <TextField
                           variant="standard"
                           margin="dense"

@@ -203,8 +203,15 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
         color: stimulationLineColor,
         shape: "hv",
         hovertemplate: ` ${stimulation.Name} %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)}<br>  %{x} <extra></extra>`,
-      }, ax[ax.length-1])
+        name: stimulation.Name,
+        showlegend: true
+      }, ax[ax.length-1]);
     }
+
+    fig.setLegend({
+      xanchor: "right",
+      y: 1/ax.length - (0.15/ax.length)
+    });
 
     if (!data) {
       fig.purge();

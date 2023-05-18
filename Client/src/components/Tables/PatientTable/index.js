@@ -80,7 +80,6 @@ const PatientTable = ({data}) => {
   }, [paginationControl, sortedData]);
 
   useEffect(() => {
-    console.log(sortType)
     switch (sortType.key) {
       case "PatientTableName": 
         if (sortType.direction == 1) {

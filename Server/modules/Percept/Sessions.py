@@ -400,6 +400,8 @@ def processSessionFile(JSON):
     else:
         Overview["Therapy"]["TherapyChangeHistory"] = [{"DateTime": datetime.fromtimestamp(SessionDate), "OldGroupId": "GroupIdDef.GROUP_A", "NewGroupId": "GroupIdDef.GROUP_A"}]
 
+    Overview["Therapy"]["TherapyChangeHistory"] = [log for log in Overview["Therapy"]["TherapyChangeHistory"] if not "TherapyStatus" in log.keys()]
+
     TherapyDutyPercent = dict()
     for i in range(len(Overview["Therapy"]["TherapyChangeHistory"])):
         if lastMeasuredTimestamp < SessionDate:

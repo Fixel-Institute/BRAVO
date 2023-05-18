@@ -45,6 +45,10 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
         zeroline: false
       }, "y");
       fig.setTitle(dictionaryLookup(dictionary.TherapyHistory.Figure, "TherapyChangeLog", language));
+
+      fig.setLegend({
+        bgcolor: "transparent",
+      })
     }
 
     for (var i = 0; i < data.length; i++) {
@@ -80,17 +84,23 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
         mode: 'lines',
         line: {shape: 'hv'},
         hovertemplate: "  %{x} <br>  %{y} <extra></extra>",
-        name: data[i]["device_name"]
+        name: data[i]["device_name"],
+        showlegend: true
       });
 
       let therapyStatusDate = data[i]["date_of_status"].map((value) => new Date(value/1000000));
       let newTherapyStatus = data[i]["new_status"].map((value)=> value ? 3.5 : -0.5);
 
+      let firstLegend = true;
       if (newTherapyStatus[0] == 3.5) {
         /*
         fig.addShadedArea([xdata[0], therapyStatusDate[0]], {
-          color: "#FF0000"
+          color: "#FF0000",
+          name: "Stimulation Off",
+          legendgroup: "Stimulation Off",
+          showlegend: firstLegend
         });
+        firstLegend = false;
         */
       }
       for (let j = 0; j < newTherapyStatus.length; j++) {
@@ -98,13 +108,21 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
           if (j == newTherapyStatus.length-1) {
             /*
             fig.addShadedArea([therapyStatusDate[j], new Date(data[i]["date_of_change"][data[i]["date_of_change"].length-1]/1000000)], {
-              color: "#FF0000"
+              color: "#FF0000",
+              name: "Stimulation Off",
+              legendgroup: "Stimulation Off",
+              showlegend: firstLegend
             });
+            firstLegend = false;
             */
           } else {
             fig.addShadedArea([therapyStatusDate[j], therapyStatusDate[j+1]], {
-              color: "#FF0000"
+              color: "#FF0000",
+              name: "Stimulation Off",
+              legendgroup: "Stimulation Off",
+              showlegend: firstLegend
             });
+            firstLegend = false;
           }
         }
       }

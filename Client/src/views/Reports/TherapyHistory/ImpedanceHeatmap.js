@@ -160,7 +160,6 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    console.log(logType)
     if (dataToRender.length > 0) handleGraphing(dataToRender[dataToRender.length-1]);
     else {
       fig.purge();
