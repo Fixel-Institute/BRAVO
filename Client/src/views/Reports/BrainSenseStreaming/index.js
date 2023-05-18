@@ -263,7 +263,6 @@ function BrainSenseStreaming() {
 
     }).then((response) => {
       if (side == "Left") {
-        console.log(response.data)
         setLeftHemispherePSD(response.data);
         setLeftHemisphereBox(response.data);
       } else {

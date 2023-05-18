@@ -106,7 +106,7 @@ function TherapeuticPredictionTable({data, getRecordingData, children}) {
     for (var i = 0; i < data.length; i++) {
       var timestruct = new Date(data[i]["Timestamp"]*1000);
       if (timestruct.toLocaleDateString(language) == date.value) {
-        collectiveData.push(data[i]);
+        collectiveData.push({...data[i], state: false});
       }
     }
     setDisplayData(collectiveData);
@@ -350,7 +350,7 @@ function TherapeuticPredictionTable({data, getRecordingData, children}) {
 
               const [side, target] = recording.Channels[indexOfInterest].Hemisphere.split(" ");
               
-              return <TableRow key={recording.RecordingID}>
+              return <TableRow key={recording.AnalysisID}>
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                   <MDTypography variant="h5" fontSize={15} style={{marginBottom: 0}}>
                     {new Date(recording.Timestamp*1000).toLocaleString(language)}
@@ -414,7 +414,7 @@ function TherapeuticPredictionTable({data, getRecordingData, children}) {
                   </MDBox>
                 </TableCell>
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                  <MDButton variant={"contained"} color="info" onClick={() => getRecordingData(recording.RecordingID)} style={{padding: 0}}>
+                  <MDButton variant={"contained"} color="info" onClick={() => getRecordingData(recording.AnalysisID)} style={{padding: 0}}>
                     {dictionary.PatientOverview.PatientInformation.View[language]}
                   </MDButton>
                 </TableCell>

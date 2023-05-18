@@ -31,8 +31,6 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, height, figureTitle}
   const handleGraphing = (data) => {
     fig.clearData();
 
-    console.log(data)
-
     let yLimCap = 5000;
     if (fig.fresh) {
       if (data.Channels.length == 2) {

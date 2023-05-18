@@ -48,63 +48,70 @@ RESOURCES = str(pathlib.Path(__file__).parent.resolve())
 key = os.environ.get('ENCRYPTION_KEY')
 
 def processSpectrogram(stream, channel):
-    if not "Spectrogram" in stream.keys():
-        stream["Spectrogram"] = dict()
-    
-    for series in stream["Stimulation"]:
+    for series in stream["PowerDomain"]["Stimulation"]:
         if channel == series["Name"]:
             StimulationSeries = series
 
-    stream["Spectrogram"][channel]["ConstantStimulation"] = np.ones(stream["Spectrogram"][channel]["Time"].shape, dtype=bool)
-    stream["Spectrogram"][channel]["logPower"] = 10*np.log10(stream["Spectrogram"][channel]["Power"])
-    stream["Spectrogram"][channel]["ConstantStimulation"][np.isinf(stream["Spectrogram"][channel]["logPower"][0,:])] = False
-    for t in StimulationSeries["Time"]:
-        stream["Spectrogram"][channel]["ConstantStimulation"][rangeSelection(stream["Spectrogram"][channel]["Time"], [t-3, t+3])] = False
-        
-    stream["Spectrogram"][channel]["Stimulation"] = np.zeros(stream["Spectrogram"][channel]["Time"].shape)
-    for t in range(len(stream["Spectrogram"][channel]["Time"])):
-        Stim = np.where(StimulationSeries["Time"] < stream["Spectrogram"][channel]["Time"][t])[0]
-        if len(Stim) == 0:
-            stream["Spectrogram"][channel]["Stimulation"][t] = StimulationSeries["Amplitude"][0]
-        else:
-            stream["Spectrogram"][channel]["Stimulation"][t] = StimulationSeries["Amplitude"][Stim[-1]+1]
-            
+    StimulationSeries["Time"] += stream["TimeDomain"]["StartTime"] - stream["PowerDomain"]["StartTime"]
+    
+    for i in range(len(stream["TimeDomain"]["ChannelNames"])):
+        if stream["TimeDomain"]["ChannelNames"][i] == channel:
+            stream["TimeDomain"]["Spectrogram"][i]["ConstantStimulation"] = np.ones(stream["TimeDomain"]["Spectrogram"][i]["Time"].shape, dtype=bool)
+            stream["TimeDomain"]["Spectrogram"][i]["logPower"] = 10*np.log10(stream["TimeDomain"]["Spectrogram"][i]["Power"])
+            stream["TimeDomain"]["Spectrogram"][i]["ConstantStimulation"][np.isinf(stream["TimeDomain"]["Spectrogram"][i]["logPower"][0,:])] = False
+            for t in StimulationSeries["Time"]:
+                stream["TimeDomain"]["Spectrogram"][i]["ConstantStimulation"][rangeSelection(stream["TimeDomain"]["Spectrogram"][i]["Time"], [t-3, t+3])] = False
+                
+            stream["TimeDomain"]["Spectrogram"][i]["Stimulation"] = np.zeros(stream["TimeDomain"]["Spectrogram"][i]["Time"].shape)
+            for t in range(len(stream["TimeDomain"]["Spectrogram"][i]["Time"])):
+                Stim = np.where(StimulationSeries["Time"] < stream["TimeDomain"]["Spectrogram"][i]["Time"][t])[0]
+                if len(Stim) == 0:
+                    stream["TimeDomain"]["Spectrogram"][i]["Stimulation"][t] = StimulationSeries["Amplitude"][0]
+                else:
+                    stream["TimeDomain"]["Spectrogram"][i]["Stimulation"][t] = StimulationSeries["Amplitude"][Stim[-1]]
+                    
     return stream
 
 def extractFrequencyOfInterest(stream, channel):
-    if len(np.unique(stream["Spectrogram"][channel]["Stimulation"][stream["Spectrogram"][channel]["ConstantStimulation"]])) > 2:
-        ModulationIndex = np.zeros(stream["Spectrogram"][channel]["Frequency"].shape)
-        for f in range(len(stream["Spectrogram"][channel]["Frequency"])):
-            ModulationIndex[f] = np.var(stream["Spectrogram"][channel]["logPower"][f,:][stream["Spectrogram"][channel]["ConstantStimulation"]])
-        
-        TargetFrequency = rangeSelection(stream["Spectrogram"][channel]["Frequency"], [5,50])
-        maxModulation = np.max(ModulationIndex[TargetFrequency])
-        SelectedData = np.bitwise_and(stream["Spectrogram"][channel]["ConstantStimulation"], stream["Spectrogram"][channel]["Missing"] == 0)
-        
-        CorrelationIndex = np.zeros(stream["Spectrogram"][channel]["Frequency"].shape)
-        for f in range(len(stream["Spectrogram"][channel]["Frequency"])):
-            CorrelationIndex[f], _ = stats.pearsonr(stream["Spectrogram"][channel]["Stimulation"][SelectedData], stream["Spectrogram"][channel]["Power"][f,:][SelectedData])
-        
-        CorrelationIndex = np.power(CorrelationIndex,2)
-        maxCorrelation = np.max(CorrelationIndex[TargetFrequency])
-        
-        CombinedFeature = SPU.smooth(ModulationIndex/maxModulation * CorrelationIndex/maxCorrelation,5)
-        maxFeature = np.max(CombinedFeature[TargetFrequency])
-        
-        TargetFrequency = rangeSelection(stream["Spectrogram"][channel]["Frequency"], [5,50])
-        
-        GoodnessOfFit = np.mean(CombinedFeature[TargetFrequency]) / np.mean(CombinedFeature[~TargetFrequency])
-        return stream["Spectrogram"][channel]["Frequency"][CombinedFeature == maxFeature][0], GoodnessOfFit
+    for i in range(len(stream["TimeDomain"]["ChannelNames"])):
+        if stream["TimeDomain"]["ChannelNames"][i] == channel:
+            if len(np.unique(stream["TimeDomain"]["Spectrogram"][i]["Stimulation"][stream["TimeDomain"]["Spectrogram"][i]["ConstantStimulation"]])) > 2:
+                ModulationIndex = np.zeros(stream["TimeDomain"]["Spectrogram"][i]["Frequency"].shape)
+                for f in range(len(stream["TimeDomain"]["Spectrogram"][i]["Frequency"])):
+                    ModulationIndex[f] = np.var(stream["TimeDomain"]["Spectrogram"][i]["logPower"][f,:][stream["TimeDomain"]["Spectrogram"][i]["ConstantStimulation"]])
+                
+                TargetFrequency = rangeSelection(stream["TimeDomain"]["Spectrogram"][i]["Frequency"], [5,50])
+                maxModulation = np.max(ModulationIndex[TargetFrequency])
+                SelectedData = np.bitwise_and(stream["TimeDomain"]["Spectrogram"][i]["ConstantStimulation"], stream["TimeDomain"]["Spectrogram"][i]["Missing"] == 0)
+                
+                CorrelationIndex = np.zeros(stream["TimeDomain"]["Spectrogram"][i]["Frequency"].shape)
+                for f in range(len(stream["TimeDomain"]["Spectrogram"][i]["Frequency"])):
+                    CorrelationIndex[f], _ = stats.pearsonr(stream["TimeDomain"]["Spectrogram"][i]["Stimulation"][SelectedData], stream["TimeDomain"]["Spectrogram"][i]["Power"][f,:][SelectedData])
+                
+                CorrelationIndex = np.power(CorrelationIndex,2)
+                maxCorrelation = np.max(CorrelationIndex[TargetFrequency])
+                
+                CombinedFeature = SPU.smooth(ModulationIndex/maxModulation * CorrelationIndex/maxCorrelation,5)
+                maxFeature = np.max(CombinedFeature[TargetFrequency])
+                
+                TargetFrequency = rangeSelection(stream["TimeDomain"]["Spectrogram"][i]["Frequency"], [5,50])
+                
+                GoodnessOfFit = np.mean(CombinedFeature[TargetFrequency]) / np.mean(CombinedFeature[~TargetFrequency])
+                return stream["TimeDomain"]["Spectrogram"][i]["Frequency"][CombinedFeature == maxFeature][0], GoodnessOfFit
     return -1, -1
 
 def powerDecay(x, a, b, c):
     return a * np.power(1/b, x) + c
 
 def extractModelParameters(stream, channel, centerFrequency):
-    FrequencyOfInterest = rangeSelection(stream["Spectrogram"][channel]["Frequency"], [centerFrequency - 3, centerFrequency + 3])
-    constantStimulation = np.bitwise_and(stream["Spectrogram"][channel]["ConstantStimulation"], stream["Spectrogram"][channel]["Missing"] == 0)
-    StimulationAmplitude = stream["Spectrogram"][channel]["Stimulation"][constantStimulation]
-    BrainPower = np.mean(stream["Spectrogram"][channel]["Power"][:,constantStimulation][FrequencyOfInterest], axis=0)
+    for i in range(len(stream["TimeDomain"]["ChannelNames"])):
+        if stream["TimeDomain"]["ChannelNames"][i] == channel:
+            break
+
+    FrequencyOfInterest = rangeSelection(stream["TimeDomain"]["Spectrogram"][i]["Frequency"], [centerFrequency - 3, centerFrequency + 3])
+    constantStimulation = np.bitwise_and(stream["TimeDomain"]["Spectrogram"][i]["ConstantStimulation"], stream["TimeDomain"]["Spectrogram"][i]["Missing"] == 0)
+    StimulationAmplitude = stream["TimeDomain"]["Spectrogram"][i]["Stimulation"][constantStimulation]
+    BrainPower = np.mean(stream["TimeDomain"]["Spectrogram"][i]["Power"][:,constantStimulation][FrequencyOfInterest], axis=0)
     
     uniqueAmplitude = sorted(np.unique(StimulationAmplitude))
     simplifiedYData = []
@@ -151,7 +158,7 @@ def extractModelParameters(stream, channel, centerFrequency):
         "FinalPower": np.percentile(modeled_signal, 5)}, xdata[modeled_signal <= threshold][0], [xdata[0], xdata[-1]], modeled_signal.tolist()
 
 def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0):
-    for channel in BrainSenseData["Channels"]:
+    for channel in BrainSenseData["TimeDomain"]["ChannelNames"]:
         contacts, hemisphere = Percept.reformatChannelName(channel)
         if HemisphereInfo.startswith(hemisphere):
             BrainSenseData = processSpectrogram(BrainSenseData, channel)

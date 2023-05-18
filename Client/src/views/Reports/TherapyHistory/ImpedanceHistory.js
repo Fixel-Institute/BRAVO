@@ -37,15 +37,25 @@ function ImpedanceHistory({dataToRender, height, figureTitle}) {
     if (fig.fresh) {
       var ax = fig.subplots(1, 1, {sharex: true, sharey: true});
       fig.setXlabel("Time (local time)", {fontSize: 15}, ax[ax.length-1]);
-      fig.setYlim([0, 6000]);
+      
       fig.setYlabel(dictionaryLookup(dictionary.TherapyHistory.Figure, "Impedance", language), {fontSize: 15});
       fig.setTitle(dictionaryLookup(dictionary.TherapyHistory.Figure, "ImpedanceHistory", language));
     }
     
-    fig.plot(data.data.map((item) => new Date(item.timestamps*1000)), data.data.map((item) => item.value), {
-      type: 'scatter',
-      mode: 'lines+markers',
-      hovertemplate: "  %{x} <br>  %{y} <extra></extra>",
+    let impedanceHistoryValues = data.data.map((item) => item.value);
+    fig.setYlim([0, Math.max(...impedanceHistoryValues)*1.1]); 
+
+    let impedanceHistoryDates = data.data.map((item) => Math.floor(item.timestamps / 3600 / 15 / 24)*3600*24*15).map((item) => new Date(item*1000));
+    
+    fig.box(impedanceHistoryDates, impedanceHistoryValues, {
+      hoveron: "points",
+      pointpos: -1.5,
+      boxpoints: "all",
+      jitter: 0.3,
+      marker: {
+        color: "#FF0000",
+        size: 5
+      }
     });
 
     if (!data) {

@@ -391,7 +391,7 @@ function TherapyHistory() {
                             <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} px={2}>
                               {leadInfo.map((lead) => {
                                 if (lead.TargetLocation.startsWith("Left")) {
-                                  return <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} px={2}>
+                                  return <MDBox key={lead.TargetLocation} display={"flex"} flexDirection={"row"} alignItems={"center"} px={2}>
                                     <MDBadge badgeContent="L" color={"info"} size={"xs"} container sx={{marginRight: 1}} />
                                     <MDBox>
                                       <MDTypography fontWeight={"medium"} fontSize={15} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
@@ -400,7 +400,7 @@ function TherapyHistory() {
                                     </MDBox>
                                   </MDBox>
                                 } else {
-                                  return <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} px={2}>
+                                  return <MDBox key={lead.TargetLocation} display={"flex"} flexDirection={"row"} alignItems={"center"} px={2}>
                                     <MDBadge badgeContent="R" color={"error"} size={"xs"} container sx={{marginRight: 1}} />
                                     <MDBox>
                                       <MDTypography fontWeight={"medium"} fontSize={15} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
@@ -530,7 +530,9 @@ function TherapyHistory() {
                         color="info"
                         value={impedanceMode}
                         exclusive
-                        onChange={(event, value) => setImpedanceMode(value)}
+                        onChange={(event, value) => {
+                          if (value) setImpedanceMode(value);
+                        }}
                       >
                         <ToggleButton value="Bipolar">
                           <MDTypography variant="p" fontWeight="bold" fontSize={15}>

@@ -659,11 +659,13 @@ class QueryPredictionModel(RestViews.APIView):
             elif Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
                 data = BrainSenseStream.queryRealtimeStreamOverview(request.user, request.data["id"], Authority)
+                data = [item for item in data if item["Duration"] > 30]
                 return Response(status=200, data=data)
             elif Authority["Level"] == 2:
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
                 data = BrainSenseStream.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
+                data = [item for item in data if item["Duration"] > 30]
                 return Response(status=200, data=data)
 
         elif "updatePredictionModels" in request.data:
@@ -685,22 +687,14 @@ class QueryPredictionModel(RestViews.APIView):
             BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
-            BrainSenseData["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData)
+            BrainSenseData["PowerDomain"]["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
 
             data = list()
-            for stimulationSide in BrainSenseData["Stimulation"]:
+            for stimulationSide in BrainSenseData["PowerDomain"]["Stimulation"]:
                 if len(np.unique(stimulationSide["Amplitude"])) > 3:
-                    #if not models.PredictionModel.objects.filter(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"]).exists():
-                    if True:
-                        Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
-                        PredictionModel = models.PredictionModel(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"], model_details=Features)
-                        PredictionModel.save()
-                    else:
-                        PredictionModel = models.PredictionModel.objects.filter(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"]).first()
-                        Features = PredictionModel.model_details
-                        Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
-                        PredictionModel.model_details = Features
-                        PredictionModel.save()
+                    Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
+                    #PredictionModel = models.PredictionModel(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"], model_details=Features)
+                    #PredictionModel.save()
                     data.append(Features)
                 else:
                     data.append({"NoPrediction": True})
@@ -718,7 +712,7 @@ class QueryPredictionModel(RestViews.APIView):
                 BrainSenseData, RecordingID = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
-                BrainSenseData["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData)
+                BrainSenseData["PowerDomain"]["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
                 
                 data = dict()
                 data["StimPSD"] = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=request.data["centerFrequency"])
@@ -728,12 +722,12 @@ class QueryPredictionModel(RestViews.APIView):
                 BrainSenseData["Info"]["CenterFrequency"][request.data["channel"]] = request.data["centerFrequency"]
                 models.BrainSenseRecording.objects.filter(recording_id=RecordingID).update(recording_info=BrainSenseData["Info"])
 
-                for stimulationSide in BrainSenseData["Stimulation"]:
+                for stimulationSide in BrainSenseData["PowerDomain"]["Stimulation"]:
                     if len(np.unique(stimulationSide["Amplitude"])) > 3 and stimulationSide["Name"] == request.data["channel"]:
                         Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"], centerFrequency=request.data["centerFrequency"])
-                        PredictionModel = models.PredictionModel.objects.filter(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"]).first()
-                        PredictionModel.model_details = Features
-                        PredictionModel.save()
+                        #PredictionModel = models.PredictionModel.objects.filter(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"]).first()
+                        #PredictionModel.model_details = Features
+                        #PredictionModel.save()
                         break
                     else:
                         Features = {"NoPrediction": True}

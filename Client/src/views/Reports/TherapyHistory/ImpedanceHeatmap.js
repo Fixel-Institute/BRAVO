@@ -50,6 +50,7 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
             showscale: false
           }),
         }, ax[0]);
+        fig.setSubtitle(`Left Hemisphere ${logType} Impedance Map`, ax[0]);
         
         fig.setAxisProps({
           ticksmode: "array",
@@ -76,6 +77,8 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
             showscale: false
           }),
         }, ax[0]);
+        fig.setSubtitle(`Left Hemisphere ${logType} Impedance Map`, ax[0]);
+        
         
         fig.setAxisProps({
           ticks: "",
@@ -104,6 +107,7 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
             showscale: false
           }),
         }, ax[1]);
+        fig.setSubtitle(`Right Hemisphere ${logType} Impedance Map`, ax[1]);
         
         fig.setAxisProps({
           ticksmode: "array",
@@ -130,6 +134,7 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
             showscale: false
           }),
         }, ax[1]);
+        fig.setSubtitle(`Right Hemisphere ${logType} Impedance Map`, ax[1]);
 
         fig.setAxisProps({
           ticks: "",
@@ -155,6 +160,7 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
+    console.log(logType)
     if (dataToRender.length > 0) handleGraphing(dataToRender[dataToRender.length-1]);
     else {
       fig.purge();

@@ -33,7 +33,7 @@ import LoadingProgress from "components/LoadingProgress";
 import DatabaseLayout from "layouts/DatabaseLayout";
 
 import TimeFrequencyAnalysis from "../../Reports/BrainSenseStreaming/TimeFrequencyAnalysis";
-import StimulationPSD from "../../Reports/BrainSenseStreaming/StimulationPSD";
+import StimulationPSD from "./StimulationPSD";
 import StimulationBoxPlot from "./StimulationBoxPlot";
 
 import TherapeuticPredictionTable from "./TherapeuticPredictionTable";
@@ -92,7 +92,7 @@ function TherapeuticPrediction() {
         const response = await SessionController.query("/api/queryPredictionModel", {
           updatePredictionModels: true,
           id: patientID,
-          recordingId: data[i].RecordingID,
+          recordingId: data[i].AnalysisID,
         });
         predictedModels.push({...data[i], Prediction: response.data});
         setProcessingProgress({...processingProgress, progress: (i+1) / data.length * 100});
@@ -111,14 +111,14 @@ function TherapeuticPrediction() {
   const getRecordingData = (timestamp) => {
     var ChannelInfos = [];
     for (var i in data) {
-      if (data[i].RecordingID == timestamp) {
+      if (data[i].AnalysisID == timestamp) {
         ChannelInfos = data[i].Channels;
       }
     }
 
     var centerFrequencies = [];
     for (var i in predictionModel) {
-      if (predictionModel[i].RecordingID == timestamp) {
+      if (predictionModel[i].AnalysisID == timestamp) {
         setPredictionToRender(predictionModel[i].Prediction);
         for (var j in predictionModel[i].Prediction) {
           centerFrequencies.push(predictionModel[i].Prediction[j].CenterFrequency ? predictionModel[i].Prediction[j].CenterFrequency : 0);
@@ -163,7 +163,7 @@ function TherapeuticPrediction() {
         setLeftHemisphereBox(response.data.StimPSD);
         setPredictionModel((models) => {
           for (var j in models) {
-            if (models[j].RecordingID == recordingId) {
+            if (models[j].AnalysisID == recordingId) {
               for (var k in models[j]["Channels"]) {
                 if (models[j]["Channels"][k]["Hemisphere"].startsWith("Left")) {
                   models[j].Prediction[k] = response.data.PredictionModel;
@@ -192,7 +192,7 @@ function TherapeuticPrediction() {
       }).then((response) => {
         setRightHemisphereBox(response.data.StimPSD);
         for (var j in predictionModel) {
-          if (predictionModel[j].RecordingID == recordingId) {
+          if (predictionModel[j].AnalysisID == recordingId) {
             for (var k in predictionModel[j]["Channels"]) {
               if (predictionModel[j]["Channels"][k]["Hemisphere"].startsWith("Right")) {
                 predictionModel[j].Prediction[k] = response.data.PredictionModel;
@@ -225,11 +225,11 @@ function TherapeuticPrediction() {
   React.useEffect(() => {
     for (var i in dataToRender.Channels) {
       if (dataToRender.Channels[i].endsWith("LEFT")) {
-        setLeftHemispherePSD(dataToRender[dataToRender.Channels[i]].StimPSD);
-        setLeftHemisphereBox(dataToRender[dataToRender.Channels[i]].StimPSD);
+        setLeftHemispherePSD(dataToRender.Stream[i].StimPSD);
+        setLeftHemisphereBox(dataToRender.Stream[i].StimPSD);
       } else {
-        setRightHemispherePSD(dataToRender[dataToRender.Channels[i]].StimPSD);
-        setRightHemisphereBox(dataToRender[dataToRender.Channels[i]].StimPSD);
+        setRightHemispherePSD(dataToRender.Stream[i].StimPSD);
+        setRightHemisphereBox(dataToRender.Stream[i].StimPSD);
       }
     }
   }, [dataToRender]);
