@@ -394,13 +394,12 @@ def processSessionFile(JSON):
     if lastMeasuredTimestamp == 0:
         lastMeasuredTimestamp = datetime.fromisoformat(Overview["Overall"]["DeviceInformation"]["ImplantDate"][:-1]+"+00:00").timestamp()
     
+    Overview["Therapy"]["TherapyChangeHistory"] = [log for log in Overview["Therapy"]["TherapyChangeHistory"] if not "TherapyStatus" in log.keys()]
     if "TherapyChangeHistory" in Overview["Therapy"].keys():
         if SessionDate > Overview["Therapy"]["TherapyChangeHistory"][-1]["DateTime"].timestamp():
             Overview["Therapy"]["TherapyChangeHistory"].append({"DateTime": datetime.fromtimestamp(SessionDate), "OldGroupId": Overview["Therapy"]["TherapyChangeHistory"][-1]["NewGroupId"], "NewGroupId": Overview["Therapy"]["TherapyChangeHistory"][-1]["NewGroupId"]})
     else:
         Overview["Therapy"]["TherapyChangeHistory"] = [{"DateTime": datetime.fromtimestamp(SessionDate), "OldGroupId": "GroupIdDef.GROUP_A", "NewGroupId": "GroupIdDef.GROUP_A"}]
-
-    Overview["Therapy"]["TherapyChangeHistory"] = [log for log in Overview["Therapy"]["TherapyChangeHistory"] if not "TherapyStatus" in log.keys()]
 
     TherapyDutyPercent = dict()
     for i in range(len(Overview["Therapy"]["TherapyChangeHistory"])):
