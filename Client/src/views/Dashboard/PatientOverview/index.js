@@ -161,7 +161,7 @@ export default function PatientOverview() {
     SessionController.query("/api/updatePatientInformation", {
       updatePatientInfo: patientID,
       updateDeviceID: editDeviceInfo.DeviceID,
-      newDeviceName: editDeviceInfo.DeviceName,
+      newDeviceName: editDeviceInfo.DeviceName == editDeviceInfo.DeviceID ? "" : editDeviceInfo.DeviceName,
       leadAnnotations: editDeviceInfo.LeadInfo.map((lead) => lead.CustomName),
     }).then(() => {
       setPatientInfo({...patientInfo, Devices: patientInfo.Devices.map((device) => {
