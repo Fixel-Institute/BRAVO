@@ -58,7 +58,13 @@ def processAdaptiveDutyCycle(ChronicData, timezoneOffset):
                 if not ChronicData[i]["Therapy"][j][hemisphere]["AdaptiveSetup"]["Status"] == "ADBSStatusDef.NOT_CONFIGURED":
                     if "AmplitudeThreshold" in ChronicData[i]["Therapy"][j][hemisphere].keys():
                         AmplitudeRange = ChronicData[i]["Therapy"][j][hemisphere]["AmplitudeThreshold"]
-                        PercentRange = (np.array(ChronicData[i]["Amplitude"][j]) - AmplitudeRange[0]) / (AmplitudeRange[1]-AmplitudeRange[0]) * 100
+                        if (AmplitudeRange[1]-AmplitudeRange[0]) == 0:
+                            if AmplitudeRange[1] == 0:
+                                PercentRange = np.ones(len(ChronicData[i]["Amplitude"][j])) * 100
+                            else:
+                                PercentRange = np.zeros(len(ChronicData[i]["Amplitude"][j].shape))
+                        else:
+                            PercentRange = (np.array(ChronicData[i]["Amplitude"][j]) - AmplitudeRange[0]) / (AmplitudeRange[1]-AmplitudeRange[0]) * 100
                         PercentRange = SPU.smooth(PercentRange, 6)
                         ChronicData[i]["DutyCycle"][j] = PercentRange.tolist()
 

@@ -188,7 +188,7 @@ function ImpedanceHeatmap({dataToRender, onContactSelect, logType, height, figur
       plotly_singleclicked = true;
       updateTimeout = setTimeout(function() {
         onContactSelect(data["points"][0]);
-        plotly_singleclicked = false
+        plotly_singleclicked = false;
       }, 300);
     }
   };

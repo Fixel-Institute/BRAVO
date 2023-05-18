@@ -49,7 +49,6 @@ function TherapeuticPrediction() {
   const [recordingId, setRecordingId] = React.useState([]);
 
   const [data, setData] = React.useState([]);
-  const [configuration, setConfiguration] = React.useState({});
   const [predictionModel, setPredictionModel] = React.useState([]);
   const [predictionToRender, setPredictionToRender] = React.useState([]);
   const [dataToRender, setDataToRender] = React.useState(false);
@@ -59,9 +58,6 @@ function TherapeuticPrediction() {
   const [leftHemisphereBox, setLeftHemisphereBox] = React.useState(false);
   const [rightHemisphereBox, setRightHemisphereBox] = React.useState(false);
 
-  const [centerFrequencyLeft, setCenterFrequencyLeft] = React.useState(0);
-  const [centerFrequencyRight, setCenterFrequencyRight] = React.useState(0);
-  
   const [timeFrequencyPlotHeight, setTimeFrequencyPlotHeight] = React.useState(600)
   const [alert, setAlert] = React.useState(null);
 
