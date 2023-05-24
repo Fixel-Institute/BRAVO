@@ -100,6 +100,17 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
             for (let i in currentState.queues) {
               if (currentState.queues[i].taskId == content["TaskID"]) {
                 currentState.queues[i].state = content["State"];
+                currentState.queues[i].descriptor = {...currentState.queues[i].descriptor, Message: content["Message"]};
+              }
+            }
+            return {...currentState};
+          });
+        } else if (content["UpdateType"] === "JobUpdate") {
+          setQueueState(currentState => {
+            for (let i in currentState.queues) {
+              if (currentState.queues[i].taskId == content["TaskID"]) {
+                currentState.queues[i].state = content["State"];
+                currentState.queues[i].descriptor = {...currentState.queues[i].descriptor, Message: content["Message"]};
               }
             }
             return {...currentState};
@@ -301,7 +312,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
                 variant="contained"
                 onClick={(event) => getProcessingQueue()}
               >
-                {queueState.queues.filter((item) => item.state === "InProgress").length > 0 ? <CircularProgress color={"info"} fontSize="large" /> : <PublishedWithChanges color={"info"} fontSize="large" />}
+                {queueState.queues.filter((item) => item.state === "InProgress" || item.state === "Processing").length > 0 ? <CircularProgress color={"info"} fontSize="large" /> : <PublishedWithChanges color={"info"} fontSize="large" />}
               </IconButton>
               <IconButton
                 size="small"

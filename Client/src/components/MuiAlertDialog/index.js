@@ -59,7 +59,7 @@ export default function MuiAlertDialog({title, message, denyButton, cancelButton
           {cancelText}
         </MDButton>) : null}
         {denyButton ? (
-        <MDButton variant="gradient" color="error" onClick={handleDeny} sx={{minWidth: 100}}>
+        <MDButton variant="gradient" color={cancelButton ? "error" : "secondary"} onClick={handleDeny} sx={{minWidth: 100}}>
           {denyText}
         </MDButton>) : null}
         <MDButton variant="gradient" color="info" onClick={handleConfirm} sx={{minWidth: 100}}>

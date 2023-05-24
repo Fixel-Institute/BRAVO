@@ -89,6 +89,17 @@ class NotificationSystem(AsyncWebsocketConsumer):
                                 "Message": request["Message"],
                             }
                         })
+
+                    elif request["NotificationType"] == "TaskProcessing":
+                        await self.channel_layer.group_send("BroadcastChannel", {
+                            "type": "broadcast_queue_update",
+                            "message": {
+                                "UserID": request["TaskUser"],
+                                "TaskID": request["TaskID"],
+                                "State": request["State"],
+                                "Message": request["Message"],
+                            }
+                        })
                     
                     return
 
@@ -105,6 +116,24 @@ class NotificationSystem(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "Notification": "ProcessQueue",
         }))
+
+    # Broadcast Queue Update
+    async def broadcast_queue_update(self, event):
+        if "UserID" in event["message"]:
+            if str(self.scope["user"].unique_user_id) == event["message"]["UserID"]:
+                await self.send(text_data=json.dumps({
+                    "Notification": "QueueUpdate",
+                    "UpdateType": "JobUpdate",
+                    "TaskID": event["message"]["TaskID"],
+                    "State": event["message"]["State"],
+                    "Message": event["message"]["Message"],
+                }))
+
+            await self.send(text_data=json.dumps({
+                "Notification": "QueueUpdate",
+                "UpdateType": "QueueReduced",
+            }))
+        pass
 
     # Broadcast Queue Compeltion
     async def broadcast_queue_complete(self, event):

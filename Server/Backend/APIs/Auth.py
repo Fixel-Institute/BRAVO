@@ -142,7 +142,6 @@ class UserAuth(RestViews.APIView):
                 if "Persistent" in request.data:
                     if request.data["Persistent"]:
                         refresh.set_exp(lifetime=datetime.timedelta(weeks= 520))
-                        access.set_exp(lifetime=datetime.timedelta(weeks= 520))
 
                 return Response(status=200, data={
                     "access": str(access),

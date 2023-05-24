@@ -26,6 +26,7 @@ import {
   TableBody,
   CircularProgress,
   TableHead,
+  Tooltip,
 } from "@mui/material";
 
 import MDBox from "components/MDBox";
@@ -35,7 +36,8 @@ import MDButton from "components/MDButton";
 import { usePlatformContext } from "context";
 import { dictionary } from "assets/translation";
 import { SessionController } from "database/session-control";
-import { TaskAlt } from "@mui/icons-material";
+import { TaskAlt, PendingOutlined, Error } from "@mui/icons-material";
+
 
 export default function ProcessingQueue({queues, clearQueue}) {
   const [ context, dispatch ] = usePlatformContext();
@@ -96,8 +98,16 @@ export default function ProcessingQueue({queues, clearQueue}) {
                 </MDTypography>
               </TableCell>
               <TableCell>
-                {queue.state === "InProgress" ? <CircularProgress size={"20px"}/> : null}
-                {queue.state === "Complete" ? <TaskAlt color={"success"} fontSize="large"/> : null}
+                <MDBox style={{display: "flex", alignItems: "center"}}>
+                  {queue.state === "InProgress" ? <PendingOutlined fontSize={"medium"}/> : null}
+                  {queue.state === "Processing" ? <CircularProgress size={"20px"}/> : null}
+                  {queue.state === "Complete" ? <TaskAlt color={"success"} fontSize="medium"/> : null}
+                  {queue.state === "Error" ? (
+                    <Tooltip title={queue.descriptor.Message}>
+                      <Error color={"error"} fontSize="medium"/>
+                    </Tooltip>
+                  ) : null}
+                </MDBox>
               </TableCell>
             </TableRow>
           })}

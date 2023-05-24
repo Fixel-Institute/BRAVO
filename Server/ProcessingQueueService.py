@@ -48,6 +48,19 @@ def processJSONUploads():
                 continue
             queue.state = "Processing"
             queue.save()
+            try:
+                ws.connect("ws://localhost:3001/socket/notification")
+                ws.send(json.dumps({
+                    "NotificationType": "TaskProcessing",
+                    "TaskUser": str(queue.owner),
+                    "TaskID": str(queue.queue_id),
+                    "Authorization": os.environ["ENCRYPTION_KEY"],
+                    "State": "Processing",
+                    "Message": "",
+                }))
+                ws.close()
+            except Exception as e:
+                print(e)
 
             print(f"Start Processing {queue.descriptor['filename']}")
             newPatient = None
@@ -61,6 +74,21 @@ def processJSONUploads():
                 queue.descriptor["Message"] = "JSON Format Error"
                 print(queue.descriptor["Message"])
                 queue.save()
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
+
                 continue
 
             try:
@@ -110,6 +138,20 @@ def processJSONUploads():
                 queue.state = "Error"
                 queue.descriptor["Message"] = ErrorMessage
                 queue.save()
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
                 
                 Sessions.saveCacheJSON(queue.descriptor["filename"], json.dumps(JSON).encode('utf-8'))
 
