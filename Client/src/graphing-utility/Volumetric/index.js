@@ -67,6 +67,7 @@ export const parseBinarySTL = (data) => {
   let defaultR, defaultG, defaultB, alpha;
 
   var colorString = "#FFFFFF";
+  var space = "LPS";
 
   for ( let index = 0; index < 80 - 10; index ++ ) {
     if ( ( reader.getUint32( index, false ) == 0x434F4C4F /*COLO*/ ) &&
@@ -78,6 +79,20 @@ export const parseBinarySTL = (data) => {
         defaultG = reader.getUint8( index + 7 ) / 255;
         defaultB = reader.getUint8( index + 8 ) / 255;
         alpha = reader.getUint8( index + 9 ) / 255;
+    }
+
+    if ( ( reader.getUint32( index, false ) == 0x53504143 /*SPAC*/ ) &&
+      ( reader.getUint8( index + 4 ) == 0x45 /*'E'*/ ) &&
+      ( reader.getUint8( index + 5 ) == 0x3D /*'='*/ ) ) {
+
+        if ( (reader.getUint8( index + 6 ) == 0x4C) && (reader.getUint8( index + 7 ) == 0x50) && (reader.getUint8( index + 8 ) == 0x53) ) {
+          space = "LPS";
+        } else if ( (reader.getUint8( index + 6 ) == 0x52) && (reader.getUint8( index + 7 ) == 0x41) && (reader.getUint8( index + 8 ) == 0x53) ) {
+          space = "RAS";
+        } else {
+          console.log("Unaccounted Space Type");
+        }
+
     }
   }
 
@@ -112,12 +127,21 @@ export const parseBinarySTL = (data) => {
       const vertexstart = start + i * 12;
       const componentIdx = ( face * 3 * 3 ) + ( ( i - 1 ) * 3 );
 
-      vertices[ componentIdx ] = reader.getFloat32( vertexstart, true );
-      vertices[ componentIdx + 1 ] = reader.getFloat32( vertexstart + 4, true );
-      vertices[ componentIdx + 2 ] = reader.getFloat32( vertexstart + 8, true );
-      normals[ componentIdx ] = normalX;
-      normals[ componentIdx + 1 ] = normalY;
-      normals[ componentIdx + 2 ] = normalZ;
+      if (space == "RAS") {
+        vertices[ componentIdx ] = -reader.getFloat32( vertexstart, true );
+        vertices[ componentIdx + 1 ] = -reader.getFloat32( vertexstart + 4, true );
+        vertices[ componentIdx + 2 ] = reader.getFloat32( vertexstart + 8, true );
+        normals[ componentIdx ] = -normalX;
+        normals[ componentIdx + 1 ] = -normalY;
+        normals[ componentIdx + 2 ] = normalZ;
+      } else {
+        vertices[ componentIdx ] = reader.getFloat32( vertexstart, true );
+        vertices[ componentIdx + 1 ] = reader.getFloat32( vertexstart + 4, true );
+        vertices[ componentIdx + 2 ] = reader.getFloat32( vertexstart + 8, true );
+        normals[ componentIdx ] = normalX;
+        normals[ componentIdx + 1 ] = normalY;
+        normals[ componentIdx + 2 ] = normalZ;
+      }
 
       if ( hasColors ) {
         colors[ componentIdx ] = r;

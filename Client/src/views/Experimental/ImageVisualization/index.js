@@ -17,6 +17,8 @@ import { useNavigate } from "react-router-dom";
 import {
   TextField,
   Autocomplete,
+  Dialog,
+  DialogContent,
   Popover,
   Card,
   Grid,
@@ -74,6 +76,7 @@ function ImageVisualization() {
 
   const [addItemModal, setAddItemModal] = useState({show: false});
   const [popup, setPopupState] = React.useState({item: ""});
+  const [editTargetEntry, setEditTargetEntry] = React.useState({show: false, item: "", targetPoint: [0,0,0], entryPoint: [10,10,10]});
 
   const [cameraLock, setCameraLock] = React.useState(false);
   const [worldMatrix, setWorldMatrx] = React.useState(null);
@@ -176,6 +179,25 @@ function ImageVisualization() {
     }
     setControlItems([...controlItems]);
   };
+
+  const updateTargetPoints = () => {
+    setControlItems((controlItems) => {
+      for (let i in controlItems) {
+        if (controlItems[i].filename == editTargetEntry.file) {
+          controlItems[i].targetPts = editTargetEntry.targetPoint.map((value) => parseFloat(value));
+          controlItems[i].entryPts = editTargetEntry.entryPoint.map((value) => parseFloat(value));
+        }
+      }
+      return [...controlItems];
+    });
+    setEditTargetEntry({...editTargetEntry, show: false});
+  };
+
+  const lockCamera = () => {
+    setCameraLock((cameraLock) => {
+      return !cameraLock;
+    });
+  }
 
   return (
     <>
@@ -283,6 +305,12 @@ function ImageVisualization() {
                               {downloadedItem ? (<IconButton variant="contained" color={downloadedItem.show ? "info" : "light"} onClick={() => addModel(item)}>
                                 <i className="fa-solid fa-eye" style={{fontSize: 10}}></i>
                               </IconButton>) : null}
+                              {downloadedItem && item.type === "electrode" ? (<IconButton variant="contained" color={"info"} onClick={() => setEditTargetEntry({item: item.file, targetPoint: item.targetPt, entryPoint: item.entryPt, show: true})}>
+                                <i className="fa-solid fa-pen" style={{fontSize: 10}}></i>
+                              </IconButton>) : null}
+                              {downloadedItem && item.type === "volume" ? (<IconButton variant="contained" color={cameraLock ? "light" : "info"} onClick={lockCamera}>
+                                <i className="fa-solid fa-pen" style={{fontSize: 10}}></i>
+                              </IconButton>) : null}
                             </MDBox>
                           </Grid>
                         })}
@@ -290,7 +318,7 @@ function ImageVisualization() {
                     </Grid>
                     <Grid item xs={12}>
                       <MDBox p={2}>
-                        <Canvas style={{height: "100%", height: "60vh", background: "#000000"}}>
+                        <Canvas style={{height: "100%", height: "80vh", background: "#000000"}}>
                           <CameraController cameraLock={cameraLock}/>
                           <CoordinateSystem length={50} origin={[300, -300, -150]}/>
                           <ShadowLight x={-100} y={-100} z={-100} color={0xffffff} intensity={0.5}/>
@@ -341,6 +369,61 @@ function ImageVisualization() {
               </Grid>
             </Grid>
           </MDBox>
+          <Dialog open={editTargetEntry.show} onClose={() => setEditTargetEntry({...editTargetEntry, show: false})}>
+            <MDBox px={2} pt={2}>
+              <MDTypography variant="h5">
+                {"Edit Electrode Target/Entry Points"}
+              </MDTypography>
+              <MDTypography variant="p" fontSize={24}>
+                {editTargetEntry.item}
+              </MDTypography>
+            </MDBox>
+            <DialogContent style={{minWidth: 500}} >
+              <MDBox style={{display: "flex", flexDirection: "row"}}>
+                {editTargetEntry.targetPoint.map((value, index) => {
+                  let coordinate = ["x", "y", "z"];
+                  return <TextField
+                    variant="standard"
+                    margin="dense"
+                    value={editTargetEntry.targetPoint[index]}
+                    onChange={(event) => setEditTargetEntry((editTargetEntry) => {
+                      editTargetEntry.targetPoint[index] = event.target.value;
+                      return {...editTargetEntry};
+                    })}
+                    label={"Target Position " + coordinate[index] + ":"} type={"number"}
+                    autoComplete={"off"}
+                    fullWidth
+                  />
+                })}
+              </MDBox>
+
+              <MDBox style={{display: "flex", flexDirection: "row"}}>
+                {editTargetEntry.entryPoint.map((value, index) => {
+                  let coordinate = ["x", "y", "z"];
+                  return <TextField
+                    variant="standard"
+                    margin="dense"
+                    value={editTargetEntry.entryPoint[index]}
+                    onChange={(event) => setEditTargetEntry((editTargetEntry) => {
+                      editTargetEntry.entryPoint[index] = event.target.value;
+                      return {...editTargetEntry};
+                    })}
+                    label={"Entry Position " + coordinate[index] + ":"} type={"number"}
+                    autoComplete={"off"}
+                    fullWidth
+                  />
+                })}
+              </MDBox>
+            </DialogContent>
+            <MDBox px={2} py={2} style={{display: "flex", justifyContent: "flex-end"}}>
+              <MDButton variant={"gradient"} color={"secondary"} onClick={() => setEditTargetEntry({...editTargetEntry, show: false})}>
+                {"Cancel"}
+              </MDButton>
+              <MDButton variant={"gradient"} color={"success"} style={{marginLeft: 10}} onClick={updateTargetPoints}>
+                {"Update"}
+              </MDButton>
+            </MDBox>
+          </Dialog>
         </MDBox>
       </DatabaseLayout>
     </>
