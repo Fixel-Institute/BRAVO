@@ -42,7 +42,7 @@ from uuid import UUID
 processingQueue = queue.Queue()
 
 from Backend import models
-from modules import Database
+from modules import Database, AnalysisBuilder
 from modules.Percept import Sessions
 
 class DeidentificationTable(RestViews.APIView):
@@ -270,6 +270,11 @@ class SessionRemove(RestViews.APIView):
                 patient.removeDevice(device)
                 device.delete()
 
+            Authority["Permission"] = Database.verifyPermission(request.user, request.data["patientId"], Authority, "BrainSenseStream")
+            analyses = AnalysisBuilder.getExistingAnalysis(request.user, request.data["patientId"], Authority)
+            for analysis in analyses:
+                AnalysisBuilder.deleteAnalysis(request.user, request.data["patientId"], analysis["AnalysisID"], Authority)
+
             patient.delete()
             return Response(status=200)
         
@@ -319,3 +324,55 @@ class ExtractSessionEMR(RestViews.APIView):
         Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
         Overview = Sessions.viewSession(request.user, request.data["id"], request.data["sessionId"], Authority)
         return Response(status=200, data=Overview)
+
+class ExternalRecordingUpload(RestViews.APIView):
+    """ Upload External Recordings.
+
+    .. note::
+
+        This is the only route in the server that uses MultiPart/Form Parser instead of JSON object. 
+
+    This is the primary route that allow users to upload files that are not Medtronic JSON Session file. 
+    External recording should be pre-parsed into CSV file before upload. 
+
+    **POST**: ``/api/uploadSessionFiles``
+
+    Args:
+      file (io): File object whose content can be read into raw bytes array.
+      [deviceId] (uuid): Device Unique Identifier if the uploader is not clinician/admin. 
+        this is to ensure deidentified JSON file will be properly organized to their own folder.
+        If ``deviceId`` is not provided, the server will attempt to use ``deidentificationLookupTable`` to deidentify batch files.
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+      Response Body may contain "newPatient" object if a new Patient object is created because the patient information is new. 
+    """ 
+    
+    parser_classes = [RestParsers.MultiPartParser, RestParsers.FormParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        for key in request.data.keys():
+            if not (key.startswith("file") or key == "deviceId" or key == "patientId" or key == "decryptionKey" or key == "batchSessionId" or key == "SamplingRate" or key == "RecordingLabel" or key == "StartTime"):
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+            
+            if key.startswith("file"):
+                if not request.data[key].name.endswith(".csv"):
+                    return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+        for key in request.data.keys():
+            if key.startswith("file"):
+                rawBytes = request.data[key].read()
+                queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="externalCSVs", state="WaitToStart", descriptor={
+                    "filename": request.data[key].name,
+                    "patientId": request.data["patientId"],
+                    "batchSessionId": request.data["batchSessionId"],
+                    "descriptor": {
+                        "SamplingRate": request.data["SamplingRate"],
+                        "Label": request.data["RecordingLabel"],
+                        "StartTime": request.data["StartTime"]
+                    }
+                })
+                AnalysisBuilder.saveCacheFile(request.data[key].name, rawBytes)
+                queueItem.save()
+            
+        return Response(status=200)

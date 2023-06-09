@@ -55,6 +55,10 @@ function UploadDialog({show, deidentified, onCancel}) {
       const batchSessionId = uuidv4() + new Date().toISOString();
 
       const myDropzone = dropzoneRef.current.dropzone;
+      if (myDropzone.files.length == 0) {
+        onCancel();
+      }
+
       myDropzone.on("processing", function() {
         this.options.autoProcessQueue = true;
       });
@@ -89,6 +93,10 @@ function UploadDialog({show, deidentified, onCancel}) {
 
   const uploadSessions = () => {
     const myDropzone = dropzoneRef.current.dropzone;
+    if (myDropzone.files.length == 0) {
+      onCancel();
+    }
+    
     myDropzone.on("processing", function() {
       this.options.autoProcessQueue = false;
     });
@@ -247,7 +255,7 @@ function UploadDialog({show, deidentified, onCancel}) {
     )}
     <DialogActions>
       <MDButton color="secondary" onClick={() => cancelUpload()}>Cancel</MDButton>
-      <MDButton color="info" onClick={() => (deidentified && !batchUpload) ? uploadSessionsDeidentified() : uploadSessions()}>Upload</MDButton>
+      <MDButton color="info" onClick={() => (deidentified && !batchUpload) ? uploadSessionsDeidentified() : uploadSessions()}>{"Create"}</MDButton>
     </DialogActions>
   </Dialog>
   </>

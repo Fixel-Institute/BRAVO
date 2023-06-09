@@ -66,7 +66,7 @@ def retrievePatientInformation(PatientInformation, Institute, lookupTable=None, 
         MRN = encoder.encrypt(PatientInformation["PatientId"].encode('utf_8')).decode("utf-8")
         hashfield = hashlib.sha256((PatientInformation["PatientFirstName"] + " " + PatientInformation["PatientLastName"]).encode("utf-8")).hexdigest()
         try:
-            PatientDateOfBirth = datetime.fromisoformat(PatientInformation["PatientDateOfBirth"][:-1]+"+00:00")
+            PatientDateOfBirth = datetime.fromisoformat(PatientInformation["PatientDateOfBirth"].replace("Z","+00:00"))
         except:
             PatientDateOfBirth = datetime.fromtimestamp(0)
 
@@ -146,7 +146,7 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
         DeviceInformation = JSON["DeviceInformation"]["Final"]
         DeviceType = DeviceInformation["Neurostimulator"]
         NeurostimulatorLocation = DeviceInformation["NeurostimulatorLocation"].replace("InsLocation.","")
-        ImplantDate = datetime.fromisoformat(DeviceInformation["ImplantDate"][:-1]+"+00:00")
+        ImplantDate = datetime.fromisoformat(DeviceInformation["ImplantDate"].replace("Z","+00:00"))
         LeadConfigurations = list()
 
         LeadInformation = JSON["LeadConfiguration"]["Final"]
@@ -204,7 +204,7 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
 
     DeviceInformation = JSON["DeviceInformation"]["Final"]
     NeurostimulatorLocation = DeviceInformation["NeurostimulatorLocation"].replace("InsLocation.","")
-    ImplantDate = datetime.fromisoformat(DeviceInformation["ImplantDate"][:-1]+"+00:00")
+    ImplantDate = datetime.fromisoformat(DeviceInformation["ImplantDate"].replace("Z","+00:00"))
     deviceID.implant_date = ImplantDate
     deviceID.device_location = NeurostimulatorLocation
 
@@ -386,13 +386,13 @@ def processSessionFile(JSON):
     lastMeasuredTimestamp = 0
     if "TherapyHistory" in Overview["Therapy"].keys():
         for i in range(len(Overview["Therapy"]["TherapyHistory"])):
-            HistoryDate = datetime.fromisoformat(Overview["Therapy"]["TherapyHistory"][i]["DateTime"][:-1]+"+00:00").timestamp()
+            HistoryDate = datetime.fromisoformat(Overview["Therapy"]["TherapyHistory"][i]["DateTime"].replace("Z","+00:00")).timestamp()
             if SessionDate-HistoryDate > 24*3600:
                 lastMeasuredTimestamp = HistoryDate
                 break
 
     if lastMeasuredTimestamp == 0:
-        lastMeasuredTimestamp = datetime.fromisoformat(Overview["Overall"]["DeviceInformation"]["ImplantDate"][:-1]+"+00:00").timestamp()
+        lastMeasuredTimestamp = datetime.fromisoformat(Overview["Overall"]["DeviceInformation"]["ImplantDate"].replace("Z","+00:00")).timestamp()
     
     Overview["Therapy"]["TherapyChangeHistory"] = [log for log in Overview["Therapy"]["TherapyChangeHistory"] if not "TherapyStatus" in log.keys()]
     if "TherapyChangeHistory" in Overview["Therapy"].keys():
@@ -472,7 +472,7 @@ def viewSession(user, patient_id, session_id, authority):
                 Overview["Overall"]["DeviceInformation"]["NeurostimulatorSerialNumber"] = "Unknown"
                 
                 # Deidentification of Dates
-                Overview["Overall"]["DeviceInformation"]["ImplantDate"] = datetime.fromisoformat(Overview["Overall"]["DeviceInformation"]["ImplantDate"][:-1]+"+00:00").timestamp() + 15*24*3600
+                Overview["Overall"]["DeviceInformation"]["ImplantDate"] = datetime.fromisoformat(Overview["Overall"]["DeviceInformation"]["ImplantDate"].replace("Z","+00:00")).timestamp() + 15*24*3600
                 Overview["Overall"]["DeviceInformation"]["ImplantDate"] = datetime.fromtimestamp(Overview["Overall"]["DeviceInformation"]["ImplantDate"]).isoformat() + "Z"
 
             return Overview

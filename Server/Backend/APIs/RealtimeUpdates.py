@@ -100,6 +100,17 @@ class NotificationSystem(AsyncWebsocketConsumer):
                                 "Message": request["Message"],
                             }
                         })
+
+                    elif request["NotificationType"] == "AnalysisProcessing":
+                        await self.channel_layer.group_send("BroadcastChannel", {
+                            "type": "broadcast_analysis_processing",
+                            "message": {
+                                "UserID": request["TaskUser"],
+                                "TaskID": request["TaskID"],
+                                "State": request["State"],
+                                "Message": request["Message"],
+                            }
+                        })
                     
                     return
 
@@ -167,3 +178,15 @@ class NotificationSystem(AsyncWebsocketConsumer):
     # Broadcast Streams
     async def broadcast_stream(self, event):
         pass
+
+    async def broadcast_analysis_processing(self, event):
+        if "UserID" in event["message"]:
+            if str(self.scope["user"].unique_user_id) == event["message"]["UserID"]:
+                await self.send(text_data=json.dumps({
+                    "Notification": "AnalysisUpdate",
+                    "TaskID": event["message"]["TaskID"],
+                    "State": event["message"]["State"],
+                    "Message": event["message"]["Message"],
+                }))
+        pass
+

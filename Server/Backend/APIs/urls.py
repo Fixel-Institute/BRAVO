@@ -27,6 +27,7 @@ urlpatterns = [
 	
 	path('deidentificationTable', Upload.DeidentificationTable.as_view()),
 	path('uploadSessionFiles', Upload.SessionUpload.as_view()),
+	path('uploadExternalFiles', Upload.ExternalRecordingUpload.as_view()),
 	path('deleteSessionFiles', Upload.SessionRemove.as_view()),
 	path('requestProcessing', Upload.RequestProcessingQueue.as_view()),
 	path('extractSessionEMR', Upload.ExtractSessionEMR.as_view()),
@@ -58,6 +59,9 @@ urlpatterns = [
 	path('queryAdaptiveGroups', Queries.QueryAdaptiveGroups.as_view()),
   path('queryAdaptiveStimulation', Queries.QueryAdaptiveStimulation.as_view()),
 	path('queryCircadianPower', Queries.QueryCircadianPower.as_view()),
+    
+	path('queryCustomizedAnalysis', Queries.QueryCustomizedAnalysis.as_view()),
+	path('queryRecordingsForAnalysis', Queries.QueryRecordingsForAnalysis.as_view()),
 
 	path('queryImageDirectory', Queries.QueryImageModelDirectory.as_view()),
 	path('queryImageModel', Queries.QueryImageModel.as_view()),

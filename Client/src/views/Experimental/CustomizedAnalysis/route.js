@@ -11,16 +11,20 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-const enabledPlugins = [
-  "TherapeuticPrediction",
-  "MultipleSegmentAnalysis",
-  "AdaptiveStimulation",
-  "CircadianThreshold",
-  "PatientEvents",
-  "ImageVisualization",
-  "CustomizedAnalysis"
-];
+import {
+  FlashAuto, 
+} from "@mui/icons-material";
 
-export const experimentalRoutes = enabledPlugins.map((plugin) => {
-  return require("views/Experimental/" + plugin + "/route.js").default;
-});
+import CustomizedAnalysis from "./index";
+
+const route = {
+  name: "CustomizedAnalysis",
+  key: "analysis",
+  icon: <FlashAuto style={{color: "white", margin: 0, padding: 0}}/>,
+  route: "/experimental/analysis",
+  component: <CustomizedAnalysis />,
+  identified: true,
+  deidentified: true
+};
+
+export default route;

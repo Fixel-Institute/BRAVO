@@ -930,6 +930,14 @@ export const dictionary = {
       en: "Wearable Stream",
       zh: "Wearable Stream"
     },
+    mobile: {
+      en: "Mobile App Manager",
+      zh: "Mobile App Manager"
+    },
+    analysis: {
+      en: "Analysis Builder",
+      zh: "Analysis Builder"
+    },
     surveys: {
       en: "Surveys",
       zh: "Surveys"
@@ -1011,6 +1019,14 @@ export const dictionary = {
     WearableStream: {
       en: "Wearable Stream",
       zh: "Wearable Stream"
+    },
+    MobileManager: {
+      en: "Mobile App Manager",
+      zh: "Mobile App Manager"
+    },
+    CustomizedAnalysis: {
+      en: "Analysis Builder",
+      zh: "Analysis Builder"
     },
     Surveys: {
       en: "Surveys",

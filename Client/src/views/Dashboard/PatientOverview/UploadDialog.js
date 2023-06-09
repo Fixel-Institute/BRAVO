@@ -36,6 +36,14 @@ import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
 import { dictionary, dictionaryLookup } from "assets/translation";
 
+const formatAsDate = (datetime) => {
+  return datetime.getFullYear() + "-" + (datetime.getMonth()+1).toFixed(0).padStart(2, "0") + "-" + datetime.getDate().toFixed(0).padStart(2, "0");
+};
+
+const formatAsTime = (datetime) => {
+  return datetime.getHours().toFixed(0).padStart(2, "0") + ":" + datetime.getMinutes().toFixed(0).padStart(2, "0") + ":" + datetime.getSeconds().toFixed(0).padStart(2, "0");
+};
+
 export default function UploadDialog({show, availableDevices, onCancel}) {
   const [controller, dispatch] = usePlatformContext();
   const { user, language, patientID } = controller;
@@ -43,10 +51,16 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
   const [deidentifiedInfo, setDeidentifiedInfo] = useState({patientId: "", studyId: "", diagnosis: "", deviceName: ""});
   const [decryptionKey, setDecryptionKey] = useState("");
   const [selectedDevice, setSelectedDevice] = useState({label: "New Device", value: "NewDevice"});
+  const [externalDataInfo, setExternalDataInfo] = useState({
+    label: "External Recording",
+    samplingRate: "100",
+    startDate: formatAsDate(new Date()),
+    startTime: formatAsTime(new Date())
+  });
 
   React.useEffect(() => {
     if (availableDevices.length > 0) setSelectedDevice(availableDevices[0]);
-  }, [availableDevices])
+  }, [availableDevices]);
 
   const uploadSessionsDeidentified = () => {
     const myDropzone = dropzoneRef.current.dropzone;
@@ -54,7 +68,7 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
     if (deviceId === "NewDevice") {
       deviceId = uuidv4();
     }
-
+    
     const batchSessionId = uuidv4() + new Date().toISOString();
 
     myDropzone.on("processing", function() {
@@ -64,6 +78,11 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
       formData.append("deviceId", deviceId);  
       formData.append("patientId", patientID);
       formData.append("batchSessionId", batchSessionId);
+      if (deviceId === "ExternalRecordings") {
+        formData.append("SamplingRate", externalDataInfo.samplingRate);
+        formData.append("StartTime", new Date(externalDataInfo.startDate + " " + externalDataInfo.startTime).getTime());
+        formData.append("RecordingLabel", externalDataInfo.label);
+      }
     });
     myDropzone.on("success", function(file, response) {
       this.removeFile(file);
@@ -74,12 +93,14 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
       }
     });
     myDropzone.on("complete", function(file, response) {
-      if (myDropzone.getUploadingFiles().length === 0 && myDropzone.getQueuedFiles().length === 0) {
+      if (myDropzone.getUploadingFiles().length === 0 && myDropzone.getQueuedFiles().length === 0 && myDropzone.files.length === 0) {
         SessionController.query("/api/requestProcessing", {
           batchSessionId: batchSessionId
         }).then((response) => {
-          if (myDropzone.getRejectedFiles().length === 0) onCancel();
-        });
+          onCancel();
+        }).catch((error) => {
+          console.log(error);
+        })
       }
     });
     myDropzone.processQueue();
@@ -97,7 +118,7 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
   <Dialog open={show} onClose={cancelUpload}>
     <MDBox px={2} pt={2}>
       <MDTypography variant="h5">
-        {"Upload New JSON Session Files"} 
+        {"Upload New Recordings"} 
       </MDTypography>
     </MDBox>
     <DialogContent>
@@ -105,7 +126,7 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
         <Grid item xs={12}>
           <Autocomplete
             value={selectedDevice}
-            options={[...availableDevices, {label: "New Device", value: "NewDevice"}]}
+            options={[...availableDevices, {label: "New Device", value: "NewDevice"}, {label: "External Recording", value: "ExternalRecordings"}]}
             onChange={(event, value) => setSelectedDevice(value)}
             isOptionEqualToValue={(option, value) => {
               return option.value == value.value;
@@ -119,20 +140,65 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
             )}
           />
         </Grid>
+        {selectedDevice.value === "ExternalRecordings" ? (
+          <Grid item xs={12} style={{display: "flex", flexDirection: "column"}}>
+            <TextField
+              variant="standard"
+              margin="dense"
+              label="Recording Name"
+              placeholder="External Recording"
+              value={externalDataInfo.label}
+              onChange={(event) => setExternalDataInfo({...externalDataInfo, label: event.target.value})}
+
+            />
+            <TextField
+              variant="standard"
+              margin="dense"
+              label="Sampling Rate (Hz)"
+              placeholder="Sampling Rate (Hz)"
+              value={externalDataInfo.samplingRate}
+              type="number"
+              onChange={(event) => setExternalDataInfo({...externalDataInfo, samplingRate: event.target.value})}
+            />
+            <MDBox style={{display: "flex", flexDirection: "row", justifyContent: "space-between"}}>
+              <TextField
+                variant="standard"
+                margin="dense"
+                label="Recording Date"
+                placeholder="Recording Time"
+                value={externalDataInfo.startDate}
+                type={"date"}
+                onChange={(event) => setExternalDataInfo({...externalDataInfo, startDate: event.target.value})}
+                fullWidth
+              />
+              <TextField
+                variant="standard"
+                margin="dense"
+                label="Recording Time"
+                placeholder="Recording Time"
+                value={externalDataInfo.startTime}
+                type={"time"}
+                onChange={(event) => setExternalDataInfo({...externalDataInfo, startTime: event.target.value})}
+                fullWidth
+              />
+            </MDBox>
+          </Grid>
+        ) : null}
       </Grid>
         
       <MDBox pt={2}>
         <DropzoneUploader options={{
-          url: SessionController.getServer() + "/api/uploadSessionFiles",
+          url: SessionController.getServer() + (selectedDevice.value === "ExternalRecordings" ? "/api/uploadExternalFiles" : "/api/uploadSessionFiles"),
           paramName: "file",
           addRemoveLinks: true,
-          acceptedFiles: ".json",
+          acceptedFiles: selectedDevice.value === "ExternalRecordings" ? ".csv" : ".json",
           autoDiscover: false,
           autoProcessQueue: false,
           uploadMultiple: true,
           headers: { 'Authorization': "Bearer " + SessionController.getAuthToken() },
           parallelUploads: 50,
-          maxFiles: 50
+          maxFiles: 50,
+          maxFilesize: 500
         }} ref={dropzoneRef}>
         </DropzoneUploader>
       </MDBox>

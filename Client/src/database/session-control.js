@@ -93,6 +93,7 @@ export const SessionController = (function () {
         }
       } else if (error.response.status == 401) {
         setAuthToken("");
+        setRefreshToken("");
         errorMessage = dictionary.ErrorMessage["CONNECTION_TIMEDOUT"][session.language]
       } else {
         console.log(error);

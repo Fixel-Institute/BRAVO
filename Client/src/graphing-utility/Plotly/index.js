@@ -584,6 +584,46 @@ class PlotlyRenderManager {
   }
 
   /**
+   * Add text
+   *
+   * @param {number[]} x - x positions
+   * @param {number[]} y - y positions
+   * @param {string[]} text - texts
+   * @param {Object} [options] - Text Configuration Options (https://plotly.com/javascript/reference/text/)
+   * @param {string} [ax] - Subplot to add scatter plot to. Default to last access axes.
+   * 
+   * @return {Object} The line plot object created.
+   */
+  addText(x, y, text, options={}, ax=null) {
+    var trace = {
+      x: x, 
+      y: y,
+      text: text,
+      mode: "text"
+    };
+
+    for (var key of Object.keys(options)) {
+      trace[key] = options[key];
+    }
+
+    if (!ax) {
+      ax = this.gca;
+    } else {
+      if (this.ax.includes(ax)) {
+        this.gca = ax;
+      } else {
+        console.log("WARNING: Ax Not Found");
+        ax = this.gca;
+      }
+    }
+    trace.xaxis = this.gca.xaxis;
+    trace.yaxis = this.gca.yaxis;
+
+    this.traces.push(trace);
+    return trace;
+  }
+
+  /**
    * Add colorbar to figure
    *
    * @param {Object} [options] - Color Axis Graph Configuration Options (https://plotly.com/javascript/reference/layout/coloraxis/#layout-coloraxis)

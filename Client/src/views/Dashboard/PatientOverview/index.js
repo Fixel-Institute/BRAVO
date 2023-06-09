@@ -255,7 +255,7 @@ export default function PatientOverview() {
                     </Grid>
                     <Grid item xs={12} xl={user.Clinician ? 12 : 6}>
                       <Divider variant="middle" />
-                      <MDButton variant="outlined" color="warning" fullWidth
+                      <MDButton variant="outlined" color="warning" fullWidth 
                         onClick={() => setEditPatientInfo({...patientInfo, show: true})}
                       >
                         {dictionary.PatientOverview.EditPatientInfo[language]}

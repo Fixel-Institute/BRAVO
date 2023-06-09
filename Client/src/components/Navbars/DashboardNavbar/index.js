@@ -319,17 +319,6 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
                 disableRipple
                 color="inherit"
                 sx={navbarIconButton}
-                aria-haspopup="true"
-                variant="contained"
-                onClick={(event) => handleOpenMenu(event, "LanguageMenu")}
-              >
-                <Translate fontSize="large" />
-              </IconButton>
-              <IconButton
-                size="small"
-                disableRipple
-                color="inherit"
-                sx={navbarIconButton}
                 aria-controls="notification-menu"
                 aria-haspopup="true"
                 variant="contained"

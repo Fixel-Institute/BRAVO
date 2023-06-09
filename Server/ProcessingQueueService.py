@@ -26,6 +26,8 @@ import json
 import datetime
 import dateutil
 import time
+import numpy as np
+import pytz
 from cryptography.fernet import Fernet
 
 import websocket
@@ -33,16 +35,16 @@ from BRAVO import asgi
 
 from Backend import models
 from modules.Percept import Sessions
-from modules import Database
+from modules import Database, AnalysisBuilder
 from decoder import Percept
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
 def processJSONUploads():
     ws = websocket.WebSocket()
-    if models.ProcessingQueue.objects.filter(state="InProgress").exists():
+    if models.ProcessingQueue.objects.filter(type="decodeJSON", state="InProgress").exists():
         print(datetime.datetime.now())
-        BatchQueues = models.ProcessingQueue.objects.filter(state="InProgress").order_by("datetime").all()
+        BatchQueues = models.ProcessingQueue.objects.filter(type="decodeJSON", state="InProgress").order_by("datetime").all()
         for queue in BatchQueues:
             if not models.ProcessingQueue.objects.filter(state="InProgress", queue_id=queue.queue_id).exists():
                 continue
@@ -155,5 +157,98 @@ def processJSONUploads():
                 
                 Sessions.saveCacheJSON(queue.descriptor["filename"], json.dumps(JSON).encode('utf-8'))
 
+def processExternalRecordingUpload():
+    ws = websocket.WebSocket()
+    if models.ProcessingQueue.objects.filter(type="externalCSVs", state="InProgress").exists():
+        print(datetime.datetime.now())
+        BatchQueues = models.ProcessingQueue.objects.filter(type="externalCSVs", state="InProgress").order_by("datetime").all()
+        for queue in BatchQueues:
+            if not models.ProcessingQueue.objects.filter(state="InProgress", queue_id=queue.queue_id).exists():
+                continue
+            queue.state = "Processing"
+            queue.save()
+            ErrorMessage = ""
+            try:
+                ws.connect("ws://localhost:3001/socket/notification")
+                ws.send(json.dumps({
+                    "NotificationType": "TaskProcessing",
+                    "TaskUser": str(queue.owner),
+                    "TaskID": str(queue.queue_id),
+                    "Authorization": os.environ["ENCRYPTION_KEY"],
+                    "State": "Processing",
+                    "Message": "",
+                }))
+                ws.close()
+            except Exception as e:
+                print(e)
+
+            print(f"Start Processing {queue.descriptor['filename']}")
+            try:
+                ProcessedData = AnalysisBuilder.processExternalRecordings(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"])
+            except:
+                queue.state = "Error"
+                queue.descriptor["Message"] = "CSV Format Error"
+                print(queue.descriptor["Message"])
+                queue.save()
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
+                continue
+
+            try:
+                ProcessedData["SamplingRate"] = float(queue.descriptor["descriptor"]["SamplingRate"])
+                ProcessedData["StartTime"] = float(queue.descriptor["descriptor"]["StartTime"])/1000 # Javascript Time is in Milliseconds
+                ProcessedData["Missing"] = np.zeros(ProcessedData["Data"].shape)
+                ProcessedData["Duration"] = ProcessedData["Data"].shape[0]/ProcessedData["SamplingRate"]
+                recording = models.ExternalRecording(patient_deidentified_id=queue.descriptor["patientId"], 
+                                         recording_type=queue.descriptor["descriptor"]["Label"], 
+                                         recording_date=datetime.datetime.fromtimestamp(ProcessedData["StartTime"]).astimezone(pytz.utc),
+                                         recording_duration=ProcessedData["Duration"])
+                
+                filename = Database.saveSourceFiles(ProcessedData, "ExternalRecording", "Raw", recording.recording_id, recording.patient_deidentified_id)
+                recording.recording_datapointer = filename
+                recording.save()
+                
+            except Exception as e:
+                ErrorMessage = str(e)
+
+            print(f"End Processing {queue.descriptor['filename']}")
+            if ErrorMessage == "":
+                queue.state = "Complete"
+                queue.save()
+            else:
+                print(ErrorMessage)
+                queue.state = "Error"
+                queue.descriptor["Message"] = ErrorMessage
+                queue.save()
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
+                
+
+
 if __name__ == '__main__':
     processJSONUploads()
+    processExternalRecordingUpload()
