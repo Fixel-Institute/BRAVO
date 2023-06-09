@@ -173,6 +173,12 @@ def AuthorizeRecordingAccess(user, researcher_id, patient_id, recording_id="", r
                     models.ResearchAuthorizedAccess(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type).save()
             else:
                 DeidentifiedPatientID = models.DeidentifiedPatientID.objects.get(researcher_id=researcher_id, authorized_patient_id=patient_id)
+                if recording_type not in DeidentifiedPatientID.authorized_time_range.keys():
+                    CurrentStruct = DeidentifiedPatientID.authorized_time_range
+                    CurrentStruct[recording_type] = [0, datetime.utcnow().timestamp()]
+                    DeidentifiedPatientID.authorized_time_range = CurrentStruct
+                    DeidentifiedPatientID.save()
+
                 TimeRange = [datetime.fromtimestamp(timestamp) for timestamp in DeidentifiedPatientID.authorized_time_range[recording_type]]
                 AvailableDevices = models.PerceptDevice.objects.filter(patient_deidentified_id=patient_id).all()
                 for device in AvailableDevices:
@@ -358,9 +364,14 @@ def verifyPermission(user, patient_id, authority, access_type):
         recording_ids = [id["authorized_recording_id"] for id in recording_ids]
         return recording_ids
 
-    elif access_type == "BrainSenseStream" and models.ResearchAuthorizedAccess.objects.filter(researcher_id=user.unique_user_id, authorized_patient_id=patient_id, authorized_recording_type=access_type).exists():
-        recording_ids = models.ResearchAuthorizedAccess.objects.filter(researcher_id=user.unique_user_id, authorized_patient_id=patient_id, authorized_recording_type=access_type).all().values("authorized_recording_id")
-        recording_ids = [id["authorized_recording_id"] for id in recording_ids]
+    elif access_type == "BrainSenseStream":
+        recording_ids = []
+        for subaccess_type in ["BrainSenseStreamTimeDomain", "BrainSenseStreamPowerDomain"]:
+            if models.ResearchAuthorizedAccess.objects.filter(researcher_id=user.unique_user_id, authorized_patient_id=patient_id, authorized_recording_type=subaccess_type).exists():
+                recording_ids_obj = models.ResearchAuthorizedAccess.objects.filter(researcher_id=user.unique_user_id, authorized_patient_id=patient_id, authorized_recording_type=subaccess_type).all().values("authorized_recording_id")
+                recording_ids.extend([str(id["authorized_recording_id"]) for id in recording_ids_obj])
+        if len(recording_ids) == 0:
+            return None
         return recording_ids
 
     elif access_type == "IndefiniteStream" and models.ResearchAuthorizedAccess.objects.filter(researcher_id=user.unique_user_id, authorized_patient_id=patient_id, authorized_recording_type=access_type).exists():

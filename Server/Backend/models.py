@@ -32,7 +32,8 @@ def PerceptRecordingDefaultAuthorization():
     Authorization = {
         "TherapyHistory": [nullDateTime, nowDateTime],
         "BrainSenseSurvey": [nullDateTime, nowDateTime],
-        "BrainSenseStream": [nullDateTime, nowDateTime],
+        "BrainSenseStreamTimeDomain": [nullDateTime, nowDateTime],
+        "BrainSenseStreamPowerDomain": [nullDateTime, nowDateTime],
         "IndefiniteStream": [nullDateTime, nowDateTime],
         "ChronicLFPs": [nullDateTime, nowDateTime]
     }
@@ -80,6 +81,24 @@ class PlatformUser(AbstractBaseUser):
     def is_staff(self):
         return self.is_admin
 
+class MobileUser(AbstractBaseUser):
+    user_name = models.CharField(max_length=255, default="", unique=True)
+    institute = models.CharField(max_length=255, default="Mobile")
+    unique_user_id = models.UUIDField(default=uuid.uuid1, unique=True, editable=False)
+
+    register_date = models.DateTimeField(default=timezone.now)
+    configuration = models.JSONField(default=dict)
+    linked_patient_id = models.UUIDField(default=uuid.uuid1)
+
+    USERNAME_FIELD = "user_name"
+    REQUIRED_FIELDS = ["institute", "linked_patient_id"]
+
+    is_active = models.BooleanField(default=False)
+    active_token = models.CharField(max_length=255, default="")
+
+    def __str__(self):
+        return self.user_name + " (" + self.institute + ")"
+    
 class Institute(models.Model):
     name = models.CharField(default="", max_length=100, unique=True)
 
@@ -312,6 +331,7 @@ class ExternalRecording(models.Model):
     patient_deidentified_id = models.UUIDField(default=uuid.uuid4)
     recording_type = models.CharField(default="", max_length=32)
     recording_date = models.DateTimeField(default=timezone.now)
+    recording_info = models.JSONField(default=dict, null=True)
     recording_duration = models.FloatField(default=0)
 
     recording_datapointer = models.CharField(default="", max_length=255)

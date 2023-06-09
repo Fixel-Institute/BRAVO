@@ -399,8 +399,9 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
             leads = device.device_lead_configurations
 
         for analysis in allAnalysis:
-            if not analysis.deidentified_id in authority["Permission"] and authority["Level"] == 2:
-                continue
+            for recordingId in analysis.recording_list:
+                if not recordingId in authority["Permission"] and authority["Level"] == 2:
+                    continue
 
             data = dict()
             data["Timestamp"] = analysis.analysis_date.timestamp()
@@ -490,8 +491,9 @@ def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=Fal
 
     if not analysis == None:
         if authority["Level"] == 2:
-            if not analysis.deidentified_id in authority["Permission"]:
-                return BrainSenseData, RecordingID
+            for recordingId in analysis.recording_list:
+                if not recordingId in authority["Permission"] and authority["Level"] == 2:
+                    return BrainSenseData, RecordingID
             
         allRecordings = models.BrainSenseRecording.objects.filter(recording_id__in=analysis.recording_list)
         for recording in allRecordings:

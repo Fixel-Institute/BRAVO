@@ -291,7 +291,8 @@ class UpdatePatientAccess(RestViews.APIView):
                 Database.AuthorizeResearchAccess(request.user, request.user.unique_user_id, patientId, True)
                 Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="TherapyHistory")
                 Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="BrainSenseSurvey")
-                Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="BrainSenseStream")
+                Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="BrainSenseStreamTimeDomain")
+                Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="BrainSenseStreamPowerDomain")
                 Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="IndefiniteStream")
                 Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="ChronicLFPs")
 

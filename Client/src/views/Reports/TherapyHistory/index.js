@@ -214,7 +214,7 @@ function TherapyHistory() {
       }
     } else if (type == "BrainSense") {
       if (therapy.Mode == "BrainSense") {
-        if (therapy.LFPThresholds[0] == 20 && therapy.LFPThresholds[1] == 30 && therapy.CaptureAmplitudes[0] == 0 && therapy.CaptureAmplitudes[1] == 0) {
+        if ((therapy.LFPThresholds[0] == 20 && therapy.LFPThresholds[1] == 30 && therapy.CaptureAmplitudes[0] == 0 && therapy.CaptureAmplitudes[1] == 0) || !therapy.AdaptiveSetup) {
           return (
           <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
             <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>

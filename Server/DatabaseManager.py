@@ -323,8 +323,6 @@ def processInput(argv):
       return True
     
     elif argv[1] == "MigrateFromV2.1":
-      # Require to run ProcessingQueueJob after migration.
-      
       from BRAVO import asgi
       from Backend import models
       from modules.Percept import Sessions, Therapy, BrainSenseSurvey, BrainSenseStream, BrainSenseEvent, IndefiniteStream, ChronicBrainSense
@@ -351,19 +349,50 @@ def processInput(argv):
                 shutil.copyfile(DATABASE_PATH + session.session_file_path,(DATABASE_PATH + session.session_file_path).replace("/sessions/","/cache/"))
                 models.ProcessingQueue(owner=user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
                     "filename": session.session_file_path.split("/")[-1],
-                    "device_deidentified_id": str(device.deidentified_id)
+                    "device_deidentified_id": str(device.deidentified_id),
                 }).save()
                 Sessions.deleteSessions(user, patient.deidentified_id, [str(session.deidentified_id)], Authority)
 
               except Exception as e:
                 print(e)
-    
+          
       # Cleanup Database
       models.CombinedRecordingAnalysis.objects.all().delete()
       models.TherapyChangeLog.objects.all().delete()
       models.TherapyHistory.objects.all().delete()
       models.ImpedanceHistory.objects.all().delete()
       models.BrainSenseRecording.objects.all().delete()
+
+      # Run Processing Script
+      from ProcessingQueueService import processJSONUploads 
+      processJSONUploads()
+
+      # Check for Authorized Access
+      users = models.PlatformUser.objects.all()
+      Authority = {"Level": 1}
+      for user in users:
+        if user.is_admin or user.is_clinician:
+          Patients = models.Patient.objects.filter(institute=user.institute).all()
+        else:
+          Patients = models.Patient.objects.filter(institute=user.email).all()
+
+        for patient in Patients:
+          AuthorizedUsers = []
+          if models.DeidentifiedPatientID.objects.filter(authorized_patient_id=patient.deidentified_id).exists():
+            AuthorizedUsers = models.DeidentifiedPatientID.objects.filter(authorized_patient_id=patient.deidentified_id).all()
+
+            for authorizeUser in AuthorizedUsers:
+              # First Cleanup Permission
+              Database.AuthorizeResearchAccess(user, authorizeUser.researcher_id, patient.deidentified_id, False)
+
+              # Then Add Permission Again due to different structures
+              Database.AuthorizeResearchAccess(user, authorizeUser.researcher_id, patient.deidentified_id, True)
+              Database.AuthorizeRecordingAccess(user, authorizeUser.researcher_id, patient.deidentified_id, recording_type="TherapyHistory")
+              Database.AuthorizeRecordingAccess(user, authorizeUser.researcher_id, patient.deidentified_id, recording_type="BrainSenseSurvey")
+              Database.AuthorizeRecordingAccess(user, authorizeUser.researcher_id, patient.deidentified_id, recording_type="BrainSenseStreamTimeDomain")
+              Database.AuthorizeRecordingAccess(user, authorizeUser.researcher_id, patient.deidentified_id, recording_type="BrainSenseStreamPowerDomain")
+              Database.AuthorizeRecordingAccess(user, authorizeUser.researcher_id, patient.deidentified_id, recording_type="IndefiniteStream")
+              Database.AuthorizeRecordingAccess(user, authorizeUser.researcher_id, patient.deidentified_id, recording_type="ChronicLFPs")
 
       return True
 
@@ -425,7 +454,7 @@ def processInput(argv):
           for therapy in TherapyHistories:
             if therapy.therapy_type == "Past Therapy":
               for newTherapy in TherapySettings["TherapyHistory"]:
-                if therapy.therapy_date == datetime.fromisoformat(newTherapy["DateTime"]+"+00:00"):
+                if therapy.therapy_date == datetime.fromisoformat(newTherapy["DateTime"].replace("Z","+00:00")):
                   for group in newTherapy["Therapy"]:
                     if group["GroupId"] == therapy.group_id:
                       therapy.therapy_details = group
