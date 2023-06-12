@@ -18,9 +18,10 @@ from django.conf import settings
 from . import Wearable, Auth, Speech
 
 urlpatterns = [
-	path('auth/login', Auth.UserLogin.as_view()),
-	path('auth/refresh', Auth.UserRefresh.as_view()),
+	path('auth/login', Auth.UserAuth.as_view()),
+	path('auth/logout', Auth.UserSignout.as_view()),
 
+	path('wearable/queryMobileAccount', Wearable.QueryMobileAccount.as_view()),
 	path('wearable/requestPairing', Wearable.RequestPairingDevice.as_view()),
 	path('wearable/queryPairedDevice', Wearable.QueryPairedDevice.as_view()),
 	path('wearable/verifyDevicePairing', Wearable.VerifyPairing.as_view()),

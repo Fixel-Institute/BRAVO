@@ -49,6 +49,60 @@ with open(RESOURCES + "/../codes.json", "r") as file:
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
+class QueryMobileAccount(RestViews.APIView):
+    """ Query associated mobile account.
+
+    **POST**: ``/mobile/wearable/queryMobileAccount``
+
+    Args:
+      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
+
+    Returns:
+      Response Code 200.
+      Response Body contains a single patient object with detailed information.
+    """
+
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        Authority = {}
+        Authority["Level"] = Database.verifyAccess(request.user, request.data["patientId"])
+        if Authority["Level"] == 0 or Authority["Level"] == 2:
+            return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        if "queryMobileAccount" in request.data:
+            if models.MobileUser.objects.filter(linked_patient_id=request.data["patientId"]).exists():
+                mobileUser = models.MobileUser.objects.filter(linked_patient_id=request.data["patientId"]).first()
+                return Response(status=200, data=[{
+                    "Username": mobileUser.user_name,
+                    "Token": mobileUser.active_token,
+                }])
+            else:
+                return Response(status=200, data=[])
+        
+        elif "createMobileAccount" in request.data:
+            if not models.MobileUser.objects.filter(linked_patient_id=request.data["patientId"]).exists():
+                mobileUser = models.MobileUser(user_name=request.data["username"], linked_patient_id=request.data["patientId"])
+                mobileUser.set_password(request.data["password"])
+                mobileUser.save()
+                return Response(status=200, data=[{
+                    "Username": mobileUser.user_name,
+                    "Password": "",
+                }])
+            else:
+                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        elif "deleteMobileAccount" in request.data:
+            if models.MobileUser.objects.filter(linked_patient_id=request.data["patientId"]).exists():
+                mobileUser = models.MobileUser.objects.filter(linked_patient_id=request.data["patientId"]).delete()
+                return Response(status=200, data=[{
+                    "Username": "",
+                    "Password": "",
+                    "New": True
+                }])
+            else:
+                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
 class RequestPairingDevice(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
