@@ -46,6 +46,7 @@
     "react-router-dom": "6.2.1",
     "react-scripts": "5.0.0",
     "react-select": "^5.7.0",
+    "react-window": "^1.8.9",
     "stylis": "4.0.13",
     "stylis-plugin-rtl": "2.1.1",
     "three": "^0.145.0",

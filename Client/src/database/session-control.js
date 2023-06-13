@@ -29,6 +29,7 @@ export const SessionController = (function () {
   let user = {};
   let authToken = "";
   let refreshToken = "";
+  let serverVersion = "";
 
   const setAuthToken = (token) => {
     authToken = token;
@@ -57,7 +58,10 @@ export const SessionController = (function () {
   };
 
   const getConnectionStatus = () => {
-    return connectionStatus;
+    return {
+      version: serverVersion,
+      status: connectionStatus
+    };
   };
 
   const query = (url, form, config, timeout, responseType) => {
@@ -115,9 +119,17 @@ export const SessionController = (function () {
 
     connectionStatus = false;
     try {
-      await query("/api/handshake", {}, {}, 2000);
-      connectionStatus = true;
+      const response = await query("/api/handshake", {}, {}, 2000);
+      if (response.status == 200) {
+        if (response.data.Version) {
+          serverVersion = response.data.Version;
+        } else {
+          serverVersion = "";
+        }
+        connectionStatus = true;
+      }
     } catch (error) {
+      serverVersion = "";
       console.log(error);
     }
 

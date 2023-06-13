@@ -215,4 +215,6 @@ class Handshake(RestViews.APIView):
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
-        return Response(status=200)
+        return Response(status=200, data={
+            "Version": "2.2.0"
+        })

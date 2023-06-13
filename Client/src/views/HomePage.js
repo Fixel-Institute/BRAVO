@@ -11,8 +11,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 // @mui material components
 import { 
@@ -21,7 +20,7 @@ import {
   CardContent,
   Switch,
   Grid,
-  MuiLink,
+  Link,
 } from "@mui/material";
 
 import MDTypography from "components/MDTypography";
@@ -31,12 +30,39 @@ import OnePageLayout from "layouts/OnePage";
 
 import { SessionController } from "database/session-control";
 
+import MuiAlertDialog from "components/MuiAlertDialog";
+
 export default function HomePage() {
   const server = SessionController.getServer();
   const connectionStatus = SessionController.getConnectionStatus();
 
+  const [alert, setAlert] = useState(null);
+
+  useEffect(() => {
+    if (connectionStatus.status) {
+      if (connectionStatus.version !== "2.2.0") {
+        setAlert(<MuiAlertDialog title={"Server Version Imcompatible"} message={<>
+          {"Current frontend page support Version 2.2.0. Please upgrade your server by following instructions at"}
+          <Link target="_blank" href="https://github.com/Fixel-Institute/BRAVO/blob/v2.1.1/README.md" underline="always" sx={{color: "blue"}} > <i>GitHub Page</i> </Link>
+          <br></br>
+          <br></br>
+          {"If you would like to stay with older build, please use"}
+          <Link target="_blank" href="https://github.com/Fixel-Institute/BRAVO/blob/v2.1.1/README.md" underline="always" sx={{color: "blue"}} > <i>this link</i> </Link>
+          {"to access previous build links"}
+          <br></br>
+          <br></br>
+          {"Additionally, you can run your local version using NPM with instructions at "}
+          <Link target="_blank" href="https://bravo-documentation.jcagle.solutions/installation#react-frontend-installation-guide" underline="always" sx={{color: "blue"}} > <i>documentation page</i> </Link>
+        </>}
+          handleClose={() => setAlert()} 
+          handleConfirm={() => setAlert()}/>)
+      }
+    }
+  }, []);
+
   return (
     <OnePageLayout wide image={"https://j9q7m2a3.rocketcdn.me/wp-content/uploads/2022/01/UF-Health.jpg"}>
+      {alert}
       <Card sx={{
         paddingTop: 5,
         paddingBottom: 5,
@@ -58,14 +84,14 @@ export default function HomePage() {
             {"Connection Status"}
           </MDTypography>
           <MDTypography variant={"h6"} color={"black"} align={"center"} fontSize={20}>
-            {connectionStatus ? "Backend Server Connected" : "Backend Server not Found"}
+            {connectionStatus.status ? "Backend Server Connected" : "Backend Server not Found"}
             <br></br>
             {"Host: " + (server || (window.location.protocol + "//" + window.location.hostname))}
           </MDTypography>
           <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
             {"Current Frontend Version: 2.2.0"}
             <br></br>
-            {"Compatible Backend Version: 2.2.0"}
+            {"Connected Backend Version: "} {connectionStatus.version === "" ? "Unknown" : connectionStatus.version}
           </MDTypography>
         </CardContent>
       </Card>
