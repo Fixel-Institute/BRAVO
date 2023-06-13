@@ -19,11 +19,13 @@ Please refer to `GitHub Repository <https://github.com/Fixel-Institute/BRAVO>`_ 
    installation.rst
    usage.rst
    tutorials.rst 
+   previous_builds.rst 
 
 .. toctree::
    :maxdepth: 1
    :caption: Change Logs
 
+   ChangeLogs/v2.2.0.rst
    ChangeLogs/v2.1.1.rst
    ChangeLogs/v2.1.0.rst
    ChangeLogs/v2.0.0.rst

@@ -7,7 +7,8 @@ analysis. These capabilities often require server manager to handle stuff at the
 .. toctree::
   :maxdepth: 1
 
-  Tutorials/MigrationGuide.rst
+  Tutorials/MigrationGuide1.0.rst
+  Tutorials/MigrationGuide2.1.rst
   Tutorials/SSLCertificateForBRAVOServer.rst
   Tutorials/TwilioService.rst
   Tutorials/ImageRenderer.rst

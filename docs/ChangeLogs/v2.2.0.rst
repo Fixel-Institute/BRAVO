@@ -1,0 +1,44 @@
+Version 2.2.0
+===============================================
+
+Overview
+---------------------------------------------
+UF Brain Recording and Analysis Visualization Online (BRAVO) Platform Version 2.2.0 is a major update to the BRAVO that contains multiple breaking changes. 
+The change is primarily associated with data formating and organization. In addition, the Percept format decoder is being updated to better handle missing 
+data during recordings and corrupted format downloaded from Medtronic Tablet. 
+
+Secondly, a major update in this version is to establish the preliminary Online-Analysis-Interface that allow user to design their own analysis flow using
+either external annotations, markers, or recordings in combination with Percept. This is still a preliminary design and updates are expected in the 2.2.x. 
+
+Thirdly, relatively minor update is to lay foundation for mobile companion app for collecting wearable sensor data. 
+
+Major Changes 
+---------------------------------------------
+
+.. topic:: 1. Percept Decoder Update
+
+  Medtronic Percept JSON structures are not always consistent. Errors often occur when there are mismatching TimeDomain/PowerDomain channels. Previously,
+  such inconsistent would lead to removal of one or the other channel as the data structure "require" the presence of both TimeDomain recordings 
+  and PowerDomain/Stimulation parameters. In new format, we split the TimeDomain recordings from PowerDomain/Stimulation recordings to make them more independent. 
+  Therefore, data will be stored, though specific analysis will still not be availble (such as effect of stimulation) if one or the other data is not in the JSON file. 
+
+.. topic:: 2. External Recordings and New Data Structure 
+
+  External Recordings are now available to be uploaded via the same interface as :ref:`Upload JSON Files` interface. A universal data structure is designed 
+  to handle all data source in the same pipeline. 
+
+.. topic:: 3. Analysis Builder 
+
+  The analysis builder is an Online Analysis Interface that allow users to add processing steps based on existing uploaded data. More functions will be added in times to come. 
+  V2.2.0 will only introduce the foundation to ensure database's capabilities to handle such task. 
+
+Minor Changes 
+---------------------------------------------
+
+.. topic:: 1. Mobile Account Pairing and Generation
+
+  The UF BRAVO Wearable App has been in development for over a year, originally designed as a completely offline data collection tool that 
+  collect MBIENTLAB Sensor data and Apple Watches Movement Disorder Kit data along with other HealthKit information with higher sampling rate and better 
+  battery than existing tools without the need of a tethering phone. 
+  As the development continues, we decided to make the mobile app public for people to use, and through doing so we 
+  design it to use BRAVO Authentication system as Apple require a sign-in account for public apps that uses research capabilities. 
