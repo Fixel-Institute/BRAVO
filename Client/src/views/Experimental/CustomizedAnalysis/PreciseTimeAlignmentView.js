@@ -50,7 +50,7 @@ function PreciseTimeAlignmentView({dataToRender, configuration, onStreamClicked,
       fig.setLegend({
         xanchor: "left",
         tracegroupgap: 10
-      })
+      });
     }
     
     for (let i in data) {
@@ -69,29 +69,7 @@ function PreciseTimeAlignmentView({dataToRender, configuration, onStreamClicked,
         }, ax[i]);
       }
     }
-/*
-    for (var i in data) {
-      for (var j in data[i].Channels) {
-        var timeArray = Array(data[i]["Stream"][j].length).fill(0).map((value, index) => new Date(data[i].Timestamp*1000 + 4*index));
-        for (var k in ax) {
-          if (!ax[k].title) {
-            ax[k].title = data[i].Channels[j];
-            fig.plot(timeArray, data[i]["Stream"][j], {
-              linewidth: 0.5,
-              hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "mV", language)}<extra></extra>`,
-            }, ax[k]);
-            break;
-          } else if (ax[k].title == data[i].Channels[j]) {
-            fig.plot(timeArray, data[i]["Stream"][j], {
-              linewidth: 0.5,
-              hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "mV", language)}<extra></extra>`,
-            }, ax[k]);
-            break;
-          }
-        }
-      }
-    }
-*/
+    
     if (!data) {
       fig.purge();
       setShow(false);

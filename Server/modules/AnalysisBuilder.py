@@ -36,6 +36,8 @@ from Backend import models
 from modules import Database
 from modules.Percept import BrainSenseStream
 
+from utility import PythonUtility
+
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 key = os.environ.get('ENCRYPTION_KEY')
 
@@ -300,7 +302,8 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, authority):
             "TimeShift": 0,
             "Label": "",
             "Type": "Signal",
-            "Version": 1
+            "Version": 1,
+            "Channels": {}
         }
         saveAnalysisConfiguration(Data, user, patientId, analysisId)
 
@@ -312,6 +315,7 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, authority):
                 "RecordingId": recording.recording_id,
                 "RecordingType": recording.recording_type,
                 "Time": recording.recording_date.timestamp(),
+                "RecordingChannels": recording.recording_info["Channel"],
                 "Duration": recording.recording_duration,
                 "RecordingLabel": recording.recording_type
             },
@@ -343,7 +347,8 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, authority):
                     "TimeShift": 0,
                     "Label": "",
                     "Type": "Signal",
-                    "Version": 1
+                    "Version": 1,
+                    "Channels": {}
                 }
                 saveAnalysisConfiguration(Data, user, patientId, analysisId)
 
@@ -354,6 +359,7 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, authority):
                     "recording": {
                         "RecordingId": recording.recording_id,
                         "RecordingType": recording.recording_type,
+                        "RecordingChannels": recording.recording_info["Hemisphere"].replace("HemisphereLocationDef.","") if recording.recording_type == "ChronicLFPs" else recording.recording_info["Channel"],
                         "Time": recording.recording_date.timestamp(),
                         "Duration": recording.recording_duration,
                         "RecordingLabel": deviceName + " " + recording.recording_info["Hemisphere"].replace("HemisphereLocationDef.","") if recording.recording_type == "ChronicLFPs" else deviceName
@@ -424,20 +430,43 @@ def getRawRecordingData(user, patientId, analysisId, recordingId, authority):
     if not recording:
         return None
     
+    Configuration = loadAnalysisConfiguration(user, patientId, analysisId)
+    ChannelConfiguration = Configuration["Descriptor"][recordingId]["Channels"]
+    
     if isExternalRecording:
         Data = Database.loadSourceDataPointer(recording.recording_datapointer)
+        ChannelSelection = np.ones(len(Data["ChannelNames"]), dtype=bool)
+        for channelName in ChannelConfiguration.keys():
+            ChannelSelection[PythonUtility.iterativeCompare(Data["ChannelNames"], channelName, "equal").flatten()] = ChannelConfiguration[channelName]["show"]
+
         return {
-            "Data": Data["Data"].T,
-            "ChannelNames": Data["ChannelNames"],
+            "Data": Data["Data"][:,ChannelSelection].T,
+            "ChannelNames": PythonUtility.listSelection(Data["ChannelNames"], ChannelSelection),
             "StartTime": Data["StartTime"],
             "SamplingRate": Data["SamplingRate"]
         } 
     else:
         if recording.recording_type == "BrainSenseStreamTimeDomain":
             Data = Database.loadSourceDataPointer(recording.recording_datapointer)
+            ChannelSelection = np.ones(len(Data["ChannelNames"]), dtype=bool)
+            for channelName in ChannelConfiguration.keys():
+                ChannelSelection[PythonUtility.iterativeCompare(Data["ChannelNames"], channelName, "equal").flatten()] = ChannelConfiguration[channelName]["show"]
+
             return {
-                "Data": Data["Data"].T,
-                "ChannelNames": Data["ChannelNames"],
+                "Data": Data["Data"][:,ChannelSelection].T,
+                "ChannelNames": PythonUtility.listSelection(Data["ChannelNames"], ChannelSelection),
+                "StartTime": Data["StartTime"],
+                "SamplingRate": Data["SamplingRate"]
+            } 
+        elif recording.recording_type == "BrainSenseStreamPowerDomain":
+            Data = Database.loadSourceDataPointer(recording.recording_datapointer)
+            ChannelSelection = np.ones(len(Data["ChannelNames"]), dtype=bool)
+            for channelName in ChannelConfiguration.keys():
+                ChannelSelection[PythonUtility.iterativeCompare(Data["ChannelNames"], channelName, "equal").flatten()] = ChannelConfiguration[channelName]["show"]
+
+            return {
+                "Data": Data["Data"][:,ChannelSelection].T,
+                "ChannelNames": PythonUtility.listSelection(Data["ChannelNames"], ChannelSelection),
                 "StartTime": Data["StartTime"],
                 "SamplingRate": Data["SamplingRate"]
             } 

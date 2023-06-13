@@ -120,16 +120,11 @@ function PreciseTimeAlignmentTab({analysisId, analysisData, updateAnalysisData})
           return a.RecordingLabel < b.RecordingLabel ? -1 : 1;
         }
       }).map((recording) => {
-        let descriptor = new Date(recording.Time*1000).toLocaleString();
-        if (recording.RecordingType == "ChronicLFPs") {
-          descriptor = "";
-        } else {
-          descriptor = "(" + descriptor + " / " + recording.Duration.toFixed(0) + " seconds) "
-        }
+        const descriptor = analysisData.Configuration.Descriptor[recording.RecordingId];
         
         return {
           key: recording.RecordingId,
-          title: "[" + recording.RecordingLabel + "] - " + descriptor + recording.RecordingType,
+          title: "[" + descriptor.Type + "] - " + descriptor.Label,
           value: recording.RecordingId
         }
       }));

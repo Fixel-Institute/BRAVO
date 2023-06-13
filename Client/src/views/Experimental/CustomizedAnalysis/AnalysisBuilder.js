@@ -21,14 +21,21 @@ import {
   TextField,
   Card,
   Grid,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Checkbox,
   IconButton,
   InputLabel,
   Input,
 } from "@mui/material"
 
+import { FixedSizeList } from 'react-window';
+
 import { createFilterOptions } from "@mui/material/Autocomplete";
 
-import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser';
+import { Edit as EditIcon } from "@mui/icons-material"
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -61,6 +68,12 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
   const [configureRecording, setConfigureRecording] = useState({
     configuration: {},
     show: false
+  });
+
+  const [editChannelName, setEditChannelName] = useState({
+    show: false,
+    name: "",
+    id: ""
   });
 
   const [alert, setAlert] = useState(null);
@@ -131,7 +144,12 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
   const handleStreamConfiguration = (plotlyPoint) => {
     let recording = data.Recordings[plotlyPoint.points[0].pointIndex];
     let configuration = data.Configuration.Descriptor[recording.RecordingId] || {};
-    setConfigureRecording({...configureRecording, title: "[" + recording.RecordingLabel + "] - " + recording.RecordingType, recordingId: recording.RecordingId, configuration: configuration, show: true});
+    setConfigureRecording({...configureRecording, 
+      title: "[" + recording.RecordingLabel + "] - " + recording.RecordingType, 
+      recordingId: recording.RecordingId, 
+      configuration: configuration, 
+      channels: recording.RecordingChannels,
+      show: true});
   }
 
   const handleDeleteVerification = () => {
@@ -207,9 +225,125 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
     });
   };
 
+  const renderChannelLists = ({index, style}) => {
+    let show = true;
+    let customName = configureRecording.channels[index];
+    if (Object.keys(configureRecording.configuration.Channels).includes(configureRecording.channels[index])) {
+      show = configureRecording.configuration.Channels[configureRecording.channels[index]].show
+      customName = configureRecording.configuration.Channels[configureRecording.channels[index]].name
+    }
+
+    const handleToggleSingle = () => {
+      if (!Object.keys(configureRecording.configuration.Channels).includes(configureRecording.channels[index])) {
+        configureRecording.configuration.Channels[configureRecording.channels[index]] = {
+          show: true,
+          name: configureRecording.channels[index]
+        };
+      }
+      configureRecording.configuration.Channels[configureRecording.channels[index]].show = !configureRecording.configuration.Channels[configureRecording.channels[index]].show;
+      setConfigureRecording({...configureRecording});
+    };
+
+    const handleDoubleClick = () => {
+      for (let i in configureRecording.channels) {
+        if (i == index) continue;
+
+        if (!Object.keys(configureRecording.configuration.Channels).includes(configureRecording.channels[i])) {
+          configureRecording.configuration.Channels[configureRecording.channels[i]] = {
+            show: true,
+            name: configureRecording.channels[i]
+          };
+        }
+        configureRecording.configuration.Channels[configureRecording.channels[i]].show = !configureRecording.configuration.Channels[configureRecording.channels[i]].show;
+      }
+      setConfigureRecording({...configureRecording});
+    }
+
+    var updateTimeout = null;
+    var singleClicked = false;
+    const onClick = () => {
+      if (singleClicked) {
+        singleClicked = false;
+        handleDoubleClick();
+        clearTimeout(updateTimeout);
+      } else {
+        singleClicked = true;
+        updateTimeout = setTimeout(function() {
+          handleToggleSingle();
+          singleClicked = false
+        }, 200);
+      }
+    };
+
+    return (
+      <ListItem style={style} key={index} 
+        secondaryAction={
+          <IconButton edge="end" aria-label="comments" onClick={() => {
+            setEditChannelName({...editChannelName, id: index, name: customName, show: true});
+          }} sx={{marginRight: 1}}>
+            <EditIcon />
+          </IconButton>
+        }
+        disablePadding>
+        <ListItemButton onClick={onClick} dense>
+          <ListItemIcon>
+            <Checkbox
+              edge="start"
+              checked={show}
+              tabIndex={-1}
+              disableRipple
+            />
+          </ListItemIcon>
+          <ListItemText primary={customName} />
+        </ListItemButton>
+      </ListItem>
+    )
+  };
+
   return data ? (
     <Card width={"100%"} style={{paddingTop: 15, paddingBottom: 15, paddingLeft: 15, paddingRight: 15}}>
       {alert}
+
+      <Dialog open={editChannelName.show} onClose={() => setEditChannelName({...editChannelName, show: false})}>
+        <MDBox px={2} pt={2}>
+          <MDTypography variant="h5">
+            {"Edit Channel Name"}
+          </MDTypography>
+        </MDBox>
+        <DialogContent>
+          <TextField
+            variant="standard"
+            margin="dense" id="name"
+            value={editChannelName.name}
+            onChange={(event) => setEditChannelName({...editChannelName, name: event.target.value})}
+            fullWidth
+          />
+        </DialogContent>
+        <MDBox style={{paddingLeft: 15, paddingRight: 15, paddingBottom: 15}}>
+          <MDButton color={"secondary"} 
+            onClick={() => setEditChannelName({...editChannelName, show: false})}
+          >
+            Cancel
+          </MDButton>
+          <MDButton color={"info"} 
+            onClick={() => {
+              if (!Object.keys(configureRecording.configuration.Channels).includes(configureRecording.channels[editChannelName.id])) {
+                configureRecording.configuration.Channels[configureRecording.channels[editChannelName.id]] = {
+                  show: true,
+                  name: configureRecording.channels[editChannelName.id]
+                };
+              }
+              configureRecording.configuration.Channels[configureRecording.channels[editChannelName.id]].name = editChannelName.name;
+              setConfigureRecording({...configureRecording});
+              setEditChannelName({...editChannelName, show: false});
+            }} style={{marginLeft: 10}}
+          >
+            Update
+          </MDButton>
+        </MDBox>
+      </Dialog>
+
+
       <Dialog open={configureRecording.show} onClose={() => setConfigureRecording({...configureRecording, show: false})}>
         <MDBox px={2} pt={2}>
           <MDTypography variant="h5">
@@ -261,6 +395,16 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
               fullWidth
             />
           </MDBox>
+          {configureRecording.channels ? (
+          <MDBox style={{ width: '100%', height: 400, bgcolor: 'background.paper', marginTop: 15}}>
+            <MDTypography variant="h5">
+              {"Channels Selection"}
+            </MDTypography>
+            <FixedSizeList height={380} width={"100%"} itemSize={36} itemCount={configureRecording.channels.length} overscanCount={5}>
+              {renderChannelLists}
+            </FixedSizeList>
+          </MDBox>
+          ) : null}
         </DialogContent>
         <MDBox px={2} py={2} style={{display: "flex", justifyContent: "space-between"}}>
           <MDBox px={2} py={2} style={{display: "flex", justifyContent: "space-between"}}>

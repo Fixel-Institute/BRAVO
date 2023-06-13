@@ -43,11 +43,11 @@ export default function HomePage() {
       if (connectionStatus.version !== "2.2.0") {
         setAlert(<MuiAlertDialog title={"Server Version Imcompatible"} message={<>
           {"Current frontend page support Version 2.2.0. Please upgrade your server by following instructions at"}
-          <Link target="_blank" href="https://github.com/Fixel-Institute/BRAVO/blob/v2.1.1/README.md" underline="always" sx={{color: "blue"}} > <i>GitHub Page</i> </Link>
+          <Link target="_blank" href="https://bravo-documentation.jcagle.solutions/Tutorials/MigrationGuide2.1" underline="always" sx={{color: "blue"}} > <i>GitHub Page</i> </Link>
           <br></br>
           <br></br>
           {"If you would like to stay with older build, please use"}
-          <Link target="_blank" href="https://github.com/Fixel-Institute/BRAVO/blob/v2.1.1/README.md" underline="always" sx={{color: "blue"}} > <i>this link</i> </Link>
+          <Link target="_blank" href="https://bravo-documentation.jcagle.solutions/previous_builds" underline="always" sx={{color: "blue"}} > <i>this link</i> </Link>
           {"to access previous build links"}
           <br></br>
           <br></br>
