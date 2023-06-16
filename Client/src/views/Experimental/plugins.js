@@ -18,7 +18,8 @@ const enabledPlugins = [
   "CircadianThreshold",
   "PatientEvents",
   "ImageVisualization",
-  "CustomizedAnalysis"
+  "CustomizedAnalysis",
+  "MobileManager"
 ];
 
 export const experimentalRoutes = enabledPlugins.map((plugin) => {

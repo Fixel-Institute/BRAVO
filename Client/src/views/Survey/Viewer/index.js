@@ -94,6 +94,12 @@ export default function SurveyViewer({match}) {
     setContents({...contents});
   };
 
+  const setMultipleChoiceValue = (index, questionId, type, value) => {
+    contents.contents[index].questions[questionId][type] = value;
+    contents.contents[index].questions[questionId].changed = true;
+    setContents({...contents});
+  };
+
   const submitSurvey = () => {
     let results = [];
 
@@ -188,7 +194,33 @@ export default function SurveyViewer({match}) {
                             {question.type == "multiple-choice" ? (
                               <MDBox displ>
                                 {question.multiple ? (
-                                  null
+                                  <Grid container spacing={0}>
+                                    {question.options.map((option, optionId) => {
+                                      let answerLength = 0;
+                                      question.options.map((option) => {
+                                        if (option.length > answerLength) answerLength = option.length;
+                                      });
+
+                                      return <Grid key={optionId} item xs={12} md={answerLength > 14 ? 12 : 12/question.options.length}>
+                                        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
+                                          <Radio
+                                            checked={question.value.includes(option)}
+                                            value={option}
+                                            onClick={(event) => {
+                                              if (question.value.includes(option) && question.value.length > 1) {
+                                                setMultipleChoiceValue(index, questionId, "value", question.value.filter((text) => text != option));
+                                              } else if (!question.value.includes(option)) {
+                                                setMultipleChoiceValue(index, questionId, "value", [...question.value, option]);
+                                              }
+                                            }}
+                                          />
+                                          <MDTypography variant="h6" fontSize={13}>
+                                            {option}
+                                          </MDTypography>
+                                        </MDBox>
+                                      </Grid>
+                                    })}
+                                  </Grid>
                                 ) : (
                                   <Grid container spacing={0}>
                                     {question.options.map((option) => {
@@ -200,8 +232,9 @@ export default function SurveyViewer({match}) {
                                       return <Grid item xs={12} md={answerLength > 14 ? 12 : 12/question.options.length}>
                                         <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
                                           <Radio
-                                            checked
+                                            checked={question.value == option}
                                             value={option}
+                                            onClick={(event) => setMultipleChoiceValue(index, questionId, "value", option)}
                                           />
                                           <MDTypography variant="h6" fontSize={13}>
                                             {option}
@@ -214,6 +247,11 @@ export default function SurveyViewer({match}) {
                                 {question.changed ? null : (
                                   <MDTypography variant="h5" fontSize={12} color={"error"}>
                                     {"*Required"}
+                                  </MDTypography>
+                                )}
+                                {!question.multiple ? null : (
+                                  <MDTypography variant="h5" fontSize={12} color={"error"}>
+                                    {"*Multiple Allowed"}
                                   </MDTypography>
                                 )}
                               </MDBox>
