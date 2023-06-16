@@ -24,6 +24,8 @@ import rest_framework.parsers as RestParsers
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
+import datetime
+import pytz
 from modules import Database
 import json
 from copy import deepcopy
@@ -39,6 +41,7 @@ from rest_framework.response import Response
 import numpy as np
 from scipy import signal
 
+from decoder import BRAVOWearableApp
 from Backend import models
 
 import os, pathlib
@@ -178,35 +181,51 @@ class VerifyPairing(RestViews.APIView):
 
 class UploadRecording(RestViews.APIView):
     parser_classes = [RestParsers.MultiPartParser, RestParsers.FormParser]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        if not "file" in request.data:
+        if not "file" in request.data or not "authToken" in request.data:
             return Response(status=403, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
-            
-        rawBytes = request.data["file"].read()
-        header = rawBytes[:80].decode("utf-8")
 
-        if header[5:].strip() == "AppleWatch":
-            filename = "AppleWatch" + os.path.sep + "ExternalSensor_" + request.data["file"].name
-            with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
-                file.write(rawBytes)
-            return Response(status=200)
+        mobileUser = models.MobileUser.objects.filter(active_token=request.data["authToken"]).first()
+        if not mobileUser:
+            return Response(status=401)
 
-        availableDevice = models.ExternalSensorPairing.objects.filter(device_mac=header[5:].strip(), paired=True).first()
-        if not availableDevice:
-            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+        associatedPatient = models.Patient.objects.filter(deidentified_id=mobileUser.linked_patient_id).first()
+        if not associatedPatient:
+            return Response(status=401)
 
         try:
-            os.mkdir(DATABASE_PATH + "recordings" + os.path.sep + str(availableDevice.patient_deidentified_id))
+            os.mkdir(DATABASE_PATH + "recordings" + os.path.sep + str(mobileUser.linked_patient_id))
         except Exception:
             pass
 
-        filename = str(availableDevice.patient_deidentified_id) + os.path.sep + "ExternalSensor_" + request.data["file"].name
-        with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
-            file.write(rawBytes)
+        rawBytes = request.data["file"].read()
+        header = rawBytes[:72].decode("utf-8")
+        
+        if header.strip().startswith("DATA:APPLEWATCH"):
+            Data = BRAVOWearableApp.decodeAppleWatchStructureRaw(rawBytes)
+            startTime = 0
+            endTime = 0
+            for key in ["Accelerometer","TremorSeverity","DyskineticProbability","HeartRate","HeartRateVariability","SleepState"]:
+                if len(Data[key]["Time"]) > 0:
+                    if startTime == 0 or Data[key]["Time"][0] < startTime:
+                        startTime = Data[key]["Time"][0]
+                    
+                    if endTime == 0 or Data[key]["Time"][-1] > endTime:
+                        endTime = Data[key]["Time"][-1]
+
+            recording = models.ExternalRecording(patient_deidentified_id=mobileUser.linked_patient_id, 
+                                         recording_type="BRAVOWearableApp_AppleWatch", 
+                                         recording_date=datetime.datetime.fromtimestamp(startTime).astimezone(pytz.utc),
+                                         recording_duration=endTime - startTime)
             
-        return Response(status=200)
+            filename = Database.saveSourceFiles(Data, "ExternalRecording", "BRAVOWearableApp_AppleWatch", recording.recording_id, recording.patient_deidentified_id)
+            recording.recording_datapointer = filename
+            recording.save()
+            return Response(status=200)
+        
+        return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
 class StreamRelay(AsyncWebsocketConsumer):
     async def connect(self):

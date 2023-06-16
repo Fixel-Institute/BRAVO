@@ -219,6 +219,16 @@ class SubmitSurveyResults(RestViews.APIView):
                 result = models.SurveyResults(survey_id=survey.survey_id, version=request.data["version"], responder=request.user.email, values=request.data["results"], date=datetime.datetime.fromtimestamp(request.data["date"]/1000))
                 result.save()
                 return Response(status=200)
+        
+        elif "authToken" in request.data:
+            survey = models.CustomizedSurvey.objects.filter(url=request.data["id"], archived=False).first()
+            responder = models.MobileUser.objects.filter(active_token=request.data["authToken"]).first()
+            if not responder:
+                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+            result = models.SurveyResults(survey_id=survey.survey_id, version=request.data["version"], responder=responder.linked_patient_id, values=request.data["results"], date=datetime.datetime.fromtimestamp(request.data["date"]/1000))
+            result.save()
+            return Response(status=200)
 
         elif "passcode" in request.data:
             survey = models.CustomizedSurvey.objects.filter(url=request.data["id"], archived=False).first()
