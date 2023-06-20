@@ -109,6 +109,6 @@ class UserSignout(RestViews.APIView):
                 user.active_token = ""
                 user.save()
                 return Response(status=200)
-            return Response(status=200)
+            return Response(status=201)
         
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})

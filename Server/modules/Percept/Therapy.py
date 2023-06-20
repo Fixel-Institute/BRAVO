@@ -120,6 +120,10 @@ def queryTherapyHistory(user, patientUniqueID, authority):
             if authority["Permission"][1] > 0:
                 DateSelection = np.bitwise_and(DateSelection, pd.to_datetime(TherapyChangeHistory["date_of_change"]).view(np.int64) < authority["Permission"][1]*1000000000)
             TherapyGroupSelection = [not TherapyChangeHistory["previous_group"][i].startswith("TherapyChangeStatusDef") for i in range(len(TherapyChangeHistory["previous_group"]))]
+            
+            if np.sum(TherapyGroupSelection) == 0:
+                continue
+
             TherapyChangeData["date_of_change"] = TherapyChangeHistory["date_of_change"].values[np.bitwise_and(DateSelection, TherapyGroupSelection)].tolist()
             TherapyChangeData["previous_group"] = TherapyChangeHistory["previous_group"].values[np.bitwise_and(DateSelection, TherapyGroupSelection)].tolist()
             TherapyChangeData["new_group"] = TherapyChangeHistory["new_group"].values[np.bitwise_and(DateSelection, TherapyGroupSelection)].tolist()
