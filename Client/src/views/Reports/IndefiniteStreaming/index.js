@@ -104,10 +104,10 @@ function IndefiniteStreaming() {
     csvData += "\n";
     
     for (var section in dataToRender.data) {
-      for (var i = 0; i < dataToRender.data[section]["Time"].length; i++) {
-        csvData += dataToRender.data[section]["Time"][i] + dataToRender.data[section].Timestamp;
+      for (var i = 0; i < dataToRender.data[section]["Stream"][0].length; i++) {
+        csvData += (i*1/250 + dataToRender.data[section].Timestamp);
         for (var j = 0; j < dataToRender.data[section]["Channels"].length; j++) {
-          csvData += "," + dataToRender.data[section][dataToRender.data[section]["Channels"][j]][i];
+          csvData += "," + dataToRender.data[section]["Stream"][j][i];
         }
         csvData += "\n";
       }
