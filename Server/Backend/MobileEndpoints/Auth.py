@@ -67,7 +67,11 @@ class UserAuth(RestViews.APIView):
                 user = models.MobileUser.objects.filter(user_name=request.data["Username"]).first()
                 if user.check_password(request.data["Password"]):
                     if user.is_active:
-                        return Response(status=401)
+                        return Response(status=200, data={
+                            "username": user.user_name,
+                            "configuration": user.configuration,
+                            "token": user.active_token
+                        })
                     else:
                         user.is_active = True
                         user.active_token = generate_key(64)

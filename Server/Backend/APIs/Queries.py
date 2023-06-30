@@ -956,7 +956,7 @@ class QueryImageModelDirectory(RestViews.APIView):
             return Response(status=404)
 
         elif Authority["Level"] == 1:
-            Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
+            Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "Imaging")
             PatientID = request.data["id"]
 
         elif Authority["Level"] == 2:
@@ -1017,6 +1017,15 @@ class QueryImageModel(RestViews.APIView):
 
             elif request.data["FileType"] == "tracts":
                 tracts = ImageDatabase.tractReader(PatientID, request.data["FileName"])
+                if not tracts:
+                    return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+                return Response(status=200, data={
+                    "points": tracts
+                })
+
+            elif request.data["FileType"] == "points":
+                tracts = ImageDatabase.pointsReader(PatientID, request.data["FileName"])
                 if not tracts:
                     return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 

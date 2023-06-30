@@ -139,6 +139,10 @@ def queryAvailableRecordings(user, patientId, authority):
         if recording.recording_type == "AnalysisOutput":
             continue
 
+        # Currently does not support Wearable Sensor Before Parsing 
+        if recording.recording_type == "BRAVOWearableApp_AppleWatch":
+            continue
+            
         if not recording.recording_info:
             RecordingData = Database.loadSourceDataPointer(recording.recording_datapointer)
             recording.recording_info = {

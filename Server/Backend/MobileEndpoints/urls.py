@@ -15,7 +15,7 @@
 from django.urls import path
 from django.conf import settings
 
-from . import Wearable, Auth, Speech
+from . import Wearable, Auth, Speech, Imaging
 
 urlpatterns = [
 	path('auth/login', Auth.UserAuth.as_view()),
@@ -27,7 +27,11 @@ urlpatterns = [
 	path('wearable/verifyDevicePairing', Wearable.VerifyPairing.as_view()),
 
 	path('wearable/uploadRecording', Wearable.UploadRecording.as_view()),
+
 	path('speech/uploadRecording', Speech.UploadRecording.as_view()),
+
+	path('imaging/queryImageDirectory', Imaging.QueryImageModelDirectory.as_view()),
+	path('imaging/queryImageModel', Imaging.QueryImageModel.as_view()),
 ]
 
 websocket_urlpatterns = [

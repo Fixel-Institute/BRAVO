@@ -154,6 +154,37 @@ def stlReader(directory, filename, color="#FFFFFF"):
     file_data[lastDataByte + 1 : lastDataByte + len(colorArray) + 1] = colorArray
     return file_data
 
+def pointsReader(directory, filename):
+    """ Decode SCIRun Points/Edges files. 
+
+    Args:
+      directory: UUID4 deidentified id for each unique Patient in SQL Database.
+      filename: String of model filename
+
+    Returns:
+      Point arrays of tracts.
+    """
+
+    if not os.path.exists(DATABASE_PATH + 'imaging/' + directory + "/" + filename):
+        return False 
+
+    if not os.path.exists(DATABASE_PATH + 'imaging/' + directory + "/" + filename.replace(".pts",".edge")):
+        return False 
+
+    pts = np.loadtxt(DATABASE_PATH + 'imaging/' + directory + "/" + filename)
+    edges = np.loadtxt(DATABASE_PATH + 'imaging/' + directory + "/" + filename.replace(".pts",".edge"))
+
+    tracts = []
+    breakingIndex = np.where(np.diff(edges[:,0]) != 1)[0]
+    startIndex = 0
+    for i in range(len(breakingIndex)):
+        if i > 0:
+            startIndex = int(edges[breakingIndex[i-1]+1,0])
+        endIndex = int(edges[breakingIndex[i],1]+1)
+        tracts.append(pts[startIndex:endIndex])
+
+    return tracts
+
 def tractReader(directory, filename):
     """ Decode Tract files. 
 
