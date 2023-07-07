@@ -224,6 +224,31 @@ class UploadRecording(RestViews.APIView):
             recording.recording_datapointer = filename
             recording.save()
             return Response(status=200)
+        elif header.strip().startswith("DATA:"):
+            Data = BRAVOWearableApp.decodeMetaMotionStructureRaw(rawBytes)
+
+            startTime = 0
+            endTime = 0
+            for key in ["Accelerometer","RSSAccelerometer","Gyroscope","AmbientLight"]:
+                if len(Data[key]["Time"]) > 0:
+                    if startTime == 0 or Data[key]["Time"][0] < startTime:
+                        startTime = Data[key]["Time"][0]
+                    
+                    if endTime == 0 or Data[key]["Time"][-1] > endTime:
+                        endTime = Data[key]["Time"][-1]
+
+            recording = models.ExternalRecording(patient_deidentified_id=mobileUser.linked_patient_id, 
+                                         recording_type="BRAVOWearableApp_MetaMotionS", 
+                                         recording_date=datetime.datetime.fromtimestamp(startTime).astimezone(pytz.utc),
+                                         recording_duration=endTime - startTime)
+            
+            filename = Database.saveSourceFiles(Data, "ExternalRecording", "BRAVOWearableApp_MetaMotionS", recording.recording_id, recording.patient_deidentified_id)
+            recording.recording_datapointer = filename
+            recording.recording_info = {
+                "DeviceID": header.strip()
+            }
+            recording.save()
+            return Response(status=200)
         
         return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
