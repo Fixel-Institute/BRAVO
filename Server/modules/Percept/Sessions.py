@@ -205,9 +205,9 @@ def processPerceptJSON(user, filename, device_deidentified_id="", lookupTable=No
     DeviceInformation = JSON["DeviceInformation"]["Final"]
     NeurostimulatorLocation = DeviceInformation["NeurostimulatorLocation"].replace("InsLocation.","")
     if "█" in DeviceInformation["ImplantDate"]:
-        ImplantDate = datetime.fromtimestamp(0).astimezone(pytz.utcf)
+        ImplantDate = datetime.fromtimestamp(0).astimezone(pytz.utc)
     else:
-        ImplantDate = datetime.fromisoformat(DeviceInformation["ImplantDate"].replace("Z","+00:00")).astimezone(pytz.utcf)
+        ImplantDate = datetime.fromisoformat(DeviceInformation["ImplantDate"].replace("Z","+00:00")).astimezone(pytz.utc)
 
     deviceID.implant_date = ImplantDate
     deviceID.device_location = NeurostimulatorLocation
