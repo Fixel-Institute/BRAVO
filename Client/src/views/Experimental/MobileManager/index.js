@@ -63,6 +63,7 @@ import {
 import { Line } from 'react-chartjs-2';
 
 import DatabaseLayout from "layouts/DatabaseLayout";
+import InertiaSensorSpectrum from "./InertiaSensorSpectrum";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
@@ -91,6 +92,13 @@ function MobileManager() {
     show: false
   });
 
+  const [availableRecordings, setAvailableRecordings] = useState({
+    list: [],
+    current: "",
+  });
+
+  const [dataToRender, setDataToRender] = useState(false);
+
   useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: false});
@@ -105,8 +113,36 @@ function MobileManager() {
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
+
+      SessionController.query("/api/queryMobileRecordings", {
+        patientId: patientID, 
+        requestOverview: true
+      }).then((response) => {
+        setAvailableRecordings({list: response.data.filter((a) => a.Time > 0), current: ""});
+      }).catch((error) => {
+        SessionController.displayError(error, setAlert);
+      });
     }
   }, [patientID]);
+
+  useEffect(() => {
+    if (!patientID) {
+      navigate("/dashboard", {replace: false});
+    } else {
+      if (availableRecordings.current != "") {
+        SessionController.query("/api/queryMobileRecordings", {
+          patientId: patientID, 
+          recordingId: availableRecordings.current.RecordingId,
+          requestData: true
+        }).then((response) => {
+          console.log(response.data)
+          setDataToRender(response.data)
+        }).catch((error) => {
+          SessionController.displayError(error, setAlert);
+        });
+      }
+    }
+  }, [availableRecordings.current]);
 
   const handleMobileAccountUpdate = () => {
     if (mobileAccount.Username === "") {
@@ -275,6 +311,53 @@ function MobileManager() {
                       </MDBox>
                     </MDBox>
                   )}
+                </Card>
+              </Grid>
+            </Grid>
+          </MDBox>
+        </MDBox>
+
+        <MDBox pt={3}>
+          <MDBox>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Card sx={{width: "100%"}}>
+                  <Grid container>
+                    <Grid item xs={12}>
+                      <MDBox p={2}>
+                        <MDTypography variant={"h6"} fontSize={24}>
+                          {"Wearable Recording Viewer"}
+                        </MDTypography>
+                      </MDBox>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <MDBox p={2}>
+                        <Autocomplete
+                          value={availableRecordings.current}
+                          options={availableRecordings.list}
+                          onChange={(event, value) => setAvailableRecordings({...availableRecordings, current: value})}
+                          getOptionLabel={(option) => {
+                            if (option.Duration > 0) {
+                              return "[" + new Date(option.Time*1000).toLocaleString("en-US") + "] " + option.RecordingLabel + " for " + option.Duration.toFixed(0) + " seconds";
+                            }
+                            return "";
+                          }}
+                          renderInput={(params) => (
+                            <FormField
+                              {...params}
+                              label={"Select Recording: "}
+                              InputLabelProps={{ shrink: true }}
+                            />
+                          )}
+                        />
+                      </MDBox>
+                    </Grid>
+                    <Grid item xs={12} lg={12}>
+                      {dataToRender ? (
+                        <InertiaSensorSpectrum dataToRender={dataToRender} height={1500} figureTitle={"BRAVO Wearable Data Viewer"}/>
+                      ) : null}
+                    </Grid>
+                  </Grid>
                 </Card>
               </Grid>
             </Grid>
