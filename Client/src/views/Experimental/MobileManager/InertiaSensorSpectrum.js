@@ -65,7 +65,8 @@ function InertiaSensorSpectrum({dataToRender, height, figureTitle}) {
       
       fig.setLegend({
         tracegroupgap: 5,
-        xanchor: 'left',
+        xanchor: "right",
+        yanchor: "top"
       });
 
       fig.setLayoutProps({

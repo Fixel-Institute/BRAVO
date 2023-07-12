@@ -74,3 +74,15 @@ def getRecordingData(user, patientId, recordingId, authority):
     Data = Database.loadSourceDataPointer(recording.recording_datapointer)
     Data["Time"] = recording.recording_date.timestamp()
     return Data
+
+def removeRecordingData(user, patientId, recordingId, authority):
+    if not authority["Permission"]:
+        return None
+    
+    recording = models.ExternalRecording.objects.filter(patient_deidentified_id=patientId, recording_id=recordingId).first()
+    if not recording:
+        return None
+    
+    Database.deleteSourceDataPointer(recording.recording_datapointer)
+    recording.delete()
+    return True

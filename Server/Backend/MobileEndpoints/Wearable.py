@@ -214,6 +214,12 @@ class UploadRecording(RestViews.APIView):
                     
                     if endTime == 0 or Data[key]["Time"][-1] > endTime:
                         endTime = Data[key]["Time"][-1]
+            
+            if models.ExternalRecording.objects.filter(patient_deidentified_id=mobileUser.linked_patient_id, 
+                                         recording_type="BRAVOWearableApp_AppleWatch", 
+                                         recording_date=datetime.datetime.fromtimestamp(startTime).astimezone(pytz.utc),
+                                         recording_duration=endTime - startTime).exists():
+                return Response(status=200)
 
             recording = models.ExternalRecording(patient_deidentified_id=mobileUser.linked_patient_id, 
                                          recording_type="BRAVOWearableApp_AppleWatch", 
@@ -224,6 +230,7 @@ class UploadRecording(RestViews.APIView):
             recording.recording_datapointer = filename
             recording.save()
             return Response(status=200)
+        
         elif header.strip().startswith("DATA:"):
             Data = BRAVOWearableApp.decodeMetaMotionStructureRaw(rawBytes)
 
@@ -236,6 +243,12 @@ class UploadRecording(RestViews.APIView):
                     
                     if endTime == 0 or Data[key]["Time"][-1] > endTime:
                         endTime = Data[key]["Time"][-1]
+
+            if models.ExternalRecording.objects.filter(patient_deidentified_id=mobileUser.linked_patient_id, 
+                                         recording_type="BRAVOWearableApp_MetaMotionS", 
+                                         recording_date=datetime.datetime.fromtimestamp(startTime).astimezone(pytz.utc),
+                                         recording_duration=endTime - startTime).exists():
+                return Response(status=200)
 
             recording = models.ExternalRecording(patient_deidentified_id=mobileUser.linked_patient_id, 
                                          recording_type="BRAVOWearableApp_MetaMotionS", 

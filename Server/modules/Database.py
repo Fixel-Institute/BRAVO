@@ -511,3 +511,9 @@ def loadSourceDataPointer(filename):
     with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "rb") as file:
         datastruct = pickle.load(file)
     return datastruct
+
+def deleteSourceDataPointer(filename):
+    try:
+        os.remove(DATABASE_PATH + "recordings" + os.path.sep + filename)
+    except:
+        pass

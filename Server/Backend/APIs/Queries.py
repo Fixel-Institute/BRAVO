@@ -933,6 +933,15 @@ class QueryMobileRecordings(RestViews.APIView):
                 data = WearableRecordingsDatabase.getRecordingData(request.user, request.data["patientId"], request.data["recordingId"], Authority)
                 return Response(status=200, data=data)
         
+        elif "deleteData" in request.data:
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["patientId"])
+            if Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["patientId"], Authority, "BrainSenseStream")
+                Result = WearableRecordingsDatabase.removeRecordingData(request.user, request.data["patientId"], request.data["recordingId"], Authority)
+                if Result:
+                    return Response(status=200)
+        
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
     
 class QueryRecordingsForAnalysis(RestViews.APIView):
