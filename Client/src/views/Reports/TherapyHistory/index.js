@@ -109,7 +109,8 @@ function TherapyHistory() {
     setTherapyHistory(therapyHistory);
   }, [data, language]);
 
-  const showAdaptiveSettings = (therapy) => {
+  const showAdaptiveSettings = (therapy, captureAmplitude, amplitudeThreshold) => {
+    console.log(amplitudeThreshold)
     setAlert(
       <Dialog open={true} onClose={() => setAlert(null)}>
         <MDBox px={2} pt={2}>
@@ -127,6 +128,28 @@ function TherapyHistory() {
             </MDTypography>
             <MDTypography variant="p" fontSize={12}>
               {therapy.Mode.endsWith("DUAL_THRESHOLD_DIRECT") ? "Dual Threshold" : ""} 
+            </MDTypography>
+          </MDBox>
+          <MDBox px={2}>
+            <MDTypography variant="h6" fontSize={15}>
+              {"Capture Amplitude:"} 
+            </MDTypography>
+            <MDTypography variant="p" fontSize={12}>
+              {therapy.Mode.endsWith("SINGLE_THRESHOLD_DIRECT") ? captureAmplitude[1] : captureAmplitude[0]}
+            </MDTypography>
+            <MDTypography variant="p" fontSize={12}>
+              {therapy.Mode.endsWith("DUAL_THRESHOLD_DIRECT") ? captureAmplitude[1] : ""} 
+            </MDTypography>
+          </MDBox>
+          <MDBox px={2}>
+            <MDTypography variant="h6" fontSize={15}>
+              {"LFP Threshold:"} 
+            </MDTypography>
+            <MDTypography variant="p" fontSize={12}>
+              {therapy.Mode.endsWith("SINGLE_THRESHOLD_DIRECT") ? amplitudeThreshold[1] : amplitudeThreshold[0]}
+            </MDTypography>
+            <MDTypography variant="p" fontSize={12}>
+              {therapy.Mode.endsWith("DUAL_THRESHOLD_DIRECT") ? amplitudeThreshold[1] : ""} 
             </MDTypography>
           </MDBox>
           <MDBox px={2}>
@@ -221,7 +244,7 @@ function TherapyHistory() {
               {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
             </MDTypography>
             <MDBox display={"flex"} flexDirection={"column"} ml={2} style={{cursor: "pointer"}} onClick={() => {
-              showAdaptiveSettings(therapy.AdaptiveSetup);
+              showAdaptiveSettings(therapy.AdaptiveSetup, therapy.CaptureAmplitudes, therapy.LFPThresholds);
             }}>
               <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
                 {"Sense Only"}
@@ -236,7 +259,7 @@ function TherapyHistory() {
               {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
             </MDTypography>
             <MDBox display={"flex"} flexDirection={"column"} ml={2} style={{cursor: "pointer"}} onClick={() => {
-              showAdaptiveSettings(therapy.AdaptiveSetup);
+              showAdaptiveSettings(therapy.AdaptiveSetup, therapy.CaptureAmplitudes, therapy.LFPThresholds);
             }}>
               {therapy.AdaptiveSetup.Bypass ? (
                 <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
