@@ -12,6 +12,8 @@ sensing-enabled neurostimulators such as Medtronic Percept neurostimulator.
 
 Please refer to `GitHub Repository <https://github.com/Fixel-Institute/BRAVO>`_ to submit feature requests.
 
+Please refer to :ref:`bravoWearableApp` for tutorials regarding Mobile Companion App.
+
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started

@@ -33,6 +33,8 @@ import {
   ListItemIcon
 } from "@mui/material";
 
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from "@fullcalendar/interaction"
@@ -379,67 +381,73 @@ function MobileManager() {
           </MDBox>
         </Dialog>
 
-        <MDBox pt={3}>
-          <MDBox>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Card sx={{width: "100%"}}>
-                  <Grid container>
-                    <Grid item xs={12}>
-                      <MDBox p={2}>
-                        <MDTypography variant={"h6"} fontSize={24}>
-                          {"Wearable Recording Viewer"}
-                        </MDTypography>
-                      </MDBox>
+        {availableRecordings.list.length > 0 ? (
+          <MDBox pt={3}>
+            <MDBox>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Card sx={{width: "100%"}}>
+                    <Grid container>
+                      <Grid item xs={12}>
+                        <MDBox p={2}>
+                          <MDTypography variant={"h6"} fontSize={24}>
+                            {"Wearable Recording Viewer"}
+                          </MDTypography>
+                        </MDBox>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <MDBox p={4}>
+                          <FullCalendar
+                            plugins={[ dayGridPlugin, interactionPlugin ]}
+                            initialView={"dayGridMonth"}
+                            initialDate={availableRecordings.list.length > 0 ? new Date(availableRecordings.list[availableRecordings.list.length-1].Time*1000) : null}
+                            eventContent={(event) => {
+                              return <>
+                                <MDBox px={1} flexDirection={"column"} style={{cursor: "pointer", overflow: "hidden"}} onClick={() => {
+                                  setAlert(<LoadingProgress />);
+                                  SessionController.query("/api/queryMobileRecordings", {
+                                    patientId: patientID, 
+                                    recordingId: event.event._def.publicId,
+                                    requestData: true
+                                  }).then((response) => {
+                                    setAvailableRecordings({...availableRecordings, current: event.event._def.publicId});
+                                    setDataToRender(response.data);
+                                    setAlert(null);
+                                  }).catch((error) => {
+                                    SessionController.displayError(error, setAlert);
+                                  });
+                                }}>
+                                  <MDBox display={"flex"} flexDirection={"row"}>
+                                    <FiberManualRecordIcon color={"info"} fontSize={"sm"} />
+                                    <MDTypography display={"flex"} fontSize={9} alignItems={"center"} justifyContent={"center"}>
+                                      {event.event.start.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit"})} {"-"} {event.event.end.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit"})}
+                                    </MDTypography>
+                                  </MDBox>
+                                  <MDTypography fontSize={9}>
+                                    {event.event.title}
+                                  </MDTypography>
+                                </MDBox>
+                              </>;
+                            }}
+                            events={availableRecordings.list.map((recording) => {
+                              return {
+                                id: recording.RecordingId,
+                                title: recording.RecordingLabel,
+                                date: new Date(recording.Time*1000),
+                                end: new Date((recording.Time + recording.Duration)*1000),
+                                display: "list-item"
+                              };
+                            })}
+                          />
+                        </MDBox>
+                      </Grid>
                     </Grid>
-                    <Grid item xs={12}>
-                      <MDBox p={4}>
-                        <FullCalendar
-                          plugins={[ dayGridPlugin, interactionPlugin ]}
-                          initialView={"dayGridMonth"}
-                          eventContent={(event) => {
-                            return <>
-                              <MDBox px={1} flexDirection={"column"} style={{cursor: "pointer", overflow: "hidden"}} onClick={() => {
-                                setAlert(<LoadingProgress />);
-                                SessionController.query("/api/queryMobileRecordings", {
-                                  patientId: patientID, 
-                                  recordingId: event.event._def.publicId,
-                                  requestData: true
-                                }).then((response) => {
-                                  setAvailableRecordings({...availableRecordings, current: event.event._def.publicId});
-                                  setDataToRender(response.data);
-                                  setAlert(null);
-                                }).catch((error) => {
-                                  SessionController.displayError(error, setAlert);
-                                });
-                              }}>
-                                <MDTypography fontSize={9}>
-                                  {event.event.start.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit"})} {"-"} {event.event.end.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit"})}
-                                </MDTypography>
-                                <MDTypography fontSize={9}>
-                                  {event.event.title}
-                                </MDTypography>
-                              </MDBox>
-                            </>;
-                          }}
-                          events={availableRecordings.list.map((recording) => {
-                            return {
-                              id: recording.RecordingId,
-                              title: recording.RecordingLabel,
-                              date: new Date(recording.Time*1000),
-                              end: new Date((recording.Time + recording.Duration)*1000),
-                              display: "list-item"
-                            };
-                          })}
-                        />
-                      </MDBox>
-                    </Grid>
-                  </Grid>
-                </Card>
+                  </Card>
+                </Grid>
               </Grid>
-            </Grid>
+            </MDBox>
           </MDBox>
-        </MDBox>
+        ) : null}
       </DatabaseLayout>
     </>
   );

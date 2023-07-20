@@ -478,6 +478,18 @@ def getRawRecordingData(user, patientId, analysisId, recordingId, authority):
                 "StartTime": Data["StartTime"],
                 "SamplingRate": Data["SamplingRate"]
             } 
+        elif recording.recording_type == "IndefiniteStream":
+            Data = Database.loadSourceDataPointer(recording.recording_datapointer)
+            ChannelSelection = np.ones(len(Data["ChannelNames"]), dtype=bool)
+            for channelName in ChannelConfiguration.keys():
+                ChannelSelection[PythonUtility.iterativeCompare(Data["ChannelNames"], channelName, "equal").flatten()] = ChannelConfiguration[channelName]["show"]
+
+            return {
+                "Data": Data["Data"][:,ChannelSelection].T,
+                "ChannelNames": PythonUtility.listSelection(Data["ChannelNames"], ChannelSelection),
+                "StartTime": Data["StartTime"],
+                "SamplingRate": Data["SamplingRate"]
+            } 
     
     return None
 

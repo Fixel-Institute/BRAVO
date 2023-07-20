@@ -128,7 +128,7 @@ platform to work with Django Project.
 
 .. _LinuxEnvirontmentSetup:
 
-Step 0: Environment Setup
+Linux Step 0: Environment Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Install dependencies packages using ``apt-get`` is the simpliest way to start. 
@@ -158,7 +158,7 @@ All procedure assume that your working directory is the main directory of the cl
 
   pip3 install -r requirements.txt
 
-Step 1: SQL Databse Setup
+Linux Step 1: SQL Databse Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 SQL Database will be used to store account information, patient entries, device entries, 
@@ -190,7 +190,7 @@ You can access MySQL Database (the default database used for the installation sc
 Once the account is set-up and database is created. You can edit the ``Server/mysql.config`` file to 
 reflect actual accses credential for your database. 
 
-Step 2: Server Environment Variables
+Linux Step 2: Server Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Environment variable for Python server is saved as a JSON file named ``.env``. Python will load in the file content during load time.
@@ -245,8 +245,8 @@ An example environment file looks like the following.
   The Django operating mode. DEBUG allow more error log in case if an error is shown. 
   During development, you may keep it as ``DEBUG`` but set to ``PRODUCTION`` when done. 
 
-Step 3: Django - MySQL Database Initialization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Linux Step 3: Django - MySQL Database Initialization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Initial migration is required to setup the Database to the required structure of Django Server. 
 This only need to be run once, unless a change is made to ``Server/Backend/models.py`` file. 
@@ -256,8 +256,8 @@ This only need to be run once, unless a change is made to ``Server/Backend/model
   python3 $SCRIPT_DIR/manage.py makemigrations Backend
   python3 $SCRIPT_DIR/manage.py migrate
 
-Step 4: SSL (HTTPS) Certificate (Optional)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Linux Step 4: SSL (HTTPS) Certificate (Optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This step is not neccessary for local deployment. However, for people who want additional security to deploy with HTTPS, 
 we will provide guidance for obtaining simple certificates for SSH. 
@@ -275,7 +275,7 @@ The output certificates should be saved in a directory at ``/etc/letsencrypt/liv
 A bare-minimum sample nginx configuration file ``deployment.conf`` is in Server directory as a reference to create a working reverse proxy server to direct SSL traffic to your server.
 This configuration file should be saved in ``/etc/nginx/sites-enabled/`` directory and you should reload your nginx service whenever a change is made to the configuration.
 
-Step 5: Deployment
+Linux Step 5: Deployment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Due to the use of Websocket for real-time analysis, the default operating condition is through 
@@ -310,7 +310,7 @@ Using WSL, the deployment is essentially identical to Linux procedure with a few
 recommended for production purposes. I still recommend actual Linux Server as the production server host. However, Windows can still 
 be used as developmental server to test capabilities. 
 
-Step 0: Environment Setup
+Windows Step 0: Environment Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 WSL can be enabled on Windows computer running Windows 10 Anniversary Update or newer builds. 
@@ -350,7 +350,7 @@ All procedure assume that your working directory is the main directory of the cl
 
   pip3 install -r requirements.txt
 
-Step 1: SQL Databse Setup
+Windows Step 1: SQL Databse Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 SQL Database will be used to store account information, patient entries, device entries, 
@@ -395,7 +395,7 @@ reflect actual accses credential for your database.
   permission, leave only ``Authenticated User`` group with Read and Read/Execute Access only (not even write access). This will avoid 
   [World Writable] permission error.
 
-Step 2: Server Environment Variables
+Windows Step 2: Server Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Environment variable for Python server is saved as a JSON file named ``.env``. Python will load in the file content during load time.
@@ -451,8 +451,8 @@ An example environment file looks like the following.
   The Django operating mode. DEBUG allow more error log in case if an error is shown. 
   During development, you may keep it as ``DEBUG`` but set to ``PRODUCTION`` when done. 
 
-Step 3: Django - MySQL Database Initialization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Windows Step 3: Django - MySQL Database Initialization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Initial migration is required to setup the Database to the required structure of Django Server. 
 This only need to be run once, unless a change is made to ``Server/Backend/models.py`` file. 
@@ -468,7 +468,7 @@ This only need to be run once, unless a change is made to ``Server/Backend/model
   sudo $SCRIPT_DIR/venv/bin/python3 $SCRIPT_DIR/manage.py makemigrations Backend
   sudo $SCRIPT_DIR/venv/bin/python3 $SCRIPT_DIR/manage.py migrate
 
-Step 4: Deployment
+Windows Step 4: Deployment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Deployment in Windows can be done primarily through VS Code integrated with WSL. 
@@ -495,7 +495,7 @@ Python Server Installation Guide (MacOS)
 Installation of Python Server on MacOS follows the same process as Linux operating system. However, 
 due to the lack of ``apt-get``, MacOS user must download neccessary dependencies manually. 
 
-Step 0: Environment Setup
+MacOS Step 0: Environment Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We will need to install MySQL, Docker with Redis, and Python3 Virtual Environment to setup the conditions for server. 
@@ -540,7 +540,7 @@ All procedure assume that your working directory is the main directory of the cl
 
   pip3 install -r requirements.txt
   
-Step 1: SQL Databse Setup
+MacOS Step 1: SQL Databse Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 SQL Database will be used to store account information, patient entries, device entries, 
@@ -572,7 +572,7 @@ You can access MySQL Database (the default database used for the installation sc
 Once the account is set-up and database is created. You can edit the ``Server/mysql.config`` file to 
 reflect actual accses credential for your database. 
 
-Step 2: Server Environment Variables
+MacOS Step 2: Server Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Environment variable for Python server is saved as a JSON file named ``.env``. Python will load in the file content during load time.
@@ -628,8 +628,8 @@ An example environment file looks like the following.
   The Django operating mode. DEBUG allow more error log in case if an error is shown. 
   During development, you may keep it as ``DEBUG`` but set to ``PRODUCTION`` when done. 
 
-Step 3: Django - MySQL Database Initialization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+MacOS Step 3: Django - MySQL Database Initialization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Initial migration is required to setup the Database to the required structure of Django Server. 
 This only need to be run once, unless a change is made to ``Server/Backend/models.py`` file. 
@@ -644,7 +644,7 @@ This only need to be run once, unless a change is made to ``Server/Backend/model
   The new BRAVO Server Database has significant difference when compared to the original BRAVO platform v0.1 released in 2021.
   The database are not convertable at the moment, but a migration script is in development to help as much migration as possible. 
 
-Step 4: Deployment
+MacOS Step 4: Deployment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Due to the use of Websocket for real-time analysis, the default operating condition is through 
