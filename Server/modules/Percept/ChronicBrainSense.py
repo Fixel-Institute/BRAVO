@@ -275,10 +275,10 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                                 if "event_time" in ChronicEvents.keys():
                                     IndividualEvent = []
                                     IndividualEventTime = []
-                                    for i in range(len(ChronicEvents["event_time"])):
-                                        if ChronicEvents["event_time"][i] > datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc) and ChronicEvents["event_time"][i] < datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc):
-                                            IndividualEvent.append(ChronicEvents["event_name"][i])
-                                            IndividualEventTime.append(ChronicEvents["event_time"][i].timestamp())
+                                    for j in range(len(ChronicEvents["event_time"])):
+                                        if ChronicEvents["event_time"][j] > datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc) and ChronicEvents["event_time"][j] < datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc):
+                                            IndividualEvent.append(ChronicEvents["event_name"][j])
+                                            IndividualEventTime.append(ChronicEvents["event_time"][j].timestamp())
                                 
                                     if len(IndividualEvent) > 0 and len(LFPTrends[-1]["Power"][-1]) > 0:
                                         LFPTrends[-1]["EventName"].append(IndividualEvent)
