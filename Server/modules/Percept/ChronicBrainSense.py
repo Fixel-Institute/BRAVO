@@ -242,6 +242,9 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
 
                 LFPTrends[-1]["PowerRange"] = [0,0]
 
+                ChronicEvents = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id).all()
+                ChronicEvents = pd.DataFrame.from_records(ChronicEvents.values("event_name", "event_time"))
+
                 #[b,a] = signal.butter(5, 0.00003*2*600, 'high', output='ba')
                 for therapy in TherapyHistory:
                     if therapy["device"] == device.deidentified_id:
@@ -269,13 +272,22 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                                 if np.percentile(FiltPower,95) > LFPTrends[-1]["PowerRange"][1]:
                                     LFPTrends[-1]["PowerRange"][1] = np.percentile(FiltPower,95)
 
-                                ChronicEvents = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id,
-                                                    event_time__gt=datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc), event_time__lt=datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc)).all()
-                                ChronicEvents = pd.DataFrame.from_records(ChronicEvents.values("event_name", "event_time"))
-                                if "event_name" in ChronicEvents.keys() and len(LFPTrends[-1]["Power"][-1]) > 0:
-                                    LFPTrends[-1]["EventName"].append(ChronicEvents["event_name"])
-                                    LFPTrends[-1]["EventTime"].append([time.timestamp() for time in ChronicEvents["event_time"]])
-                                    LFPTrends[-1]["EventPower"].append([LFPTrends[-1]["Power"][-1][findClosest(LFPTrends[-1]["Timestamp"][-1], time)[1]] for time in LFPTrends[-1]["EventTime"][-1]])
+                                if "event_time" in ChronicEvents.keys():
+                                    IndividualEvent = []
+                                    IndividualEventTime = []
+                                    for i in range(len(ChronicEvents["event_time"])):
+                                        if ChronicEvents["event_time"][i] > datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc) and ChronicEvents["event_time"][i] < datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc):
+                                            IndividualEvent.append(ChronicEvents["event_name"][i])
+                                            IndividualEventTime.append(ChronicEvents["event_time"][i].timestamp())
+                                
+                                    if len(IndividualEvent) > 0 and len(LFPTrends[-1]["Power"][-1]) > 0:
+                                        LFPTrends[-1]["EventName"].append(IndividualEvent)
+                                        LFPTrends[-1]["EventTime"].append(IndividualEventTime)
+                                        LFPTrends[-1]["EventPower"].append([LFPTrends[-1]["Power"][-1][findClosest(LFPTrends[-1]["Timestamp"][-1], time)[1]] for time in LFPTrends[-1]["EventTime"][-1]])
+                                    else:
+                                        LFPTrends[-1]["EventName"].append([])
+                                        LFPTrends[-1]["EventTime"].append([])
+                                        LFPTrends[-1]["EventPower"].append([])
                                 else:
                                     LFPTrends[-1]["EventName"].append([])
                                     LFPTrends[-1]["EventTime"].append([])
