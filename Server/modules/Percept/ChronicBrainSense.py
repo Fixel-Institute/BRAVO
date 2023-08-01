@@ -272,17 +272,11 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                                 if np.percentile(FiltPower,95) > LFPTrends[-1]["PowerRange"][1]:
                                     LFPTrends[-1]["PowerRange"][1] = np.percentile(FiltPower,95)
 
-                                if "event_time" in ChronicEvents.keys():
-                                    IndividualEvent = []
-                                    IndividualEventTime = []
-                                    for j in range(len(ChronicEvents["event_time"])):
-                                        if ChronicEvents["event_time"][j] > datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc) and ChronicEvents["event_time"][j] < datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc):
-                                            IndividualEvent.append(ChronicEvents["event_name"][j])
-                                            IndividualEventTime.append(ChronicEvents["event_time"][j].timestamp())
-                                
-                                    if len(IndividualEvent) > 0 and len(LFPTrends[-1]["Power"][-1]) > 0:
-                                        LFPTrends[-1]["EventName"].append(IndividualEvent)
-                                        LFPTrends[-1]["EventTime"].append(IndividualEventTime)
+                                if "event_time" in ChronicEvents.keys() and len(LFPTrends[-1]["Power"][-1]) > 0:
+                                    SelectedTime = np.bitwise_and(ChronicEvents["event_time"] > datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc), ChronicEvents["event_time"] < datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc))
+                                    if np.any(SelectedTime):
+                                        LFPTrends[-1]["EventName"].append(ChronicEvents["event_name"][SelectedTime])
+                                        LFPTrends[-1]["EventTime"].append([time.timestamp() for time in ChronicEvents["event_time"][SelectedTime]])
                                         LFPTrends[-1]["EventPower"].append([LFPTrends[-1]["Power"][-1][findClosest(LFPTrends[-1]["Timestamp"][-1], time)[1]] for time in LFPTrends[-1]["EventTime"][-1]])
                                     else:
                                         LFPTrends[-1]["EventName"].append([])
