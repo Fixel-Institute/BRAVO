@@ -81,7 +81,7 @@ function StimulationPSD({dataToRender, channelInfos, height, type, onCenterFrequ
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    if (dataToRender) handleGraphing(dataToRender);
+    if (dataToRender.length > 0) handleGraphing(dataToRender);
     else {
       fig.purge();
       setShow(false);

@@ -84,10 +84,10 @@ function BrainSenseStreaming() {
   const [configuration, setConfiguration] = React.useState({});
   const [dataToRender, setDataToRender] = React.useState(false);
   const [channelInfos, setChannelInfos] = React.useState([]);
-  const [leftHemispherePSD, setLeftHemispherePSD] = React.useState(false);
-  const [rightHemispherePSD, setRightHemispherePSD] = React.useState(false);
-  const [leftHemisphereBox, setLeftHemisphereBox] = React.useState(false);
-  const [rightHemisphereBox, setRightHemisphereBox] = React.useState(false);
+  const [leftHemispherePSD, setLeftHemispherePSD] = React.useState([]);
+  const [rightHemispherePSD, setRightHemispherePSD] = React.useState([]);
+  const [leftHemisphereBox, setLeftHemisphereBox] = React.useState([]);
+  const [rightHemisphereBox, setRightHemisphereBox] = React.useState([]);
 
   const [centerFrequencyLeft, setCenterFrequencyLeft] = React.useState(0);
   const [centerFrequencyRight, setCenterFrequencyRight] = React.useState(0);
@@ -475,7 +475,7 @@ function BrainSenseStreaming() {
                         </MDBox>
                       </Grid>
                       <Grid item xs={12} lg={6}>
-                        {leftHemispherePSD ? (
+                        {leftHemispherePSD.length > 0 ? (
                           <MDBox display={"flex"} flexDirection={"column"}>
                             <StimulationReferenceButton value={referenceType[0]} onChange={(event, value) => handlePSDUpdate(value, "Left")} />
                             <StimulationPSD dataToRender={leftHemispherePSD} channelInfos={channelInfos} type={"Left"} figureTitle={"LeftStimulationPSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>
@@ -486,7 +486,7 @@ function BrainSenseStreaming() {
                         <StimulationBoxPlot dataToRender={leftHemisphereBox} channelInfos={channelInfos} type={"Left"} figureTitle={"LeftStimulationBar"} height={600}/>
                       </Grid>
                       <Grid item xs={12} lg={6}>
-                        {rightHemispherePSD ? (
+                        {rightHemispherePSD.length > 0 ? (
                           <MDBox display={"flex"} flexDirection={"column"}>
                             <StimulationReferenceButton value={referenceType[1]} onChange={(event, value) => handlePSDUpdate(value, "Right")} />
                             <StimulationPSD dataToRender={rightHemispherePSD} channelInfos={channelInfos} type={"Right"} figureTitle={"RightStimulationPSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>

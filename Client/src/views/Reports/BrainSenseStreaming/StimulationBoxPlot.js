@@ -73,7 +73,7 @@ function StimulationBoxPlot({dataToRender, channelInfos, height, type, figureTit
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    if (dataToRender) handleGraphing(dataToRender);
+    if (dataToRender.length > 0) handleGraphing(dataToRender);
     else {
       fig.purge();
       setShow(false);
