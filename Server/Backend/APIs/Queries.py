@@ -26,7 +26,7 @@ from django.http import HttpResponse
 
 from Backend import models
 
-from modules import Database, ImageDatabase, AnalysisBuilder
+from modules import Database, ImageDatabase, AnalysisBuilder, WearableRecordingsDatabase
 from modules.Percept import Therapy, Sessions, BrainSenseSurvey, BrainSenseEvent, BrainSenseStream, IndefiniteStream, ChronicBrainSense, TherapeuticPrediction, AdaptiveStimulation
 from utility.PythonUtility import uniqueList
 import json
@@ -905,6 +905,45 @@ class QueryCustomizedAnalysis(RestViews.APIView):
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
+class QueryMobileRecordings(RestViews.APIView):
+    """ Query Customized Analysis.
+
+    """
+
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        if not "ProcessingSettings" in request.user.configuration:
+            request.user.configuration["ProcessingSettings"] = Database.retrieveProcessingSettings(request.user.configuration)
+            request.user.save()
+
+        if "requestOverview" in request.data:
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["patientId"])
+            if Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["patientId"], Authority, "BrainSenseStream")
+                data = WearableRecordingsDatabase.queryAvailableRecordings(request.user, request.data["patientId"], Authority)
+                return Response(status=200, data=data)
+            
+        elif "requestData" in request.data:
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["patientId"])
+            if Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["patientId"], Authority, "BrainSenseStream")
+                data = WearableRecordingsDatabase.getRecordingData(request.user, request.data["patientId"], request.data["recordingId"], Authority)
+                return Response(status=200, data=data)
+        
+        elif "deleteData" in request.data:
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["patientId"])
+            if Authority["Level"] == 1:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["patientId"], Authority, "BrainSenseStream")
+                Result = WearableRecordingsDatabase.removeRecordingData(request.user, request.data["patientId"], request.data["recordingId"], Authority)
+                if Result:
+                    return Response(status=200)
+        
+        return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+    
 class QueryRecordingsForAnalysis(RestViews.APIView):
     """ Query Recording Raw Data for Analysis.
 

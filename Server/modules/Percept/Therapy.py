@@ -197,7 +197,9 @@ def queryTherapyHistory(user, patientUniqueID, authority):
                     if TherapyChangeData["therapy"][-1] and len(ImpedanceHistory) > 0:
                         impedanceIndex = np.argmin(np.abs(np.array([impedanceLog["session_date"] for impedanceLog in ImpedanceHistory]) - TherapyHistory["therapy_date"][i].timestamp()))
                         TherapyChangeData["therapy"][-1]["Impedance"] = ImpedanceHistory[impedanceIndex]
-
+            
+            # 5 Seconds Adjustment Due to TherapyChangeDate is actually logged slightly later than when the Group is actually changed.
+            TherapyChangeData["date_of_change"] = np.array(TherapyChangeData["date_of_change"]) - 5*1000000000
             TherapyHistoryContext.append(TherapyChangeData)
 
     return TherapyHistoryContext

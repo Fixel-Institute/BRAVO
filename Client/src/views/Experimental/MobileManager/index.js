@@ -33,7 +33,11 @@ import {
   ListItemIcon
 } from "@mui/material";
 
-import { ViewInAr, Timeline } from "@mui/icons-material";
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import interactionPlugin from "@fullcalendar/interaction"
 
 import React from "react";
 import * as THREE from "three";
@@ -63,6 +67,7 @@ import {
 import { Line } from 'react-chartjs-2';
 
 import DatabaseLayout from "layouts/DatabaseLayout";
+import InertiaSensorSpectrum from "./InertiaSensorSpectrum";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
@@ -91,6 +96,13 @@ function MobileManager() {
     show: false
   });
 
+  const [availableRecordings, setAvailableRecordings] = useState({
+    list: [],
+    current: "",
+  });
+
+  const [dataToRender, setDataToRender] = useState(false);
+
   useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: false});
@@ -102,6 +114,15 @@ function MobileManager() {
         if (response.data.length > 0) {
           setMobileAccount(response.data[0]);
         }
+      }).catch((error) => {
+        SessionController.displayError(error, setAlert);
+      });
+
+      SessionController.query("/api/queryMobileRecordings", {
+        patientId: patientID, 
+        requestOverview: true
+      }).then((response) => {
+        setAvailableRecordings({list: response.data.filter((a) => a.Time > 0), current: ""});
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
@@ -174,7 +195,54 @@ function MobileManager() {
         });
       }}
     />)
-  }
+  };
+
+  const handleDownloadRecording = () => {
+    for (let key of Object.keys(dataToRender)) {
+      if (key == "DeviceID") continue;
+
+      let totalSize = 0;
+      let csvContent = "";
+      let savedField = [];
+      
+      for (let field of Object.keys(dataToRender[key])) {
+        totalSize = dataToRender[key][field].length > totalSize ? dataToRender[key][field].length : totalSize;
+        if (dataToRender[key][field].length > 0) {
+          csvContent += field + ","
+          savedField.push(field);
+        }
+      }
+
+      if (totalSize == 0) continue;
+    
+      csvContent = csvContent.slice(0,-1) + "\n";
+      for (let i = 0; i < totalSize; i++) {
+        for (let j = 0; j < savedField.length; j++) {
+          csvContent += dataToRender[key][savedField[j]][i].toString() + (j == savedField.length-1 ? "\n" : ",");
+        }
+      }
+  
+      var downloader = document.createElement('a');
+      downloader.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvContent);
+      downloader.target = '_blank';
+      downloader.download = dataToRender.DeviceID.replace("DATA:","") + "_" + key + ".csv";
+      downloader.click();
+    }
+  };
+
+  const handleDeleteRecording = () => {
+    SessionController.query("/api/queryMobileRecordings", {
+      patientId: patientID, 
+      recordingId: availableRecordings.current,
+      deleteData: true
+    }).then((response) => {
+      setDataToRender(null);
+      setAvailableRecordings({list: availableRecordings.list.filter((a) => a.RecordingId != availableRecordings.current), current: ""});
+      setAlert(null);
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
+  };
 
   return (
     <>
@@ -280,6 +348,106 @@ function MobileManager() {
             </Grid>
           </MDBox>
         </MDBox>
+
+        <Dialog 
+          sx={{ color: '#FFFFFF', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          PaperProps={{
+            sx: { minWidth: 1000 }
+          }}
+          open={Boolean(dataToRender)}
+          onClose={() => setDataToRender(null)}
+        >
+          <MDBox px={5} pt={5}>
+            <MDTypography fontWeight={"bold"} fontSize={24}>
+              {"Wearable Recording Viewer"}
+            </MDTypography> 
+            <MDBox flexDirection={"row"}>
+              <MDButton variant="gradient" color="success" style={{marginRight: 5, marginTop: 5, marginBottom: 5}} onClick={handleDownloadRecording}>
+                <MDTypography fontWeight={"bold"} fontSize={18} py={0} color={"white"}>
+                  {"Download Recording"}
+                </MDTypography>
+              </MDButton>
+              <MDButton variant="gradient" color="error" style={{marginRight: 0, marginTop: 5, marginBottom: 5}} onClick={handleDeleteRecording}>
+                <MDTypography fontWeight={"bold"} fontSize={18} py={0} color={"white"}>
+                  {"Delete Recording"}
+                </MDTypography>
+              </MDButton>
+            </MDBox>
+          </MDBox>
+          <MDBox p={5} display={"flex"} alignItems={"center"} flexDirection={"column"} >
+            {dataToRender ? (
+              <InertiaSensorSpectrum dataToRender={dataToRender} height={1500} figureTitle={"BRAVO Wearable Data Viewer"}/>
+            ) : null}
+          </MDBox>
+        </Dialog>
+
+        {availableRecordings.list.length > 0 ? (
+          <MDBox pt={3}>
+            <MDBox>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Card sx={{width: "100%"}}>
+                    <Grid container>
+                      <Grid item xs={12}>
+                        <MDBox p={2}>
+                          <MDTypography variant={"h6"} fontSize={24}>
+                            {"Wearable Recording Viewer"}
+                          </MDTypography>
+                        </MDBox>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <MDBox p={4}>
+                          <FullCalendar
+                            plugins={[ dayGridPlugin, interactionPlugin ]}
+                            initialView={"dayGridMonth"}
+                            initialDate={availableRecordings.list.length > 0 ? new Date(availableRecordings.list[availableRecordings.list.length-1].Time*1000) : null}
+                            eventContent={(event) => {
+                              return <>
+                                <MDBox px={1} flexDirection={"column"} style={{cursor: "pointer", overflow: "hidden"}} onClick={() => {
+                                  setAlert(<LoadingProgress />);
+                                  SessionController.query("/api/queryMobileRecordings", {
+                                    patientId: patientID, 
+                                    recordingId: event.event._def.publicId,
+                                    requestData: true
+                                  }).then((response) => {
+                                    setAvailableRecordings({...availableRecordings, current: event.event._def.publicId});
+                                    setDataToRender(response.data);
+                                    setAlert(null);
+                                  }).catch((error) => {
+                                    SessionController.displayError(error, setAlert);
+                                  });
+                                }}>
+                                  <MDBox display={"flex"} flexDirection={"row"}>
+                                    <FiberManualRecordIcon color={"info"} fontSize={"sm"} />
+                                    <MDTypography display={"flex"} fontSize={9} alignItems={"center"} justifyContent={"center"}>
+                                      {event.event.start.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit"})} {"-"} {event.event.end.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit"})}
+                                    </MDTypography>
+                                  </MDBox>
+                                  <MDTypography fontSize={9}>
+                                    {event.event.title}
+                                  </MDTypography>
+                                </MDBox>
+                              </>;
+                            }}
+                            events={availableRecordings.list.map((recording) => {
+                              return {
+                                id: recording.RecordingId,
+                                title: recording.RecordingLabel,
+                                date: new Date(recording.Time*1000),
+                                end: new Date((recording.Time + recording.Duration)*1000),
+                                display: "list-item"
+                              };
+                            })}
+                          />
+                        </MDBox>
+                      </Grid>
+                    </Grid>
+                  </Card>
+                </Grid>
+              </Grid>
+            </MDBox>
+          </MDBox>
+        ) : null}
       </DatabaseLayout>
     </>
   );

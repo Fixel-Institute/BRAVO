@@ -62,6 +62,7 @@ urlpatterns = [
     
 	path('queryCustomizedAnalysis', Queries.QueryCustomizedAnalysis.as_view()),
 	path('queryRecordingsForAnalysis', Queries.QueryRecordingsForAnalysis.as_view()),
+	path('queryMobileRecordings', Queries.QueryMobileRecordings.as_view()),
 
 	path('queryImageDirectory', Queries.QueryImageModelDirectory.as_view()),
 	path('queryImageModel', Queries.QueryImageModel.as_view()),
