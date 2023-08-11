@@ -37,3 +37,16 @@ The Docker Compose will create 2 volumes, one for SQL Database (docker_SQLDataba
 volumes are usually mapped in the VM and accessible via Docker Interface. 
 
 For Windows, they are usually in ``\\wsl.localhost\docker-desktop-data\data\docker\volumes``. 
+
+Public Access for Docker Images
+--------------------------------------------
+
+By using Windows NETSH command, we can forward ports from Docker to public domain so your Windows Docker Image can serve as a public accessible server as well. 
+
+By standard, Port 80 and Port 3001 are used by Docker (80 as Frontend and 3001 as Backend) to serve the BRAVO Platform. However, it is also important to edit 
+`SERVER_ADDRESS` and `CLIENT_ADDRESS` to your actual IP address. To do so, you can edit the `docker-compose.yml` file you download.
+
+.. code-block:: bash 
+
+  netsh interface portproxy set v4tov4 listenport=80 listenaddress=0.0.0.0 connectport=80 connectaddress={WSL_IP_Address}
+  netsh interface portproxy set v4tov4 listenport=3001 listenaddress=0.0.0.0 connectport=3001 connectaddress={WSL_IP_Address}

@@ -207,6 +207,7 @@ def queryMontageData(user, devices, timestamps, authority):
 
                 data = dict()
                 data["Timestamp"] = stream["StartTime"]
+                data["Duration"] = stream["Duration"]
                 data["DeviceID"] = devices[i]
                 data["Channels"] = stream["ChannelNames"]
                 data["ChannelNames"] = list()

@@ -24,6 +24,7 @@ import {
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
+import MuiAlertDialog from "components/MuiAlertDialog";
 import LoadingProgress from "components/LoadingProgress";
 
 import DatabaseLayout from "layouts/DatabaseLayout";
@@ -42,6 +43,7 @@ function IndefiniteStreaming() {
   const { patientID, language } = controller;
 
   const [data, setData] = React.useState([]);
+  const [annotations, setAnnotations] = React.useState([]);
   const [dataToRender, setDataToRender] = React.useState(false);
   const [alert, setAlert] = React.useState(null);
 
@@ -55,6 +57,9 @@ function IndefiniteStreaming() {
         id: patientID, 
         requestOverview: true
       }).then((response) => {
+        if (response.data.length > 0) {
+          setAnnotations(response.data[0].annotations);
+        }
         setData(response.data)
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -120,6 +125,92 @@ function IndefiniteStreaming() {
     downloader.click();
   };
 
+  const handleAddEvent = async (eventInfo) => {
+    try {
+      const response = await SessionController.query("/api/queryCustomAnnotations", {
+        id: patientID,
+        addEvent: true,
+        name: eventInfo.name,
+        time: eventInfo.time / 1000,
+        duration: parseFloat(eventInfo.duration)
+      });
+
+      if (response.status == 200) {
+        setDataToRender((dataToRender) => {
+          dataToRender.data[0].Annotations = [...dataToRender.data[0].Annotations, {
+            Time: eventInfo.time / 1000,
+            Name: eventInfo.name,
+            Duration: parseFloat(eventInfo.duration)
+          }];
+          return {...dataToRender};
+        });
+
+        setAnnotations((annotations) => {
+          if (!annotations.includes(eventInfo.name)) {
+            annotations.push(eventInfo.name);
+          }
+          return [...annotations];
+        });
+      }
+    } catch (error) {
+      SessionController.displayError(error, setAlert);
+    }
+  };
+
+  const handleDeleteEvent = async (eventInfo) => {
+    for (let i in dataToRender.data) {
+      if (dataToRender.data[i].Annotations.length > 0) {
+        eventInfo.targetInfo = eventInfo;
+        eventInfo.targetInfo.timeDiff = 10;
+      }
+    }
+      
+    for (let j in dataToRender.data) {
+      for (let i = 0; i < dataToRender.data[j].Annotations.length; i++) {
+        let absoluteDiffTime = Math.abs(dataToRender.data[j].Annotations[i].Time - eventInfo.time/1000);
+        if (absoluteDiffTime < eventInfo.targetInfo.timeDiff) {
+          eventInfo.targetInfo = dataToRender.data[j].Annotations[i];
+          eventInfo.targetInfo.timeDiff = absoluteDiffTime;
+        }
+      }
+    }
+    
+    if (eventInfo.targetInfo.timeDiff < 10) {
+      setAlert(<MuiAlertDialog 
+        title={`Remove ${eventInfo.targetInfo.Name} Event`}
+        message={`Are you sure you want to delete the entry [${eventInfo.targetInfo.Name}] @ ${new Date(eventInfo.targetInfo.Time*1000)} ?`}
+        confirmText={"YES"}
+        denyText={"NO"}
+        denyButton
+        handleClose={() => setAlert(null)}
+        handleDeny={() => setAlert(null)}
+        handleConfirm={() => {
+          SessionController.query("/api/queryCustomAnnotations", {
+            id: patientID,
+            deleteEvent: true,
+            name: eventInfo.targetInfo.Name,
+            time: eventInfo.targetInfo.Time
+          }).then(() => {
+            setDataToRender((dataToRender) => {
+              for (let j in dataToRender.data) {
+                dataToRender.data[j].Annotations = dataToRender.data[j].Annotations.filter((a) => {
+                  if (a.Name == eventInfo.targetInfo.Name && a.Time == eventInfo.targetInfo.Time && a.Duration == eventInfo.targetInfo.Duration) {
+                    return false;
+                  }
+                  return true;
+                })
+              }
+              return {...dataToRender};
+            });
+            setAlert(null);
+          }).catch((error) => {
+            SessionController.displayError(error, setAlert);
+          });
+        }}
+      />)
+    }
+  }
+
   return (
     <>
       {alert}
@@ -159,7 +250,9 @@ function IndefiniteStreaming() {
                           </MDButton>
                         </MDBox>
                       </MDBox>
-                      <TimeDomainFigure dataToRender={dataToRender} height={figureHeight} figureTitle={"IndefiniteStreamTimeDomain"}/>
+                      <TimeDomainFigure dataToRender={dataToRender} height={figureHeight} 
+                        handleAddEvent={handleAddEvent} handleDeleteEvent={handleDeleteEvent} annotations={annotations}
+                        figureTitle={"IndefiniteStreamTimeDomain"}/>
                     </Grid>
                   </Grid>
                 </Card>

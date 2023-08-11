@@ -28,6 +28,7 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import LoadingProgress from "components/LoadingProgress";
+import MuiAlertDialog from "components/MuiAlertDialog";
 
 import DatabaseLayout from "layouts/DatabaseLayout";
 
@@ -81,6 +82,7 @@ function BrainSenseStreaming() {
   const [recordingId, setRecordingId] = React.useState([]);
 
   const [data, setData] = React.useState([]);
+  const [annotations, setAnnotations] = React.useState([]);
   const [configuration, setConfiguration] = React.useState({});
   const [dataToRender, setDataToRender] = React.useState(false);
   const [channelInfos, setChannelInfos] = React.useState([]);
@@ -105,6 +107,7 @@ function BrainSenseStreaming() {
         id: patientID,
         requestOverview: true,
       }).then((response) => {
+        setAnnotations(response.data.annotations)
         setData(response.data.streamingData);
         setConfiguration(response.data.configuration);
       }).catch((error) => {
@@ -405,6 +408,87 @@ function BrainSenseStreaming() {
     }
   }, [dataToRender]);
 
+  const handleAddEvent = async (eventInfo) => {
+    try {
+      const response = await SessionController.query("/api/queryCustomAnnotations", {
+        id: patientID,
+        addEvent: true,
+        name: eventInfo.name,
+        time: eventInfo.time / 1000,
+        duration: parseFloat(eventInfo.duration)
+      });
+
+      if (response.status == 200) {
+        setDataToRender((dataToRender) => {
+          dataToRender.Annotations = [...dataToRender.Annotations, {
+            Time: eventInfo.time / 1000,
+            Name: eventInfo.name,
+            Duration: parseFloat(eventInfo.duration)
+          }];
+          return {...dataToRender};
+        });
+
+        setAnnotations((annotations) => {
+          if (!annotations.includes(eventInfo.name)) {
+            annotations.push(eventInfo.name);
+          }
+          return [...annotations];
+        });
+      }
+    } catch (error) {
+      SessionController.displayError(error, setAlert);
+    }
+  };
+
+  const handleDeleteEvent = async (eventInfo) => {
+    if (dataToRender.Annotations.length > 0) {
+      eventInfo.targetInfo = eventInfo;
+      eventInfo.targetInfo.timeDiff = 10;
+    }
+
+    for (let i = 0; i < dataToRender.Annotations.length; i++) {
+      let absoluteDiffTime = Math.abs(dataToRender.Annotations[i].Time - eventInfo.time/1000);
+      console.log(absoluteDiffTime)
+      if (absoluteDiffTime < eventInfo.targetInfo.timeDiff) {
+        eventInfo.targetInfo = dataToRender.Annotations[i];
+        eventInfo.targetInfo.timeDiff = absoluteDiffTime;
+      }
+    }
+    
+    if (eventInfo.targetInfo.timeDiff < 10) {
+      setAlert(<MuiAlertDialog 
+        title={`Remove ${eventInfo.targetInfo.Name} Event`}
+        message={`Are you sure you want to delete the entry [${eventInfo.targetInfo.Name}] @ ${new Date(eventInfo.targetInfo.Time*1000)} ?`}
+        confirmText={"YES"}
+        denyText={"NO"}
+        denyButton
+        handleClose={() => setAlert(null)}
+        handleDeny={() => setAlert(null)}
+        handleConfirm={() => {
+          SessionController.query("/api/queryCustomAnnotations", {
+            id: patientID,
+            deleteEvent: true,
+            name: eventInfo.targetInfo.Name,
+            time: eventInfo.targetInfo.Time
+          }).then(() => {
+            setDataToRender((dataToRender) => {
+              dataToRender.Annotations = dataToRender.Annotations.filter((a) => {
+                if (a.Name == eventInfo.targetInfo.Name && a.Time == eventInfo.targetInfo.Time && a.Duration == eventInfo.targetInfo.Duration) {
+                  return false;
+                }
+                return true;
+              })
+              return {...dataToRender};
+            });
+            setAlert(null);
+          }).catch((error) => {
+            SessionController.displayError(error, setAlert);
+          });
+        }}
+      />)
+    }
+  }
+
   return (
     <>
       {alert}
@@ -454,7 +538,9 @@ function BrainSenseStreaming() {
                         </MDBox>
                       </Grid>
                       <Grid item xs={12}>
-                        <TimeFrequencyAnalysis dataToRender={dataToRender} channelInfos={channelInfos} figureTitle={"TimeFrequencyAnalysis"} height={timeFrequencyPlotHeight}/>
+                        <TimeFrequencyAnalysis dataToRender={dataToRender} channelInfos={channelInfos} 
+                          handleAddEvent={handleAddEvent} handleDeleteEvent={handleDeleteEvent} annotations={annotations}
+                          figureTitle={"TimeFrequencyAnalysis"} height={timeFrequencyPlotHeight}/>
                       </Grid>
                       <Grid item xs={12}>
                         {adaptiveClosedLoopParameters(dataToRender.Info.Therapy)}

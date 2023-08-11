@@ -32,6 +32,8 @@ from utility.PythonUtility import uniqueList
 import json
 import numpy as np
 import nibabel as nib
+import pytz
+from datetime import datetime
 
 import os, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
@@ -327,6 +329,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
                 data = {}
                 data["streamingData"] = BrainSenseStream.queryRealtimeStreamOverview(request.user, request.data["id"], Authority)
+                data["annotations"] = Database.extractTags("Annotations", request.user.email)
                 data["configuration"] = request.user.configuration["ProcessingSettings"]["RealtimeStream"]
                 return Response(status=200, data=data)
             elif Authority["Level"] == 2:
@@ -334,6 +337,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
                 data = {}
                 data["streamingData"] = BrainSenseStream.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
+                data["annotations"] = Database.extractTags("Annotations", request.user.email)
                 data["configuration"] = request.user.configuration["ProcessingSettings"]["RealtimeStream"]
                 return Response(status=200, data=data)
 
@@ -353,6 +357,16 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
+                
+                annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=request.data["id"], 
+                                                                    event_time__gte=datetime.fromtimestamp(BrainSenseData["TimeDomain"]["StartTime"], tz=pytz.utc), 
+                                                                    event_time__lte=datetime.fromtimestamp(BrainSenseData["TimeDomain"]["StartTime"]+BrainSenseData["TimeDomain"]["Duration"], tz=pytz.utc))
+                BrainSenseData["Annotations"] = [{
+                    "Name": item.event_name,
+                    "Time": item.event_time.timestamp(),
+                    "Duration": item.event_duration
+                } for item in annotations]
+
                 data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"], centerFrequencies=centerFrequencies)
                 return Response(status=200, data=data)
 
@@ -466,11 +480,15 @@ class QueryIndefiniteStreaming(RestViews.APIView):
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "IndefiniteStream")
                 data = IndefiniteStream.queryMontageDataOverview(request.user, request.data["id"], Authority)
+                if len(data) > 0:
+                    data[0]["annotations"] = Database.extractTags("Annotations", request.user.email)
                 return Response(status=200, data=data)
             elif Authority["Level"] == 2:
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "IndefiniteStream")
                 data = IndefiniteStream.queryMontageDataOverview(request.user, PatientInfo.authorized_patient_id, Authority)
+                if len(data) > 0:
+                    data[0]["annotations"] = Database.extractTags("Annotations", request.user.email)
                 return Response(status=200, data=data)
 
         elif "requestData" in request.data:
@@ -495,6 +513,17 @@ class QueryIndefiniteStreaming(RestViews.APIView):
 
             Authority["Permission"] = Database.verifyPermission(request.user, PatientID, Authority, "IndefiniteStream")
             data = IndefiniteStream.queryMontageData(request.user, devices, timestamps, Authority)
+
+            for i in range(len(data)):
+                annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=request.data["id"], 
+                                                                    event_time__gte=datetime.fromtimestamp(data[i]["Timestamp"], tz=pytz.utc), 
+                                                                    event_time__lte=datetime.fromtimestamp(data[i]["Timestamp"]+data[i]["Duration"], tz=pytz.utc))
+                data[i]["Annotations"] = [{
+                    "Name": item.event_name,
+                    "Time": item.event_time.timestamp(),
+                    "Duration": item.event_duration
+                } for item in annotations]
+
             return Response(status=200, data=data)
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
@@ -788,6 +817,41 @@ class QueryPatientEvents(RestViews.APIView):
         data["EventPSDs"] = BrainSenseEvent.getAllPatientEvents(request.user, PatientID, Authority)
         return Response(status=200, data=data)
 
+class QueryCustomAnnotations(RestViews.APIView):
+    parser_classes = [RestParsers.JSONParser]
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        Authority = {}
+        Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+        if Authority["Level"] != 1:
+            return Response(status=404)
+
+        elif Authority["Level"] == 1:
+            Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
+            PatientID = request.data["id"]
+        
+        if "requestOverview" in request.data:
+            pass 
+
+        elif "addEvent" in request.data:
+            annotation = models.CustomAnnotations(patient_deidentified_id=PatientID, 
+                                     event_name=request.data["name"], 
+                                     event_time=datetime.fromtimestamp(request.data["time"],tz=pytz.utc),
+                                     event_duration=request.data["duration"])
+            models.SearchTags.objects.get_or_create(tag_name=request.data["name"], tag_type="Annotations", institute=request.user.email)
+            annotation.save()
+            return Response(status=200)
+
+        elif "deleteEvent" in request.data:
+            annotation = models.CustomAnnotations.objects.filter(patient_deidentified_id=PatientID, 
+                                     event_name=request.data["name"], 
+                                     event_time=datetime.fromtimestamp(request.data["time"],tz=pytz.utc)).first()
+            if annotation:
+                annotation.delete()
+                return Response(status=200)
+
+        return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+    
 class QueryCustomizedAnalysis(RestViews.APIView):
     """ Query Customized Analysis.
 

@@ -488,7 +488,7 @@ def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=Fal
         return BrainSenseData, RecordingID
 
     analysis = models.CombinedRecordingAnalysis.objects.filter(deidentified_id=recordingId, analysis_name="DefaultBrainSenseStreaming").first()
-
+    
     if not analysis == None:
         if authority["Level"] == 2:
             for recordingId in analysis.recording_list:
@@ -520,11 +520,12 @@ def queryRealtimeStreamRecording(user, recordingId, authority, cardiacFilter=Fal
             Database.saveSourceFiles(BrainSenseData["TimeDomain"], "BrainSenseStreamTimeDomain", "Raw", TimeRecording.recording_id, TimeRecording.device_deidentified_id)
             TimeRecording.save()
         
-        BrainSenseData["Timestamp"] = analysis.analysis_date.timestamp();
+        BrainSenseData["Timestamp"] = analysis.analysis_date.timestamp()
         BrainSenseData["Info"].update(PowerRecording.recording_info)
         BrainSenseData["Info"].update(TimeRecording.recording_info)
 
         AnalysisID = analysis.deidentified_id
+    
     return BrainSenseData, AnalysisID
 
 def queryMultipleSegmentComparison(user, recordingIds, authority):
@@ -677,6 +678,7 @@ def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies
     data["Info"] = stream["Info"]
     data["Timestamp"] = stream["TimeDomain"]["StartTime"]
     data["PowerTimestamp"] = stream["PowerDomain"]["StartTime"]
+    data["Annotations"] = stream["Annotations"]
 
     if len(centerFrequencies) < len(stream["TimeDomain"]["ChannelNames"]):
         centerFrequencies.append(0)
