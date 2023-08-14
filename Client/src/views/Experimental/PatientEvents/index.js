@@ -66,6 +66,7 @@ function PatientEvents() {
       SessionController.query("/api/queryPatientEvents", {
         id: patientID
       }).then((response) => {
+        console.log(response.data.EventPSDs)
         setData(response.data.EventPSDs);
         setAlert(null);
       }).catch((error) => {
