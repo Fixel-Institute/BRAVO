@@ -66,7 +66,7 @@ def saveBrainSenseEvents(deviceID, LfpFrequencySnapshotEvents, sourceFile):
         else:
             if SensingExist:
                 customEvent = models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist).first()
-                if len(customEvent.brainsense_psd) == 0:
+                if len(customEvent.brainsense_psd.keys()) == 0:
                     customEvent.brainsense_psd = EventData
                     customEvent.save()
 
@@ -234,28 +234,27 @@ def getAllPatientEvents(user, patientUniqueID, authority):
                 PatientEventPSDs[-1][hemisphere] = list()
 
             EventPSDsDF = pd.DataFrame.from_records(EventPSDs.values("brainsense_psd", "event_name", "event_time"))
-            EventPSDsDF.drop_duplicates(inplace=True)
-            EventPSDsDF.loc[EventPSDsDF["event_time"] > datetime.fromtimestamp(authority["Permission"][0])]
+            EventPSDsDF.drop_duplicates(subset=['event_name', 'event_time'], inplace=True)
 
-            for eventPSD in EventPSDs:
-                EventTimestamp = eventPSD.event_time.timestamp()
+            for i in EventPSDsDF.index:
+                EventTimestamp = EventPSDsDF["event_time"][i].timestamp()
                 if EventTimestamp > authority["Permission"][0]:
                     if authority["Permission"][1] > 0 and EventTimestamp < authority["Permission"][1]:
                         for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
-                            if hemisphere in eventPSD.brainsense_psd:
-                                PatientEventPSDs[-1][hemisphere].append(eventPSD.brainsense_psd[hemisphere]["FFTBinData"])
+                            if hemisphere in EventPSDsDF["brainsense_psd"][i]:
+                                PatientEventPSDs[-1][hemisphere].append(EventPSDsDF["brainsense_psd"][i][hemisphere]["FFTBinData"])
                             else:
                                 PatientEventPSDs[-1][hemisphere].append(None)
-                        PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
+                        PatientEventPSDs[-1]["EventName"].append(EventPSDsDF["event_name"][i])
                         PatientEventPSDs[-1]["EventTime"].append(EventTimestamp)
                         
                     elif authority["Permission"][1] == 0:
                         for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
-                            if hemisphere in eventPSD.brainsense_psd:
-                                PatientEventPSDs[-1][hemisphere].append(eventPSD.brainsense_psd[hemisphere]["FFTBinData"])
+                            if hemisphere in EventPSDsDF["brainsense_psd"][i]:
+                                PatientEventPSDs[-1][hemisphere].append(EventPSDsDF["brainsense_psd"][i][hemisphere]["FFTBinData"])
                             else:
                                 PatientEventPSDs[-1][hemisphere].append(None)
-                        PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
+                        PatientEventPSDs[-1]["EventName"].append(EventPSDsDF["event_name"][i])
                         PatientEventPSDs[-1]["EventTime"].append(EventTimestamp)
 
     return PatientEventPSDs
