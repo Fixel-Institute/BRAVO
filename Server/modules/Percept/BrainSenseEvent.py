@@ -58,11 +58,17 @@ def saveBrainSenseEvents(deviceID, LfpFrequencySnapshotEvents, sourceFile):
             SensingExist = True
             EventData = event["LfpFrequencySnapshotEvents"]
 
-        if not models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist, source_file=sourceFile).exists():
+        if not models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist).exists():
             customEvent = models.PatientCustomEvents(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist, source_file=sourceFile)
             if SensingExist:
                 customEvent.brainsense_psd = EventData
             batchStorage.append(customEvent)
+        else:
+            if SensingExist:
+                customEvent = models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist).first()
+                if len(customEvent.brainsense_psd) == 0:
+                    customEvent.brainsense_psd = EventData
+                    customEvent.save()
 
     if len(batchStorage) > 0:
         NewRecordingFound = True
@@ -160,7 +166,7 @@ def queryPatientEventPSDs(user, patientUniqueID, TherapyHistory, authority):
                                         PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
                                         break
 
-    i = 0;
+    i = 0
     while i < len(PatientEventPSDs):
         if not "Hemisphere" in PatientEventPSDs[i]:
             del(PatientEventPSDs[i])
@@ -226,6 +232,10 @@ def getAllPatientEvents(user, patientUniqueID, authority):
 
             for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
                 PatientEventPSDs[-1][hemisphere] = list()
+
+            EventPSDsDF = pd.DataFrame.from_records(EventPSDs.values("brainsense_psd", "event_name", "event_time"))
+            EventPSDsDF.drop_duplicates(inplace=True)
+            EventPSDsDF.loc[EventPSDsDF["event_time"] > datetime.fromtimestamp(authority["Permission"][0])]
 
             for eventPSD in EventPSDs:
                 EventTimestamp = eventPSD.event_time.timestamp()

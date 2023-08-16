@@ -242,8 +242,9 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
 
                 LFPTrends[-1]["PowerRange"] = [0,0]
 
-                ChronicEvents = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id).all()
-                ChronicEvents = pd.DataFrame.from_records(ChronicEvents.values("event_name", "event_time"))
+                ChronicEventsDjango = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id).all()
+                ChronicEvents = pd.DataFrame.from_records(ChronicEventsDjango.values("event_name", "event_time"))
+                ChronicEvents.drop_duplicates(inplace=True)
 
                 #[b,a] = signal.butter(5, 0.00003*2*600, 'high', output='ba')
                 for therapy in TherapyHistory:
