@@ -24,6 +24,11 @@ Procedure
 Due to major database redesign to work with external data and have a common data structure moving forward, 
 existing logs must be re-processed again. This approach will run through all session files currently in the database. 
 
+.. danger::
+
+  You must stop the processing queue script in crontab. You can do ``sudo service cron stop`` to stop cron before running the following script. 
+  Once the migration is done, you can start cron job again by ``sudo service cron start``. This will avoid processing conflicts. 
+
 .. code-block:: bash 
 
   # Database Change 

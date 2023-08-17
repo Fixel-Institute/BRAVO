@@ -147,7 +147,7 @@ All procedure assume that your working directory is the main directory of the cl
 
   # Install Dependencies with Apt
   sudo apt-get update
-  sudo apt-get install python3-pip libjpeg-dev libjpeg8-dev libpng-dev nginx python3-virtualenv libmysqlclient-dev mysql-server docker.io
+  sudo apt-get install python3-pip libjpeg-dev libjpeg8-dev libpng-dev nginx python3-virtualenv libmysqlclient-dev mysql-server docker.io cron
   
   # Setup Redis Server on Docker for Django Channels
   sudo docker run -p 6379:6379 -d redis:5
@@ -298,6 +298,32 @@ To use ASGI, we use ``daphne`` to start our server. A standard startup script ``
   Due to how daphne is looking for Python modules, the working directory must be in "Server" folder for the command to work. 
 
 A more advanced SSL Certificate and Automatic Background Service tutorial can be found at :ref:`SSLCertificateTutorial` tutorial page. 
+
+Linux Step 6: Processing Queue Service
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In Version 2.2 and beyond, data processing is done through Processing Queue Service script. 
+Once a while is uploaded, the file will be shown in Processing Queue. 
+
+.. image:: images/ProcessingQueue.PNG
+  :target: _images/ProcessingQueue.PNG
+  :width: 400
+
+To actually start the backend processing, user must execute the Processing Queue script.
+
+.. code-block:: bash 
+
+  # Working Directory is your BRAVO Folder, $SCRIPT_DIR
+  ./Server/ProcessingQueueJob.sh
+
+This script is recommended to be run with Cron in Linux for scheduled execution to reduce user interaction. 
+An example Crontab Script is available at ``Server/cron-job``. Add these lines to your user's crontab to allow the 
+processing queue to be run periodically. 
+
+.. warning:: 
+
+  It should be noted that if the BRAVO Server is started as a User service, the crontab has to be the user's crontab (without ``sudo`` command).
+  ``sudo crontab -e`` is not the same as ``crontab -e``. 
 
 Python Server Installation Guide (Windows)
 ------------------------------------------------
@@ -488,6 +514,23 @@ for your needs.
   cd ${cwd}/Server; 
   sudo /etc/init.d/mysql start; 
   sudo ${cwd}/Server/venv/bin/daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application
+
+Linux Step 5: Processing Queue Service
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In Version 2.2 and beyond, data processing is done through Processing Queue Service script. 
+Once a while is uploaded, the file will be shown in Processing Queue. 
+
+.. image:: images/ProcessingQueue.PNG
+  :target: _images/ProcessingQueue.PNG
+  :width: 400
+
+To actually start the backend processing, user must execute the Processing Queue script.
+
+.. code-block:: bash 
+
+  # Working Directory is your BRAVO Folder, $SCRIPT_DIR
+  ./Server/ProcessingQueueJob.sh
 
 Python Server Installation Guide (MacOS)
 ------------------------------------------------
@@ -692,3 +735,29 @@ To use ASGI, we use ``daphne`` to start our server. A standard startup script ``
     import pymysql
     pymysql.version_info = (1, 4, 2, "final", 0)
     pymysql.install_as_MySQLdb()
+
+Linux Step 5: Processing Queue Service
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In Version 2.2 and beyond, data processing is done through Processing Queue Service script. 
+Once a while is uploaded, the file will be shown in Processing Queue. 
+
+.. image:: images/ProcessingQueue.PNG
+  :target: _images/ProcessingQueue.PNG
+  :width: 400
+
+To actually start the backend processing, user must execute the Processing Queue script.
+
+.. code-block:: bash 
+
+  # Working Directory is your BRAVO Folder, $SCRIPT_DIR
+  ./Server/ProcessingQueueJob.sh
+
+This script is recommended to be run with Cron in Linux for scheduled execution to reduce user interaction. 
+An example Crontab Script is available at ``Server/cron-job``. Add these lines to your user's crontab to allow the 
+processing queue to be run periodically. 
+
+.. warning:: 
+
+  It should be noted that if the BRAVO Server is started as a User service, the crontab has to be the user's crontab (without ``sudo`` command).
+  ``sudo crontab -e`` is not the same as ``crontab -e``. 
