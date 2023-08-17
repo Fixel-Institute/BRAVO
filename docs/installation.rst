@@ -515,7 +515,7 @@ for your needs.
   sudo /etc/init.d/mysql start; 
   sudo ${cwd}/Server/venv/bin/daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application
 
-Linux Step 5: Processing Queue Service
+Windows Step 5: Processing Queue Service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In Version 2.2 and beyond, data processing is done through Processing Queue Service script. 
@@ -736,7 +736,7 @@ To use ASGI, we use ``daphne`` to start our server. A standard startup script ``
     pymysql.version_info = (1, 4, 2, "final", 0)
     pymysql.install_as_MySQLdb()
 
-Linux Step 5: Processing Queue Service
+MacOS Step 5: Processing Queue Service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In Version 2.2 and beyond, data processing is done through Processing Queue Service script. 
