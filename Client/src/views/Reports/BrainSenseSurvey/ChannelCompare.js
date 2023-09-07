@@ -24,7 +24,7 @@ import { usePlatformContext } from "context";
 
 import { dictionary, dictionaryLookup } from "assets/translation";
 
-function ChannelCompare({dataToRender, height, figureTitle}) {
+function ChannelCompare({dataToRender, height, config, figureTitle}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
@@ -38,7 +38,11 @@ function ChannelCompare({dataToRender, height, figureTitle}) {
       fig.subplots(1,1, {sharey: true, sharex: true});
       fig.setScaleType("log", "y");
       fig.setTickValue([0.001, 0.01, 0.1, 1, 10, 100, 1000], "y");
-      fig.setYlim([-3, 2]);
+      if (config.PSDMethod.value === "Estimated Medtronic PSD") {
+        fig.setYlim([-1, 1]);
+      } else {
+        fig.setYlim([-3, 2]);
+      }
       fig.setXlim([0, 100]);
       fig.setTitle(figureTitle);
       if (data[0]) {

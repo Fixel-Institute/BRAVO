@@ -61,8 +61,8 @@ class QuerySessionConfigs(RestViews.APIView):
     permission_classes = [AllowAny]
     def post(self, request):
         if request.user.is_authenticated:
-            if not "ProcessingSettings" in request.user.configuration:
-                request.user.configuration["ProcessingSettings"] = Database.retrieveProcessingSettings(request.user.configuration)
+            request.user.configuration["ProcessingSettings"], changed = Database.retrieveProcessingSettings(request.user.configuration)
+            if not changed:
                 request.user.save()
 
             userSession = formatRequestSession(request.user.configuration)
@@ -79,9 +79,17 @@ class UpdateSessionConfig(RestViews.APIView):
     permission_classes = [AllowAny]
     def post(self, request):
         if request.user.is_authenticated:
+            request.user.configuration["ProcessingSettings"], _ = Database.retrieveProcessingSettings(request.user.configuration)
+
             for key in request.data.keys():
                 if key in ["language","miniSidenav","darkMode"]:
                     request.user.configuration[key] = request.data[key]
+
+                if key in ["BrainSenseSurvey"]:
+                    for subkey in request.data[key]:
+                        if request.data[key][subkey]["value"] in request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"][subkey]["options"]:
+                            request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"][subkey]["value"] = request.data[key][subkey]["value"]
+
             request.user.save()
         return Response(status=200)
 

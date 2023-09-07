@@ -18,9 +18,23 @@ import {
   Autocomplete,
   Card,
   Grid,
-} from "@mui/material"
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon,
+  Drawer,
+  IconButton,
+  Divider,
+} from "@mui/material";
+
+import { 
+  Edit as EditIcon,
+  KeyboardDoubleArrowUp as KeyboardDoubleArrowUpIcon,
+  Settings as SettingsIcon,
+  ChevronRight as ChevronRightIcon
+} from "@mui/icons-material";
 
 import MDBox from "components/MDBox";
+import MDButton from "components/MDButton";
 import MDTypography from "components/MDTypography";
 import FormField from "components/MDInput/FormField";
 import LoadingProgress from "components/LoadingProgress";
@@ -39,9 +53,10 @@ import { dictionaryLookup } from "assets/translation";
 function BrainSenseSurvey() {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
-  const { patientID, language } = controller;
+  const { patientID, language, user } = controller;
 
   const [data, setData] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState({open: false, config: {}});
 
   const [dateOfView, setDateOfView] = useState(null);
   const [viewSessions, setViewSessions] = useState([]);
@@ -63,7 +78,8 @@ function BrainSenseSurvey() {
       SessionController.query("/api/queryBrainSenseSurveys", {
         id: patientID
       }).then((response) => {
-        setData(response.data)
+        setData(response.data.data)
+        setDrawerOpen({...drawerOpen, config: response.data.config});
         setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -189,10 +205,10 @@ function BrainSenseSurvey() {
                         </MDBox>
                       </Grid>
                       <Grid item xs={12} lg={6}>
-                        <SurveyFigure dataToRender={leftDataToRender} height={500} figureTitle="LeftHemisphereSurvey"/>
+                        <SurveyFigure dataToRender={leftDataToRender} height={500} config={drawerOpen.config} figureTitle="LeftHemisphereSurvey"/>
                       </Grid>
                       <Grid item xs={12} lg={6}>
-                        <SurveyFigure dataToRender={rightDataToRender} height={500} figureTitle="RightHemisphereSurvey"/>
+                        <SurveyFigure dataToRender={rightDataToRender} height={500}  config={drawerOpen.config}figureTitle="RightHemisphereSurvey"/>
                       </Grid>
                     </>) : (
                       <Grid item xs={12}>
@@ -230,13 +246,136 @@ function BrainSenseSurvey() {
                       </MDBox>
                     </Grid>
                     <Grid item xs={12}>
-                      <ChannelCompare dataToRender={chronicDataToCompare} height={500} figureTitle="ChannelSurveyAcrossTime"/>
+                      <ChannelCompare dataToRender={chronicDataToCompare} height={500} config={drawerOpen.config} figureTitle="ChannelSurveyAcrossTime"/>
                     </Grid>
                   </Grid>
                 </Card>
               </Grid>
               ) : null}
             </Grid>
+            <Drawer
+              sx={{
+                width: 300,
+                flexShrink: 0,
+                '& .MuiDrawer-paper': {
+                  width: 300,
+                  boxSizing: 'border-box',
+                },
+              }}
+              PaperProps={{
+                sx: {
+                  borderWidth: "2px",
+                  borderColor: "black",
+                  borderStyle: "none",
+                  boxShadow: "-2px 0px 5px gray",
+                }
+              }}
+              variant="persistent"
+              anchor="right"
+              open={drawerOpen.open}
+            >
+            <MDBox>
+              <IconButton onClick={() => setDrawerOpen({...drawerOpen, open: false})}>
+                <ChevronRightIcon />
+                <MDTypography>
+                  {"Close"}
+                </MDTypography>
+              </IconButton>
+            </MDBox>
+            <MDBox>
+            <Grid container spacing={2} sx={{paddingLeft: 2, paddingRight: 2}}>
+              {Object.keys(drawerOpen.config).map((key) => {
+                return <Grid item xs={12} sx={{
+                  wordWrap: "break-word",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word"
+                }}>
+                  <MDTypography fontSize={18} fontWeight={"bold"}>
+                    {drawerOpen.config[key].name}
+                  </MDTypography>
+                  <MDTypography fontSize={15} fontWeight={"regular"}>
+                    {drawerOpen.config[key].description}
+                  </MDTypography>
+                  <Autocomplete
+                    options={drawerOpen.config[key].options}
+                    value={drawerOpen.config[key].value}
+                    onChange={(event, value) => setDrawerOpen((option) => {
+                      option.config[key].value = value;
+                      return {...option};
+                    })}
+                    renderInput={(params) => (
+                      <FormField
+                        {...params}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
+                  <Divider variant="middle" />
+                </Grid>
+              })}
+            </Grid>
+            </MDBox>
+            <MDBox p={3}>
+              <MDButton variant={"gradient"} color={"success"} onClick={() => {
+                setAlert(<LoadingProgress/>);
+                console.log(drawerOpen.config)
+                SessionController.query("/api/updateSession", {
+                  "BrainSenseSurvey": drawerOpen.config
+                }).then(() => {
+                  
+                  SessionController.query("/api/queryBrainSenseSurveys", {
+                    id: patientID
+                  }).then((response) => {
+                    setData(response.data.data)
+                    setDrawerOpen({...drawerOpen, config: response.data.config});
+                    setAlert(null);
+                  }).catch((error) => {
+                    SessionController.displayError(error, setAlert);
+                  });
+
+                }).catch((error) => {
+                  SessionController.displayError(error, setAlert);
+                });
+                
+              }} fullWidth>
+                <MDTypography color={"light"}>
+                  {"Update"}
+                </MDTypography>
+              </MDButton>
+            </MDBox>
+            </Drawer>
+            <MDBox style={{
+              position: 'sticky',
+              bottom: 32,
+              right: 32,
+            }}>
+              <SpeedDial
+                ariaLabel={"SurveySpeedDial"}
+                color={"info"}
+                icon={<SpeedDialIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                FabProps={{
+                  color: "info",
+                  sx: {display: "flex", marginLeft: "auto"}
+                }}
+                sx={{alignItems: "end"}}
+                hidden={viewSessions.length == 0}
+              >
+                <SpeedDialAction
+                  key={"GoToTop"}
+                  icon={<KeyboardDoubleArrowUpIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                  tooltipTitle={"Go to Top"}
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+                <SpeedDialAction
+                  key={"ChangeSettings"}
+                  icon={<SettingsIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                  tooltipTitle={"Edit Processing Configurations"}
+                  onClick={() => setDrawerOpen({...drawerOpen, open: true})}
+                />
+              </SpeedDial>
+            </MDBox>
           </MDBox>
         </MDBox>
       </DatabaseLayout>

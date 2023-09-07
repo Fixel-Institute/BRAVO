@@ -102,7 +102,7 @@ def saveBrainSenseSurvey(deviceID, streamList, sourceFile):
             
     return NewRecordingFound
 
-def querySurveyResults(user, patientUniqueID, authority):
+def querySurveyResults(user, patientUniqueID, options, authority):
     """ Extract all BrainSense Survey recordings and process for power spectrum.
 
     This pipeline will process all BrainSense Survey recordings recorded from one patient and output the average power spectrum. 
@@ -110,6 +110,7 @@ def querySurveyResults(user, patientUniqueID, authority):
     Args:
       user: BRAVO Platform User object. 
       patientUniqueID: Deidentified patient ID as referenced in SQL Database. 
+      options: BrainSenseSurvey Configuration dictionary
       authority: User permission structure indicating the type of access the user has.
 
     Returns:
@@ -151,12 +152,20 @@ def querySurveyResults(user, patientUniqueID, authority):
                     if lead["TargetLocation"].startswith(data["Hemisphere"]):
                         data["Hemisphere"] = lead["TargetLocation"]
                         break
-                data["Frequency"] = survey["MedtronicPSD"][i]["Frequency"]
-                data["MeanPower"] = survey["MedtronicPSD"][i]["Power"].tolist()
-                data["StdPower"] = np.zeros(len(survey["MedtronicPSD"][i]["Power"])).tolist()
-                #data["Frequency"] = survey["Spectrum"][i]["Frequency"]
-                #data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
-                #data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
+
+                if options["PSDMethod"]["value"] == "Estimated Medtronic PSD":
+                    data["Frequency"] = survey["MedtronicPSD"][i]["Frequency"]
+                    data["MeanPower"] = survey["MedtronicPSD"][i]["Power"].tolist()
+                    data["StdPower"] = survey["MedtronicPSD"][i]["StdErr"].tolist()
+                elif options["PSDMethod"]["value"] == "Short-time Fourier Transform":
+                    data["Frequency"] = survey["Spectrum"][i]["Frequency"]
+                    data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                    data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                else:
+                    data["Frequency"] = survey["Spectrum"][i]["Frequency"]
+                    data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                    data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                    
                 BrainSenseData.append(data)
     return BrainSenseData
 
@@ -179,7 +188,6 @@ def processBrainSenseSurvey(survey, method="spectrogram"):
     survey["MedtronicPSD"] = []
     for i in range(len(survey["ChannelNames"])):
         filtered = signal.filtfilt(b, a, survey["Data"][:,i])
-        freq, power = SPU.MedtronicPSD(filtered)
-        survey["MedtronicPSD"].append({"Frequency": freq, "Power": power})
+        survey["MedtronicPSD"].append(SPU.MedtronicPSD(filtered))
         survey["Spectrum"].append(SPU.defaultSpectrogram(filtered, window=1.0, overlap=0.5, frequency_resolution=0.5, fs=survey["SamplingRate"]))
     return survey

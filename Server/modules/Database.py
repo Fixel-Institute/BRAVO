@@ -54,16 +54,31 @@ def retrieveProcessingSettings(config=dict()):
                 "options": ["true", "false"],
                 "value": "false"
             },
+        },
+        "BrainSenseSurvey": {
+            "PSDMethod": {
+                "name": "Power Spectrum Estimation Algorithm",
+                "description": "",
+                "options": ["Estimated Medtronic PSD","Short-time Fourier Transform"],
+                "value": "Short-time Fourier Transform"
+            },
         }
     }
 
-    for key in config.keys():
-        if type(config[key]) == dict:
-            for subkey in config[key].keys():
-                if type(config[key][subkey]) == dict and subkey in options[key].keys():
-                    if config[key][subkey]["name"] == options[key][subkey]["name"] and config[key][subkey]["description"] == options[key][subkey]["description"] and config[key][subkey]["options"] == options[key][subkey]["options"]:
-                        options[key][subkey]["value"] = config[key][subkey]["value"]
-    return options
+    if not "ProcessingSettings" in config.keys():
+        return options, False
+    
+    if not type(config["ProcessingSettings"]) == dict:
+        return options, False
+
+    for key in config["ProcessingSettings"].keys():
+        if type(config["ProcessingSettings"][key]) == dict:
+            for subkey in config["ProcessingSettings"][key].keys():
+                if type(config["ProcessingSettings"][key][subkey]) == dict and subkey in options[key].keys():
+                    if config["ProcessingSettings"][key][subkey]["name"] == options[key][subkey]["name"] and config["ProcessingSettings"][key][subkey]["description"] == options[key][subkey]["description"] and config["ProcessingSettings"][key][subkey]["options"] == options[key][subkey]["options"]:
+                        options[key][subkey]["value"] = config["ProcessingSettings"][key][subkey]["value"]
+    
+    return options, options==config["ProcessingSettings"]
 
 def extractUserInfo(user):
     userInfo = dict()

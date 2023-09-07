@@ -232,22 +232,25 @@ class QueryBrainSenseSurveys(RestViews.APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         if "id" in request.data:
-            Authority = {}
+            request.user.configuration["ProcessingSettings"], changed = Database.retrieveProcessingSettings(request.user.configuration)
+            if not changed:
+                request.user.save()
 
+            Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 0:
                 return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseSurvey")
-                data = BrainSenseSurvey.querySurveyResults(request.user, request.data["id"], Authority)
-                return Response(status=200, data=data)
+                data = BrainSenseSurvey.querySurveyResults(request.user, request.data["id"], request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"], Authority)
+                return Response(status=200, data={"data": data, "config": request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"]})
 
             elif Authority["Level"] == 2:
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseSurvey")
-                data = BrainSenseSurvey.querySurveyResults(request.user, PatientInfo.authorized_patient_id, Authority)
-                return Response(status=200, data=data)
+                data = BrainSenseSurvey.querySurveyResults(request.user, PatientInfo.authorized_patient_id, request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"], Authority)
+                return Response(status=200, data={"data": data, "config": request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"]})
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
@@ -318,8 +321,8 @@ class QueryBrainSenseStreaming(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        if not "ProcessingSettings" in request.user.configuration:
-            request.user.configuration["ProcessingSettings"] = Database.retrieveProcessingSettings(request.user.configuration)
+        request.user.configuration["ProcessingSettings"], changed = Database.retrieveProcessingSettings(request.user.configuration)
+        if not changed:
             request.user.save()
 
         if "requestOverview" in request.data:
@@ -860,8 +863,8 @@ class QueryCustomizedAnalysis(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        if not "ProcessingSettings" in request.user.configuration:
-            request.user.configuration["ProcessingSettings"] = Database.retrieveProcessingSettings(request.user.configuration)
+        request.user.configuration["ProcessingSettings"], changed = Database.retrieveProcessingSettings(request.user.configuration)
+        if not changed:
             request.user.save()
 
         if "requestOverview" in request.data:
@@ -977,8 +980,8 @@ class QueryMobileRecordings(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        if not "ProcessingSettings" in request.user.configuration:
-            request.user.configuration["ProcessingSettings"] = Database.retrieveProcessingSettings(request.user.configuration)
+        request.user.configuration["ProcessingSettings"], changed = Database.retrieveProcessingSettings(request.user.configuration)
+        if not changed:
             request.user.save()
 
         if "requestOverview" in request.data:
@@ -1016,8 +1019,8 @@ class QueryRecordingsForAnalysis(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        if not "ProcessingSettings" in request.user.configuration:
-            request.user.configuration["ProcessingSettings"] = Database.retrieveProcessingSettings(request.user.configuration)
+        request.user.configuration["ProcessingSettings"], changed = Database.retrieveProcessingSettings(request.user.configuration)
+        if not changed:
             request.user.save()
 
         if "requestRawData" in request.data:
