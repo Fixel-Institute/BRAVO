@@ -134,7 +134,11 @@ def querySurveyResults(user, patientUniqueID, authority):
             if not "Spectrum" in survey.keys():
                 survey = processBrainSenseSurvey(survey)
                 Database.saveSourceFiles(survey, "BrainSenseSurvey", "Combined", recording.recording_id, recording.device_deidentified_id)
-
+            
+            if not "MedtronicPSD" in survey.keys():
+                survey = processBrainSenseSurvey(survey)
+                Database.saveSourceFiles(survey, "BrainSenseSurvey", "Combined", recording.recording_id, recording.device_deidentified_id)
+            
             for i in range(len(survey["ChannelNames"])):
                 data = dict()
                 if device.device_name == "":
@@ -147,9 +151,12 @@ def querySurveyResults(user, patientUniqueID, authority):
                     if lead["TargetLocation"].startswith(data["Hemisphere"]):
                         data["Hemisphere"] = lead["TargetLocation"]
                         break
-                data["Frequency"] = survey["Spectrum"][i]["Frequency"]
-                data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
-                data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                data["Frequency"] = survey["MedtronicPSD"][i]["Frequency"]
+                data["MeanPower"] = survey["MedtronicPSD"][i]["Power"].tolist()
+                data["StdPower"] = np.zeros(len(survey["MedtronicPSD"][i]["Power"])).tolist()
+                #data["Frequency"] = survey["Spectrum"][i]["Frequency"]
+                #data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                #data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
                 BrainSenseData.append(data)
     return BrainSenseData
 
@@ -169,7 +176,10 @@ def processBrainSenseSurvey(survey, method="spectrogram"):
 
     [b,a] = signal.butter(5, np.array([1,100])*2/250, 'bp', output='ba')
     survey["Spectrum"] = []
+    survey["MedtronicPSD"] = []
     for i in range(len(survey["ChannelNames"])):
         filtered = signal.filtfilt(b, a, survey["Data"][:,i])
+        freq, power = SPU.MedtronicPSD(filtered)
+        survey["MedtronicPSD"].append({"Frequency": freq, "Power": power})
         survey["Spectrum"].append(SPU.defaultSpectrogram(filtered, window=1.0, overlap=0.5, frequency_resolution=0.5, fs=survey["SamplingRate"]))
     return survey
