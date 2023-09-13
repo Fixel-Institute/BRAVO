@@ -43,9 +43,14 @@ function SurveyFigure({dataToRender, height, config, figureTitle}) {
       }
       fig.setXlim([0, 100]);
       if (data[0]) {
-        const [side, target] = data[0].Hemisphere.split(" ");
-        const titleText = `${data[0].DeviceName} ${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)}`;
-        fig.setTitle(titleText);
+        if (data[0].CustomName) {
+          const titleText = `${data[0].DeviceName} ${data[0].CustomName}`;
+          fig.setTitle(titleText);
+        } else {
+          const [side, target] = data[0].Hemisphere.split(" ");
+          const titleText = `${data[0].DeviceName} ${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)}`;
+          fig.setTitle(titleText);
+        }
       } else {
         fig.setTitle(figureTitle);
       }

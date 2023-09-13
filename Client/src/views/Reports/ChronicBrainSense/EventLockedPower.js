@@ -51,7 +51,7 @@ function EventLockedPower({dataToRender, selector, events, height, figureTitle})
       });
 
       const [device, side, target] = selector.hemisphere.split(" ");
-      const titleText = `${device} ${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} ${selector.therapyName}`;
+      const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} ${selector.therapyName}`;
       fig.setTitle(`${titleText}`);
     }
 

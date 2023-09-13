@@ -380,6 +380,9 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                
+                BrainSenseData["Annotations"] = []
+
                 data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"], centerFrequencies=centerFrequencies)
                 return Response(status=200, data=data)
 
@@ -420,6 +423,16 @@ class QueryBrainSenseStreaming(RestViews.APIView):
             BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=True, cardiacFilter=request.data["updateCardiacFilter"])
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
+            
+            annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=request.data["id"], 
+                                                                    event_time__gte=datetime.fromtimestamp(BrainSenseData["TimeDomain"]["StartTime"], tz=pytz.utc), 
+                                                                    event_time__lte=datetime.fromtimestamp(BrainSenseData["TimeDomain"]["StartTime"]+BrainSenseData["TimeDomain"]["Duration"], tz=pytz.utc))
+            BrainSenseData["Annotations"] = [{
+                "Name": item.event_name,
+                "Time": item.event_time.timestamp(),
+                "Duration": item.event_duration
+            } for item in annotations]
+
             data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"])
             return Response(status=200, data=data)
 
@@ -437,6 +450,16 @@ class QueryBrainSenseStreaming(RestViews.APIView):
             BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority)
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
+            
+            annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=request.data["id"], 
+                                                                    event_time__gte=datetime.fromtimestamp(BrainSenseData["TimeDomain"]["StartTime"], tz=pytz.utc), 
+                                                                    event_time__lte=datetime.fromtimestamp(BrainSenseData["TimeDomain"]["StartTime"]+BrainSenseData["TimeDomain"]["Duration"], tz=pytz.utc))
+            BrainSenseData["Annotations"] = [{
+                "Name": item.event_name,
+                "Time": item.event_time.timestamp(),
+                "Duration": item.event_duration
+            } for item in annotations]
+            
             data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"])
             return Response(status=200, data=data)
 

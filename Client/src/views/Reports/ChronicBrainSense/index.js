@@ -82,12 +82,21 @@ function ChronicBrainSense() {
     for (var i = 0; i < data.length; i++) {
       for (var j = 0; j < data[i]["CircadianPowers"].length; j++) {
         if (data[i]["CircadianPowers"][j]["Power"].length > 144*3) {
-          options.push({
-            label: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["CircadianPowers"][j]["Therapy"],
-            hemisphere: data[i]["Device"] + " " + data[i]["Hemisphere"],
-            therapyName: data[i]["CircadianPowers"][j]["Therapy"],
-            value: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["CircadianPowers"][j]["Therapy"]
-          });
+          if (data[i]["CustomName"]) {
+            options.push({
+              label: data[i]["Device"] + " " + data[i]["CustomName"] + " " + data[i]["CircadianPowers"][j]["Therapy"],
+              hemisphere: data[i]["Device"] + " " + data[i]["Hemisphere"],
+              therapyName: data[i]["CircadianPowers"][j]["Therapy"],
+              value: data[i]["Device"] + "//" + data[i]["CustomName"] + "//" + data[i]["CircadianPowers"][j]["Therapy"]
+            });
+          } else {
+            options.push({
+              label: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["CircadianPowers"][j]["Therapy"],
+              hemisphere: data[i]["Device"] + " " + data[i]["Hemisphere"],
+              therapyName: data[i]["CircadianPowers"][j]["Therapy"],
+              value: data[i]["Device"] + "//" + data[i]["Hemisphere"] + "//" + data[i]["CircadianPowers"][j]["Therapy"]
+            });
+          }
         }
       }
     }
@@ -250,7 +259,9 @@ function ChronicBrainSense() {
                           <Autocomplete
                             options={circadianData.selector}
                             value={circadianData.currentValue}
-                            onChange={(event, value) => setCircadianData({...circadianData, currentValue: value})}
+                            onChange={(event, value) => {
+                              setCircadianData({...circadianData, currentValue: value})
+                            }}
                             getOptionLabel={(option) => {
                               return option.label || "";
                             }}

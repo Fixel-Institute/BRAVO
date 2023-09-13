@@ -151,6 +151,7 @@ def querySurveyResults(user, patientUniqueID, options, authority):
                 for lead in leads:
                     if lead["TargetLocation"].startswith(data["Hemisphere"]):
                         data["Hemisphere"] = lead["TargetLocation"]
+                        data["CustomName"] = lead["CustomName"]
                         break
 
                 if options["PSDMethod"]["value"] == "Estimated Medtronic PSD":
@@ -165,7 +166,7 @@ def querySurveyResults(user, patientUniqueID, options, authority):
                     data["Frequency"] = survey["Spectrum"][i]["Frequency"]
                     data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
                     data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
-                    
+
                 BrainSenseData.append(data)
     return BrainSenseData
 

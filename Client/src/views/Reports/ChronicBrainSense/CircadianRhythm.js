@@ -47,8 +47,8 @@ function CircadianRhythm({dataToRender, selector, height, figureTitle}) {
         hovermode: "xy"
       });
 
-      const [device, side, target] = selector.hemisphere.split(" ");
-      const titleText = `${device} ${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} ${selector.therapyName}`;
+      const [device, hemisphere, therapy] = selector.value.split("//");
+      const titleText = `${device} ${hemisphere} ${selector.therapyName}`;
       fig.setTitle(`${titleText}`);
     }
 
