@@ -22,11 +22,11 @@ import MDBox from "components/MDBox";
 import MDPagination from "components/MDPagination";
 
 import { dictionary } from "assets/translation";
-import { usePlatformContext } from "context";
+import { usePlatformContext, setContextState } from "context";
 import { SessionController } from "database/session-control";
 
 export default function PatientTablePagination({totalCount, totalPages, currentPage, setPagination}) {
-  const [controller, ] = usePlatformContext();
+  const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
   const handlePageChange = (page) => {
@@ -35,6 +35,7 @@ export default function PatientTablePagination({totalCount, totalPages, currentP
         totalPages: totalPages,
         currentPage: page,
       });
+      setContextState(dispatch, "PatientTablePageIndex", page);
       SessionController.setPageIndex("PatientTable", page);
     }
   };

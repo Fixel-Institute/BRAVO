@@ -168,14 +168,20 @@ export const SessionController = (function () {
     if (localStorage.getItem("sessionContext")) {
       session = JSON.parse(localStorage.getItem("sessionContext"));
     }
-
     const response = await query("/api/querySessions", {
       session: session,
     });
-    session = response.data.session;
+    session = {...session, ...response.data.session};
+
+    if (!Object.keys(session).includes("IndefiniteStreamLayout")) {
+      session.BrainSenseSurveyLayout = {};
+      session.BrainSensestreamLayout = {};
+      session.IndefiniteStreamLayout = {};
+      session.ChronicBrainSenseLayout = {};
+    }
+
     localStorage.setItem("sessionContext", JSON.stringify(session));
     user = response.data.user;
-
     return getSession();
   };
 

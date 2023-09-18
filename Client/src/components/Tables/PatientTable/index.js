@@ -61,7 +61,7 @@ const PatientTable = ({data}) => {
       direction: 1
     });
 
-    if (paginationControl.totalPages != Math.ceil(data.length / viewPerPage)) {
+    if (paginationControl.totalPages != Math.ceil(data.length / viewPerPage) && paginationControl.totalPages != 0) {
       SessionController.setPageIndex("PatientTable", 0);
       setPagination({currentPage: 0, totalPages: Math.ceil(data.length / viewPerPage)});
       return;
