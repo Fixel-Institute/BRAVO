@@ -17,13 +17,29 @@ import { useNavigate } from "react-router-dom";
 import {
   Autocomplete,
   Card,
+  Drawer,
+  Divider,
   Grid,
+  IconButton,
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon,
+  ToggleButton,
+  ToggleButtonGroup
 } from "@mui/material"
+
+import { 
+  ChevronRight as ChevronRightIcon,
+  Settings as SettingsIcon,
+  KeyboardDoubleArrowUp as KeyboardDoubleArrowUpIcon, 
+  Dashboard as DashboardIcon
+} from "@mui/icons-material";
 
 // core components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
+import FormField from "components/MDInput/FormField";
 import MuiAlertDialog from "components/MuiAlertDialog";
 import LoadingProgress from "components/LoadingProgress";
 
@@ -32,6 +48,9 @@ import DatabaseLayout from "layouts/DatabaseLayout";
 import IndefiniteStreamingTable from "components/Tables/StreamingTable/IndefiniteStreamingTable";
 import TimeDomainFigure from "./TimeDomainFigure";
 import TimeFrequencyFigure from "./TimeFrequencyFigure";
+import LayoutOptions from "./LayoutOptions";
+import EventPSDs from "./EventPSDs";
+import EventOnsetSpectrum from "./EventOnsetSpectrum";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
@@ -40,12 +59,27 @@ import { dictionary, dictionaryLookup } from "assets/translation.js";
 function IndefiniteStreaming() {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
-  const { patientID, language } = controller;
+  const { patientID, IndefiniteStreamLayout, language } = controller;
 
   const [data, setData] = React.useState([]);
+  const [dataList, setDataList] = React.useState({});
   const [annotations, setAnnotations] = React.useState([]);
   const [dataToRender, setDataToRender] = React.useState(false);
+
+  const [eventPSDs, setEventPSDs] = React.useState(false);
+  const [eventPSDSelector, setEventPSDSelector] = React.useState({
+    type: "Channels",
+    options: [],
+    value: ""
+  });
+  const [eventSpectrograms, setEventSpectrograms] = React.useState(false);
+  const [eventSpectrogramSelector, setEventSpectrogramSelector] = React.useState({
+    options: [],
+    value: ""
+  });
   const [alert, setAlert] = React.useState(null);
+
+  const [drawerOpen, setDrawerOpen] = React.useState({open: false, config: {}});
 
   const [figureHeight, setFigureHeight] = React.useState(0);
 
@@ -60,7 +94,8 @@ function IndefiniteStreaming() {
         if (response.data.length > 0) {
           setAnnotations(response.data[0].annotations);
         }
-        setData(response.data)
+        setData(response.data.data);
+        setDrawerOpen({...drawerOpen, config: response.data.config});
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
@@ -79,6 +114,7 @@ function IndefiniteStreaming() {
       }
     }
     if (devices.length == 0) return;
+    setDataList({devices, timestamps, channelInfos});
 
     setAlert(<LoadingProgress/>);
     SessionController.query("/api/queryIndefiniteStreaming", {
@@ -88,18 +124,59 @@ function IndefiniteStreaming() {
       timestamps: timestamps
     }).then((response) => {
       var axLength = 0;
-      for (var i in response.data) {
-        if (response.data[i].Channels.length > axLength) {
-          axLength = response.data[i].Channels.length;
+      for (var i in response.data.data) {
+        if (response.data.data[i].Channels.length > axLength) {
+          axLength = response.data.data[i].Channels.length;
         }
       }
       setFigureHeight(200*axLength);
-      setDataToRender({data: response.data, ChannelInfos: channelInfos});
+      setDataToRender({data: response.data.data, ChannelInfos: channelInfos}); 
+      if (Object.keys(response.data.eventPSDs).length > 0) {
+        setEventPSDs(response.data.eventPSDs)
+      } else {
+        setEventPSDs(false);
+      }
+      if (Object.keys(response.data.eventOnsetSpectrum).length > 0) {
+        setEventSpectrograms(response.data.eventOnsetSpectrum);
+      } else {
+        setEventSpectrograms(false);
+      }
       setAlert(null);
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
     });
   };
+
+  const refreshEventAnalysis = () => {
+    setAlert(<LoadingProgress/>);
+    SessionController.query("/api/queryIndefiniteStreaming", {
+      id: patientID, 
+      requestEventData: true, 
+      devices: dataList.devices, 
+      timestamps: dataList.timestamps
+    }).then((response) => {
+      var axLength = 0;
+      for (var i in response.data.data) {
+        if (response.data.data[i].Channels.length > axLength) {
+          axLength = response.data.data[i].Channels.length;
+        }
+      }
+      if (Object.keys(response.data.eventPSDs).length > 0) {
+        setEventPSDs(response.data.eventPSDs)
+      } else {
+        setEventPSDs(false);
+      }
+
+      if (Object.keys(response.data.eventOnsetSpectrum).length > 0) {
+        setEventSpectrograms(response.data.eventOnsetSpectrum);
+      } else {
+        setEventSpectrograms(false);
+      }
+      setAlert(null);
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
+  }
 
   const exportCurrentStream = () => {
     var csvData = "Time";
@@ -211,6 +288,38 @@ function IndefiniteStreaming() {
     }
   }
 
+  React.useEffect(() => {
+    if (!eventPSDs) return;
+
+    if (eventPSDSelector.type == "Events") {
+      eventPSDSelector.options = Object.keys(eventPSDs);
+      eventPSDSelector.value = eventPSDSelector.options[0];
+      setEventPSDSelector({...eventPSDSelector});
+    } else {
+      const Events = Object.keys(eventPSDs);
+      if (Events.length > 0) {
+        eventPSDSelector.options = eventPSDs[Events[0]].map((value) => value.Channel);
+        eventPSDSelector.value = eventPSDSelector.options[0];
+        setEventPSDSelector({...eventPSDSelector});
+      } else {
+        setEventPSDSelector({...eventPSDSelector, options: [], value: ""});
+      }
+    }
+  }, [eventPSDSelector.type, eventPSDs]);
+
+  React.useEffect(() => {
+    if (!eventSpectrograms) return;
+
+    const Events = Object.keys(eventSpectrograms);
+    if (Events.length > 0) {
+      eventSpectrogramSelector.options = Events
+      eventSpectrogramSelector.value = eventSpectrogramSelector.options[0];
+      setEventSpectrogramSelector({...eventSpectrogramSelector});
+    } else {
+      setEventSpectrogramSelector({options: [], value: ""});
+    }
+  }, [eventSpectrograms]);
+
   return (
     <>
       {alert}
@@ -240,13 +349,18 @@ function IndefiniteStreaming() {
                 <Card sx={{width: "100%"}}>
                   <Grid container>
                     <Grid item xs={12}>
-                      <MDBox p={2} display={"flex"} flexDirection={"row"}>
+                      <MDBox display={"flex"} justifyContent={"space-between"} p={3}>
                         <MDBox display={"flex"} flexDirection={"column"}>
                           <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
                             {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
                           </MDTypography>
                           <MDButton size="large" variant="contained" color="primary" style={{marginBottom: 3}} onClick={() => exportCurrentStream()}>
                             {dictionaryLookup(dictionary.FigureStandardText, "Export", language)}
+                          </MDButton>
+                        </MDBox>
+                        <MDBox display={"flex"} flexDirection={"column"}>
+                          <MDButton size="large" variant="contained" color="info" style={{marginBottom: 3}} onClick={() => refreshEventAnalysis()}>
+                            {"Refresh Event Analysis"}
                           </MDButton>
                         </MDBox>
                       </MDBox>
@@ -258,16 +372,237 @@ function IndefiniteStreaming() {
                 </Card>
               </Grid>
               ) : null}
-              <Grid item xs={12}> 
-                <Card sx={{width: "100%"}}>
-                  <Grid container>
-                    <Grid item xs={12}>
-                      <TimeFrequencyFigure dataToRender={dataToRender} height={figureHeight} figureTitle={"IndefiniteStreamTimeFrequency"}/>
+              {!IndefiniteStreamLayout.TimeFrequencyAnalysis ? (
+                <Grid item xs={12}> 
+                  <Card sx={{width: "100%"}}>
+                    <Grid container>
+                      <Grid item xs={12}>
+                        <TimeFrequencyFigure dataToRender={dataToRender} height={figureHeight} figureTitle={"IndefiniteStreamTimeFrequency"}/>
+                      </Grid>
                     </Grid>
-                  </Grid>
-                </Card>
-              </Grid>
+                  </Card>
+                </Grid>
+              ) : null}
+              {(!IndefiniteStreamLayout.EventStatePSD && eventPSDs) ? (
+                <Grid item xs={6}> 
+                  <Card sx={{width: "100%"}}>
+                    <Grid container p={2}>
+                      <Grid item xs={12}>
+                        <MDBox display={"flex"} flexDirection={"row"} justifyContent={"space-between"}>
+                          <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
+                            {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
+                          </MDTypography>
+                          <ToggleButtonGroup
+                            value={eventPSDSelector.type}
+                            exclusive
+                            onChange={(event, newSelector) => setEventPSDSelector({...eventPSDSelector, type: newSelector})}
+                            aria-label="Event Comparisons"
+                          >
+                            <ToggleButton value="Channels" aria-label="by channels">
+                              <MDTypography variant="p" fontWeight={"bold"} fontSize={12}>
+                                {"Channels"}
+                              </MDTypography>
+                            </ToggleButton>
+                            <ToggleButton value="Events" aria-label="by events">
+                              <MDTypography variant="p" fontWeight={"bold"} fontSize={12}>
+                                {"Events"}
+                              </MDTypography>
+                            </ToggleButton>
+                          </ToggleButtonGroup>
+                        </MDBox>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <MDBox lineHeight={1}>
+                          <Autocomplete
+                            value={eventPSDSelector.value}
+                            options={eventPSDSelector.options}
+                            onChange={(event, value) => setEventPSDSelector({...eventPSDSelector, value: value})}
+                            getOptionLabel={(option) => {
+                              return option;
+                            }}
+                            renderInput={(params) => (
+                              <FormField
+                                {...params}
+                                label={"Comparison Selector"}
+                                InputLabelProps={{ shrink: true }}
+                              />
+                            )}
+                          />
+                        </MDBox>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <EventPSDs dataToRender={eventPSDs} selector={eventPSDSelector} height={500} figureTitle={"EventPSDComparison"}/>
+                      </Grid>
+                    </Grid>
+                  </Card>
+                </Grid>
+              ) : null}
+              {(!IndefiniteStreamLayout.EventStatePSD && eventSpectrograms) ? (
+                <Grid item xs={6}> 
+                  <Card sx={{width: "100%"}}>
+                    <Grid container p={2}>
+                      <Grid item xs={12}>
+                        <MDBox display={"flex"} flexDirection={"row"} justifyContent={"space-between"}>
+                          <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
+                            {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
+                          </MDTypography>
+                        </MDBox>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <MDBox lineHeight={1}>
+                          <Autocomplete
+                            value={eventSpectrogramSelector.value}
+                            options={eventSpectrogramSelector.options}
+                            onChange={(event, value) => setEventSpectrogramSelector({...eventSpectrogramSelector, value: value})}
+                            getOptionLabel={(option) => {
+                              return option;
+                            }}
+                            renderInput={(params) => (
+                              <FormField
+                                {...params}
+                                label={"Comparison Selector"}
+                                InputLabelProps={{ shrink: true }}
+                              />
+                            )}
+                          />
+                        </MDBox>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <EventOnsetSpectrum dataToRender={eventSpectrograms} selector={eventSpectrogramSelector} height={500} figureTitle={"EventOnsetSpectrum"}/>
+                      </Grid>
+                    </Grid>
+                  </Card>
+                </Grid>
+              ) : null}
             </Grid>
+            <Drawer
+              sx={{
+                width: 300,
+                flexShrink: 0,
+                '& .MuiDrawer-paper': {
+                  width: 300,
+                  boxSizing: 'border-box',
+                },
+              }}
+              PaperProps={{
+                sx: {
+                  borderWidth: "2px",
+                  borderColor: "black",
+                  borderStyle: "none",
+                  boxShadow: "-2px 0px 5px gray",
+                }
+              }}
+              variant="persistent"
+              anchor="right"
+              open={drawerOpen.open}
+            >
+              <MDBox>
+                <IconButton onClick={() => setDrawerOpen({...drawerOpen, open: false})}>
+                  <ChevronRightIcon />
+                  <MDTypography>
+                    {"Close"}
+                  </MDTypography>
+                </IconButton>
+              </MDBox>
+              <MDBox>
+              <Grid container spacing={2} sx={{paddingLeft: 2, paddingRight: 2}}>
+                {Object.keys(drawerOpen.config).map((key) => {
+                  return <Grid key={key} item xs={12} sx={{
+                    wordWrap: "break-word",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word"
+                  }}>
+                    <MDTypography fontSize={18} fontWeight={"bold"}>
+                      {drawerOpen.config[key].name}
+                    </MDTypography>
+                    <MDTypography fontSize={15} fontWeight={"regular"}>
+                      {drawerOpen.config[key].description}
+                    </MDTypography>
+                    <Autocomplete
+                      options={drawerOpen.config[key].options}
+                      value={drawerOpen.config[key].value}
+                      onChange={(event, value) => setDrawerOpen((option) => {
+                        option.config[key].value = value;
+                        return {...option};
+                      })}
+                      renderInput={(params) => (
+                        <FormField
+                          {...params}
+                          InputLabelProps={{ shrink: true }}
+                        />
+                      )}
+                    />
+                    <Divider variant="middle" />
+                  </Grid>
+                })}
+              </Grid>
+              </MDBox>
+              <MDBox p={3}>
+                <MDButton variant={"gradient"} color={"success"} onClick={() => {
+                  setAlert(<LoadingProgress/>);
+                  SessionController.query("/api/updateSession", {
+                    "BrainSenseSurvey": drawerOpen.config
+                  }).then(() => {
+                    
+                    SessionController.query("/api/queryBrainSenseSurveys", {
+                      id: patientID
+                    }).then((response) => {
+                      setData(response.data.data)
+                      setDrawerOpen({...drawerOpen, config: response.data.config});
+                      setAlert(null);
+                    }).catch((error) => {
+                      SessionController.displayError(error, setAlert);
+                    });
+
+                  }).catch((error) => {
+                    SessionController.displayError(error, setAlert);
+                  });
+                  
+                }} fullWidth>
+                  <MDTypography color={"light"}>
+                    {"Update"}
+                  </MDTypography>
+                </MDButton>
+              </MDBox>
+            </Drawer>
+            <MDBox style={{
+              position: 'sticky',
+              bottom: 32,
+              right: 32,
+            }}>
+              <SpeedDial
+                ariaLabel={"SurveySpeedDial"}
+                color={"info"}
+                icon={<SpeedDialIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                FabProps={{
+                  color: "info",
+                  sx: {display: "flex", marginLeft: "auto"}
+                }}
+                sx={{alignItems: "end"}}
+                hidden={false}
+              >
+                <SpeedDialAction
+                  key={"GoToTop"}
+                  icon={<KeyboardDoubleArrowUpIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                  tooltipTitle={"Go to Top"}
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+                <SpeedDialAction
+                  key={"EditLayout"}
+                  icon={<DashboardIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                  tooltipTitle={"Edit Layout"}
+                  onClick={() => setAlert(<LayoutOptions setAlert={setAlert} />)}
+                />
+                <SpeedDialAction
+                  key={"ChangeSettings"}
+                  icon={<SettingsIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                  tooltipTitle={"Edit Processing Configurations"}
+                  onClick={() => setDrawerOpen({...drawerOpen, open: true})}
+                />
+              </SpeedDial>
+            </MDBox>
           </MDBox>
         </MDBox>
       </DatabaseLayout>

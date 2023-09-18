@@ -55,6 +55,26 @@ def retrieveProcessingSettings(config=dict()):
                 "value": "false"
             },
         },
+        "IndefiniteStream": {
+            "SpectrogramMethod": {
+                "name": "Time-Frequency Analysis Algorithm",
+                "description": "",
+                "options": ["Welch","Spectrogram","Wavelet"],
+                "value": "Spectrogram"
+            },
+            "PSDMethod": {
+                "name": "Stimulation Epoch Power Spectrum Algorithm",
+                "description": "",
+                "options": ["Welch","Time-Frequency Analysis"],
+                "value": "Welch"
+            },
+            "NormalizedPSD": {
+                "name": "Normalize Stimulation Epoch Power Spectrum",
+                "description": "",
+                "options": ["true", "false"],
+                "value": "false"
+            },
+        },
         "BrainSenseSurvey": {
             "PSDMethod": {
                 "name": "Power Spectrum Estimation Algorithm",

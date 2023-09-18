@@ -223,3 +223,70 @@ def queryMontageData(user, devices, timestamps, authority):
                 data["Spectrums"] = stream["Spectrums"]
                 BrainSenseData.append(data)
     return BrainSenseData
+
+def processAnnotationAnalysis(data):
+    EventOnsetSpectrum = {}
+    EventPSDs = {}
+    for i in range(len(data)):
+        if "Annotations" in data[i].keys():
+            for j in range(len(data[i]["Annotations"])):
+                if data[i]["Annotations"][j]["Duration"] > 0:
+                    if not data[i]["Annotations"][j]["Name"] in EventPSDs.keys():
+                        EventPSDs[data[i]["Annotations"][j]["Name"]] = []
+
+                    EventStartTime = data[i]["Annotations"][j]["Time"] - data[i]["Timestamp"]
+                    for k in range(len(data[i]["Spectrums"])):
+                        ChannelFound = -1
+                        for l in range(len(EventPSDs[data[i]["Annotations"][j]["Name"]])):
+                            if EventPSDs[data[i]["Annotations"][j]["Name"]][l]["Channel"] == data[i]["ChannelNames"][k]:
+                                ChannelFound = l
+                                break
+
+                        if not ChannelFound >= 0:
+                            EventPSDs[data[i]["Annotations"][j]["Name"]].append({
+                                "Channel": data[i]["ChannelNames"][k],
+                                "Count": 0,
+                                "MeanPower": [],
+                                "StdPower": [],
+                                "Frequency": []
+                            })
+                            ChannelFound = len(EventPSDs[data[i]["Annotations"][j]["Name"]]) - 1
+                        
+                        TimeSelection = rangeSelection(data[i]["Spectrums"][k]["Time"], [EventStartTime, EventStartTime+data[i]["Annotations"][j]["Duration"]])
+                        PSDs = data[i]["Spectrums"][k]["Power"][:, TimeSelection]
+                        EventPSDs[data[i]["Annotations"][j]["Name"]][ChannelFound]["Count"] += 1
+                        EventPSDs[data[i]["Annotations"][j]["Name"]][ChannelFound]["MeanPower"].append(np.mean(PSDs, axis=1))
+                        EventPSDs[data[i]["Annotations"][j]["Name"]][ChannelFound]["Frequency"] = data[i]["Spectrums"][k]["Frequency"]
+                else:
+                    for k in range(len(data[i]["Spectrums"])):
+                        key = data[i]["ChannelNames"][k] + " " + data[i]["Annotations"][j]["Name"]
+                        
+                        if not key in EventOnsetSpectrum.keys():
+                            EventOnsetSpectrum[key] = {
+                                "Count": 0,
+                                "Time": [],
+                                "Frequency": [],
+                                "Spectrum": []
+                            }
+
+                        EventStartTime = data[i]["Annotations"][j]["Time"] - data[i]["Timestamp"]
+                        TimeSelection = rangeSelection(data[i]["Spectrums"][k]["Time"], [EventStartTime-5, EventStartTime+5])
+                        EventOnsetSpectrum[key]["Frequency"] = data[i]["Spectrums"][k]["Frequency"]
+                        EventOnsetSpectrum[key]["Time"] = data[i]["Spectrums"][k]["Time"][TimeSelection] - EventStartTime
+
+                        PSDs = data[i]["Spectrums"][k]["logPower"][:, TimeSelection]
+                        EventOnsetSpectrum[key]["Count"] += 1
+                        EventOnsetSpectrum[key]["Spectrum"].append(PSDs)
+
+    for key in EventOnsetSpectrum.keys():
+        EventOnsetSpectrum[key]["Spectrum"] = np.mean(np.array(EventOnsetSpectrum[key]["Spectrum"]), axis=0).tolist()
+        EventOnsetSpectrum[key]["Frequency"] = EventOnsetSpectrum[key]["Frequency"].tolist()
+        EventOnsetSpectrum[key]["Time"] = EventOnsetSpectrum[key]["Time"].tolist()
+
+    for key in EventPSDs.keys():
+        for channel in range(len(EventPSDs[key])):
+            EventPSDs[key][channel]["StdPower"] = SPU.stderr(np.array(EventPSDs[key][channel]["MeanPower"]), axis=0).tolist()
+            EventPSDs[key][channel]["MeanPower"] = np.mean(np.array(EventPSDs[key][channel]["MeanPower"]), axis=0).tolist()
+            EventPSDs[key][channel]["Frequency"] = EventPSDs[key][channel]["Frequency"].tolist()
+
+    return EventPSDs, EventOnsetSpectrum

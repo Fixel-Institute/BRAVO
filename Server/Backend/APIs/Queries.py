@@ -500,6 +500,10 @@ class QueryIndefiniteStreaming(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
+        request.user.configuration["ProcessingSettings"], changed = Database.retrieveProcessingSettings(request.user.configuration)
+        if not changed:
+            request.user.save()
+
         if "requestOverview" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
@@ -508,14 +512,20 @@ class QueryIndefiniteStreaming(RestViews.APIView):
                 data = IndefiniteStream.queryMontageDataOverview(request.user, request.data["id"], Authority)
                 if len(data) > 0:
                     data[0]["annotations"] = Database.extractTags("Annotations", request.user.email)
-                return Response(status=200, data=data)
+                return Response(status=200, data={
+                    "data": data,
+                    "config": request.user.configuration["ProcessingSettings"]["IndefiniteStream"]
+                })
             elif Authority["Level"] == 2:
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "IndefiniteStream")
                 data = IndefiniteStream.queryMontageDataOverview(request.user, PatientInfo.authorized_patient_id, Authority)
                 if len(data) > 0:
                     data[0]["annotations"] = Database.extractTags("Annotations", request.user.email)
-                return Response(status=200, data=data)
+                return Response(status=200, data={
+                    "data": data,
+                    "config": request.user.configuration["ProcessingSettings"]["IndefiniteStream"]
+                })
 
         elif "requestData" in request.data:
             timestamps = request.data["timestamps"]
@@ -549,8 +559,52 @@ class QueryIndefiniteStreaming(RestViews.APIView):
                     "Time": item.event_time.timestamp(),
                     "Duration": item.event_duration
                 } for item in annotations]
+            EventPSDs, EventOnsetSpectrum = IndefiniteStream.processAnnotationAnalysis(data)
 
-            return Response(status=200, data=data)
+            return Response(status=200, data={
+                "data": data, 
+                "eventPSDs": EventPSDs,
+                "eventOnsetSpectrum": EventOnsetSpectrum
+            })
+
+        elif "requestEventData" in request.data:
+            timestamps = request.data["timestamps"]
+            devices = request.data["devices"]
+
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+            if Authority["Level"] == 0:
+                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+            PatientID = request.data["id"]
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id, deidentifiedId=request.data["id"])
+                DeviceIDs = [str(deidentification["Devices"][i]["ID"]) for i in range(len(deidentification["Devices"]))]
+                for device in devices:
+                    if not device in DeviceIDs:
+                        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                
+                PatientID = PatientInfo.authorized_patient_id
+
+            Authority["Permission"] = Database.verifyPermission(request.user, PatientID, Authority, "IndefiniteStream")
+            data = IndefiniteStream.queryMontageData(request.user, devices, timestamps, Authority)
+
+            for i in range(len(data)):
+                annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=request.data["id"], 
+                                                                    event_time__gte=datetime.fromtimestamp(data[i]["Timestamp"], tz=pytz.utc), 
+                                                                    event_time__lte=datetime.fromtimestamp(data[i]["Timestamp"]+data[i]["Duration"], tz=pytz.utc))
+                data[i]["Annotations"] = [{
+                    "Name": item.event_name,
+                    "Time": item.event_time.timestamp(),
+                    "Duration": item.event_duration
+                } for item in annotations]
+            EventPSDs, EventOnsetSpectrum = IndefiniteStream.processAnnotationAnalysis(data)
+
+            return Response(status=200, data={
+                "eventPSDs": EventPSDs,
+                "eventOnsetSpectrum": EventOnsetSpectrum
+            })
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
