@@ -24,6 +24,7 @@ import {
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import MDButton from "components/MDButton";
 import FormField from "components/MDInput/FormField";
 import LoadingProgress from "components/LoadingProgress";
 
@@ -35,16 +36,20 @@ import DatabaseLayout from "layouts/DatabaseLayout";
 import { SessionController } from "database/session-control";
 import { formatStimulationChannel } from "database/helper-function";
 import { usePlatformContext, setContextState } from "context.js";
-import { dictionary } from "assets/translation.js";
+import { dictionary, dictionaryLookup } from "assets/translation.js";
 
 function CircadianThreshold() {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
   const { patientID, language } = controller;
 
-  const [data, setData] = useState([]);
+  const [data, setData] = useState(false);
+  const [availableDevice, setAvailableDevices] = useState({current: null, list: []});
 
+  const [eventList, setEventList] = useState([]);
   const [circadianData, setCircadianData] = useState({});
+  const [eventLockedPowerData, setEventLockedPowerData] = useState({});
+  const [eventPSDData, setEventPSDData] = useState({});
 
   const [alert, setAlert] = useState(null);
 
@@ -53,10 +58,19 @@ function CircadianThreshold() {
       navigate("/dashboard", {replace: false});
     } else {
       setAlert(<LoadingProgress/>);
-      SessionController.query("/api/queryAdaptiveGroups", {
+      SessionController.query("/api/queryChronicBrainSense", {
         id: patientID, 
+        requestData: true, 
+        timezoneOffset: new Date().getTimezoneOffset()*60
       }).then((response) => {
-        setData(response.data);
+        if (response.data.ChronicData.length > 0) {
+          populateCircadianRhythmSelector(response.data.ChronicData);
+          setData(response.data.ChronicData);
+          setAvailableDevices({
+            current: response.data.ChronicData[0].Device,
+            list: response.data.ChronicData.map((channel) => channel.Device).filter((value, index, array) => array.indexOf(value) === index)
+          });
+        }
         setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -64,45 +78,37 @@ function CircadianThreshold() {
     }
   }, [patientID]);
 
-  const extractCircadianRhythm = (therapy,side) => {
-    setAlert(<LoadingProgress/>);
-    const channels = formatStimulationChannel(therapy[side].Channel);
-    
-    SessionController.query("/api/queryCircadianPower", {
-      id: patientID, 
-      therapyInfo: {
-        Frequency: therapy[side].Frequency,
-        FrequencyInHertz: therapy[side].SensingSetup.FrequencyInHertz,
-        Hemisphere: side,
-        Channel: channels.filter((channel) => channel.startsWith("E1")).length > 0 ? 1 : 2
-      },
-      timezoneOffset: new Date().getTimezoneOffset()*60
-    }).then((response) => {
-      setCircadianData(response.data)
-      setAlert(
-        <Backdrop
-          sx={{ color: '#FFFFFF', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-          open={true}
-          onClick={() => setAlert(null)}
-        >
-          {response.data.Power.length > 0 ? (
-            <Card style={{padding: 15}}>
-              <CircadianRhythm dataToRender={response.data} height={600} figureTitle={"CircadianRhythm"}/>
-            </Card>
-          ) : (
-            <Card style={{padding: 50}}>
-              <MDTypography variant={"h6"} fontSize={24}>
-                {"No Available Data"}
-              </MDTypography>
-            </Card>
-          )}
-        </Backdrop>
-      );
-    }).catch((error) => {
-      SessionController.displayError(error, setAlert);
-    });
-  };
+  const populateCircadianRhythmSelector = (data) => {
+    const options = [];
+    for (var i = 0; i < data.length; i++) {
+      for (var j = 0; j < data[i]["CircadianPowers"].length; j++) {
+        if (data[i]["CircadianPowers"][j]["Power"].length > 144*3) {
+          if (data[i]["CustomName"]) {
+            options.push({
+              label: data[i]["Device"] + " " + data[i]["CustomName"] + " " + data[i]["CircadianPowers"][j]["Therapy"],
+              hemisphere: data[i]["Device"] + " " + data[i]["Hemisphere"],
+              therapyName: data[i]["CircadianPowers"][j]["Therapy"],
+              value: data[i]["Device"] + "//" + data[i]["CustomName"] + "//" + data[i]["CircadianPowers"][j]["Therapy"]
+            });
+          } else {
+            options.push({
+              label: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["CircadianPowers"][j]["Therapy"],
+              hemisphere: data[i]["Device"] + " " + data[i]["Hemisphere"],
+              therapyName: data[i]["CircadianPowers"][j]["Therapy"],
+              value: data[i]["Device"] + "//" + data[i]["Hemisphere"] + "//" + data[i]["CircadianPowers"][j]["Therapy"]
+            });
+          }
+        }
+      }
+    }
 
+    if (options.length > 0) {
+      setCircadianData({...circadianData, selector: options, currentValue: options[0]});
+    } else {
+      setCircadianData({});
+    }
+  };
+  
   return (
     <>
       {alert}
@@ -113,110 +119,42 @@ function CircadianThreshold() {
               <Grid item xs={12}>
                 <Card sx={{width: "100%"}}>
                   <Grid container>
-                    <Grid item xs={12}>
-                      <MDBox p={2}>
-                        <MDTypography variant={"h6"} fontSize={24}>
-                          {"Left Hemisphere"} {dictionary.CircadianThreshold.AdaptiveGroups[language]} 
-                        </MDTypography>
-                      </MDBox>
-                    </Grid>
-                    {data.map((group) => {
-                      if (!group.Therapy.LeftHemisphere) return;
-
-                      return <Grid key={group.TherapyGroup} item xs={12} lg={6} sx={{paddingX: 2, paddingY: 2}}>
-                        <Card sx={{paddingX: 2, paddingY: 3, cursor: "pointer", boxShadow: "0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19)"}}
-                          onClick={() => group.Therapy["LeftHemisphere"].Mode === "BrainSense" ? extractCircadianRhythm(group.Therapy, "LeftHemisphere") : {}}
-                        >
-                          <MDBox style={{paddingY: 3}}>
-                            <MDTypography variant={"h5"}>
-                              {group.TherapyGroup} 
-                            </MDTypography>
-                            {group.Therapy["LeftHemisphere"].Mode === "BrainSense" ? (
-                              <MDBox>
-                                <MDTypography variant={"h6"} color={"info"}>
-                                  {formatStimulationChannel(group.Therapy["LeftHemisphere"].Channel)} {" "}
-                                  {group.Therapy["LeftHemisphere"].Frequency} {dictionary.FigureStandardUnit.Hertz[language]} {" "}
-                                  {group.Therapy["LeftHemisphere"].PulseWidth} {dictionary.FigureStandardUnit.uS[language]}
-                                </MDTypography>
-                                <MDTypography variant={"h6"} color={"info"}>
-                                  {"BrainSense Frequency: "}
-                                  {group.Therapy["LeftHemisphere"].SensingSetup.FrequencyInHertz} {dictionary.FigureStandardUnit.Hertz[language]}
-                                </MDTypography>
-                                <MDTypography variant={"h6"} color={"info"}>
-                                  {"Upper Threshold: "}
-                                  {group.Therapy["LeftHemisphere"].LFPThresholds[1]} {dictionary.FigureStandardUnit.AU[language]}
-                                  {` (${group.Therapy["LeftHemisphere"].CaptureAmplitudes[0]} ${dictionary.FigureStandardUnit.mA[language]})`}
-                                </MDTypography>
-                                <MDTypography variant={"h6"} color={"info"}>
-                                  {"Lower Threshold: "}
-                                  {group.Therapy["LeftHemisphere"].LFPThresholds[0]} {dictionary.FigureStandardUnit.AU[language]}
-                                  {` (${group.Therapy["LeftHemisphere"].CaptureAmplitudes[1]} ${dictionary.FigureStandardUnit.mA[language]})`}
-                                </MDTypography>
-                              </MDBox>
-                            ) : (
-                              <MDTypography variant={"h6"} color={"error"}>
-                                {"BrainSense Disabled"}
-                              </MDTypography>
-                            )}
+                    {data ? (
+                      <>
+                        <Grid item xs={12}>
+                          <MDBox p={2} lineHeight={1}>
+                            <Autocomplete
+                              options={circadianData.selector}
+                              value={circadianData.currentValue}
+                              onChange={(event, value) => {
+                                setCircadianData({...circadianData, currentValue: value})
+                              }}
+                              getOptionLabel={(option) => {
+                                return option.label || "";
+                              }}
+                              renderInput={(params) => (
+                                <FormField
+                                  {...params}
+                                  label={dictionary.ChronicBrainSense.Select.Therapy[language]}
+                                  InputLabelProps={{ shrink: true }}
+                                />
+                              )}
+                            />
                           </MDBox>
-                        </Card>
+                        </Grid>
+                        <Grid item xs={12} lg={12}>
+                          <CircadianRhythm dataToRender={data} selector={circadianData.currentValue} height={700} figureTitle={"CircadianRhythmThreshold"} />
+                        </Grid>
+                      </>
+                    ) : (
+                      <Grid item xs={12}>
+                        <MDBox p={2}>
+                          <MDTypography variant="h6" fontSize={24}>
+                            {dictionary.WarningMessage.NoData[language]}
+                          </MDTypography>
+                        </MDBox>
                       </Grid>
-                    })}
-                  </Grid>
-                </Card>
-              </Grid>
-              <Grid item xs={12}>
-                <Card sx={{width: "100%"}}>
-                  <Grid container>
-                    <Grid item xs={12}>
-                      <MDBox p={2}>
-                        <MDTypography variant={"h6"} fontSize={24}>
-                          {"Right Hemisphere"} {dictionary.CircadianThreshold.AdaptiveGroups[language]}
-                        </MDTypography>
-                      </MDBox>
-                    </Grid>
-                    {data.map((group) => {
-                      if (!group.Therapy.RightHemisphere) return;
-
-                      return <Grid key={group.TherapyGroup} item xs={12} lg={6} sx={{paddingX: 2, paddingY: 2}}>
-                        <Card sx={{paddingX: 2, paddingY: 3, cursor: "pointer", boxShadow: "0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19)"}}
-                          onClick={() => group.Therapy["RightHemisphere"].Mode === "BrainSense" ? extractCircadianRhythm(group.Therapy, "RightHemisphere") : {}}
-                        >
-                          <MDBox style={{paddingY: 3}}>
-                            <MDTypography variant={"h5"}>
-                              {group.TherapyGroup}
-                            </MDTypography>
-                            {group.Therapy["RightHemisphere"].Mode === "BrainSense" ? (
-                              <MDBox>
-                                <MDTypography variant={"h6"} color={"info"}>
-                                  {formatStimulationChannel(group.Therapy["RightHemisphere"].Channel)} {" "}
-                                  {group.Therapy["RightHemisphere"].Frequency} {dictionary.FigureStandardUnit.Hertz[language]} {" "}
-                                  {group.Therapy["RightHemisphere"].PulseWidth} {dictionary.FigureStandardUnit.uS[language]}
-                                </MDTypography>
-                                <MDTypography variant={"h6"} color={"info"}>
-                                  {"BrainSense Frequency: "}
-                                  {group.Therapy["RightHemisphere"].SensingSetup.FrequencyInHertz} {dictionary.FigureStandardUnit.Hertz[language]}
-                                </MDTypography>
-                                <MDTypography variant={"h6"} color={"info"}>
-                                  {"Upper Threshold: "}
-                                  {group.Therapy["RightHemisphere"].LFPThresholds[1]} {dictionary.FigureStandardUnit.AU[language]}
-                                  {` (${group.Therapy["RightHemisphere"].CaptureAmplitudes[0]} ${dictionary.FigureStandardUnit.mA[language]})`}
-                                </MDTypography>
-                                <MDTypography variant={"h6"} color={"info"}>
-                                  {"Lower Threshold: "}
-                                  {group.Therapy["RightHemisphere"].LFPThresholds[0]} {dictionary.FigureStandardUnit.AU[language]}
-                                  {` (${group.Therapy["RightHemisphere"].CaptureAmplitudes[1]} ${dictionary.FigureStandardUnit.mA[language]})`}
-                                </MDTypography>
-                              </MDBox>
-                            ) : (
-                              <MDTypography variant={"h6"} color={"error"}>
-                                {"BrainSense Disabled"}
-                              </MDTypography>
-                            )}
-                          </MDBox>
-                        </Card>
-                      </Grid>
-                    })}
+                    )}
                   </Grid>
                 </Card>
               </Grid>
