@@ -370,6 +370,10 @@ All procedure assume that your working directory is the main directory of the cl
   sudo apt-get update
   sudo apt-get install python3-pip libjpeg-dev libjpeg8-dev libpng-dev python3-virtualenv libmysqlclient-dev mysql-server 
 
+  # Setup Redis Server on Docker for Django Channels
+  docker run -p 6379:6379 -d redis:5
+  # NOTE: You can also opt to install Redis via Docker Desktop GUI directly. 
+  
   # Create Virutal Environment for Python called "venv"
   virtualenv $SCRIPT_DIR/venv
   source $SCRIPT_DIR/venv/bin/activate
