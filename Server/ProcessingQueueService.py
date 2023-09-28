@@ -25,18 +25,21 @@ from pathlib import Path
 import json
 import datetime
 import dateutil
+import shutil
 import time
 import numpy as np
 import pytz
 from cryptography.fernet import Fernet
+from zipfile import ZipFile
 
 import websocket
 from BRAVO import asgi
 
 from Backend import models
-from modules.Percept import Sessions
+from modules.Percept import Sessions as PerceptSessions
+from modules.Summit import Sessions as SummitSessions
 from modules import Database, AnalysisBuilder
-from decoder import Percept
+from decoder import Percept, Summit
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
@@ -96,13 +99,13 @@ def processJSONUploads():
             try:
                 user = models.PlatformUser.objects.get(unique_user_id=queue.owner)
                 if (user.is_admin or user.is_clinician):
-                    ProcessingResult, newPatient, _ = Sessions.processPerceptJSON(user, queue.descriptor["filename"]) 
+                    ProcessingResult, newPatient, _ = PerceptSessions.processPerceptJSON(user, queue.descriptor["filename"]) 
                 else:
                     if "device_deidentified_id" in queue.descriptor:
-                        ProcessingResult, _, _ = Sessions.processPerceptJSON(user, queue.descriptor["filename"], device_deidentified_id=queue.descriptor["device_deidentified_id"])
+                        ProcessingResult, _, _ = PerceptSessions.processPerceptJSON(user, queue.descriptor["filename"], device_deidentified_id=queue.descriptor["device_deidentified_id"])
                     elif "passkey" in queue.descriptor:
                         table = Database.getDeidentificationLookupTable(user, queue.descriptor["passkey"])
-                        ProcessingResult, newPatient, _ = Sessions.processPerceptJSON(user, queue.descriptor["filename"], lookupTable=table)
+                        ProcessingResult, newPatient, _ = PerceptSessions.processPerceptJSON(user, queue.descriptor["filename"], lookupTable=table)
 
             except Exception as e:
                 ErrorMessage = str(e)
@@ -155,7 +158,7 @@ def processJSONUploads():
                 except Exception as e:
                     print(e)
                 
-                Sessions.saveCacheJSON(queue.descriptor["filename"], json.dumps(JSON).encode('utf-8'))
+                PerceptSessions.saveCacheJSON(queue.descriptor["filename"], json.dumps(JSON).encode('utf-8'))
 
 def processExternalRecordingUpload():
     ws = websocket.WebSocket()
@@ -247,8 +250,102 @@ def processExternalRecordingUpload():
                 except Exception as e:
                     print(e)
                 
+def processSummitZIPUpload():
+    ws = websocket.WebSocket()
+    if models.ProcessingQueue.objects.filter(type="decodeSummitZIP", state="InProgress").exists():
+        print(datetime.datetime.now())
+        BatchQueues = models.ProcessingQueue.objects.filter(type="decodeSummitZIP", state="InProgress").order_by("datetime").all()
+        for queue in BatchQueues:
+            if not models.ProcessingQueue.objects.filter(state="InProgress", queue_id=queue.queue_id).exists():
+                continue
+            queue.state = "Processing"
+            queue.save()
+            ErrorMessage = ""
+            try:
+                ws.connect("ws://localhost:3001/socket/notification")
+                ws.send(json.dumps({
+                    "NotificationType": "TaskProcessing",
+                    "TaskUser": str(queue.owner),
+                    "TaskID": str(queue.queue_id),
+                    "Authorization": os.environ["ENCRYPTION_KEY"],
+                    "State": "Processing",
+                    "Message": "",
+                }))
+                ws.close()
+            except Exception as e:
+                print(e)
+
+            print(f"Start Processing {queue.descriptor['filename']}")
+            try:
+                with ZipFile(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"]) as zObject:
+                    zObject.extractall(path=DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"].replace(".zip",""))
+                
+            except:
+                queue.state = "Error"
+                queue.descriptor["Message"] = "ZipFile Format Error"
+                print(queue.descriptor["Message"])
+                queue.save()
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
+                continue
+            
+            try:
+                user = models.PlatformUser.objects.get(unique_user_id=queue.owner)
+                if "device_deidentified_id" in queue.descriptor:
+                    ProcessingResult, _, _ = SummitSessions.processSummitSession(user, DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"].replace(".zip",""), device_deidentified_id=queue.descriptor["device_deidentified_id"])
+                    if not ProcessingResult == "Success":
+                        raise Exception(ProcessingResult)
+                    
+            except Exception as e:
+                ErrorMessage = str(e)
+                print(ErrorMessage)
+
+            print(f"End Processing {queue.descriptor['filename']}")
+            if ErrorMessage == "":
+                queue.state = "Complete"
+                queue.save()
+
+                shutil.rmtree(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"].replace(".zip",""))
+                os.remove(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"])
+
+            else:
+                queue.state = "Error"
+                queue.descriptor["Message"] = ErrorMessage
+                queue.save()
+
+                shutil.rmtree(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"].replace(".zip",""))
+                os.remove(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"])
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
+                
+
 
 
 if __name__ == '__main__':
     processJSONUploads()
+    processSummitZIPUpload()
     processExternalRecordingUpload()
