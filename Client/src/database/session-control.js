@@ -21,7 +21,7 @@ import MuiAlertDialog from "components/MuiAlertDialog"
 
 export const SessionController = (function () {
   //let server = "https://bravo-server.jcagle.solutions";
-  let server = "";
+  let server = "http://localhost:3001";
   let connectionStatus = false;
 
   let synced = false;
