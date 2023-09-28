@@ -40,6 +40,10 @@ export const dictionary = {
       en: "Change Language",
       zh: "更改语言"
     },
+    ChangeBRAVOVersion: {
+      en: "Redirect BRAVO Version",
+      zh: "更改网页版本"
+    },
     ChangeServer: {
       en: "Change Database Host",
       zh: "更改数据库地址"
@@ -538,12 +542,12 @@ export const dictionary = {
         zh: "日期"
       },
       StreamingTableLeftHemisphere: {
-        en: "Left Hemisphere",
-        zh: "左大脑半球"
+        en: "Left Channel",
+        zh: "左频道"
       },
       StreamingTableRightHemisphere: {
-        en: "Right Hemisphere",
-        zh: "右大脑半球"
+        en: "Right Channel",
+        zh: "右频道"
       },
       StreamingTableRecordingDuration: {
         en: "Recording Duration",
@@ -596,8 +600,8 @@ export const dictionary = {
         zh: "时频分析"
       },
       PowerChannel: {
-        en: "Power @ ",
-        zh: "板载频谱能量 @ "
+        en: "Power Band",
+        zh: "板载频谱能量"
       },
       Stimulation: {
         en: "Stimulation Amplitude",

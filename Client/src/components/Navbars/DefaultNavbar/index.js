@@ -112,6 +112,20 @@ function DefaultNavbar({ transparent, light, action }) {
     }
   };
 
+  const setBRAVOVersion = (server) => {
+    handleCloseMenu();
+
+    if (server == "Latest (v2.2.1)") {
+      window.location.href = 'https://uf-bravo.jcagle.solutions/index';
+    } else if (server == "V2.2.0") {
+      window.location.href = 'https://8b84b888.uf-bravo.pages.dev/index';
+    } else {
+      window.location.href = 'http://localhost:80';
+    }
+    return null;
+  };
+  
+
   useEffect(() => {
     // A function that sets the display state for the DefaultNavbarMobile.
     function displayMobileNavbar() {
@@ -187,6 +201,32 @@ function DefaultNavbar({ transparent, light, action }) {
     </Menu>
   );
 
+  // Render the notifications menu
+  const renderBRAVOSelectMenu = () => (
+    <Menu
+      anchorEl={openMenu}
+      anchorReference={null}
+      anchorOrigin={{
+        vertical: "bottom",
+        horizontal: "left",
+      }}
+      open={whichMenu === "BRAVOVersion"}
+      onClose={handleCloseMenu}
+      sx={{ mt: 2 }}
+    >
+      {["Latest (v2.2.1)","V2.2.0"].map((server) => (
+        <MenuItem key={server} onClick={() => setBRAVOVersion(server)}>
+          <Icon sx={{ mr: 1 }}>{
+            <StorageIcon/>
+          }</Icon>
+          <MDTypography variant="button" fontWeight="regular" color="text">
+            {server}
+          </MDTypography>
+        </MenuItem>
+      ))}
+    </Menu>
+  );
+
   return (
     <Container>
       <MDBox
@@ -228,6 +268,12 @@ function DefaultNavbar({ transparent, light, action }) {
         <MDBox color="inherit" display={{ xs: "none", lg: "flex" }} m={0} p={0}>
           <DefaultNavbarLink 
             icon={<StorageIcon/>}
+            name={dictionary.SimplifiedNavbar.ChangeBRAVOVersion[language]}
+            onClick={(event) => handleOpenMenu(event, "BRAVOVersion")} 
+            light={light} 
+          />
+          <DefaultNavbarLink 
+            icon={<StorageIcon/>}
             name={dictionary.SimplifiedNavbar.ChangeServer[language]}
             onClick={(event) => handleOpenMenu(event, "ServerMenu")} 
             light={light} 
@@ -252,6 +298,7 @@ function DefaultNavbar({ transparent, light, action }) {
           />
           {renderLanguageSelectionMenu()}
           {renderServerSelectionMenu()}
+          {renderBRAVOSelectMenu()}
 
           <Dialog open={customServer.show} onClose={() => setCustomServer({...customServer, show: false})}>
             <MDBox px={2} pt={2} sx={{minWidth: 500}}>
