@@ -51,7 +51,7 @@ import ImpedanceHistory from "./ImpedanceHistory";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
-import { dictionary } from "assets/translation.js";
+import { dictionary, dictionaryLookup } from "assets/translation.js";
 import MDButton from "components/MDButton";
 import MDBadge from "components/MDBadge";
 
@@ -68,6 +68,7 @@ function TherapyHistory() {
   const [dataToRender, setDataToRender] = React.useState(null);
 
   const [alert, setAlert] = React.useState(null);
+  const [therapyTypes, setTherapyTypes] = React.useState([]);
   const [activeTab, setActiveTab] = React.useState(null);
   const [activeDevice, setActiveDevice] = React.useState(null);
 
@@ -91,12 +92,25 @@ function TherapyHistory() {
     var therapyHistory = {};
     var therapyTimestamp = Object.keys(data);
     therapyTimestamp = therapyTimestamp.map((value, index) => therapyTimestamp[therapyTimestamp.length - 1 - index]);
+    therapyTimestamp = therapyTimestamp.filter((value, index) => {
+      if (index < therapyTimestamp.length-1) {
+        return therapyTimestamp[index+1] - therapyTimestamp[index] < -(3600*6);
+      }
+      return true;
+    })
+
+    var therapyTypes = [];
+
     for (var i in therapyTimestamp) {
       for (var j in data[therapyTimestamp[i]]) {
         if (!Object.keys(therapyHistory).includes(data[therapyTimestamp[i]][j].DeviceID)) {
-          therapyHistory[data[therapyTimestamp[i]][j].DeviceID] = {Device: data[therapyTimestamp[i]][j].Device, Lead: null, Therapy: {"Past Therapy": {}, "Pre-visit Therapy": {}, "Post-visit Therapy": {}}};
+          therapyHistory[data[therapyTimestamp[i]][j].DeviceID] = {Device: data[therapyTimestamp[i]][j].Device, Lead: null, Therapy: {}};
         }
-        const dateString = new Date(data[therapyTimestamp[i]][j].TherapyDate*1000).toLocaleDateString(language, {dateStyle: "full"});
+        if (!Object.keys(therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy).includes(data[therapyTimestamp[i]][j].TherapyType)) {
+          therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy[data[therapyTimestamp[i]][j].TherapyType] = {};
+          therapyTypes.push(data[therapyTimestamp[i]][j].TherapyType);
+        }
+        const dateString = new Date(data[therapyTimestamp[i]][j].TherapyDate*1000).toLocaleString(language, {dateStyle: "full"});
         if (!Object.keys(therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy[data[therapyTimestamp[i]][j].TherapyType]).includes(dateString)) {
           therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy[data[therapyTimestamp[i]][j].TherapyType][dateString] = [];
         }
@@ -105,12 +119,12 @@ function TherapyHistory() {
       }
     }
     setActiveDevice(Object.keys(therapyHistory)[0]);
-    setActiveTab("Past Therapy");
+    setTherapyTypes(therapyTypes);
+    setActiveTab(therapyTypes[0]);
     setTherapyHistory(therapyHistory);
   }, [data, language]);
 
   const showAdaptiveSettings = (therapy, captureAmplitude, amplitudeThreshold) => {
-    console.log(amplitudeThreshold)
     setAlert(
       <Dialog open={true} onClose={() => setAlert(null)}>
         <MDBox px={2} pt={2}>
@@ -389,12 +403,12 @@ function TherapyHistory() {
                   </Grid>
                   <Grid item xs={12} md={9}>
                     <MDBox display={"flex"} flexDirection={"row"}>
-                      {["Past Therapy", "Pre-visit Therapy", "Post-visit Therapy"].map((type) => (
+                      {therapyTypes.map((type) => (
                       <MDBox key={type} p={2}>
                         <MDButton variant={activeTab == type ? "contained" : "outlined"} color="warning" onClick={() => setActiveTab(type)} sx={{borderRadius: 30}}>
                           <TabletAndroidIcon sx={{marginRight: 1}} />
                           <MDTypography variant="h5" fontWeight="bold" fontSize={15} color={activeDevice == type ? "white" : "black"}>
-                            {dictionary.TherapyHistory.Table[type][language]}
+                            {dictionaryLookup(dictionary.TherapyHistory.Table, type, language)}
                           </MDTypography>
                         </MDButton>
                       </MDBox>

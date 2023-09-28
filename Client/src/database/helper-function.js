@@ -16,6 +16,8 @@ export const matchArray = (a, b) => {
 };
 
 export const formatSegmentString = (channels) => {
+  if ((typeof channels)  == "string") return channels;
+
   var channelName = "";
   for (var i = 0; i < channels.length; i++) {
     switch (channels[i]) {

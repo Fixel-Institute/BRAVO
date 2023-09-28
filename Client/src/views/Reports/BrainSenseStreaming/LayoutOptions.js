@@ -32,17 +32,17 @@ import { usePlatformContext, setContextState } from "context";
 
 function LayoutOptions({setAlert}) {
   const [controller, dispatch] = usePlatformContext();  
-  const { patientID, IndefiniteStreamLayout, language } = controller;
+  const { patientID, BrainSensestreamLayout, language } = controller;
   
   const handleStateChange = (type, state) => {
-    setContextState(dispatch, "IndefiniteStreamLayout", {...IndefiniteStreamLayout, [type]: state});
+    setContextState(dispatch, "BrainSensestreamLayout", {...BrainSensestreamLayout, [type]: state});
   };
 
   return (
     <Dialog open={true} onClose={() => setAlert(null)}>
       <MDBox px={2} pt={2}>
         <MDTypography variant="h5">
-          {"Indefinite Streaming Layout Toggles"} 
+          {"Realtime Streaming Layout Toggles"} 
         </MDTypography>
       </MDBox>
       <DialogContent>
@@ -54,9 +54,9 @@ function LayoutOptions({setAlert}) {
               wordBreak: "break-word"
             }}>
               <MDTypography fontSize={18} fontWeight={"bold"}>
-                {"Time-Frequency Analysis"}
+                {"Neural Response from Effect of Stimulation"}
               </MDTypography>
-              <Switch checked={!IndefiniteStreamLayout.TimeFrequencyAnalysis} onChange={(event, checked) => handleStateChange("TimeFrequencyAnalysis", !checked)} />
+              <Switch checked={!BrainSensestreamLayout.StimulationPSDs} onChange={(event, checked) => handleStateChange("StimulationPSDs", !checked)} />
               <Divider variant="middle" />
             </Grid>
             <Grid item xs={6} sx={{
@@ -67,7 +67,7 @@ function LayoutOptions({setAlert}) {
               <MDTypography fontSize={18} fontWeight={"bold"}>
                 {"Event-Onset Spectrogram"}
               </MDTypography>
-              <Switch checked={!IndefiniteStreamLayout.EventOnsetSpectrogram} onChange={(event, checked) => handleStateChange("EventOnsetSpectrogram", !checked)} />
+              <Switch checked={!BrainSensestreamLayout.EventOnsetSpectrogram} onChange={(event, checked) => handleStateChange("EventOnsetSpectrogram", !checked)} />
               <Divider variant="middle" />
             </Grid>
             <Grid item xs={6} sx={{
@@ -78,7 +78,7 @@ function LayoutOptions({setAlert}) {
               <MDTypography fontSize={18} fontWeight={"bold"}>
                 {"Event-State PSD"}
               </MDTypography>
-              <Switch checked={!IndefiniteStreamLayout.EventStatePSD} onChange={(event, checked) => handleStateChange("EventStatePSD", !checked)} />
+              <Switch checked={!BrainSensestreamLayout.EventStatePSD} onChange={(event, checked) => handleStateChange("EventStatePSD", !checked)} />
               <Divider variant="middle" />
             </Grid>
           </Grid>

@@ -11,7 +11,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import React, {useCallback} from "react";
+import React, {useCallback, useRef} from "react";
 import {useResizeDetector} from "react-resize-detector";
 
 import MDBox from "components/MDBox";
@@ -26,9 +26,10 @@ function StimulationBoxPlot({dataToRender, channelInfos, height, type, figureTit
   const { language } = controller;
 
   const [show, setShow] = React.useState(false);
-  const fig = new PlotlyRenderManager(figureTitle, language);
+  const figRef = useRef();
 
   const handleGraphing = (data) => {
+    const fig = figRef.current;
     fig.clearData();
 
     if (fig.fresh) {
@@ -39,13 +40,10 @@ function StimulationBoxPlot({dataToRender, channelInfos, height, type, figureTit
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Stimulation", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)})`, {fontSize: 15});
       fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)})`, {fontSize: 15});
 
-      for (var i in channelInfos) {
-        const [side, target] = channelInfos[i].Hemisphere.split(" ");
-        if (type === side) {
-          const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} @ ${data[0].CenterFrequency} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)}`;
-          fig.setTitle(`${titleText}`);
-        }
-      }
+      const [side, target] = channelInfos.Hemisphere.split(" ");
+      const contactText = (typeof channelInfos.Contacts) == "string" ? channelInfos.Contacts : `E${channelInfos.Contacts[0]}-E${channelInfos.Contacts[1]}`;
+      const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} ${contactText}  @ ${data[0].CenterFrequency} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)}`;
+      fig.setTitle(`${titleText}`);
     }
 
     var maxStimulation = 0;
@@ -73,16 +71,22 @@ function StimulationBoxPlot({dataToRender, channelInfos, height, type, figureTit
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    if (dataToRender.length > 0) handleGraphing(dataToRender);
-    else {
-      fig.purge();
-      setShow(false);
+    if (figRef) {
+      figRef.current = new PlotlyRenderManager(figureTitle, language);
+      if (dataToRender.length > 0) {
+        handleGraphing(dataToRender);
+      } else {
+        figRef.current.purge();
+        setShow(false);
+      }
     }
-  }, [dataToRender, language]);
+  }, [dataToRender, figRef, language]);
 
   const onResize = useCallback(() => {
-    fig.refresh();
-  }, []);
+    if (figRef.current) {
+      figRef.current.refresh();
+    }
+  }, [figRef.current]);
 
   const {ref} = useResizeDetector({
     onResize: onResize,

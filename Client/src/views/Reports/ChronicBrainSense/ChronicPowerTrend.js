@@ -28,6 +28,7 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
   const { language } = controller;
 
   const [show, setShow] = React.useState(false);
+  const [figureHeight, setFigureHeight] = React.useState(height);
   const fig = new PlotlyRenderManager(figureTitle, language);
   
   const handleGraphing = (data) => {
@@ -90,7 +91,7 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
       for (let j = 0; j < data[i].Timestamp.length; j++) {
         var therapyString = ""
         if (data[i]["Therapy"][j].hasOwnProperty("TherapyOverview")) therapyString = data[i]["Therapy"][j]["TherapyOverview"]
-
+        
         var timeArray = Array(data[i]["Timestamp"][j].length).fill(0).map((value, index) => new Date(data[i]["Timestamp"][j][index]*1000));
         if (data[i]["Power"][j].length > 0) {
           fig.plot(timeArray, data[i]["Power"][j], {
@@ -98,14 +99,24 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
             color: "#000000",
             hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
           }, ax[i*2]);
+        } else {
+          fig.plot([], [], {}, ax[i*2]);
         }
 
+
         if (data[i]["Amplitude"][j].length > 0) {
+          if (data[i]["AdaptiveTimestamp"]) {
+            timeArray = Array(data[i]["AdaptiveTimestamp"][j].length).fill(0).map((value, index) => new Date(data[i]["AdaptiveTimestamp"][j][index]*1000));
+          }
+          
           fig.plot(timeArray, data[i]["Amplitude"][j], {
+            line: {shape: 'hv'},
             linewidth: 0.5,
             color: "#AA0000",
             hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>"
           }, ax[i*2+1]);
+        } else {
+          fig.plot([], [], {}, ax[i*2+1]);
         }
 
         for (let k = 0; k < data[i].EventName[j].length; k++) {
@@ -156,7 +167,10 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
   React.useEffect(() => {
     if (dataToRender) {
       const channelData = dataToRender.ChronicData.filter((channel) => channel.Device == selectedDevice);
-      if (channelData.length > 0) handleGraphing(channelData);
+      if (channelData.length > 0) {
+        setFigureHeight(channelData.length*height);
+        handleGraphing(channelData)
+      };
     };
   }, [dataToRender, events, selectedDevice, language]);
 
@@ -172,7 +186,7 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
   });
 
   return (
-    <MDBox ref={ref} id={figureTitle} style={{marginTop: 5, marginBottom: 10, height: height, width: "100%", display: show ? "" : "none"}}/>
+    <MDBox ref={ref} id={figureTitle} style={{marginTop: 5, marginBottom: 10, height: figureHeight, width: "100%", display: show ? "" : "none"}}/>
   );
 }
 

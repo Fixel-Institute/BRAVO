@@ -166,7 +166,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
         />
       </MDBox>
       <MDBox style={{overflowX: "auto"}}>
-        <MDButton variant={"contained"} color={!toggleMerge.show ? "info" : "error"} style={{marginLeft: 10}} onClick={() => {
+        <MDButton variant={"contained"} color={!toggleMerge.show ? "info" : "error"} style={{marginLeft: 10, display: "none"}} onClick={() => {
           if (toggleMerge.show) {
             if (toggleMerge.merge.length == 0) {
               setToggleMerge({merge: [], show: false});
@@ -199,28 +199,29 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
           </TableHead>
           <TableBody>
             {displayData.map((recording) => {
-              var leftHemisphere, rightHemisphere;
+              var leftHemisphere = [], rightHemisphere = [];
               for (var channel of recording.Channels) {
+                const channelName = formatSegmentString(channel.Contacts);
                 if (channel.Hemisphere.startsWith("Left")) {
                   const [side, target] = channel.Hemisphere.split(" ");
-                  leftHemisphere = <>
+                  leftHemisphere.push(<MDBox key={channelName}>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
                       {channel.CustomName!=channel.Hemisphere ? channel.CustomName : dictionaryLookup(dictionary.FigureStandardText, side, language) + " " + dictionaryLookup(dictionary.BrainRegions, target, language)}
                     </MDTypography>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
-                      {formatSegmentString(channel.Contacts)} {"@ " + recording.Therapy.Left.RateInHertz + " Hz " + recording.Therapy.Left.PulseWidthInMicroSecond + " μS"}
+                      {channelName} {recording.Therapy ? ("@ " + recording.Therapy.Left.RateInHertz + " Hz " + recording.Therapy.Left.PulseWidthInMicroSecond + " μS") : ""}
                     </MDTypography>
-                  </>
+                  </MDBox>)
                 } else {
                   const [side, target] = channel.Hemisphere.split(" ");
-                  rightHemisphere = <>
+                  rightHemisphere.push(<MDBox key={channelName}>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
                       {channel.CustomName!=channel.Hemisphere ? channel.CustomName : dictionaryLookup(dictionary.FigureStandardText, side, language) + " " + dictionaryLookup(dictionary.BrainRegions, target, language)}
                     </MDTypography>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
-                      {formatSegmentString(channel.Contacts)} {"@ " + recording.Therapy.Right.RateInHertz + " Hz " + recording.Therapy.Right.PulseWidthInMicroSecond + " μS"}
+                      {channelName} {recording.Therapy ? ("@ " + recording.Therapy.Left.RateInHertz + " Hz " + recording.Therapy.Left.PulseWidthInMicroSecond + " μS") : ""}
                     </MDTypography>
-                  </>
+                  </MDBox>)
                 }
               }
 
@@ -253,26 +254,28 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                     {leftHemisphere ? (
                       <MDBox>
                         {leftHemisphere}
-                        <FormControl sx={{
-                          marginTop: 1
-                        }} fullWidth>
-                          <InputLabel id="left-hemisphere-stim-mode-label">
-                            {dictionary.BrainSenseStreaming.Table.StimMode[language]}
-                          </InputLabel>
-                          <Select
-                            labelId={"left-hemisphere-stim-mode-label"}
-                            label={dictionary.BrainSenseStreaming.Table.StimMode[language]}
-                            value={recording.ContactType[0]}
-                            onChange={(event) => setStimMode(recording.RecordingIDs, 0, event)}
-                            sx={{
-                              paddingY: "6px"
-                            }}
-                          >
-                            {recording.ContactTypes[0].map((value) => {
-                              return <MenuItem key={value} value={value}> {dictionaryLookup(dictionary.Segments, value, language)} </MenuItem>
-                            })}
-                          </Select>
-                        </FormControl>
+                        {recording.ContactType ? (
+                          <FormControl sx={{
+                            marginTop: 1
+                          }} fullWidth>
+                            <InputLabel id="left-hemisphere-stim-mode-label">
+                              {dictionary.BrainSenseStreaming.Table.StimMode[language]}
+                            </InputLabel>
+                            <Select
+                              labelId={"left-hemisphere-stim-mode-label"}
+                              label={dictionary.BrainSenseStreaming.Table.StimMode[language]}
+                              value={recording.ContactType[0]}
+                              onChange={(event) => setStimMode(recording.RecordingIDs, 0, event)}
+                              sx={{
+                                paddingY: "6px"
+                              }}
+                            >
+                              {recording.ContactTypes[0].map((value) => {
+                                return <MenuItem key={value} value={value}> {dictionaryLookup(dictionary.Segments, value, language)} </MenuItem>
+                              })}
+                            </Select>
+                          </FormControl>
+                        ) : null}
                       </MDBox>
                     ) : null}
                   </MDBox>
@@ -281,7 +284,8 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                   {rightHemisphere ? (
                     <MDBox>
                       {rightHemisphere}
-                      <FormControl sx={{
+                      {recording.ContactType ? (
+                        <FormControl sx={{
                         marginTop: 1
                       }} fullWidth>
                         <InputLabel id="right-hemisphere-stim-mode-label">
@@ -303,6 +307,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                           })}
                         </Select>
                       </FormControl>
+                      ) : null}
                     </MDBox>
                   ) : null}
                 </TableCell>

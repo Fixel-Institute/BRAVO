@@ -80,6 +80,7 @@ function ChronicBrainSense() {
   const populateCircadianRhythmSelector = (data) => {
     const options = [];
     for (var i = 0; i < data.length; i++) {
+      if (!data[i]["CircadianPowers"]) continue;
       for (var j = 0; j < data[i]["CircadianPowers"].length; j++) {
         if (data[i]["CircadianPowers"][j]["Power"].length > 144*3) {
           if (data[i]["CustomName"]) {
@@ -111,6 +112,7 @@ function ChronicBrainSense() {
   const populateEventLockedPowerSelector = (data) => {
     const options = [];
     for (var i = 0; i < data.length; i++) {
+      if (!data[i]["EventLockedPower"]) continue;
       for (var j = 0; j < data[i]["EventLockedPower"].length; j++) {
         if (data[i]["EventLockedPower"][j].hasOwnProperty("PowerChart")) {
           options.push({
@@ -132,15 +134,17 @@ function ChronicBrainSense() {
   
   const populateEventPSDSelector = (data) => {
     const options = [];
-    for (var i = 0; i < data.length; i++) {
-      for (var j = 0; j < data[i]["Render"].length; j++) {
-        if (data[i]["Render"][j].hasOwnProperty("Events")) {
-          options.push({
-            label: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["Render"][j]["Therapy"],
-            hemisphere: data[i]["Device"] + " " + data[i]["Hemisphere"],
-            therapyName: data[i]["Render"][j]["Therapy"],
-            value: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["Render"][j]["Therapy"]
-          });
+    if (data) {
+      for (var i = 0; i < data.length; i++) {
+        for (var j = 0; j < data[i]["Render"].length; j++) {
+          if (data[i]["Render"][j].hasOwnProperty("Events")) {
+            options.push({
+              label: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["Render"][j]["Therapy"],
+              hemisphere: data[i]["Device"] + " " + data[i]["Hemisphere"],
+              therapyName: data[i]["Render"][j]["Therapy"],
+              value: data[i]["Device"] + " " + data[i]["Hemisphere"] + " " + data[i]["Render"][j]["Therapy"]
+            });
+          }
         }
       }
     }
@@ -235,7 +239,7 @@ function ChronicBrainSense() {
                           </MDBox>
                         </Grid>
                         <Grid item xs={12} lg={12}>
-                          <ChronicPowerTrend dataToRender={data} height={800} selectedDevice={availableDevice.current} events={eventList} figureTitle={"ChronicPowerTrend"}/>
+                          <ChronicPowerTrend dataToRender={data} height={400} selectedDevice={availableDevice.current} events={eventList} figureTitle={"ChronicPowerTrend"}/>
                         </Grid>
                       </>
                     ) : (

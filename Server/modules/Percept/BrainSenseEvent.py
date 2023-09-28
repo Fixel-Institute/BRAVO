@@ -32,8 +32,7 @@ from utility import SignalProcessingUtility as SPU
 from utility.PythonUtility import *
 
 from Backend import models
-from modules import Database
-from modules.Percept import Therapy
+from modules import Database, Therapy
 
 key = os.environ.get('ENCRYPTION_KEY')
 

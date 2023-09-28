@@ -44,7 +44,7 @@ from modules import Database
 
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveChronicLFP(deviceID, ChronicLFPs, sourceFile):
+def saveChronicLogs(deviceID, ChronicLogs, sourceFile):
     """ Save Chronic BrainSense Data in Database Storage
 
     Args:
@@ -55,139 +55,104 @@ def saveChronicLFP(deviceID, ChronicLFPs, sourceFile):
     Returns:
       Boolean indicating if new data is found (to be saved).
     """
-
+    ChronicLogTimestamp = []
+    ChronicLogState = []
+    for log in ChronicLogs:
+        if log["Payload"]["ID"] == "AdaptiveTherapyStateChange":
+            ChronicLogTimestamp.append(log["Timestamp"])
+            ChronicLogState.append(log["Payload"]["AdaptiveTherapy"]["NewState"])
+    ChronicLogTimestamp = np.array(ChronicLogTimestamp)
+    ChronicLogState = np.array(ChronicLogState)
+    
     NewRecordingFound = False
-    for key in ChronicLFPs.keys():
-        recording_info = {"Hemisphere": key}
-        if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="ChronicLFPs", recording_info__Hemisphere=recording_info["Hemisphere"]).exists():
-            recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_type="ChronicLFPs", recording_info=recording_info)
-            filename = Database.saveSourceFiles(ChronicLFPs[key], "ChronicLFPs", key.replace("HemisphereLocationDef.",""), recording.recording_id, recording.device_deidentified_id)
-            recording.recording_datapointer = filename
-            recording.save()
+    recording_info = {"Hemisphere": "AllHemisphere"}
+    if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitChronicLogs", recording_info__Hemisphere=recording_info["Hemisphere"]).exists():
+        sortedIndex = np.argsort(ChronicLogTimestamp,axis=0).flatten()
+        ChronicLogTimestamp = ChronicLogTimestamp[sortedIndex]
+        ChronicLogState = ChronicLogState[sortedIndex]
+        
+        recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_type="SummitChronicLogs", recording_info=recording_info)
+        filename = Database.saveSourceFiles({
+            "ChronicLogs": {
+                "DateTime": ChronicLogTimestamp,
+                "State": ChronicLogState,
+            }
+        }, "SummitChronicLogs", "SummitRCS", recording.recording_id, recording.device_deidentified_id)
+        recording.recording_datapointer = filename
+        recording.save()
+        NewRecordingFound = True
+    else:
+        recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitChronicLogs", recording_info__Hemisphere=recording_info["Hemisphere"]).first()
+        ChronicData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+        Common = set(ChronicLogTimestamp) & set(ChronicData["ChronicLogs"]["DateTime"])
+
+        toInclude = np.zeros(len(ChronicLogTimestamp), dtype=bool)
+        IndexToInclude = list()
+        for i in range(len(ChronicLogTimestamp)):
+            if not ChronicLogTimestamp[i] in Common:
+                toInclude[i] = True
+
+        if np.any(toInclude):
+            ChronicData["ChronicLogs"]["DateTime"] = np.concatenate((ChronicData["ChronicLogs"]["DateTime"], ChronicLogTimestamp[toInclude]),axis=0)
+            ChronicData["ChronicLogs"]["State"] = np.concatenate((ChronicData["ChronicLogs"]["State"], ChronicLogState[toInclude]),axis=0)
+            
+            sortedIndex = np.argsort(ChronicData["ChronicLogs"]["DateTime"],axis=0).flatten()
+            ChronicData["ChronicLogs"]["DateTime"] = ChronicData["ChronicLogs"]["DateTime"][sortedIndex]
+            ChronicData["ChronicLogs"]["State"] = ChronicData["ChronicLogs"]["State"][sortedIndex]
+            filename = Database.saveSourceFiles({
+                "ChronicLogs": ChronicData["ChronicLogs"]
+            }, "SummitChronicLogs", "SummitRCS", recording.recording_id, recording.device_deidentified_id)
+            
             NewRecordingFound = True
-        else:
-            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="ChronicLFPs", recording_info__Hemisphere=recording_info["Hemisphere"]).first()
-            pastChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
-
-            Common = set(ChronicLFPs[key]["DateTime"]) & set(pastChronicLFPs["DateTime"])
-
-            toInclude = np.zeros(len(ChronicLFPs[key]["DateTime"]), dtype=bool)
-            IndexToInclude = list()
-            for i in range(len(ChronicLFPs[key]["DateTime"])):
-                if not ChronicLFPs[key]["DateTime"][i] in Common:
-                    toInclude[i] = True
-
-            if np.any(toInclude):
-                pastChronicLFPs["DateTime"] = np.concatenate((pastChronicLFPs["DateTime"], ChronicLFPs[key]["DateTime"][toInclude]),axis=0)
-                pastChronicLFPs["Amplitude"] = np.concatenate((pastChronicLFPs["Amplitude"], ChronicLFPs[key]["Amplitude"][toInclude]),axis=0)
-                pastChronicLFPs["LFP"] = np.concatenate((pastChronicLFPs["LFP"], ChronicLFPs[key]["LFP"][toInclude]),axis=0)
-
-                sortedIndex = np.argsort(pastChronicLFPs["DateTime"],axis=0).flatten()
-                pastChronicLFPs["DateTime"] = pastChronicLFPs["DateTime"][sortedIndex]
-                pastChronicLFPs["Amplitude"] = pastChronicLFPs["Amplitude"][sortedIndex]
-                pastChronicLFPs["LFP"] = pastChronicLFPs["LFP"][sortedIndex]
-                filename = Database.saveSourceFiles(pastChronicLFPs, "ChronicLFPs", key.replace("HemisphereLocationDef.",""), recording.recording_id, recording.device_deidentified_id)
-                NewRecordingFound = True
 
     return NewRecordingFound
 
-def queryChronicLFPsByTime(user, patientUniqueID, timeRange, authority):
-    LFPTrends = list()
-    availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
-    for device in availableDevices:
-        leads = device.device_lead_configurations
-        for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
-            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="ChronicLFPs", recording_info__Hemisphere=hemisphere).first()
-            if not recording == None:
-                ChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
-                if device.device_name == "":
-                    LFPTrends.append({"Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
+def processPowerBand(device, ChronicLFPs):
+    recordings = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="SummitStreamingPower")
+    PowerStreams = {}
+    for recording in recordings:
+        PowerStream = Database.loadSourceDataPointer(recording.recording_datapointer)
+        if not "LfpConfig" in PowerStream["Descriptor"].keys():
+            continue
+        
+        PowerStream["Time"] = np.arange(PowerStream["Data"].shape[0])/PowerStream["SamplingRate"] + PowerStream["StartTime"]
+        for i in range(len(PowerStream["Descriptor"]["PowerBands"])):
+            FrequencyResolution = PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["SamplingRate"] / PowerStream["Descriptor"]["NFFT"]
+            if i < 4:
+                ChannelNames = "Left " + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][0] + "-" + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][1]
+            else:
+                ChannelNames = "Right " + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][0] + "-" + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][1]
+            #ChannelNames += f" {PowerStream['ChannelNames'][i]}"
+            ChannelNames += f" {PowerStream['Descriptor']['PowerBands'][i][0]*FrequencyResolution:.2f}-{PowerStream['Descriptor']['PowerBands'][i][1]*FrequencyResolution:.2f} Hz"
+            
+            if not ChannelNames in PowerStreams.keys():
+                if i < 4:
+                    PowerStreams[ChannelNames] = {"Hemisphere": "Left", "PowerBand": PowerStream['ChannelNames'][i], "Power": np.array((0,1)), "Time": np.array((0,1))}
                 else:
-                    LFPTrends.append({"Device": device.device_name, "DeviceLocation": device.device_location})
+                    PowerStreams[ChannelNames] = {"Hemisphere": "Right", "PowerBand": PowerStream['ChannelNames'][i], "Power": np.array((0,1)), "Time": np.array((0,1))}
+            PowerStreams[ChannelNames]["Power"] = np.concatenate((PowerStreams[ChannelNames]["Power"], PowerStream["Data"][:,i]))
+            PowerStreams[ChannelNames]["Time"] = np.concatenate((PowerStreams[ChannelNames]["Time"], PowerStream["Time"]))
+    
+    for key in PowerStreams.keys():
+        SortIndex = np.argsort(PowerStreams[key]["Time"])
+        PowerStreams[key]["Time"] = PowerStreams[key]["Time"][SortIndex]
+        PowerStreams[key]["Power"] = PowerStreams[key]["Power"][SortIndex]
 
-                for lead in leads:
-                    if lead["TargetLocation"].startswith(hemisphere.replace("HemisphereLocationDef.","")):
-                        LFPTrends[-1]["Hemisphere"] = lead["TargetLocation"]
+        NewTimestamp = []
+        SmoothPower = []
+        i = 0
+        while i < len(PowerStreams[key]["Time"]):
+            TimeSelection = rangeSelection(PowerStreams[key]["Time"], [PowerStreams[key]["Time"][i]-60, PowerStreams[key]["Time"][i]+60], "inclusive")
+            SmoothPower.append(np.mean(PowerStreams[key]["Power"][TimeSelection]))
+            NewTimestamp.append(PowerStreams[key]["Time"][SortIndex[i]])
+            i = np.where(TimeSelection)[0][-1]+1
 
-                LFPTimestamps = ChronicLFPs["DateTime"]
-                LFPPowers = ChronicLFPs["LFP"]
-                StimulationAmplitude = ChronicLFPs["Amplitude"]
-                LFPTimestamps = np.array([time.timestamp() for time in LFPTimestamps])
-                LFPTrends[-1]["Timestamp"] = list()
-                LFPTrends[-1]["Power"] = list()
-                LFPTrends[-1]["Amplitude"] = list()
-                LFPTrends[-1]["EventName"] = list()
-                LFPTrends[-1]["EventTime"] = list()
+        PowerStreams[key]["Power"] = np.array(SmoothPower)
+        PowerStreams[key]["Time"] = np.array(NewTimestamp)
 
-                # Remove Outliers
-                LFPSelection = LFPPowers < np.median(LFPPowers) + np.std(LFPPowers)*6
-                LFPTimestamps = LFPTimestamps[LFPSelection]
-                LFPPowers = LFPPowers[LFPSelection]
-                StimulationAmplitude = StimulationAmplitude[LFPSelection]
-
-                LFPTrends[-1]["PowerRange"] = [0,0]
-                LFPTrends[-1]["Timestamp"].append(LFPTimestamps)
-                FiltPower = np.array(LFPPowers).tolist()
-                LFPTrends[-1]["Power"].append(FiltPower)
-                LFPTrends[-1]["Amplitude"].append(np.array(StimulationAmplitude).tolist())
-                if np.percentile(FiltPower,5) < LFPTrends[-1]["PowerRange"][0]:
-                    LFPTrends[-1]["PowerRange"][0] = np.percentile(FiltPower,5)
-                if np.percentile(FiltPower,95) > LFPTrends[-1]["PowerRange"][1]:
-                    LFPTrends[-1]["PowerRange"][1] = np.percentile(FiltPower,95)
-
-                ChronicEvents = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id,
-                                    event_time__gt=timeRange[0], event_time__lt=timeRange[1]).all()
-                ChronicEvents = pd.DataFrame.from_records(ChronicEvents.values("event_name", "event_time"))
-                if "event_name" in ChronicEvents.keys():
-                    LFPTrends[-1]["EventName"] = ChronicEvents["event_name"]
-                    LFPTrends[-1]["EventTime"] = [time.timestamp() for time in ChronicEvents["event_time"]]
-                else:
-                    LFPTrends[-1]["EventName"] = []
-                    LFPTrends[-1]["EventTime"] = []
-
-                LFPTrends[-1]["Power"] = np.array(LFPTrends[-1]["Power"])
-                LFPTrends[-1]["Timestamp"] = np.array(LFPTrends[-1]["Timestamp"])
-
-    for i in range(len(LFPTrends)):
-        # Event Locked Power
-        EventToInclude = list()
-        LFPTrends[i]["EventLockedPower"] = dict()
-        LFPTrends[i]["EventLockedPower"]["TimeArray"] = np.arange(37)*600 - 180*60
-        EventLockedPower = np.zeros((len(LFPTrends[i]["EventName"]),len(LFPTrends[i]["EventLockedPower"]["TimeArray"])))
-        for iEvent in range(len(LFPTrends[i]["EventName"])):
-            dataSelected = rangeSelection(LFPTrends[i]["Timestamp"], [LFPTrends[i]["EventTime"][iEvent]+LFPTrends[i]["EventLockedPower"]["TimeArray"][0], LFPTrends[i]["EventTime"][iEvent]+LFPTrends[i]["EventLockedPower"]["TimeArray"][-1]])
-            PowerTrend = LFPTrends[i]["Power"][dataSelected]
-            Timestamp = LFPTrends[i]["Timestamp"][dataSelected]
-            if len(Timestamp) > 35:
-                index = np.argsort(Timestamp)
-                EventLockedPower[iEvent,:] = np.interp(LFPTrends[i]["EventLockedPower"]["TimeArray"]+LFPTrends[i]["EventTime"][iEvent], Timestamp[index], PowerTrend[index])
-                EventToInclude.append(iEvent)
-        EventToInclude = np.array(EventToInclude)
-
-        if not len(EventToInclude) == 0:
-            LFPTrends[i]["EventLockedPower"]["PowerChart"] = list()
-            LFPTrends[i]["EventLockedPower"]["EventName"] = np.array(LFPTrends[i]["EventName"])[EventToInclude]
-            EventLockedPower = EventLockedPower[EventToInclude,:]
-            for name in np.unique(LFPTrends[i]["EventLockedPower"]["EventName"]):
-                SelectedEvent = LFPTrends[i]["EventLockedPower"]["EventName"] == name
-                LFPTrends[i]["EventLockedPower"]["PowerChart"].append({"EventName": name + f" (n={np.sum(SelectedEvent)})",
-                                                "Line": np.mean(EventLockedPower[SelectedEvent,:], axis=0),
-                                                "Shade": SPU.stderr(EventLockedPower[SelectedEvent,:],axis=0)})
-
-            LFPTrends[i]["EventLockedPower"]["PowerRange"] = [np.percentile(EventLockedPower.flatten(),1),np.percentile(EventLockedPower.flatten(),99)]
-            LFPTrends[i]["EventLockedPower"]["TimeArray"] = LFPTrends[i]["EventLockedPower"]["TimeArray"] / 60
-
-    return LFPTrends
-
-def normalizeChronicLFPs(xdata, tdata, method="zscore"):
-    normPower = np.zeros(xdata.shape)
-    if method == "zscore":
-        for i in range(len(xdata)):
-            PeriodSelection = rangeSelection(tdata, [tdata[i]-12*3600, tdata[i]+12*3600])
-            normPower[i] = (xdata[i] - np.mean(xdata[PeriodSelection])) / stats.sem(xdata[PeriodSelection])
-    else:
-        normPower = xdata
-    return normPower
+    ChronicLFPs["PowerBand"] = PowerStreams
+    return ChronicLFPs
 
 def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
     """ Query Chronic LFPs based on Therapy History.
@@ -208,98 +173,147 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
     LFPTrends = list()
     if not authority["Permission"]:
         return LFPTrends
-
+    
     availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
+    PowerBandIndex = []
+
     for device in availableDevices:
         leads = device.device_lead_configurations
-        for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
-            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="ChronicLFPs", recording_info__Hemisphere=hemisphere).first()
-            if not recording == None:
-                ChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
-                if device.device_name == "":
-                    LFPTrends.append({"Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
+        recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="SummitChronicLogs", recording_info__Hemisphere="AllHemisphere").first()
+        if not recording == None:
+            ChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+            if not "PowerBand" in ChronicLFPs.keys():
+                ChronicLFPs = processPowerBand(device, ChronicLFPs)
+                Database.saveSourceFiles(ChronicLFPs, "SummitChronicLogs", "SummitRCS", recording.recording_id, recording.device_deidentified_id)
+
+            ChronicLFPChannels = ChronicLFPs["PowerBand"].keys()
+            for Channel in ChronicLFPChannels:
+                if not (str(device.deidentified_id) + ChronicLFPs["PowerBand"][Channel]["PowerBand"]) in PowerBandIndex:
+                    PowerBandIndex.append(str(device.deidentified_id) + ChronicLFPs["PowerBand"][Channel]["PowerBand"])
+                    if device.device_name == "":
+                        LFPTrends.append({"Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
+                    else:
+                        LFPTrends.append({"Device": device.device_name, "DeviceLocation": device.device_location})
+                    index = len(PowerBandIndex)-1
+                    
+                    LFPTrends[index]["Timestamp"] = list()
+                    LFPTrends[index]["Power"] = list()
+                    LFPTrends[index]["AdaptiveTimestamp"] = list()
+                    LFPTrends[index]["Amplitude"] = list()
+                    LFPTrends[index]["Therapy"] = list()
+                    LFPTrends[index]["EventName"] = list()
+                    LFPTrends[index]["EventTime"] = list()
+                    LFPTrends[index]["EventPower"] = list()
                 else:
-                    LFPTrends.append({"Device": device.device_name, "DeviceLocation": device.device_location})
-
+                    index = PowerBandIndex.index(str(device.deidentified_id) + ChronicLFPs["PowerBand"][Channel]["PowerBand"])
+                
                 for lead in leads:
-                    if lead["TargetLocation"].startswith(hemisphere.replace("HemisphereLocationDef.","")):
-                        LFPTrends[-1]["Hemisphere"] = lead["TargetLocation"]
-                        LFPTrends[-1]["CustomName"] = lead["CustomName"]
+                    if lead["TargetLocation"].startswith(ChronicLFPs["PowerBand"][Channel]["Hemisphere"]):
+                        LFPTrends[index]["Hemisphere"] = lead["TargetLocation"]
+                        LFPTrends[index]["CustomName"] = lead["CustomName"] + " " + ChronicLFPs["PowerBand"][Channel]["PowerBand"]
+                
+                Hemisphere = LFPTrends[index]["Hemisphere"].split(" ")[0]
+                LFPTimestamps = ChronicLFPs["PowerBand"][Channel]["Time"]
+                LFPPowers = ChronicLFPs["PowerBand"][Channel]["Power"]
+                StimulationTimestamps = ChronicLFPs["ChronicLogs"]["DateTime"]
+                StimulationAmplitude = ChronicLFPs["ChronicLogs"]["State"]
 
-                LFPTimestamps = ChronicLFPs["DateTime"]
-                LFPPowers = ChronicLFPs["LFP"]
-                StimulationAmplitude = ChronicLFPs["Amplitude"]
-                LFPTimestamps = np.array([time.timestamp() for time in LFPTimestamps])
-                LFPTrends[-1]["Timestamp"] = list()
-                LFPTrends[-1]["Power"] = list()
-                #LFPTrends[-1]["NormPower"] = list()
-                LFPTrends[-1]["Amplitude"] = list()
-                LFPTrends[-1]["Therapy"] = list()
-                LFPTrends[-1]["EventName"] = list()
-                LFPTrends[-1]["EventTime"] = list()
-                LFPTrends[-1]["EventPower"] = list()
+                LFPTimestamps = np.array(LFPTimestamps)
+                LFPPowers = np.array(LFPPowers)
+                StimulationTimestamps = np.array(StimulationTimestamps)
+                StimulationAmplitude = np.array(StimulationAmplitude, dtype=int)
 
                 # Remove Outliers
-                LFPSelection = np.abs(LFPPowers) < 1e6
+                LFPSelection = np.abs(LFPPowers) <= (np.median(LFPPowers) + np.std(LFPPowers)*6)
                 LFPTimestamps = LFPTimestamps[LFPSelection]
                 LFPPowers = LFPPowers[LFPSelection]
-                StimulationAmplitude = StimulationAmplitude[LFPSelection]
 
-                # Remove Outliers
-                LFPSelection = np.abs(LFPPowers) < (np.median(LFPPowers) + np.std(LFPPowers)*6)
-                LFPTimestamps = LFPTimestamps[LFPSelection]
-                LFPPowers = LFPPowers[LFPSelection]
-                StimulationAmplitude = StimulationAmplitude[LFPSelection]
+                LFPTrends[index]["PowerRange"] = [0,0]
 
-                LFPTrends[-1]["PowerRange"] = [0,0]
-
-                ChronicEventsDjango = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id).all()
-                ChronicEvents = pd.DataFrame.from_records(ChronicEventsDjango.values("event_name", "event_time"))
-                ChronicEvents.drop_duplicates(inplace=True)
-
-                #[b,a] = signal.butter(5, 0.00003*2*600, 'high', output='ba')
                 for therapy in TherapyHistory:
-                    if therapy["device"] == device.deidentified_id:
+                    if therapy["device"] == str(device.deidentified_id):
                         for i in range(len(therapy["date_of_change"])-1):
-                            rangeSelected = rangeSelection(LFPTimestamps,[therapy["date_of_change"][i]/1000000000,therapy["date_of_change"][i+1]/1000000000])
+                            rangeSelected = rangeSelection(LFPTimestamps, [therapy["date_of_change"][i]/1000000000, therapy["date_of_change"][i+1]/1000000000])
                             if np.any(rangeSelected):
-                                try:
-                                    TherapyDetails = therapy["therapy"][i][hemisphere.replace("HemisphereLocationDef.","")+"Hemisphere"]
-                                except:
-                                    continue
-                                
-                                LFPTrends[-1]["Timestamp"].append(LFPTimestamps[rangeSelected])
-                                #FiltPower = signal.filtfilt(b,a,LFPPowers[rangeSelected])
+                                LFPTrends[index]["Timestamp"].append(LFPTimestamps[rangeSelected])
+                                LFPTrends[index]["AdaptiveTimestamp"].append([])
                                 FiltPower = np.array(LFPPowers[rangeSelected])
-                                LFPTrends[-1]["Power"].append(FiltPower.tolist())
-                                #LFPTrends[-1]["NormPower"].append(normalizeChronicLFPs(FiltPower, LFPTimestamps[rangeSelected]).tolist())
-                                LFPTrends[-1]["Amplitude"].append(np.array(StimulationAmplitude[rangeSelected]).tolist())
-                                LFPTrends[-1]["Therapy"].append(copy.deepcopy(therapy["therapy"][i]))
+                                LFPTrends[index]["Power"].append(FiltPower.tolist())
+                                LFPTrends[index]["Amplitude"].append([])
+                                LFPTrends[index]["Therapy"].append(copy.deepcopy(therapy["therapy"][i]))
                                 
-                                if "AdaptiveSetup" in TherapyDetails.keys():
-                                    if "Bypass" in TherapyDetails["AdaptiveSetup"].keys():
-                                        LFPTrends[-1]["Power"][-1] = []
-                                
-                                if np.percentile(FiltPower,5) < LFPTrends[-1]["PowerRange"][0]:
-                                    LFPTrends[-1]["PowerRange"][0] = np.percentile(FiltPower,5)
-                                if np.percentile(FiltPower,95) > LFPTrends[-1]["PowerRange"][1]:
-                                    LFPTrends[-1]["PowerRange"][1] = np.percentile(FiltPower,95)
+                                LFPTrends[index]["Therapy"][-1]["TherapyOverview"] = Channel
+                                    
+                                if np.percentile(FiltPower,5) < LFPTrends[index]["PowerRange"][0]:
+                                    LFPTrends[index]["PowerRange"][0] = np.percentile(FiltPower,5)
+                                if np.percentile(FiltPower,95) > LFPTrends[index]["PowerRange"][1]:
+                                    LFPTrends[index]["PowerRange"][1] = np.percentile(FiltPower,95)
 
-                                if "event_time" in ChronicEvents.keys() and len(LFPTrends[-1]["Power"][-1]) > 0:
-                                    SelectedTime = np.bitwise_and(ChronicEvents["event_time"] > datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc), ChronicEvents["event_time"] < datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc))
-                                    if np.any(SelectedTime):
-                                        LFPTrends[-1]["EventName"].append(ChronicEvents["event_name"][SelectedTime])
-                                        LFPTrends[-1]["EventTime"].append([time.timestamp() for time in ChronicEvents["event_time"][SelectedTime]])
-                                        LFPTrends[-1]["EventPower"].append([LFPTrends[-1]["Power"][-1][findClosest(LFPTrends[-1]["Timestamp"][-1], time)[1]] for time in LFPTrends[-1]["EventTime"][-1]])
+                                LFPTrends[index]["EventName"].append([])
+                                LFPTrends[index]["EventTime"].append([])
+                                LFPTrends[index]["EventPower"].append([])
+                                
+                            rangeSelected = rangeSelection(StimulationTimestamps, [therapy["date_of_change"][i]/1000000000, therapy["date_of_change"][i+1]/1000000000])
+                            if np.any(rangeSelected):
+                                LFPTrends[index]["Timestamp"].append([])
+                                LFPTrends[index]["Power"].append([])
+
+                                StateDictionary = np.zeros(9)
+                                if "Adaptive" in therapy["therapy"][i]["Therapy"].keys():
+                                    if "Adaptive" in therapy["therapy"][i]["Therapy"]["Adaptive"].keys():
+                                        if "State" in therapy["therapy"][i]["Therapy"]["Adaptive"]["Adaptive"].keys():
+                                            if therapy["therapy"][i]["Therapy"]["Adaptive"]["Adaptive"]["Status"] == "EmbeddedActive":
+                                                StateDictionary = []
+                                                for j in range(9):
+                                                    TherapyAmplitudes = np.array([therapy["therapy"][i]["Therapy"]["Adaptive"]["Adaptive"]["State"][j]["prog0AmpInMilliamps"], 
+                                                                     therapy["therapy"][i]["Therapy"]["Adaptive"]["Adaptive"]["State"][j]["prog1AmpInMilliamps"],
+                                                                     therapy["therapy"][i]["Therapy"]["Adaptive"]["Adaptive"]["State"][j]["prog2AmpInMilliamps"],
+                                                                     therapy["therapy"][i]["Therapy"]["Adaptive"]["Adaptive"]["State"][j]["prog3AmpInMilliamps"]])
+                                                    TherapyAmplitudes[TherapyAmplitudes > 25] = 0
+                                                    StateDictionary.append(np.sum(TherapyAmplitudes))
+                                                StateDictionary = np.array(StateDictionary)
+
+                                TimestampRaw = StimulationTimestamps[rangeSelected]
+                                AmplitudeRaw = StateDictionary[StimulationAmplitude[rangeSelected]]
+
+                                SmoothWindow = 1800
+                                NewTimestamp = np.arange(TimestampRaw[0], TimestampRaw[-1], SmoothWindow)
+                                SmoothAmplitude = np.zeros(NewTimestamp.shape)
+                                for j in range(len(NewTimestamp)):
+                                    StartAmplitude = np.where(TimestampRaw <= NewTimestamp[j])[0][-1]
+                                    EndAmplitude = np.where(TimestampRaw <= NewTimestamp[j]+SmoothWindow)[0][-1]
+                                    AmplitudeAdjustmentSelection = rangeSelection(TimestampRaw, [NewTimestamp[j], NewTimestamp[j]+SmoothWindow])
+                                    AmplitudeAdjustment = TimestampRaw[AmplitudeAdjustmentSelection]
+                                    SelectedAmplitude = AmplitudeRaw[AmplitudeAdjustmentSelection]
+                                    
+                                    if len(AmplitudeAdjustment) == 0:
+                                        SmoothAmplitude[j] = AmplitudeRaw[StartAmplitude]
+                                    elif len(AmplitudeAdjustment) == 1:
+                                        SmoothAmplitude[j] = AmplitudeRaw[StartAmplitude] * (AmplitudeAdjustment[0]-NewTimestamp[j]) + AmplitudeRaw[EndAmplitude] * (SmoothWindow-AmplitudeAdjustment[0]+NewTimestamp[j])
+                                        SmoothAmplitude[j] /= SmoothWindow
                                     else:
-                                        LFPTrends[-1]["EventName"].append([])
-                                        LFPTrends[-1]["EventTime"].append([])
-                                        LFPTrends[-1]["EventPower"].append([])
+                                        SmoothAmplitude[j] += AmplitudeRaw[StartAmplitude] * (AmplitudeAdjustment[0]-NewTimestamp[j])
+                                        for k in range(1, len(AmplitudeAdjustment)):
+                                            SmoothAmplitude[j] += SelectedAmplitude[k-1] * (AmplitudeAdjustment[k]-AmplitudeAdjustment[k-1])
+                                        SmoothAmplitude[j] += AmplitudeRaw[EndAmplitude] * (SmoothWindow-AmplitudeAdjustment[-1]+NewTimestamp[j])
+                                        SmoothAmplitude[j] /= SmoothWindow
+                                        
+                                LFPTrends[index]["AdaptiveTimestamp"].append(NewTimestamp+SmoothWindow/2)
+                                LFPTrends[index]["Amplitude"].append(SmoothAmplitude)
+                                LFPTrends[index]["Therapy"].append(copy.deepcopy(therapy["therapy"][i]))
+                                if Hemisphere+'Hemisphere' in LFPTrends[index]['Therapy'][-1]['Therapy'].keys():
+                                    LFPTrends[index]["Therapy"][-1]["TherapyOverview"] = f"{LFPTrends[index]['Therapy'][-1]['Therapy'][Hemisphere+'Hemisphere']['Frequency']}Hz {LFPTrends[index]['Therapy'][-1]['Therapy'][Hemisphere+'Hemisphere']['PulseWidth']}μSec @ {LFPTrends[index]['Therapy'][-1]['Therapy']['Programs'][0]['Electrode']}"
                                 else:
-                                    LFPTrends[-1]["EventName"].append([])
-                                    LFPTrends[-1]["EventTime"].append([])
-                                    LFPTrends[-1]["EventPower"].append([])
+                                    LFPTrends[index]["Therapy"][-1]["TherapyOverview"] = "Therapy Unavailable"
 
+                                LFPTrends[index]["EventName"].append([])
+                                LFPTrends[index]["EventTime"].append([])
+                                LFPTrends[index]["EventPower"].append([])
+
+                ChronicLFPs["ChronicLogs"]["DateTime"] = np.array([])
+                ChronicLFPs["ChronicLogs"]["State"] = np.array([])
+                
     return LFPTrends
 
 def processChronicLFPs(LFPTrends, timezoneOffset=0):

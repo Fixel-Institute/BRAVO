@@ -26,8 +26,9 @@ from django.http import HttpResponse
 
 from Backend import models
 
-from modules import Database, ImageDatabase, AnalysisBuilder, WearableRecordingsDatabase
-from modules.Percept import Therapy, Sessions, BrainSenseSurvey, BrainSenseEvent, BrainSenseStream, IndefiniteStream, ChronicBrainSense, TherapeuticPrediction, AdaptiveStimulation
+from modules import Database, ImageDatabase, AnalysisBuilder, WearableRecordingsDatabase, Therapy, RealtimeStream
+from modules.Percept import Sessions, BrainSenseSurvey, BrainSenseEvent, BrainSenseStream, IndefiniteStream, ChronicBrainSense, TherapeuticPrediction, AdaptiveStimulation
+from modules.Summit import ChronicLogs, StreamingData
 from utility.PythonUtility import uniqueList
 import json
 import numpy as np
@@ -140,7 +141,7 @@ class QueryProcessingQueue(RestViews.APIView):
     def post(self, request):
         if "clearQueue" in request.data:
             if request.data["clearQueue"] == "All":
-                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, type__in=["decodeJSON", "externalCSVs"])
+                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, type__in=["decodeJSON", "decodeSummitZIP", "externalCSVs"])
                 for queue in queues:
                     try:
                         os.remove(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"])
@@ -148,13 +149,13 @@ class QueryProcessingQueue(RestViews.APIView):
                         pass
                     queue.delete()
             else:
-                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, type__in=["decodeJSON", "externalCSVs"], state=request.data["clearQueue"]).delete()
+                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, type__in=["decodeJSON", "decodeSummitZIP", "externalCSVs"], state=request.data["clearQueue"]).delete()
             return Response(status=200)
         else:
             queues = models.ProcessingQueue.objects.all()
             data = []
             for i in range(len(queues)):
-                if queues[i].owner == request.user.unique_user_id and queues[i].type in ["decodeJSON", "externalCSVs"]:
+                if queues[i].owner == request.user.unique_user_id and queues[i].type in ["decodeJSON", "decodeSummitZIP", "externalCSVs"]:
                     data.append({
                         "currentIndex": i,
                         "taskId": queues[i].queue_id,
@@ -331,7 +332,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
                 data = {}
-                data["streamingData"] = BrainSenseStream.queryRealtimeStreamOverview(request.user, request.data["id"], Authority)
+                data["streamingData"] = RealtimeStream.queryRealtimeStreamOverview(request.user, request.data["id"], Authority)
                 data["annotations"] = Database.extractTags("Annotations", request.user.email)
                 data["configuration"] = request.user.configuration["ProcessingSettings"]["RealtimeStream"]
                 return Response(status=200, data=data)
@@ -339,7 +340,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
                 data = {}
-                data["streamingData"] = BrainSenseStream.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
+                data["streamingData"] = RealtimeStream.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
                 data["annotations"] = Database.extractTags("Annotations", request.user.email)
                 data["configuration"] = request.user.configuration["ProcessingSettings"]["RealtimeStream"]
                 return Response(status=200, data=data)
@@ -357,7 +358,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
 
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
                 
@@ -370,20 +371,22 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                     "Duration": item.event_duration
                 } for item in annotations]
 
-                data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"], centerFrequencies=centerFrequencies)
+                data = RealtimeStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"], centerFrequencies=centerFrequencies)
+                data = RealtimeStream.processAnnotationAnalysis(data)
                 return Response(status=200, data=data)
 
             elif Authority["Level"] == 2:
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
 
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
-                BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
                 
                 BrainSenseData["Annotations"] = []
 
-                data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"], centerFrequencies=centerFrequencies)
+                data = RealtimeStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"], centerFrequencies=centerFrequencies)
+                data = RealtimeStream.processAnnotationAnalysis(data)
                 return Response(status=200, data=data)
 
         elif "updateStimulationPSD" in request.data:
@@ -394,22 +397,31 @@ class QueryBrainSenseStreaming(RestViews.APIView):
 
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
-                BrainSenseData["PowerDomain"]["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
-                StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
+                
+                if BrainSenseData["Info"]["Device"] == "Summit RC+S":
+                    BrainSenseData["PowerDomain"]["Stimulation"] = StreamingData.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
+                    ChannelName = request.data["channel"]["Hemisphere"].split(" ")[0] + " " + request.data["channel"]["Contacts"]
+                    StimPSD = StreamingData.processRealtimeStreamStimulationPSD(BrainSenseData, ChannelName, method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
+                else:
+                    BrainSenseData["PowerDomain"]["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
+                    ContactDict = {0: "ZERO", 1: "ONE", 2: "TWO", 3: "THREE"}
+                    ChannelName = ContactDict[request.data["channel"]["Contacts"][0]] + "_" + ContactDict[request.data["channel"]["Contacts"][1]] + "_" + request.data["channel"]["Hemisphere"].split(" ")[0].upper()
+                    StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, ChannelName, method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
+                
                 return Response(status=200, data=StimPSD)
 
             elif Authority["Level"] == 2:
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
 
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
-                BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
-                BrainSenseData["PowerDomain"]["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
-                StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
+                BrainSenseData["PowerDomain"]["Stimulation"] = RealtimeStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
+                StimPSD = RealtimeStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
                 return Response(status=200, data=StimPSD)
 
         elif "updateCardiacFilter" in request.data:
@@ -420,7 +432,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
             elif Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
 
-            BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=True, cardiacFilter=request.data["updateCardiacFilter"])
+            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=True, cardiacFilter=request.data["updateCardiacFilter"])
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
             
@@ -433,7 +445,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 "Duration": item.event_duration
             } for item in annotations]
 
-            data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"])
+            data = RealtimeStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"])
             return Response(status=200, data=data)
 
         elif "updateWaveletTransform" in request.data:
@@ -447,7 +459,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
             elif Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
 
-            BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority)
+            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority)
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
             
@@ -460,7 +472,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 "Duration": item.event_duration
             } for item in annotations]
             
-            data = BrainSenseStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"])
+            data = RealtimeStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"])
             return Response(status=200, data=data)
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
@@ -647,12 +659,17 @@ class QueryChronicBrainSense(RestViews.APIView):
                 PatientID = PatientInfo.authorized_patient_id
 
             data = dict()
-            TherapyHistory = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
-            data["ChronicData"] = ChronicBrainSense.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)
-            data["EventPSDs"] = BrainSenseEvent.queryPatientEventPSDs(request.user, PatientID, TherapyHistory, Authority)
-
-            data["ChronicData"] = ChronicBrainSense.processChronicLFPs(data["ChronicData"], int(request.data["timezoneOffset"]))
-            data["EventPSDs"] = BrainSenseEvent.processEventPSDs(data["EventPSDs"])
+            availableDevices = Database.getPerceptDevices(request.user, PatientID, Authority)
+            DeviceTypes = [device.device_type for device in availableDevices]
+            if "Summit RC+S" in DeviceTypes:
+                TherapyHistory = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
+                data["ChronicData"] = ChronicLogs.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)
+            else:
+                TherapyHistory = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
+                data["ChronicData"] = ChronicBrainSense.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)
+                data["EventPSDs"] = BrainSenseEvent.queryPatientEventPSDs(request.user, PatientID, TherapyHistory, Authority)
+                data["ChronicData"] = ChronicBrainSense.processChronicLFPs(data["ChronicData"], int(request.data["timezoneOffset"]))
+                data["EventPSDs"] = BrainSenseEvent.processEventPSDs(data["EventPSDs"])
 
             return Response(status=200, data=data)
 
@@ -761,13 +778,13 @@ class QueryPredictionModel(RestViews.APIView):
                 return Response(status=404)
             elif Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data = BrainSenseStream.queryRealtimeStreamOverview(request.user, request.data["id"], Authority)
+                data = RealtimeStream.queryRealtimeStreamOverview(request.user, request.data["id"], Authority)
                 data = [item for item in data if item["Duration"] > 30]
                 return Response(status=200, data=data)
             elif Authority["Level"] == 2:
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
-                data = BrainSenseStream.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
+                data = RealtimeStream.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
                 data = [item for item in data if item["Duration"] > 30]
                 return Response(status=200, data=data)
 
@@ -787,10 +804,10 @@ class QueryPredictionModel(RestViews.APIView):
             else:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
 
-            BrainSenseData, _ = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
-            BrainSenseData["PowerDomain"]["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
+            BrainSenseData["PowerDomain"]["Stimulation"] = RealtimeStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
 
             data = list()
             for stimulationSide in BrainSenseData["PowerDomain"]["Stimulation"]:
@@ -812,13 +829,13 @@ class QueryPredictionModel(RestViews.APIView):
 
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                BrainSenseData, RecordingID = BrainSenseStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, RecordingID = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
-                BrainSenseData["PowerDomain"]["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
+                BrainSenseData["PowerDomain"]["Stimulation"] = RealtimeStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
                 
                 data = dict()
-                data["StimPSD"] = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=request.data["centerFrequency"])
+                data["StimPSD"] = RealtimeStream.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["channel"], method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label="Ipsilateral", centerFrequency=request.data["centerFrequency"])
                 
                 if not "CenterFrequency" in BrainSenseData["Info"]:
                     BrainSenseData["Info"]["CenterFrequency"] = dict()
@@ -859,7 +876,7 @@ class QueryMultipleSegmentComparison(RestViews.APIView):
             PatientInfo = Database.extractAccess(request.user, request.data["id"])
             Authority["Devices"] = PatientInfo.device_deidentified_id
 
-            data = BrainSenseStream.queryMultipleSegmentComparison(request.user, request.data["recordingIds"], Authority)
+            data = RealtimeStream.queryMultipleSegmentComparison(request.user, request.data["recordingIds"], Authority)
             return Response(status=200, data=data)
 
         elif Authority["Level"] == 2:
@@ -1242,25 +1259,6 @@ class QueryImageModel(RestViews.APIView):
             elif request.data["FileType"] == "volume":
                 headers = ImageDatabase.niftiInfo(PatientID, request.data["FileName"])
                 return Response(status=200, data={"headers": headers})
-
-class QueryAdaptiveGroups(RestViews.APIView):
-    parser_classes = [RestParsers.JSONParser]
-    permission_classes = [IsAuthenticated]
-    def post(self, request):
-        if not "id" in request.data:
-            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
-
-        Authority = {}
-        Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-        if Authority["Level"] == 0 or Authority["Level"] == 2:
-            return Response(status=404)
-
-        elif Authority["Level"] == 1:
-            Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
-            PatientID = request.data["id"]
-
-        data = Therapy.queryAdaptiveGroupForThreshold(request.user, PatientID, Authority)
-        return Response(status=200, data=data)
 
 class QueryCircadianPower(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]

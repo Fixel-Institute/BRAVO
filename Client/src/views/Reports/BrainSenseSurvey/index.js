@@ -285,7 +285,7 @@ function BrainSenseSurvey() {
             <MDBox>
             <Grid container spacing={2} sx={{paddingLeft: 2, paddingRight: 2}}>
               {Object.keys(drawerOpen.config).map((key) => {
-                return <Grid item xs={12} sx={{
+                return <Grid item xs={12} key={key} sx={{
                   wordWrap: "break-word",
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word"

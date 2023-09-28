@@ -44,6 +44,7 @@ processingQueue = queue.Queue()
 from Backend import models
 from modules import Database, AnalysisBuilder
 from modules.Percept import Sessions
+from modules.Summit import Sessions as SummitSessions
 
 class DeidentificationTable(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
@@ -200,12 +201,21 @@ class SessionUpload(RestViews.APIView):
                 for key in request.data.keys():
                     if key.startswith("file"):
                         rawBytes = request.data[key].read()
-                        queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
-                            "filename": request.data[key].name,
-                            "device_deidentified_id": deviceId
-                        })
-                        Sessions.saveCacheJSON(request.data[key].name, rawBytes)
-                        queueItem.save()
+
+                        if request.data[key].name.endswith(".json"):
+                            queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeJSON", state="InProgress", descriptor={
+                                "filename": request.data[key].name,
+                                "device_deidentified_id": deviceId
+                            })
+                            Sessions.saveCacheJSON(request.data[key].name, rawBytes)
+                            queueItem.save()
+                        elif request.data[key].name.endswith(".zip"):
+                            queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="decodeSummitZIP", state="InProgress", descriptor={
+                                "filename": request.data[key].name,
+                                "device_deidentified_id": deviceId
+                            })
+                            SummitSessions.saveCacheZIP(request.data[key].name, rawBytes)
+                            queueItem.save()
 
             else:
                 hashedEncrpytionKey = hashlib.sha256(request.data["decryptionKey"].encode("utf-8")).hexdigest()[:32]

@@ -20,8 +20,19 @@ import {
   ToggleButtonGroup,
   Card,
   Grid,
+  IconButton,
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon,
   Slider
 } from "@mui/material"
+
+import { 
+  ChevronRight as ChevronRightIcon,
+  Settings as SettingsIcon,
+  KeyboardDoubleArrowUp as KeyboardDoubleArrowUpIcon, 
+  Dashboard as DashboardIcon
+} from "@mui/icons-material";
 
 // core components
 import MDBox from "components/MDBox";
@@ -29,13 +40,16 @@ import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import LoadingProgress from "components/LoadingProgress";
 import MuiAlertDialog from "components/MuiAlertDialog";
+import FormField from "components/MDInput/FormField";
 
 import DatabaseLayout from "layouts/DatabaseLayout";
+import LayoutOptions from "./LayoutOptions";
 
 import BrainSenseStreamingTable from "components/Tables/StreamingTable/BrainSenseStreamingTable";
 import TimeFrequencyAnalysis from "./TimeFrequencyAnalysis";
 import StimulationPSD from "./StimulationPSD";
 import StimulationBoxPlot from "./StimulationBoxPlot";
+import EventPSDs from "./EventPSDs";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
@@ -78,7 +92,7 @@ const StimulationReferenceButton = ({value, onChange}) => {
 function BrainSenseStreaming() {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
-  const { patientID, language } = controller;
+  const { patientID, BrainSensestreamLayout, language } = controller;
   const [recordingId, setRecordingId] = React.useState([]);
 
   const [data, setData] = React.useState([]);
@@ -86,23 +100,30 @@ function BrainSenseStreaming() {
   const [configuration, setConfiguration] = React.useState({});
   const [dataToRender, setDataToRender] = React.useState(false);
   const [channelInfos, setChannelInfos] = React.useState([]);
-  const [leftHemispherePSD, setLeftHemispherePSD] = React.useState([]);
-  const [rightHemispherePSD, setRightHemispherePSD] = React.useState([]);
-  const [leftHemisphereBox, setLeftHemisphereBox] = React.useState([]);
-  const [rightHemisphereBox, setRightHemisphereBox] = React.useState([]);
 
-  const [centerFrequencyLeft, setCenterFrequencyLeft] = React.useState(0);
-  const [centerFrequencyRight, setCenterFrequencyRight] = React.useState(0);
-
-  const [referenceType, setReferenceType] = React.useState(["Ipsilateral","Ipsilateral"]);
+  const [channelPSDs, setChannelPSDs] = React.useState([]);
   
-  const [timeFrequencyPlotHeight, setTimeFrequencyPlotHeight] = React.useState(600)
+  const [eventPSDs, setEventPSDs] = React.useState(false);
+  const [eventPSDSelector, setEventPSDSelector] = React.useState({
+    type: "Channels",
+    options: [],
+    value: ""
+  });
+  const [eventSpectrograms, setEventSpectrograms] = React.useState(false);
+  const [eventSpectrogramSelector, setEventSpectrogramSelector] = React.useState({
+    options: [],
+    value: ""
+  });
+
+  const [referenceType, setReferenceType] = React.useState([]);
+  
   const [alert, setAlert] = React.useState(null);
 
   React.useEffect(() => {
     if (!patientID) {
       navigate("/dashboard", {replace: false});
     } else {
+      setAlert(<LoadingProgress/>);
       SessionController.query("/api/queryBrainSenseStreaming", {
         id: patientID,
         requestOverview: true,
@@ -110,6 +131,7 @@ function BrainSenseStreaming() {
         setAnnotations(response.data.annotations)
         setData(response.data.streamingData);
         setConfiguration(response.data.configuration);
+        setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
@@ -131,16 +153,61 @@ function BrainSenseStreaming() {
       recordingId: timestamp, 
       requestData: true
     }).then((response) => {
-      if (response.data.Channels.length == 2) setTimeFrequencyPlotHeight(7*200);
-      else setTimeFrequencyPlotHeight(4*200);
       setChannelInfos(ChannelInfos);
+      setReferenceType(ChannelInfos.map((value) => "Ipsilateral"));
       setDataToRender(response.data);
+
+      if (Object.keys(response.data.EventPSDs).length > 0) {
+        setEventPSDs(response.data.EventPSDs)
+      } else {
+        setEventPSDs(false);
+      }
+      if (Object.keys(response.data.EventOnsetSpectrum).length > 0) {
+        setEventSpectrograms(response.data.EventOnsetSpectrum);
+      } else {
+        setEventSpectrograms(false);
+      }
+
       setAlert(null);
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
     });
   };
   
+  React.useEffect(() => {
+    if (!eventPSDs) return;
+
+    const Events = Object.keys(eventPSDs);
+    if (Events.length > 0) {
+      eventPSDSelector.options = eventPSDs[Events[0]].map((value, i) => {
+        const [side, target] = channelInfos[i].Hemisphere.split(" ");
+        let titleText = (channelInfos[i].Hemisphere == channelInfos[i].CustomName) ? dictionaryLookup(dictionary.FigureStandardText, side, language) + " " + dictionaryLookup(dictionary.FigureStandardText, target, language) : channelInfos[i].CustomName;
+        titleText += (typeof channelInfos[i].Contacts) == "string" ? " " + channelInfos[i].Contacts : ` E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
+        return {
+          text: titleText,
+          value: value.Channel
+        };
+      });
+      eventPSDSelector.value = eventPSDSelector.options[0];
+      setEventPSDSelector({...eventPSDSelector});
+    } else {
+      setEventPSDSelector({...eventPSDSelector, options: [], value: ""});
+    }
+  }, [eventPSDs]);
+
+  React.useEffect(() => {
+    if (!eventSpectrograms) return;
+
+    const Events = Object.keys(eventSpectrograms);
+    if (Events.length > 0) {
+      eventSpectrogramSelector.options = Events
+      eventSpectrogramSelector.value = eventSpectrogramSelector.options[0];
+      setEventSpectrogramSelector({...eventSpectrogramSelector});
+    } else {
+      setEventSpectrogramSelector({options: [], value: ""});
+    }
+  }, [eventSpectrograms]);
+
   const handleMerge = async (toggleMerge) => {
     try {
       let mergeResponse = await SessionController.query("/api/updateBrainSenseStream", {
@@ -160,47 +227,33 @@ function BrainSenseStreaming() {
   };
 
   const onCenterFrequencyChange = (side, freq) => {
-    var channelName = "";
     var reference = "Ipsilateral";
-    if (side === "Left") {
-      reference = referenceType[0];
-      for (var i in dataToRender.Channels) {
-        if (dataToRender.Channels[i].endsWith("LEFT")) {
-          channelName = dataToRender.Channels[i];
-        }
+    for (let i in channelInfos) {
+      if (channelInfos[i] == side) {
+        reference = referenceType[i];
       }
-      SessionController.query("/api/queryBrainSenseStreaming", {
-        updateStimulationPSD: true,
-        id: patientID,
-        recordingId: recordingId,
-        channel: channelName,
-        centerFrequency: freq,
-        stimulationReference: reference
-      }).then((response) => {
-        setLeftHemisphereBox(response.data);
-      }).catch((error) => {
-        SessionController.displayError(error, setAlert);
-      });
-    } else {
-      reference = referenceType[1];
-      for (var i in dataToRender.Channels) {
-        if (!dataToRender.Channels[i].endsWith("LEFT")) {
-          channelName = dataToRender.Channels[i];
-        }
-      }
-      SessionController.query("/api/queryBrainSenseStreaming", {
-        updateStimulationPSD: true,
-        id: patientID,
-        recordingId: recordingId,
-        channel: channelName,
-        centerFrequency: freq,
-        stimulationReference: reference
-      }).then((response) => {
-        setRightHemisphereBox(response.data);
-      }).catch((error) => {
-        SessionController.displayError(error, setAlert);
-      });
     }
+
+    SessionController.query("/api/queryBrainSenseStreaming", {
+      updateStimulationPSD: true,
+      id: patientID,
+      recordingId: recordingId,
+      channel: side,
+      centerFrequency: freq,
+      stimulationReference: reference
+    }).then((response) => {
+      setChannelPSDs((channelPSDs) => {
+        for (let i in channelInfos) {
+          if (channelInfos[i] == side) {
+            channelPSDs[i] = response.data;
+          }
+        }
+        return [...channelPSDs];
+      });
+      setAlert(null);
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
   };
 
   const toggleCardiacFilter = () => {
@@ -239,42 +292,33 @@ function BrainSenseStreaming() {
   };
 
   const handlePSDUpdate = (reference, side) => {
+    if (!reference) return;
     if (channelInfos.length == 1) return;
     
-    let channelName = "";
-    if (side == "Left") {
-      for (var i in dataToRender.Channels) {
-        if (dataToRender.Channels[i].endsWith("LEFT")) {
-          channelName = dataToRender.Channels[i];
-        }
-      }
-    } else {
-      for (var i in dataToRender.Channels) {
-        if (!dataToRender.Channels[i].endsWith("LEFT")) {
-          channelName = dataToRender.Channels[i];
-        }
-      }
-    }
-
     SessionController.query("/api/queryBrainSenseStreaming", {
       updateStimulationPSD: true,
       id: patientID,
       recordingId: recordingId,
-      channel: channelName,
+      channel: side,
       centerFrequency: 22,
       stimulationReference: reference
 
     }).then((response) => {
-      if (side == "Left") {
-        setLeftHemispherePSD(response.data);
-        setLeftHemisphereBox(response.data);
-      } else {
-        setRightHemispherePSD(response.data);
-        setRightHemisphereBox(response.data);
-      }
+      setChannelPSDs((channelPSDs) => {
+        for (let i in channelInfos) {
+          if (channelInfos[i] == side) {
+            channelPSDs[i] = response.data;
+          }
+        }
+        return [...channelPSDs];
+      });
 
       setReferenceType((referenceType) => {
-        referenceType[side == "Left" ? 0 : 1] = reference;
+        for (let i in channelInfos) {
+          if (channelInfos[i] == side) {
+            referenceType[i] = reference;
+          }
+        }
         return [...referenceType];
       });
       setAlert(null);
@@ -321,6 +365,8 @@ function BrainSenseStreaming() {
   };
 
   const adaptiveClosedLoopParameters = (therapy) => {
+    if (!therapy) return null;
+
     var adaptiveState = false;
     if (therapy.Left) {
       if (therapy.Left.StreamingAdaptiveMode) {
@@ -393,18 +439,10 @@ function BrainSenseStreaming() {
 
   // Divide all PSDs by day or by channel
   React.useEffect(() => {
-    setLeftHemispherePSD(false);
-    setLeftHemisphereBox(false);
-    setRightHemispherePSD(false);
-    setRightHemisphereBox(false);
-    for (var i in dataToRender.Channels) {
-      if (dataToRender.Channels[i].endsWith("LEFT")) {
-        setLeftHemispherePSD(dataToRender.Stream[i].StimPSD);
-        setLeftHemisphereBox(dataToRender.Stream[i].StimPSD);
-      } else {
-        setRightHemispherePSD(dataToRender.Stream[i].StimPSD);
-        setRightHemisphereBox(dataToRender.Stream[i].StimPSD);
-      }
+    if (dataToRender.Stream) {
+      setChannelPSDs(dataToRender.Stream.map((data) => data.StimPSD));
+    } else {
+      setChannelPSDs([]);
     }
   }, [dataToRender]);
 
@@ -448,7 +486,6 @@ function BrainSenseStreaming() {
 
     for (let i = 0; i < dataToRender.Annotations.length; i++) {
       let absoluteDiffTime = Math.abs(dataToRender.Annotations[i].Time - eventInfo.time/1000);
-      console.log(absoluteDiffTime)
       if (absoluteDiffTime < eventInfo.targetInfo.timeDiff) {
         eventInfo.targetInfo = dataToRender.Annotations[i];
         eventInfo.targetInfo.timeDiff = absoluteDiffTime;
@@ -540,7 +577,7 @@ function BrainSenseStreaming() {
                       <Grid item xs={12}>
                         <TimeFrequencyAnalysis dataToRender={dataToRender} channelInfos={channelInfos} 
                           handleAddEvent={handleAddEvent} handleDeleteEvent={handleDeleteEvent} annotations={annotations}
-                          figureTitle={"TimeFrequencyAnalysis"} height={timeFrequencyPlotHeight}/>
+                          figureTitle={"TimeFrequencyAnalysis"} height={600}/>
                       </Grid>
                       <Grid item xs={12}>
                         {adaptiveClosedLoopParameters(dataToRender.Info.Therapy)}
@@ -549,7 +586,7 @@ function BrainSenseStreaming() {
                   </Card>
                 </Grid>
               ) : null}
-              {dataToRender && channelInfos.length > 0 ? (
+              {!BrainSensestreamLayout.StimulationPSDs && dataToRender && channelInfos.length > 0 ? (
                 <Grid item xs={12}>
                   <Card>
                     <Grid container>
@@ -560,33 +597,111 @@ function BrainSenseStreaming() {
                           </MDTypography>
                         </MDBox>
                       </Grid>
-                      <Grid item xs={12} lg={6}>
-                        {leftHemispherePSD.length > 0 ? (
-                          <MDBox display={"flex"} flexDirection={"column"}>
-                            <StimulationReferenceButton value={referenceType[0]} onChange={(event, value) => handlePSDUpdate(value, "Left")} />
-                            <StimulationPSD dataToRender={leftHemispherePSD} channelInfos={channelInfos} type={"Left"} figureTitle={"LeftStimulationPSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>
-                          </MDBox>
-                        ) : null}
+                      {channelPSDs.map((channelData, index) => {
+                        return <React.Fragment key={index}>
+                          <Grid item xs={12} lg={6}>
+                            <MDBox display={"flex"} flexDirection={"column"}>
+                              <StimulationReferenceButton value={referenceType[index]} onChange={(event, value) => handlePSDUpdate(value, channelInfos[index])} />
+                              <StimulationPSD dataToRender={channelData} channelInfos={channelInfos[index]} type={"Left"} figureTitle={channelInfos[index].Hemisphere + index.toFixed(0) + " PSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>
+                            </MDBox>
+                          </Grid>
+                          <Grid item xs={12} lg={6}>
+                            <StimulationBoxPlot dataToRender={channelData} channelInfos={channelInfos[index]} type={"Left"} figureTitle={channelInfos[index].Hemisphere + index.toFixed(0) + " Box"} height={600}/>
+                          </Grid>
+                        </React.Fragment>
+                      })}
+                    </Grid>
+                  </Card>
+                </Grid>
+              ) : null}
+              {(!BrainSensestreamLayout.EventStatePSD && eventPSDs) ? (
+                <Grid item xs={6}> 
+                  <Card sx={{width: "100%"}}>
+                    <Grid container p={2}>
+                      <Grid item xs={12}>
+                        <MDBox display={"flex"} flexDirection={"row"} justifyContent={"space-between"}>
+                          <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
+                            {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
+                          </MDTypography>
+                          <ToggleButtonGroup
+                            value={eventPSDSelector.type}
+                            exclusive
+                            onChange={(event, newSelector) => setEventPSDSelector({...eventPSDSelector, type: newSelector})}
+                            aria-label="Event Comparisons"
+                          >
+                            <ToggleButton value="Channels" aria-label="by channels">
+                              <MDTypography variant="p" fontWeight={"bold"} fontSize={12}>
+                                {"Channels"}
+                              </MDTypography>
+                            </ToggleButton>
+                            <ToggleButton value="Events" aria-label="by events">
+                              <MDTypography variant="p" fontWeight={"bold"} fontSize={12}>
+                                {"Events"}
+                              </MDTypography>
+                            </ToggleButton>
+                          </ToggleButtonGroup>
+                        </MDBox>
                       </Grid>
-                      <Grid item xs={12} lg={6}>
-                        <StimulationBoxPlot dataToRender={leftHemisphereBox} channelInfos={channelInfos} type={"Left"} figureTitle={"LeftStimulationBar"} height={600}/>
+                      <Grid item xs={12}>
+                        <MDBox lineHeight={1}>
+                          <Autocomplete
+                            value={eventPSDSelector.value}
+                            options={eventPSDSelector.options}
+                            onChange={(event, value) => setEventPSDSelector({...eventPSDSelector, value: value})}
+                            getOptionLabel={(option) => {
+                              return option.text;
+                            }}
+                            renderInput={(params) => (
+                              <FormField
+                                {...params}
+                                label={"Comparison Selector"}
+                                InputLabelProps={{ shrink: true }}
+                              />
+                            )}
+                          />
+                        </MDBox>
                       </Grid>
-                      <Grid item xs={12} lg={6}>
-                        {rightHemispherePSD.length > 0 ? (
-                          <MDBox display={"flex"} flexDirection={"column"}>
-                            <StimulationReferenceButton value={referenceType[1]} onChange={(event, value) => handlePSDUpdate(value, "Right")} />
-                            <StimulationPSD dataToRender={rightHemispherePSD} channelInfos={channelInfos} type={"Right"} figureTitle={"RightStimulationPSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>
-                          </MDBox>
-                        ) : null}
-                      </Grid>
-                      <Grid item xs={12} lg={6}>
-                        <StimulationBoxPlot dataToRender={rightHemisphereBox} channelInfos={channelInfos} type={"Right"} figureTitle={"RightStimulationBar"} height={600}/>
+                      <Grid item xs={12}>
+                        <EventPSDs dataToRender={eventPSDs} selector={eventPSDSelector} height={500} figureTitle={"EventPSDComparison"}/>
                       </Grid>
                     </Grid>
                   </Card>
                 </Grid>
               ) : null}
             </Grid>
+            <MDBox style={{
+              position: 'sticky',
+              bottom: 32,
+              right: 32,
+              pointerEvents: "none"
+            }}>
+              <SpeedDial
+                ariaLabel={"SurveySpeedDial"}
+                color={"info"}
+                icon={<SpeedDialIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                FabProps={{
+                  color: "info",
+                  sx: {display: "flex", marginLeft: "auto"}
+                }}
+                sx={{alignItems: "end"}}
+                hidden={false}
+              >
+                <SpeedDialAction
+                  key={"GoToTop"}
+                  icon={<KeyboardDoubleArrowUpIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                  tooltipTitle={"Go to Top"}
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+                <SpeedDialAction
+                  key={"EditLayout"}
+                  icon={<DashboardIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                  tooltipTitle={"Edit Layout"}
+                  onClick={() => setAlert(<LayoutOptions setAlert={setAlert} />)}
+                />
+              </SpeedDial>
+            </MDBox>
           </MDBox>
         </MDBox>
       </DatabaseLayout>

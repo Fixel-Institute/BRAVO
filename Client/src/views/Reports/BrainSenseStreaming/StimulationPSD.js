@@ -11,7 +11,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import React, {useCallback} from "react";
+import React, {useCallback, useRef} from "react";
 import {useResizeDetector} from "react-resize-detector";
 import colormap from "colormap";
 
@@ -28,9 +28,10 @@ function StimulationPSD({dataToRender, channelInfos, height, type, onCenterFrequ
   const { language } = controller;
   
   const [show, setShow] = React.useState(false);
-  const fig = new PlotlyRenderManager(figureTitle, language);
+  const figRef = useRef();
 
   const handleGraphing = (data) => {
+    const fig = figRef.current;
     fig.clearData();
 
     if (fig.fresh) {
@@ -43,13 +44,10 @@ function StimulationPSD({dataToRender, channelInfos, height, type, onCenterFrequ
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Frequency", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)})`, {fontSize: 15});
       fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)})`, {fontSize: 15});
 
-      for (var i in channelInfos) {
-        const [side, target] = channelInfos[i].Hemisphere.split(" ");
-        if (type === side) {
-          const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
-          fig.setTitle(`${titleText}`);
-        }
-      }
+      const [side, target] = channelInfos.Hemisphere.split(" ");
+      const contactText = (typeof channelInfos.Contacts) == "string" ? channelInfos.Contacts : `E${channelInfos.Contacts[0]}-E${channelInfos.Contacts[1]}`;
+      const titleText = `${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} ${contactText}`;
+      fig.setTitle(`${titleText}`);
     }
 
     const levels = (data[data.length - 1]["Stimulation"] * 10) + 1;
@@ -81,16 +79,22 @@ function StimulationPSD({dataToRender, channelInfos, height, type, onCenterFrequ
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    if (dataToRender.length > 0) handleGraphing(dataToRender);
-    else {
-      fig.purge();
-      setShow(false);
+    if (figRef) {
+      figRef.current = new PlotlyRenderManager(figureTitle, language);
+      if (dataToRender.length > 0) {
+        handleGraphing(dataToRender);
+      } else {
+        figRef.current.purge();
+        setShow(false);
+      }
     }
-  }, [dataToRender, language]);
+  }, [dataToRender, figRef, language]);
 
   const onResize = useCallback(() => {
-    fig.refresh();
-  }, []);
+    if (figRef.current) {
+      figRef.current.refresh();
+    }
+  }, [figRef.current]);
 
   const {ref} = useResizeDetector({
     onResize: onResize,
@@ -108,7 +112,7 @@ function StimulationPSD({dataToRender, channelInfos, height, type, onCenterFrequ
     } else {
       plotly_singleclicked = true;
       updateTimeout = setTimeout(function() {
-        onCenterFrequencyChange(type, data["points"][0]["x"]);
+        onCenterFrequencyChange(channelInfos, data["points"][0]["x"]);
         plotly_singleclicked = false
       }, 300);
     }

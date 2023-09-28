@@ -58,9 +58,18 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
     startTime: formatAsTime(new Date())
   });
 
+  const dropzoneRef = createRef();
+
   React.useEffect(() => {
     if (availableDevices.length > 0) setSelectedDevice(availableDevices[0]);
   }, [availableDevices]);
+
+  React.useEffect(() => {
+    if (dropzoneRef.current) {
+      const myDropzone = dropzoneRef.current.dropzone;
+      //myDropzone.hiddenFileInput.setAttribute("webkitdirectory", true);
+    }
+  }, [dropzoneRef]);
 
   const uploadSessionsDeidentified = () => {
     const myDropzone = dropzoneRef.current.dropzone;
@@ -111,8 +120,6 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
     myDropzone.removeAllFiles();
     onCancel();
   };
-
-  const dropzoneRef = createRef();
 
   return <>
   <Dialog open={show} onClose={cancelUpload}>
@@ -191,13 +198,13 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
           url: SessionController.getServer() + (selectedDevice.value === "ExternalRecordings" ? "/api/uploadExternalFiles" : "/api/uploadSessionFiles"),
           paramName: "file",
           addRemoveLinks: true,
-          acceptedFiles: selectedDevice.value === "ExternalRecordings" ? ".csv" : ".json",
+          acceptedFiles: selectedDevice.value === "ExternalRecordings" ? ".csv" : ".json,.zip",
           autoDiscover: false,
           autoProcessQueue: false,
           uploadMultiple: true,
           headers: { 'Authorization': "Bearer " + SessionController.getAuthToken() },
-          parallelUploads: 50,
-          maxFiles: 50,
+          parallelUploads: 500,
+          maxFiles: 500,
           maxFilesize: 500
         }} ref={dropzoneRef}>
         </DropzoneUploader>
