@@ -92,12 +92,6 @@ function TherapyHistory() {
     var therapyHistory = {};
     var therapyTimestamp = Object.keys(data);
     therapyTimestamp = therapyTimestamp.map((value, index) => therapyTimestamp[therapyTimestamp.length - 1 - index]);
-    therapyTimestamp = therapyTimestamp.filter((value, index) => {
-      if (index < therapyTimestamp.length-1) {
-        return therapyTimestamp[index+1] - therapyTimestamp[index] < -(3600*6);
-      }
-      return true;
-    })
 
     var therapyTypes = [];
 
@@ -108,7 +102,7 @@ function TherapyHistory() {
         }
         if (!Object.keys(therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy).includes(data[therapyTimestamp[i]][j].TherapyType)) {
           therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy[data[therapyTimestamp[i]][j].TherapyType] = {};
-          therapyTypes.push(data[therapyTimestamp[i]][j].TherapyType);
+          if (!therapyTypes.includes(data[therapyTimestamp[i]][j].TherapyType)) therapyTypes.push(data[therapyTimestamp[i]][j].TherapyType);
         }
         const dateString = new Date(data[therapyTimestamp[i]][j].TherapyDate*1000).toLocaleString(language, {dateStyle: "full"});
         if (!Object.keys(therapyHistory[data[therapyTimestamp[i]][j].DeviceID].Therapy[data[therapyTimestamp[i]][j].TherapyType]).includes(dateString)) {
@@ -401,20 +395,20 @@ function TherapyHistory() {
                       </MDBox>
                     ))}
                   </Grid>
-                  <Grid item xs={12} md={9}>
+                  <Grid item xs={12} md={9} sx={{maxHeight: "1000px", overflowY: "auto"}}>
                     <MDBox display={"flex"} flexDirection={"row"}>
-                      {therapyTypes.map((type) => (
-                      <MDBox key={type} p={2}>
-                        <MDButton variant={activeTab == type ? "contained" : "outlined"} color="warning" onClick={() => setActiveTab(type)} sx={{borderRadius: 30}}>
-                          <TabletAndroidIcon sx={{marginRight: 1}} />
-                          <MDTypography variant="h5" fontWeight="bold" fontSize={15} color={activeDevice == type ? "white" : "black"}>
-                            {dictionaryLookup(dictionary.TherapyHistory.Table, type, language)}
-                          </MDTypography>
-                        </MDButton>
-                      </MDBox>
-                      ))}
+                      {therapyTypes.map((type) => {
+                        return <MDBox key={type} p={2}>
+                          <MDButton variant={activeTab == type ? "contained" : "outlined"} color="warning" onClick={() => setActiveTab(type)} sx={{borderRadius: 30}}>
+                            <TabletAndroidIcon sx={{marginRight: 1}} />
+                            <MDTypography variant="h5" fontWeight="bold" fontSize={15} color={activeTab == type ? "white" : "black"}>
+                              {dictionaryLookup(dictionary.TherapyHistory.Table, type, language)}
+                            </MDTypography>
+                          </MDButton>
+                        </MDBox>;
+                      })}
                     </MDBox>
-                    {Object.keys(therapyHistory[activeDevice].Therapy[activeTab]).map((key) => {
+                    {therapyHistory[activeDevice].Therapy[activeTab] ? Object.keys(therapyHistory[activeDevice].Therapy[activeTab]).map((key) => {
                       let therapyList = [];
                       if (activeTab === "Pre-visit Therapy") {
                         let availableTimestamp = therapyHistory[activeDevice].Therapy[activeTab][key].map((group) => group.TherapyDate);
@@ -563,7 +557,7 @@ function TherapyHistory() {
                         </Accordion>
                       </MDBox>
                       )
-                    })}
+                    }) : null}
                   </Grid>
                 </Grid>
               </Card>
