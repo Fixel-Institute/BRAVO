@@ -488,7 +488,6 @@ def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies
                 else:
                     data["Stimulation"][i]["LegendName"] = lead["TargetLocation"] + " " + data["Stimulation"][i]["LegendName"]
         
-
     data["Stream"] = list()
     for counter in range(len(data["Channels"])):
         data["Stream"].append(dict())
@@ -513,7 +512,6 @@ def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies
             #MaxScale = np.max(np.abs(data["Stream"][counter]["Spectrogram"]["Power"]-MedianPower))
             #data["Stream"][counter]["Spectrogram"]["ColorRange"] = [MedianPower-MaxScale,MedianPower+MaxScale]
 
-        
         if stream["Info"]["Device"] == "Summit RC+S":
             if options["PSDMethod"]["value"] == "Time-Frequency Analysis":
                 data["Stream"][counter]["StimPSD"] = StreamingData.processRealtimeStreamStimulationPSD(stream, data["Channels"][counter], method=options["SpectrogramMethod"]["value"], stim_label=stimulationReference, centerFrequency=centerFrequencies[counter])

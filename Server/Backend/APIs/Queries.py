@@ -664,6 +664,7 @@ class QueryChronicBrainSense(RestViews.APIView):
             if "Summit RC+S" in DeviceTypes:
                 TherapyHistory = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
                 data["ChronicData"] = ChronicLogs.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)
+                data["ChronicData"] = ChronicLogs.processChronicLFPs(data["ChronicData"], int(request.data["timezoneOffset"]))
             else:
                 TherapyHistory = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
                 data["ChronicData"] = ChronicBrainSense.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)

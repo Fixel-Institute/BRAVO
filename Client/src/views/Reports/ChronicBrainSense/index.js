@@ -82,7 +82,7 @@ function ChronicBrainSense() {
     for (var i = 0; i < data.length; i++) {
       if (!data[i]["CircadianPowers"]) continue;
       for (var j = 0; j < data[i]["CircadianPowers"].length; j++) {
-        if (data[i]["CircadianPowers"][j]["Power"].length > 144*3) {
+        if (data[i]["CircadianPowers"][j]["Power"].length > 144*2) {
           if (data[i]["CustomName"]) {
             options.push({
               label: data[i]["Device"] + " " + data[i]["CustomName"] + " " + data[i]["CircadianPowers"][j]["Therapy"],

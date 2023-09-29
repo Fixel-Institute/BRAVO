@@ -346,42 +346,24 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
     """
 
     for i in range(len(LFPTrends)):
-        if LFPTrends[i]["Hemisphere"].startswith("Left"):
-            Hemisphere = "LeftHemisphere"
-        else:
-            Hemisphere = "RightHemisphere"
+        DeviceName = LFPTrends[i]["Device"]
 
         TherapyList = list()
         for j in range(len(LFPTrends[i]["Therapy"])):
-            if not Hemisphere in LFPTrends[i]["Therapy"][j].keys():
-                continue
-            Therapy = LFPTrends[i]["Therapy"][j][Hemisphere]
-            if "SensingSetup" in Therapy.keys():
-                TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS {Therapy['Channel']} @ {Therapy['SensingSetup']['FrequencyInHertz']}Hz"
-            else:
-                TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS {Therapy['Channel']} @ {0}Hz"
-            LFPTrends[i]["Therapy"][j]["TherapyOverview"] = TherapyOverview
-
-            TherapyList.append(TherapyOverview)
+            if LFPTrends[i]["Therapy"][j]["TherapyOverview"].startswith("Left") or LFPTrends[i]["Therapy"][j]["TherapyOverview"].startswith("Right"):
+                TherapyList.append(DeviceName + " " + LFPTrends[i]["Therapy"][j]["TherapyOverview"])
         UniqueTherapyList = uniqueList(TherapyList)
-
+        
         LFPTrends[i]["EventLockedPower"] = list()
         LFPTrends[i]["TherapyAmplitudes"] = list()
         LFPTrends[i]["CircadianPowers"] = list()
         for therapy in UniqueTherapyList:
-            LFPTrends[i]["EventLockedPower"].append({"EventName": list(), "Timestamp": list(), "Therapy": therapy})
-            LFPTrends[i]["CircadianPowers"].append({"Power": list(), "Timestamp": list(), "Therapy": therapy})
-            LFPTrends[i]["TherapyAmplitudes"].append({"Power": list(), "Amplitude": list(), "Therapy": therapy})
+            LFPTrends[i]["EventLockedPower"].append({"EventName": list(), "Timestamp": list(), "Therapy": therapy.replace(DeviceName + " ","")})
+            LFPTrends[i]["CircadianPowers"].append({"Power": list(), "Timestamp": list(), "Therapy": therapy.replace(DeviceName + " ","")})
+            LFPTrends[i]["TherapyAmplitudes"].append({"Power": list(), "Amplitude": list(), "Therapy": therapy.replace(DeviceName + " ","")})
 
             for j in range(len(LFPTrends[i]["Therapy"])):
-                if not Hemisphere in LFPTrends[i]["Therapy"][j].keys():
-                    continue
-                Therapy = LFPTrends[i]["Therapy"][j][Hemisphere]
-                if "SensingSetup" in Therapy.keys():
-                    TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS {Therapy['Channel']} @ {Therapy['SensingSetup']['FrequencyInHertz']}Hz"
-                else:
-                    TherapyOverview = f"{Therapy['Frequency']}Hz {Therapy['PulseWidth']}uS {Therapy['Channel']} @ {0}Hz"
-
+                TherapyOverview = DeviceName + " " + LFPTrends[i]["Therapy"][j]["TherapyOverview"]
                 if TherapyOverview == therapy and len(LFPTrends[i]["Power"][j]) > 0:
                     LFPTrends[i]["CircadianPowers"][-1]["Power"].extend(LFPTrends[i]["Power"][j])
                     LFPTrends[i]["CircadianPowers"][-1]["Timestamp"].extend(LFPTrends[i]["Timestamp"][j])
@@ -432,9 +414,15 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
             LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"] = np.zeros(LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"].shape)
             for t in range(len(LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"])):
                 timeSelection = rangeSelection(LFPTrends[i]["CircadianPowers"][-1]["Timestamp"],[LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"][t]-20*60, LFPTrends[i]["CircadianPowers"][-1]["AverageTimestamp"][t]+20*60])
-                if np.any(timeSelection):
-                    LFPTrends[i]["CircadianPowers"][-1]["AveragePower"][t] = np.median(LFPTrends[i]["CircadianPowers"][-1]["Power"][timeSelection])
-                    LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"][t] = SPU.stderr(LFPTrends[i]["CircadianPowers"][-1]["Power"][timeSelection])*2
+                PowerList = LFPTrends[i]["CircadianPowers"][-1]["Power"][timeSelection]
+                while True:
+                    PowerList = PowerList[np.abs(stats.zscore(PowerList)) < 3]
+                    if np.sum(np.abs(stats.zscore(PowerList)) < 3) == len(PowerList):
+                        break
+
+                if len(PowerList) > 0:
+                    LFPTrends[i]["CircadianPowers"][-1]["AveragePower"][t] = np.median(PowerList)
+                    LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"][t] = SPU.stderr(PowerList)*2
                 else:
                     LFPTrends[i]["CircadianPowers"][-1]["AveragePower"][t] = 0
                     LFPTrends[i]["CircadianPowers"][-1]["StdErrPower"][t] = 0
@@ -449,6 +437,7 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
                 LFPTrends[i]["CircadianPowers"][-1]["PowerRange"] = [np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],5),np.percentile(LFPTrends[i]["CircadianPowers"][-1]["Power"],95)]
             else:
                 LFPTrends[i]["CircadianPowers"][-1]["PowerRange"] = [0,0]
+
     return LFPTrends
 
 def processCircadianPower(LFPTrends, therapyInfo, timezoneOffset=0):
