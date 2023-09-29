@@ -295,7 +295,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                           labelId={"right-hemisphere-stim-mode-label"}
                           label={dictionary.BrainSenseStreaming.Table.StimMode[language]}
                           value={recording.ContactType.length == 2 ? recording.ContactType[1] : recording.ContactType[0]}
-                          onChange={(event) => setStimMode(recording.RecordingID, recording.ContactType.length == 2 ? 1 : 0, event)}
+                          onChange={(event) => setStimMode(recording.RecordingIDs, recording.ContactType.length == 2 ? 1 : 0, event)}
                           sx={{
                             paddingY: "6px"
                           }}
