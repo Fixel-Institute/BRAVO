@@ -74,20 +74,21 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
     var uniqueDates = [];
     for (var i = 0; i < data.length; i++) {
       var timestruct = new Date(data[i]["Timestamp"]*1000);
-
-      var found = false
-      for (var date of uniqueDates) {
-        if (date.value == timestruct.toLocaleDateString(language)) {
-          found = true;
-          break;
+      if (data[i].Duration >= 30) {
+        var found = false
+        for (var date of uniqueDates) {
+          if (date.value == timestruct.toLocaleDateString(language)) {
+            found = true;
+            break;
+          }
         }
-      }
-      if (!found) {
-        uniqueDates.push({
-          time: data[i]["Timestamp"]*1000,
-          value: timestruct.toLocaleDateString(language),
-          label: timestruct.toLocaleDateString(language)
-        });
+        if (!found) {
+          uniqueDates.push({
+            time: data[i]["Timestamp"]*1000,
+            value: timestruct.toLocaleDateString(language),
+            label: timestruct.toLocaleDateString(language)
+          });
+        }
       }
     }
 
