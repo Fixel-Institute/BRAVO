@@ -102,7 +102,7 @@ def saveBrainSenseSurvey(deviceID, streamList, sourceFile):
             
     return NewRecordingFound
 
-def querySurveyResults(user, patientUniqueID, options, authority):
+def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
     """ Extract all BrainSense Survey recordings and process for power spectrum.
 
     This pipeline will process all BrainSense Survey recordings recorded from one patient and output the average power spectrum. 
@@ -154,18 +154,21 @@ def querySurveyResults(user, patientUniqueID, options, authority):
                         data["CustomName"] = lead["CustomName"]
                         break
 
-                if options["PSDMethod"]["value"] == "Estimated Medtronic PSD":
-                    data["Frequency"] = survey["MedtronicPSD"][i]["Frequency"]
-                    data["MeanPower"] = survey["MedtronicPSD"][i]["Power"].tolist()
-                    data["StdPower"] = survey["MedtronicPSD"][i]["StdErr"].tolist()
-                elif options["PSDMethod"]["value"] == "Short-time Fourier Transform":
-                    data["Frequency"] = survey["Spectrum"][i]["Frequency"]
-                    data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
-                    data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                if requestRaw:
+                    data["Raw"] = survey["Data"].tolist()
                 else:
-                    data["Frequency"] = survey["Spectrum"][i]["Frequency"]
-                    data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
-                    data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                    if options["PSDMethod"]["value"] == "Estimated Medtronic PSD":
+                        data["Frequency"] = survey["MedtronicPSD"][i]["Frequency"]
+                        data["MeanPower"] = survey["MedtronicPSD"][i]["Power"].tolist()
+                        data["StdPower"] = survey["MedtronicPSD"][i]["StdErr"].tolist()
+                    elif options["PSDMethod"]["value"] == "Short-time Fourier Transform":
+                        data["Frequency"] = survey["Spectrum"][i]["Frequency"]
+                        data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                        data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                    else:
+                        data["Frequency"] = survey["Spectrum"][i]["Frequency"]
+                        data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                        data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
 
                 BrainSenseData.append(data)
     return BrainSenseData

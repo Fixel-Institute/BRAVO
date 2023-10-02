@@ -244,13 +244,13 @@ class QueryBrainSenseSurveys(RestViews.APIView):
 
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseSurvey")
-                data = BrainSenseSurvey.querySurveyResults(request.user, request.data["id"], request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"], Authority)
+                data = BrainSenseSurvey.querySurveyResults(request.user, request.data["id"], request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"], "requestRaw" in request.data, Authority)
                 return Response(status=200, data={"data": data, "config": request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"]})
 
             elif Authority["Level"] == 2:
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseSurvey")
-                data = BrainSenseSurvey.querySurveyResults(request.user, PatientInfo.authorized_patient_id, request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"], Authority)
+                data = BrainSenseSurvey.querySurveyResults(request.user, PatientInfo.authorized_patient_id, request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"], "requestRaw" in request.data, Authority)
                 return Response(status=200, data={"data": data, "config": request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"]})
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
