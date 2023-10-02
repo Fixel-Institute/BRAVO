@@ -425,10 +425,8 @@ function TherapyHistory() {
 
                       return (
                       <MDBox key={key} pr={2} pb={2}>
-                        <Accordion>
-                          <AccordionSummary
-                            expandIcon={<ExpandMoreIcon />}
-                          >
+                        <Accordion TransitionProps={{ unmountOnExit: true }}>
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />} >
                             <MDTypography>
                               {key}
                             </MDTypography>
