@@ -191,16 +191,20 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                     elif recording.recording_type == "SummitAdaptive":
                         PowerRecording = recording
 
-                RawData = Database.loadSourceDataPointer(TimeRecording.recording_datapointer)
-                data["Duration"] = RawData["Duration"]
-                if RawData["Duration"] < 5:
+                if TimeRecording.recording_duration == 0:
+                    RawData = Database.loadSourceDataPointer(TimeRecording.recording_datapointer)
+                    TimeRecording.recording_duration = RawData["Duration"]
+                    TimeRecording.save()
+
+                data["Duration"] = TimeRecording.recording_duration
+                if data["Duration"] < 5:
                     continue
                 
-                for i in range(len(RawData["ChannelNames"])):
-                    hemisphere = RawData["ChannelNames"][i].split(" ")[0]
+                for i in range(len(TimeRecording.recording_info["Channel"])):
+                    hemisphere = TimeRecording.recording_info["Channel"][i].split(" ")[0]
                     for lead in leads:
                         if lead["TargetLocation"].startswith(hemisphere):
-                            data["Channels"].append({"Hemisphere": lead["TargetLocation"], "CustomName": lead["CustomName"], "Contacts": RawData["ChannelNames"][i].replace(hemisphere + " ", ""), "Type": lead["ElectrodeType"]})
+                            data["Channels"].append({"Hemisphere": lead["TargetLocation"], "CustomName": lead["CustomName"], "Contacts": TimeRecording.recording_info["Channel"][i].replace(hemisphere + " ", ""), "Type": lead["ElectrodeType"]})
 
                 BrainSenseData.append(data)
                 includedRecording.append(data["Timestamp"])
