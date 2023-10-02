@@ -302,10 +302,14 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                                 LFPTrends[index]["AdaptiveTimestamp"].append(NewTimestamp+SmoothWindow/2)
                                 LFPTrends[index]["Amplitude"].append(SmoothAmplitude)
                                 LFPTrends[index]["Therapy"].append(copy.deepcopy(therapy["therapy"][i]))
-                                if Hemisphere+'Hemisphere' in LFPTrends[index]['Therapy'][-1]['Therapy'].keys():
-                                    LFPTrends[index]["Therapy"][-1]["TherapyOverview"] = f"{LFPTrends[index]['Therapy'][-1]['Therapy'][Hemisphere+'Hemisphere']['Frequency']}Hz {LFPTrends[index]['Therapy'][-1]['Therapy'][Hemisphere+'Hemisphere']['PulseWidth']}μSec @ {LFPTrends[index]['Therapy'][-1]['Therapy']['Programs'][0]['Electrode']}"
+                                if 'LeftHemisphere' in LFPTrends[index]['Therapy'][-1]['Therapy'].keys():
+                                    for lead in leads:
+                                        if lead["TargetLocation"].startswith("Left"):
+                                            LFPTrends[index]["Therapy"][-1]["TherapyOverview"] = lead["CustomName"] + f" {LFPTrends[index]['Therapy'][-1]['Therapy']['LeftHemisphere']['Frequency']}Hz {LFPTrends[index]['Therapy'][-1]['Therapy']['LeftHemisphere']['PulseWidth']}μSec @ {LFPTrends[index]['Therapy'][-1]['Therapy']['Programs'][0]['Electrode']}"
                                 else:
-                                    LFPTrends[index]["Therapy"][-1]["TherapyOverview"] = "Therapy Unavailable"
+                                    for lead in leads:
+                                        if lead["TargetLocation"].startswith("Right"):
+                                            LFPTrends[index]["Therapy"][-1]["TherapyOverview"] = lead["CustomName"] + f" {LFPTrends[index]['Therapy'][-1]['Therapy']['RightHemisphere']['Frequency']}Hz {LFPTrends[index]['Therapy'][-1]['Therapy']['RightHemisphere']['PulseWidth']}μSec @ {LFPTrends[index]['Therapy'][-1]['Therapy']['Programs'][0]['Electrode']}"
 
                                 LFPTrends[index]["EventName"].append([])
                                 LFPTrends[index]["EventTime"].append([])
