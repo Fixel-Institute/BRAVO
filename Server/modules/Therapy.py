@@ -83,7 +83,7 @@ def queryTherapyHistory(user, patientUniqueID, authority):
                 if not TherapyChangeData:
                     continue 
 
-                for i in range(len(TherapyChangeData)):
+                for i in range(len(TherapyChangeData["therapy"])):
                     if TherapyChangeData["therapy"][i] and len(ImpedanceHistory) > 0:
                         impedanceIndex = np.argmin(np.abs(np.array([impedanceLog["session_date"] for impedanceLog in ImpedanceHistory]) - TherapyChangeData["therapy"][i]["TherapyDate"]))
                         TherapyChangeData["therapy"][i]["Impedance"] = ImpedanceHistory[impedanceIndex]
