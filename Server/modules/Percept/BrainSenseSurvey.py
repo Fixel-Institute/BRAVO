@@ -155,7 +155,7 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
                         break
 
                 if requestRaw:
-                    data["Raw"] = survey["Data"].tolist()
+                    data["Raw"] = survey["Data"][:,i].tolist()
                 else:
                     if options["PSDMethod"]["value"] == "Estimated Medtronic PSD":
                         data["Frequency"] = survey["MedtronicPSD"][i]["Frequency"]
