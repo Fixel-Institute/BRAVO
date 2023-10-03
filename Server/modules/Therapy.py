@@ -74,7 +74,7 @@ def queryTherapyHistory(user, patientUniqueID, authority):
     for device in availableDevices:
             if device.device_type == "Summit RC+S":
                 TherapyChangeData = SummitTherapy.queryTherapyHistory(user, device, authority) 
-                if len(TherapyChangeData["therapy"]) > 0:
+                if len(TherapyChangeData["therapy"]) == 0:
                     continue
                 TherapyHistoryContext.append(TherapyChangeData)
                 
