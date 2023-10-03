@@ -348,6 +348,7 @@ function BrainSenseSurvey() {
               position: 'sticky',
               bottom: 32,
               right: 32,
+              pointerEvents: "none"
             }}>
               <SpeedDial
                 ariaLabel={"SurveySpeedDial"}
