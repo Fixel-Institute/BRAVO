@@ -537,26 +537,28 @@ def deleteDevice(device_id):
             pass
     Sessions.delete()
 
+def deleteSession(session_id):
+    models.TherapyHistory.objects.filter(source_file=str(session_id)).delete()
+    models.TherapyChangeLog.objects.filter(source_file=str(session_id)).delete()
+    models.PatientCustomEvents.objects.filter(source_file=str(session_id)).delete()
+    recordings = models.BrainSenseRecording.objects.filter(source_file=str(session_id)).all()
+    for recording in recordings:
+        try:
+            os.remove(DATABASE_PATH + "recordings" + os.path.sep + recording.recording_datapointer)
+        except:
+            pass
+    recordings.delete()
+    session = models.PerceptSession.objects.filter(deidentified_id=session_id).first()
+    models.ImpedanceHistory.objects.filter(session_date=session.session_date).delete()
+    try:
+        os.remove(DATABASE_PATH + session.session_file_path)
+    except:
+        pass
+    session.delete()
+
 def deleteSessions(user, patient_id, session_ids, authority):
     availableDevices = Database.getPerceptDevices(user, patient_id, authority)
-
     for i in range(len(session_ids)):
         for device in availableDevices:
             if models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id, deidentified_id=str(session_ids[i])).exists():
-                models.TherapyHistory.objects.filter(source_file=str(session_ids[i])).delete()
-                models.TherapyChangeLog.objects.filter(source_file=str(session_ids[i])).delete()
-                models.PatientCustomEvents.objects.filter(source_file=str(session_ids[i])).delete()
-                recordings = models.BrainSenseRecording.objects.filter(source_file=str(session_ids[i])).all()
-                for recording in recordings:
-                    try:
-                        os.remove(DATABASE_PATH + "recordings" + os.path.sep + recording.recording_datapointer)
-                    except:
-                        pass
-                recordings.delete()
-                session = models.PerceptSession.objects.filter(deidentified_id=session_ids[i]).first()
-                models.ImpedanceHistory.objects.filter(session_date=session.session_date).delete()
-                try:
-                    os.remove(DATABASE_PATH + session.session_file_path)
-                except:
-                    pass
-                session.delete()
+                deleteSession(session_ids[i])

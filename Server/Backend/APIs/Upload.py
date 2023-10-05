@@ -298,14 +298,27 @@ class SessionRemove(RestViews.APIView):
                 return Response(status=404)
 
             device = models.PerceptDevice.objects.filter(deidentified_id=request.data["deviceId"]).first()
-            Sessions.deleteDevice(device.deidentified_id)
+            if device.device_type == "Summit RC+S":
+                SummitSessions.deleteDevice(device.deidentified_id) 
+            else:
+                Sessions.deleteDevice(device.deidentified_id)
             patient.removeDevice(str(device.deidentified_id))
             device.delete()
             return Response(status=200)
         
         elif "deleteSession" in request.data:
             Authority["Permission"] = Database.verifyPermission(request.user, request.data["patientId"], Authority, "ChronicLFPs")
-            Sessions.deleteSessions(request.user, request.data["patientId"], [request.data["deleteSession"]], Authority)
+
+            availableDevices = Database.getPerceptDevices(request.user, request.data["patientId"], Authority)
+            session_ids = [request.data["deleteSession"]]
+            for i in range(len(session_ids)):
+                for device in availableDevices:
+                    if models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id, deidentified_id=str(session_ids[i])).exists():
+                        if device.device_type == "Summit RC+S":
+                            SummitSessions.deleteSessions(request.user, request.data["patientId"], [request.data["deleteSession"]], Authority)
+                        else:
+                            Sessions.deleteSessions(request.user, request.data["patientId"], [request.data["deleteSession"]], Authority)
+                            
             return Response(status=200)
 
         return Response(status=404)
