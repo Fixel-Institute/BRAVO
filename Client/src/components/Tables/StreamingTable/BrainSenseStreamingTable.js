@@ -220,7 +220,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                       {channel.CustomName!=channel.Hemisphere ? channel.CustomName : dictionaryLookup(dictionary.FigureStandardText, side, language) + " " + dictionaryLookup(dictionary.BrainRegions, target, language)}
                     </MDTypography>
                     <MDTypography variant="h6" fontSize={15} style={{marginBottom: 0}}>
-                      {channelName} {recording.Therapy ? ("@ " + recording.Therapy.Left.RateInHertz + " Hz " + recording.Therapy.Left.PulseWidthInMicroSecond + " μS") : ""}
+                      {channelName} {recording.Therapy ? ("@ " + recording.Therapy.Right.RateInHertz + " Hz " + recording.Therapy.Right.PulseWidthInMicroSecond + " μS") : ""}
                     </MDTypography>
                   </MDBox>)
                 }
@@ -252,7 +252,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                 </TableCell>
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                   <MDBox style={{display: "flex", flexDirection: "column"}}>
-                    {leftHemisphere ? (
+                    {leftHemisphere.length > 0 ? (
                       <MDBox>
                         {leftHemisphere}
                         {recording.ContactType ? (
@@ -282,7 +282,7 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
                   </MDBox>
                 </TableCell>
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                  {rightHemisphere ? (
+                  {rightHemisphere.length > 0 ? (
                     <MDBox>
                       {rightHemisphere}
                       {recording.ContactType ? (
