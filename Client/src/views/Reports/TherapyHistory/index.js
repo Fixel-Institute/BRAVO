@@ -118,7 +118,7 @@ function TherapyHistory() {
     setTherapyHistory(therapyHistory);
   }, [data, language]);
 
-  const showAdaptiveSettings = (therapy, captureAmplitude, amplitudeThreshold) => {
+  const showPerceptAdaptiveSettings = (therapy, captureAmplitude, amplitudeThreshold) => {
     setAlert(
       <Dialog open={true} onClose={() => setAlert(null)}>
         <MDBox px={2} pt={2}>
@@ -192,6 +192,114 @@ function TherapyHistory() {
     )
   }
 
+  const showSummitAdaptiveSettings = (therapy) => {
+    let powerChannel = {Ld0: [], Ld1: []};
+    if (therapy.Adaptive.Detector.Ld0.detectionEnable > 0) {
+      for (let i = 0; i < 8; i++) {
+        if (therapy.Adaptive.Detector.Ld0.detectionInputs & (Math.pow(2, i))) {
+          const LfpChan = parseInt(therapy.Adaptive.Power.Enabled[i][2]);
+          const FreqResolution = therapy.Adaptive.Power.LfpConfig[LfpChan].SamplingRate / therapy.Adaptive.Power.NFFT;
+          powerChannel.Ld0.push(therapy.Adaptive.Power.Enabled[i] + ` ${(therapy.Adaptive.Power.PowerBands[i][0]*FreqResolution).toFixed(2)}-${(therapy.Adaptive.Power.PowerBands[i][1]*FreqResolution).toFixed(2)}Hz`)
+        }
+      }
+    }
+    if (therapy.Adaptive.Detector.Ld1.detectionEnable > 0) {
+      for (let i = 0; i < 8; i++) {
+        if (therapy.Adaptive.Detector.Ld1.detectionInputs & (Math.pow(2, i))) {
+          const LfpChan = parseInt(therapy.Adaptive.Power.Enabled[i][2]);
+          const FreqResolution = therapy.Adaptive.Power.LfpConfig[LfpChan].SamplingRate / therapy.Adaptive.Power.NFFT;
+          powerChannel.Ld1.push(therapy.Adaptive.Power.Enabled[i] + ` ${(therapy.Adaptive.Power.PowerBands[i][0]*FreqResolution).toFixed(2)}-${(therapy.Adaptive.Power.PowerBands[i][1]*FreqResolution).toFixed(2)}Hz`)
+        }
+      }
+    }
+
+    setAlert(
+      <Dialog open={true} onClose={() => setAlert(null)}>
+        <MDBox px={2} pt={2}>
+          <MDTypography variant="h5">
+            {"Summit Adaptive Configurations"} 
+          </MDTypography>
+        </MDBox>
+        <DialogContent>
+          <MDBox px={2} pt={2}>
+            <MDTypography variant="h6" fontSize={15}>
+              {"State Configurations:"} 
+            </MDTypography>
+            <Grid container>
+              {therapy.Adaptive.Adaptive.State.map((state, index) => {
+                return <Grid item xs={4} key={index}>
+                  {state.prog0Amp < 255 ? state.prog0Amp/10 + " mA" : "Disabled"}
+                </Grid>
+              })}
+            </Grid>
+          </MDBox>
+          {powerChannel.Ld0.length > 0 ? (
+            <MDBox px={2} pt={1} display={"flex"} flexDirection={"column"}>
+              <MDTypography variant="h6" fontSize={15}>
+                {"Ld0 Channel Input:"} 
+              </MDTypography>
+              {powerChannel.Ld0.map((channel) => (
+                <MDTypography key={channel} variant="p" fontSize={14}>
+                  {channel} 
+                </MDTypography>
+              ))}
+              <MDTypography variant="p" fontSize={14}>
+                {"Thresholds: "} 
+                {therapy.Adaptive.Detector.Ld0.biasTerm[0]} 
+                {therapy.Adaptive.Detector.Ld0.biasTerm[0] == therapy.Adaptive.Detector.Ld0.biasTerm[1] ? "" : " / " + therapy.Adaptive.Detector.Ld0.biasTerm[1]} 
+              </MDTypography>
+              <MDTypography variant="p" fontSize={14}>
+                {"Onset Duration: "} 
+                {therapy.Adaptive.Detector.Ld0.onsetDuration * therapy.Adaptive.Detector.Ld0.updateRate * therapy.Adaptive.Power.Interval / 1000} {" sec"}
+              </MDTypography>
+              <MDTypography variant="p" fontSize={14}>
+                {"Termination Duration: "} 
+                {therapy.Adaptive.Detector.Ld0.terminationDuration * therapy.Adaptive.Detector.Ld0.updateRate * therapy.Adaptive.Power.Interval / 1000} {" sec"}
+              </MDTypography>
+            </MDBox>
+          ) : null}
+          {powerChannel.Ld1.length > 0 ? (
+            <MDBox px={2} pt={1} display={"flex"} flexDirection={"column"}>
+              <MDTypography variant="h6" fontSize={15}>
+                {"Ld1 Channel Input:"} 
+              </MDTypography>
+              {powerChannel.Ld1.map((channel) => (
+                <MDTypography key={channel} variant="p" fontSize={14}>
+                  {channel} 
+                </MDTypography>
+              ))}
+              <MDTypography variant="p" fontSize={14}>
+                {"Thresholds:"} 
+                {therapy.Adaptive.Detector.Ld1.biasTerm[0]} 
+                {therapy.Adaptive.Detector.Ld1.biasTerm[0] == therapy.Adaptive.Detector.Ld1.biasTerm[1] ? "" : " / " + therapy.Adaptive.Detector.Ld1.biasTerm[1]} 
+              </MDTypography>
+              <MDTypography variant="p" fontSize={14}>
+                {"Onset Duration: "} 
+                {therapy.Adaptive.Detector.Ld1.onsetDuration * therapy.Adaptive.Detector.Ld1.updateRate * therapy.Adaptive.Power.Interval / 1000} {" sec"}
+              </MDTypography>
+              <MDTypography variant="p" fontSize={14}>
+                {"Termination Duration: "} 
+                {therapy.Adaptive.Detector.Ld1.terminationDuration * therapy.Adaptive.Detector.Ld1.updateRate * therapy.Adaptive.Power.Interval / 1000} {" sec"}
+              </MDTypography>
+            </MDBox>
+          ) : null}
+          <MDBox px={2}>
+            
+          </MDBox>
+          <MDBox px={2}>
+            
+          </MDBox>
+          <MDBox px={2}>
+            
+          </MDBox>
+        </DialogContent>
+        <DialogActions>
+          <MDButton color="secondary" onClick={() => setAlert(null)}>{"Close"}</MDButton>
+        </DialogActions>
+      </Dialog>
+    )
+  }
+
   const formatTherapySettings = (therapy, type, color) => {
     if (type == "Contacts") {
       if (therapy.Mode == "Interleaving") {
@@ -251,9 +359,7 @@ function TherapyHistory() {
             <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
               {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
             </MDTypography>
-            <MDBox display={"flex"} flexDirection={"column"} ml={2} style={{cursor: "pointer"}} onClick={() => {
-              showAdaptiveSettings(therapy.AdaptiveSetup, therapy.CaptureAmplitudes, therapy.LFPThresholds);
-            }}>
+            <MDBox display={"flex"} flexDirection={"column"} ml={2}>
               <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
                 {"Sense Only"}
               </MDTypography>
@@ -267,7 +373,7 @@ function TherapyHistory() {
               {therapy.SensingSetup.FrequencyInHertz} {" Hz"} 
             </MDTypography>
             <MDBox display={"flex"} flexDirection={"column"} ml={2} style={{cursor: "pointer"}} onClick={() => {
-              showAdaptiveSettings(therapy.AdaptiveSetup, therapy.CaptureAmplitudes, therapy.LFPThresholds);
+              showPerceptAdaptiveSettings(therapy.AdaptiveSetup, therapy.CaptureAmplitudes, therapy.LFPThresholds);
             }}>
               {therapy.AdaptiveSetup.Bypass ? (
                 <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
@@ -280,10 +386,29 @@ function TherapyHistory() {
                   {therapy.AdaptiveSetup.Status === "ADBSStatusDef.DISABLED" ? "Adaptive Stim Only" : ""}
                 </MDTypography>
               )}
-              
             </MDBox>
           </MDBox>
           );
+        }
+      } else if (therapy.Mode == "SummitAdaptive") {
+        if (therapy.Adaptive.Adaptive.Status != "EmbeddedActive") {
+          return (<MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+              {"Adaptive Disabled"}
+            </MDTypography>
+          );
+        } else {
+          return (
+            <MDBox display={"flex"} flexDirection={"column"} alignItems={"start"} style={{cursor: "pointer"}} onClick={() => {
+              showSummitAdaptiveSettings(therapy);
+            }}>
+              <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+                {therapy.Adaptive.Detector.Ld0.detectionEnable == 2 ? "LD0 Enabled" : ""}
+              </MDTypography>
+              <MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>
+                {therapy.Adaptive.Detector.Ld1.detectionEnable == 2 ? "LD1 Enabled" : ""}
+              </MDTypography>
+            </MDBox>
+            );
         }
       } else {
         return (<MDTypography color={color} fontSize={12} style={{paddingBottom: 0, paddingTop: 0, marginBottom: 0}}>

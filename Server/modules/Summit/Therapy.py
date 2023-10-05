@@ -201,5 +201,9 @@ def extractTherapyDetails(therapy):
             therapy["Therapy"][hemisphere]["Amplitude"] = program["Amplitude"]
             therapy["Therapy"][hemisphere]["Unit"] = "mA"
             therapy["Therapy"][hemisphere]["Mode"] = "Standard"
-            
+        
+            if "Adaptive" in therapy["Therapy"].keys():
+                if "Adaptive" in therapy["Therapy"]["Adaptive"].keys() and "Detector" in therapy["Therapy"]["Adaptive"].keys():
+                    therapy["Therapy"][hemisphere]["Mode"] = "SummitAdaptive"
+                    therapy["Therapy"][hemisphere]["Adaptive"] = therapy["Therapy"]["Adaptive"]
     return therapy
