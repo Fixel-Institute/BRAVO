@@ -315,9 +315,9 @@ class SessionRemove(RestViews.APIView):
                 for device in availableDevices:
                     if models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id, deidentified_id=str(session_ids[i])).exists():
                         if device.device_type == "Summit RC+S":
-                            SummitSessions.deleteSessions(request.user, request.data["patientId"], [request.data["deleteSession"]], Authority)
+                            SummitSessions.deleteSessions(request.data["deleteSession"])
                         else:
-                            Sessions.deleteSessions(request.user, request.data["patientId"], [request.data["deleteSession"]], Authority)
+                            Sessions.deleteSession(request.data["deleteSession"])
                             
             return Response(status=200)
 
