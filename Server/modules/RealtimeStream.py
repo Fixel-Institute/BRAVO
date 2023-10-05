@@ -185,6 +185,10 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                     continue 
 
                 allRecordings = models.BrainSenseRecording.objects.filter(recording_id__in=analysis.recording_list)
+                if len(allRecordings) == 0:
+                    analysis.delete()
+                    continue 
+
                 for recording in allRecordings:
                     if recording.recording_type == "SummitLfp":
                         TimeRecording = recording
@@ -242,6 +246,10 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                         PowerRecording = recording
                     elif recording.recording_type == "BrainSenseStreamTimeDomain":
                         TimeRecording = recording
+
+                if len(allRecordings) == 0:
+                    analysis.delete()
+                    continue 
 
                 RawData = Database.loadSourceDataPointer(PowerRecording.recording_datapointer)
                 if not "Therapy" in PowerRecording.recording_info:
