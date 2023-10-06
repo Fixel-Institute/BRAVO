@@ -16,6 +16,8 @@ import { useNavigate } from "react-router-dom";
 
 import {
   Autocomplete,
+  Drawer,
+  Divider,
   ToggleButton,
   ToggleButtonGroup,
   Card,
@@ -97,7 +99,7 @@ function BrainSenseStreaming() {
 
   const [data, setData] = React.useState([]);
   const [annotations, setAnnotations] = React.useState([]);
-  const [configuration, setConfiguration] = React.useState({});
+  const [drawerOpen, setDrawerOpen] = React.useState({open: false, config: {}});
   const [dataToRender, setDataToRender] = React.useState(false);
   const [channelInfos, setChannelInfos] = React.useState([]);
 
@@ -130,7 +132,7 @@ function BrainSenseStreaming() {
       }).then((response) => {
         setAnnotations(response.data.annotations)
         setData(response.data.streamingData);
-        setConfiguration(response.data.configuration);
+        setDrawerOpen({...drawerOpen, config: response.data.configuration});
         setAlert(null);
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
@@ -219,7 +221,7 @@ function BrainSenseStreaming() {
           requestOverview: true,
         });
         setData(response.data.streamingData);
-        setConfiguration(response.data.configuration);
+        setDrawerOpen({...drawerOpen, config: response.data.configuration});
       }
     } catch (error) {
       SessionController.displayError(error, setAlert);
@@ -273,16 +275,19 @@ function BrainSenseStreaming() {
   const toggleWaveletTransform = () => {
     setAlert(<LoadingProgress/>);
     SessionController.query("/api/queryBrainSenseStreaming", {
-      updateWaveletTransform: configuration.SpectrogramMethod.value === "Wavelet" ? "Spectrogram" : "Wavelet",
+      updateWaveletTransform: drawerOpen.config.SpectrogramMethod.value === "Wavelet" ? "Spectrogram" : "Wavelet",
       id: patientID,
       recordingId: recordingId,
     }).then((response) => {
       setDataToRender(response.data);
-      setConfiguration({
-        ...configuration,
-        SpectrogramMethod: {
-          ...configuration.SpectrogramMethod,
-          value: configuration.SpectrogramMethod.value === "Wavelet" ? "Spectrogram" : "Wavelet"
+      setDrawerOpen({
+        ...drawerOpen,
+        config: {
+          ...drawerOpen.config,
+          SpectrogramMethod: {
+            ...drawerOpen.config.SpectrogramMethod,
+            value: drawerOpen.config.SpectrogramMethod.value === "Wavelet" ? "Spectrogram" : "Wavelet"
+          }
         }
       });
       setAlert(null);
@@ -304,6 +309,7 @@ function BrainSenseStreaming() {
       stimulationReference: reference
 
     }).then((response) => {
+      console.log(response.data)
       setChannelPSDs((channelPSDs) => {
         for (let i in channelInfos) {
           if (channelInfos[i] == side) {
@@ -569,7 +575,7 @@ function BrainSenseStreaming() {
                               {dictionaryLookup(dictionary.BrainSenseStreaming.Figure.CardiacFilter, dataToRender.Info.CardiacFilter ? "Remove" : "Add", language)}
                             </MDButton>
                             <MDButton size="small" variant="contained" color="info" onClick={() => toggleWaveletTransform()}>
-                              {dictionaryLookup(dictionary.BrainSenseStreaming.Figure.Wavelet, configuration.SpectrogramMethod.value === "Wavelet" ? "Remove" : "Add", language)}
+                              {dictionaryLookup(dictionary.BrainSenseStreaming.Figure.Wavelet, drawerOpen.config.SpectrogramMethod.value === "Wavelet" ? "Remove" : "Add", language)}
                             </MDButton>
                           </MDBox>
                         </MDBox>
@@ -577,7 +583,7 @@ function BrainSenseStreaming() {
                       <Grid item xs={12}>
                         <TimeFrequencyAnalysis dataToRender={dataToRender} channelInfos={channelInfos} 
                           handleAddEvent={handleAddEvent} handleDeleteEvent={handleDeleteEvent} annotations={annotations}
-                          figureTitle={"TimeFrequencyAnalysis"} height={600}/>
+                          figureTitle={"TimeFrequencyAnalysis"} height={700}/>
                       </Grid>
                       <Grid item xs={12}>
                         {adaptiveClosedLoopParameters(dataToRender.Info.Therapy)}
@@ -670,6 +676,87 @@ function BrainSenseStreaming() {
                 </Grid>
               ) : null}
             </Grid>
+            <Drawer
+              sx={{
+                width: 300,
+                flexShrink: 0,
+                '& .MuiDrawer-paper': {
+                  width: 300,
+                  boxSizing: 'border-box',
+                },
+              }}
+              PaperProps={{
+                sx: {
+                  borderWidth: "2px",
+                  borderColor: "black",
+                  borderStyle: "none",
+                  boxShadow: "-2px 0px 5px gray",
+                }
+              }}
+              variant="persistent"
+              anchor="right"
+              open={drawerOpen.open}
+            >
+            <MDBox>
+              <IconButton onClick={() => setDrawerOpen({...drawerOpen, open: false})}>
+                <ChevronRightIcon />
+                <MDTypography>
+                  {"Close"}
+                </MDTypography>
+              </IconButton>
+            </MDBox>
+            <MDBox>
+            <Grid container spacing={2} sx={{paddingLeft: 2, paddingRight: 2}}>
+              {Object.keys(drawerOpen.config).map((key) => {
+                return <Grid item xs={12} key={key} sx={{
+                  wordWrap: "break-word",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word"
+                }}>
+                  <MDTypography fontSize={18} fontWeight={"bold"}>
+                    {drawerOpen.config[key].name}
+                  </MDTypography>
+                  <MDTypography fontSize={15} fontWeight={"regular"}>
+                    {drawerOpen.config[key].description}
+                  </MDTypography>
+                  <Autocomplete
+                    options={drawerOpen.config[key].options}
+                    value={drawerOpen.config[key].value}
+                    onChange={(event, value) => setDrawerOpen((option) => {
+                      option.config[key].value = value;
+                      return {...option};
+                    })}
+                    renderInput={(params) => (
+                      <FormField
+                        {...params}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
+                  <Divider variant="middle" />
+                </Grid>
+              })}
+            </Grid>
+            </MDBox>
+            <MDBox p={3}>
+              <MDButton variant={"gradient"} color={"success"} onClick={() => {
+                setAlert(<LoadingProgress/>);
+                console.log(drawerOpen.config)
+                SessionController.query("/api/updateSession", {
+                  "RealtimeStream": drawerOpen.config
+                }).then(() => {
+                  setDrawerOpen({...drawerOpen, open: false});
+                  setAlert(null);
+                }).catch((error) => {
+                  SessionController.displayError(error, setAlert);
+                });
+              }} fullWidth>
+                <MDTypography color={"light"}>
+                  {"Update"}
+                </MDTypography>
+              </MDButton>
+            </MDBox>
+            </Drawer>
             <MDBox style={{
               position: 'sticky',
               bottom: 32,
@@ -700,6 +787,12 @@ function BrainSenseStreaming() {
                   icon={<DashboardIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
                   tooltipTitle={"Edit Layout"}
                   onClick={() => setAlert(<LayoutOptions setAlert={setAlert} />)}
+                />
+                <SpeedDialAction
+                  key={"ChangeSettings"}
+                  icon={<SettingsIcon sx={{display: "flex", justifyContent: "center", alignItems: "center", fontSize: 30}}/>}
+                  tooltipTitle={"Edit Processing Configurations"}
+                  onClick={() => setDrawerOpen({...drawerOpen, open: true})}
                 />
               </SpeedDial>
             </MDBox>

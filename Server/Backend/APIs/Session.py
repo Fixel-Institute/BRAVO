@@ -85,10 +85,11 @@ class UpdateSessionConfig(RestViews.APIView):
                 if key in ["language","miniSidenav","darkMode"]:
                     request.user.configuration[key] = request.data[key]
 
-                if key in ["BrainSenseSurvey"]:
+                if key in ["BrainSenseSurvey", "RealtimeStream"]:
+                    print(request.user.configuration["ProcessingSettings"][key])
                     for subkey in request.data[key]:
-                        if request.data[key][subkey]["value"] in request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"][subkey]["options"]:
-                            request.user.configuration["ProcessingSettings"]["BrainSenseSurvey"][subkey]["value"] = request.data[key][subkey]["value"]
+                        if request.data[key][subkey]["value"] in request.user.configuration["ProcessingSettings"][key][subkey]["options"]:
+                            request.user.configuration["ProcessingSettings"][key][subkey]["value"] = request.data[key][subkey]["value"]
 
             request.user.save()
         return Response(status=200)

@@ -721,7 +721,7 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
 
         elif method == "Wavelet":
             timeSelection = rangeSelection(stream["TimeDomain"]["Wavelet"][DataIndex]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
-            if np.sum(timeSelection) < 250 * 5:
+            if np.sum(timeSelection) < 2 * 5:
                 continue
             StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i-1], "Frequency": stream["TimeDomain"]["Wavelet"][DataIndex]["Frequency"], "PSD": np.mean(stream["TimeDomain"]["Wavelet"][DataIndex]["Power"][:,timeSelection],axis=1)})
 
@@ -741,14 +741,15 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
 
     for i in range(len(StimulationEpochs)):
         StimulationEpochs[i]["CenterFrequency"] = centerFrequency
-        timeSelection = np.bitwise_and(StimulationEpochs[i]["TimeSelection"], stream["TimeDomain"]["Spectrogram"][DataIndex]["Missing"] == 0)
-        
-        if method == "Wavelet":
-            timeSelection = np.bitwise_and(timeSelection, stream["TimeDomain"]["Missing"][:,DataIndex] == 0)
-            StimulationEpochs[i]["SpectralFeatures"] = stream["TimeDomain"]["Wavelet"][DataIndex]["Power"][:,timeSelection]
-        else:
-            timeSelection = np.bitwise_and(timeSelection, stream["TimeDomain"]["Spectrogram"][DataIndex]["Missing"] == 0)
+
+        if method == "Welch":
+            StimulationEpochs[i]["SpectralFeatures"] = StimulationEpochs[i]["PSD"].reshape((len(StimulationEpochs[i]["PSD"]),1))
+        elif method == "Spectrogram":
+            timeSelection = np.bitwise_and(StimulationEpochs[i]["TimeSelection"], stream["TimeDomain"]["Spectrogram"][DataIndex]["Missing"] == 0)
             StimulationEpochs[i]["SpectralFeatures"] = stream["TimeDomain"]["Spectrogram"][DataIndex]["Power"][:,timeSelection]
+        elif method == "Wavelet":
+            timeSelection = np.bitwise_and(StimulationEpochs[i]["TimeSelection"], stream["TimeDomain"]["Wavelet"][DataIndex]["Missing"] == 0)
+            StimulationEpochs[i]["SpectralFeatures"] = stream["TimeDomain"]["Wavelet"][DataIndex]["Power"][:,timeSelection]
 
         StimulationEpochs[i]["SpectralFeatures"] = np.mean(StimulationEpochs[i]["SpectralFeatures"][frequencySelection,:],axis=0)
         del(StimulationEpochs[i]["TimeSelection"])

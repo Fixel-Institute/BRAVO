@@ -409,8 +409,12 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                     BrainSenseData["PowerDomain"]["Stimulation"] = BrainSenseStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
                     ContactDict = {0: "ZERO", 1: "ONE", 2: "TWO", 3: "THREE"}
                     ChannelName = ContactDict[request.data["channel"]["Contacts"][0]] + "_" + ContactDict[request.data["channel"]["Contacts"][1]] + "_" + request.data["channel"]["Hemisphere"].split(" ")[0].upper()
-                    StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, ChannelName, method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
-                
+                    
+                    if request.user.configuration["ProcessingSettings"]["RealtimeStream"]["PSDMethod"]["value"] == "Time-Frequency Analysis":
+                        StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, ChannelName, method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["SpectrogramMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
+                    else:
+                        StimPSD = BrainSenseStream.processRealtimeStreamStimulationPSD(BrainSenseData, ChannelName, method=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["PSDMethod"]["value"], stim_label=request.data["stimulationReference"], centerFrequency=request.data["centerFrequency"])
+
                 return Response(status=200, data=StimPSD)
 
             elif Authority["Level"] == 2:
