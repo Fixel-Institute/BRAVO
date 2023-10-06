@@ -598,6 +598,7 @@ function BrainSenseStreaming() {
                         </MDBox>
                       </Grid>
                       {channelPSDs.map((channelData, index) => {
+                        if (!channelInfos[index]) return;
                         return <React.Fragment key={index}>
                           <Grid item xs={12} lg={6}>
                             <MDBox display={"flex"} flexDirection={"column"}>

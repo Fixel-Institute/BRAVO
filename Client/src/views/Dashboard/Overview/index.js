@@ -164,6 +164,7 @@ export default function DashboardOverview() {
               patient.FirstName.toLowerCase().includes(optionLower) || 
               patient.LastName.toLowerCase().includes(optionLower) || 
               patient.DaysSinceImplant.filter((device) => device.Name.toLowerCase().includes(optionLower)).length > 0 || 
+              patient.Tags.filter((tag) => tag.toLowerCase().includes(optionLower)).length > 0 || 
               diagnosis.includes(optionLower)
             );
           }

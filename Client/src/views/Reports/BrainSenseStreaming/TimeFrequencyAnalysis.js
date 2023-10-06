@@ -76,7 +76,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, hand
     
     let ax = fig.getAxes();
     for (let i in data.Channels) {
-      const ylim = Math.max(Math.abs(Math.matrix(data.Stream[i].RawData)));
+      const ylim = Math.quantileSeq(Math.abs(Math.matrix(data.Stream[i].RawData)), 0.99);
       fig.setYlim([-ylim*1.1, ylim*1.1], ax[i*2 + 0]);
       
       var timeArray = Array(data.Stream[i].RawData.length).fill(0).map((value, index) => new Date(data.Timestamp*1000 + 4*index));
