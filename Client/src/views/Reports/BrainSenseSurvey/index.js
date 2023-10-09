@@ -201,6 +201,7 @@ function BrainSenseSurvey() {
                                 InputLabelProps={{ shrink: true }}
                               />
                             )}
+                            disableClearable
                           />
                         </MDBox>
                       </Grid>
@@ -242,6 +243,7 @@ function BrainSenseSurvey() {
                               InputLabelProps={{ shrink: true }}
                             />
                           )}
+                          disableClearable
                         />
                       </MDBox>
                     </Grid>

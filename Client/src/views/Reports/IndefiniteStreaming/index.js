@@ -427,6 +427,7 @@ function IndefiniteStreaming() {
                                 InputLabelProps={{ shrink: true }}
                               />
                             )}
+                            disableClearable
                           />
                         </MDBox>
                       </Grid>
@@ -464,6 +465,7 @@ function IndefiniteStreaming() {
                                 InputLabelProps={{ shrink: true }}
                               />
                             )}
+                            disableClearable
                           />
                         </MDBox>
                       </Grid>

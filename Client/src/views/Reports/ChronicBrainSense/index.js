@@ -225,6 +225,7 @@ function ChronicBrainSense() {
                                   InputLabelProps={{ shrink: true }}
                                 />
                               )}
+                              disableClearable
                             />
                           </MDBox>
                         </Grid>
@@ -276,6 +277,7 @@ function ChronicBrainSense() {
                                 InputLabelProps={{ shrink: true }}
                               />
                             )}
+                            disableClearable
                           />
                         </MDBox>
                       </Grid>
@@ -306,6 +308,7 @@ function ChronicBrainSense() {
                                 InputLabelProps={{ shrink: true }}
                               />
                             )}
+                            disableClearable
                           />
                         </MDBox>
                       </Grid>
@@ -336,6 +339,7 @@ function ChronicBrainSense() {
                                 InputLabelProps={{ shrink: true }}
                               />
                             )}
+                            disableClearable
                           />
                         </MDBox>
                       </Grid>

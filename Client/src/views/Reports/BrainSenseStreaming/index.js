@@ -179,24 +179,33 @@ function BrainSenseStreaming() {
   React.useEffect(() => {
     if (!eventPSDs) return;
 
-    const Events = Object.keys(eventPSDs);
-    if (Events.length > 0) {
-      eventPSDSelector.options = eventPSDs[Events[0]].map((value, i) => {
-        const [side, target] = channelInfos[i].Hemisphere.split(" ");
-        let titleText = (channelInfos[i].Hemisphere == channelInfos[i].CustomName) ? dictionaryLookup(dictionary.FigureStandardText, side, language) + " " + dictionaryLookup(dictionary.FigureStandardText, target, language) : channelInfos[i].CustomName;
-        titleText += (typeof channelInfos[i].Contacts) == "string" ? " " + channelInfos[i].Contacts : ` E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
-        return {
-          text: titleText,
-          value: value.Channel
-        };
-      });
+    if (eventPSDSelector.type == "Events") {
+      eventPSDSelector.options = Object.keys(eventPSDs).map((value) => (
+        {text: value, value: value}
+      ));
       eventPSDSelector.value = eventPSDSelector.options[0];
+      console.log(eventPSDSelector)
       setEventPSDSelector({...eventPSDSelector});
     } else {
-      setEventPSDSelector({...eventPSDSelector, options: [], value: ""});
+      const Events = Object.keys(eventPSDs);
+      if (Events.length > 0) {
+        eventPSDSelector.options = eventPSDs[Events[0]].map((value, i) => {
+          const [side, target] = channelInfos[i].Hemisphere.split(" ");
+          let titleText = (channelInfos[i].Hemisphere == channelInfos[i].CustomName) ? dictionaryLookup(dictionary.FigureStandardText, side, language) + " " + dictionaryLookup(dictionary.FigureStandardText, target, language) : channelInfos[i].CustomName;
+          titleText += (typeof channelInfos[i].Contacts) == "string" ? " " + channelInfos[i].Contacts : ` E${channelInfos[i].Contacts[0]}-E${channelInfos[i].Contacts[1]}`;
+          return {
+            text: titleText,
+            value: value.Channel
+          };
+        });
+        eventPSDSelector.value = eventPSDSelector.options[0];
+        setEventPSDSelector({...eventPSDSelector});
+      } else {
+        setEventPSDSelector({...eventPSDSelector, options: [], value: ""});
+      }
     }
-  }, [eventPSDs]);
-
+  }, [eventPSDSelector.type, eventPSDs]);
+  
   React.useEffect(() => {
     if (!eventSpectrograms) return;
 
@@ -665,6 +674,7 @@ function BrainSenseStreaming() {
                                 InputLabelProps={{ shrink: true }}
                               />
                             )}
+                            disableClearable
                           />
                         </MDBox>
                       </Grid>
@@ -732,6 +742,7 @@ function BrainSenseStreaming() {
                         InputLabelProps={{ shrink: true }}
                       />
                     )}
+                    disableClearable
                   />
                   <Divider variant="middle" />
                 </Grid>
