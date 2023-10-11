@@ -421,6 +421,9 @@ def queryRealtimeStreamRecording(analysis, cardiacFilter=False, refresh=False):
         Database.saveSourceFiles(BrainSenseData["TimeDomain"], "BrainSenseStreamTimeDomain", "Raw", TimeRecording.recording_id, TimeRecording.device_deidentified_id)
         TimeRecording.save()
     
+    if "Alignment" in PowerRecording.recording_info.keys():
+        BrainSenseData["PowerDomain"]["StartTime"] += PowerRecording.recording_info["Alignment"]/1000
+    
     BrainSenseData["Timestamp"] = analysis.analysis_date.timestamp()
     BrainSenseData["Info"].update(PowerRecording.recording_info)
     BrainSenseData["Info"].update(TimeRecording.recording_info)
@@ -695,6 +698,7 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
         raise Exception("Data not available")
     
     TimeArray = np.arange(stream["TimeDomain"]["Data"].shape[0])/stream["TimeDomain"]["SamplingRate"]
+    TimeShift = stream["TimeDomain"]["StartTime"] - stream["PowerDomain"]["StartTime"]
     DataIndex = [i for i in range(len(stream["TimeDomain"]["ChannelNames"])) if stream["TimeDomain"]["ChannelNames"][i] == channel][0]
     
     cIndex = 0
@@ -703,7 +707,7 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
         cIndex += 1 
 
         if method == "Welch":
-            timeSelection = rangeSelection(TimeArray,[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            timeSelection = rangeSelection(TimeArray+TimeShift,[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
             timeSelection = np.bitwise_and(timeSelection, stream["TimeDomain"]["Missing"][:,DataIndex] == 0)
             if np.sum(timeSelection) < 250 * 5:
                 continue
@@ -713,14 +717,14 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
             timeSelection = rangeSelection(stream["TimeDomain"]["Spectrogram"][DataIndex]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
 
         elif method == "Spectrogram":
-            timeSelection = rangeSelection(stream["TimeDomain"]["Spectrogram"][DataIndex]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            timeSelection = rangeSelection(stream["TimeDomain"]["Spectrogram"][DataIndex]["Time"]+TimeShift,[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
             timeSelection = np.bitwise_and(timeSelection, stream["TimeDomain"]["Spectrogram"][DataIndex]["Missing"] == 0)
             if np.sum(timeSelection) < 2 * 5:
                 continue
             StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i-1], "Frequency": stream["TimeDomain"]["Spectrogram"][DataIndex]["Frequency"], "PSD": np.mean(stream["TimeDomain"]["Spectrogram"][DataIndex]["Power"][:,timeSelection],axis=1)})
 
         elif method == "Wavelet":
-            timeSelection = rangeSelection(stream["TimeDomain"]["Wavelet"][DataIndex]["Time"],[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
+            timeSelection = rangeSelection(stream["TimeDomain"]["Wavelet"][DataIndex]["Time"]+TimeShift,[StimulationSeries["Time"][i-1]+2,StimulationSeries["Time"][i]-2])
             if np.sum(timeSelection) < 2 * 5:
                 continue
             StimulationEpochs.append({"Stimulation": StimulationSeries["Amplitude"][i-1], "Frequency": stream["TimeDomain"]["Wavelet"][DataIndex]["Frequency"], "PSD": np.mean(stream["TimeDomain"]["Wavelet"][DataIndex]["Power"][:,timeSelection],axis=1)})

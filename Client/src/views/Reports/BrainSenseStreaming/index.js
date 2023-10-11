@@ -541,6 +541,23 @@ function BrainSenseStreaming() {
     }
   }
 
+  const handleAdjustAlignment = async (alignment) => {
+    try {
+      const response = await SessionController.query("/api/updateBrainSenseStream", {
+        id: patientID,
+        recordingId: recordingId,
+        adjustAlignment: true,
+        alignment: alignment
+      });
+
+      if (response.status == 200) {
+        return true;
+      }
+    } catch (error) {
+      SessionController.displayError(error, setAlert);
+    }
+  }
+
   return (
     <>
       {alert}
@@ -591,7 +608,7 @@ function BrainSenseStreaming() {
                       </Grid>
                       <Grid item xs={12}>
                         <TimeFrequencyAnalysis dataToRender={dataToRender} channelInfos={channelInfos} 
-                          handleAddEvent={handleAddEvent} handleDeleteEvent={handleDeleteEvent} annotations={annotations}
+                          handleAddEvent={handleAddEvent} handleDeleteEvent={handleDeleteEvent} handleAdjustAlignment={handleAdjustAlignment} annotations={annotations}
                           figureTitle={"TimeFrequencyAnalysis"} height={700}/>
                       </Grid>
                       <Grid item xs={12}>
@@ -752,7 +769,6 @@ function BrainSenseStreaming() {
             <MDBox p={3}>
               <MDButton variant={"gradient"} color={"success"} onClick={() => {
                 setAlert(<LoadingProgress/>);
-                console.log(drawerOpen.config)
                 SessionController.query("/api/updateSession", {
                   "RealtimeStream": drawerOpen.config
                 }).then(() => {

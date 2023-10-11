@@ -86,7 +86,7 @@ export const SessionController = (function () {
         errorMessage = dictionary.ErrorMessage.PERMISSION_DENIED[session.language];
       } else if (error.response.status === 400) {
         for (var key of Object.keys(ERRORCODE)) {
-          if (ERRORCODE[key] === error.response.data.code) {
+          if (ERRORCODE[key] == error.response.data.code) {
             errorMessage = dictionary.ErrorMessage[key][session.language];
             break;
           }

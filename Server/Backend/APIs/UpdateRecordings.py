@@ -228,6 +228,27 @@ class BrainSenseStreamUpdate(RestViews.APIView):
             recording.save()
             return Response(status=200)
         
+        elif "adjustAlignment" in request.data:
+            AuthorityLevel = Database.verifyAccess(request.user, request.data["id"])
+            if AuthorityLevel != 1:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+            availableDevices = Database.getPerceptDevices(request.user, request.data["id"], {"Level": 1})
+            analysis = models.CombinedRecordingAnalysis.objects.filter(deidentified_id=request.data["recordingId"]).first()
+            if not analysis:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            if not str(analysis.device_deidentified_id) in [str(device.deidentified_id) for device in availableDevices]:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+            allRecordings = models.BrainSenseRecording.objects.filter(recording_id__in=analysis.recording_list)
+            for recording in allRecordings:
+                if recording.recording_type == "BrainSenseStreamPowerDomain":
+                    recording.recording_info["Alignment"] = float(request.data["alignment"])
+                    recording.save()
+
+            return Response(status=200)
+        
         elif "mergeRecordings" in request.data:
             recordings = models.BrainSenseRecording.objects.filter(recording_id__in=request.data["mergeRecordings"], recording_type="BrainSenseStream").all()
             if not len(recordings) == len(request.data["mergeRecordings"]):

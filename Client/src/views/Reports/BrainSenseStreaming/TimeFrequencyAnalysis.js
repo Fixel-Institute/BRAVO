@@ -28,7 +28,7 @@ import { dictionary, dictionaryLookup } from "assets/translation";
 
 const filter = createFilterOptions();
 
-function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, handleDeleteEvent, annotations, height, figureTitle}) {
+function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, handleDeleteEvent, handleAdjustAlignment, annotations, height, figureTitle}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
@@ -42,6 +42,10 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, hand
     time: 0,
     duration: 0,
     show: false
+  });
+  const [dataAlignment, setDataAlignment] = React.useState({
+    show: false,
+    alignment: 0
   });
 
   const handleGraphing = (data) => {
@@ -257,6 +261,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, hand
     if (dataToRender) {
       handleGraphing(dataToRender);
       setFigureHeight(dataToRender.Channels.length*height);
+      setDataAlignment({show: false, alignment: dataToRender.Info.Alignment ? dataToRender.Info.Alignment : 0})
     } else {
       fig.purge();
       setShow(false);
@@ -314,6 +319,10 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, hand
           setContextMenu(null);
           handleDeleteEvent(eventInfo);
           }}>{"Delete Event"}</MenuItem>
+        <MenuItem onClick={() => {
+          setContextMenu(null);
+          setDataAlignment({...dataAlignment, show: true});
+          }}>{"Adjust Alignment"}</MenuItem>
       </Menu>
       <Dialog open={eventInfo.show} onClose={() => setEventInfo({...eventInfo, show: false})}>
         <MDBox px={2} pt={2}>
@@ -391,6 +400,34 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, hand
             handleAddEvent(eventInfo);
             setEventInfo({...eventInfo, show: false});
           }}>Add</MDButton>
+        </DialogActions>
+      </Dialog>
+      
+      <Dialog open={dataAlignment.show} onClose={() => setDataAlignment({show: false, alignment: 0})}>
+        <MDBox px={2} pt={2}>
+          <MDTypography variant="h5">
+            {"Adjust Secondary Recording Alignment"} 
+          </MDTypography>
+        </MDBox>
+        <DialogContent>
+          <TextField
+            variant="standard"
+            margin="dense"
+            type={"number"}
+            label="Time Shift toward Right (ms)"
+            placeholder={"Enter Time Shift to be applied to Power Channel"}
+            value={dataAlignment.alignment}
+            onChange={(event) => setDataAlignment({...dataAlignment, alignment: event.target.value})}
+            fullWidth
+          />
+        </DialogContent>
+        <DialogActions>
+          <MDButton color="secondary" onClick={() => setDataAlignment({...dataAlignment, show: false})}>Cancel</MDButton>
+          <MDButton color="info" onClick={() => handleAdjustAlignment(dataAlignment.alignment).then((response) => {
+            if (response) {
+              setDataAlignment({...dataAlignment, show: false})
+            }
+          })}>Add</MDButton>
         </DialogActions>
       </Dialog>
     </MDBox>
