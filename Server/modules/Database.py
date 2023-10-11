@@ -30,6 +30,7 @@ from cryptography.fernet import Fernet
 import json
 
 from Backend import models
+from decoder import Percept
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
@@ -306,6 +307,19 @@ def extractPatientInfo(user, patientUniqueID, deidentifiedId=None):
     availableDevices = getPerceptDevices(user, patientUniqueID, {
         "Level": 2 if deidentifiedId else 1,
     })
+
+    fileSize = 0
+    sessionPath = ""
+    for device in availableDevices:
+        availableSessions = models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id).all()
+        for session in availableSessions:
+            if os.path.getsize(DATABASE_PATH + session.session_file_path) < fileSize or fileSize == 0:
+                fileSize = os.path.getsize(DATABASE_PATH + session.session_file_path)
+                sessionPath = DATABASE_PATH + session.session_file_path
+
+    if sessionPath != "":
+        JSON = Percept.decodeEncryptedJSON(sessionPath, key)
+        info["Gender"] = JSON["PatientInformation"]["Final"]["PatientGender"].replace("PatientGenderDef.","")
 
     for device in availableDevices:
         deviceInfo = dict()
