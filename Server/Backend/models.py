@@ -108,11 +108,14 @@ class Institute(models.Model):
 class Patient(models.Model):
     first_name = models.CharField(default="", max_length=255)
     last_name = models.CharField(default="", max_length=255)
+    gender = models.CharField(default="", max_length=255)
     diagnosis = models.CharField(default="", max_length=255)
     institute = models.CharField(default="", max_length=255)
     medical_record_number = models.CharField(default="", max_length=255)
     birth_date = models.DateTimeField(default=timezone.now)
     tags = models.JSONField(default=list, null=False)
+
+    patient_info = models.JSONField(default=dict, null=False)
 
     research_study_id = models.JSONField(default=list, null=True)
     device_deidentified_id = models.JSONField(default=list, null=True)
@@ -235,6 +238,8 @@ class PerceptSession(models.Model):
     session_file_path = models.CharField(default="", max_length=255)
     session_source_filename = models.CharField(default="", max_length=255)
     session_date = models.DateTimeField(default=timezone.now)
+
+    session_info = models.JSONField(default=dict, null=False)
 
     def __str__(self):
         return str(self.deidentified_id)
