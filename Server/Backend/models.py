@@ -162,6 +162,17 @@ class Patient(models.Model):
         secureEncoder = Fernet(key)
         self.medical_record_number = secureEncoder.encrypt(mrn.encode("utf-8")).decode("utf-8")
 
+    def getPatientGender(self, key):
+        try:
+            secureEncoder = Fernet(key)
+            return secureEncoder.decrypt(self.gender.encode("utf-8")).decode("utf-8")
+        except:
+            return self.gender
+
+    def setPatientGender(self, gender, key):
+        secureEncoder = Fernet(key)
+        self.gender = secureEncoder.encrypt(gender.encode('utf_8')).decode("utf-8")
+
     def addDevice(self, deviceID):
         if not deviceID in self.device_deidentified_id:
             self.device_deidentified_id.append(deviceID)

@@ -55,6 +55,7 @@ def retrievePatientInformation(PatientInformation, Institute, lookupTable=None, 
                 FirstName = encoder.encrypt(lookupTable[i]["patient_deidentifier"].encode('utf_8')).decode("utf-8")
                 LastName = encoder.encrypt(lookupTable[i]["study_deidentifier"].encode('utf_8')).decode("utf-8")
                 Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
+                Gender = encoder.encrypt("Unknown".encode('utf_8')).decode("utf-8")
                 MRN = ""
                 PatientDateOfBirth = datetime.fromtimestamp(0)
                 
@@ -64,6 +65,7 @@ def retrievePatientInformation(PatientInformation, Institute, lookupTable=None, 
         LastName = encoder.encrypt(PatientInformation["PatientLastName"].encode('utf_8')).decode("utf-8")
         Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
         MRN = encoder.encrypt(PatientInformation["PatientId"].encode('utf_8')).decode("utf-8")
+        Gender = encoder.encrypt(PatientInformation["PatientGender"].replace("PatientGenderDef.","").encode('utf_8')).decode("utf-8")
         hashfield = hashlib.sha256((PatientInformation["PatientFirstName"] + " " + PatientInformation["PatientLastName"]).encode("utf-8")).hexdigest()
         try:
             PatientDateOfBirth = datetime.fromisoformat(PatientInformation["PatientDateOfBirth"].replace("Z","+00:00"))
@@ -82,6 +84,7 @@ def retrievePatientInformation(PatientInformation, Institute, lookupTable=None, 
             patient_identifier_hashfield=hashfield, 
             birth_date=PatientDateOfBirth, 
             diagnosis=Diagnosis, 
+            gender=Gender,
             medical_record_number=MRN, 
             institute=Institute)
         patient.save()

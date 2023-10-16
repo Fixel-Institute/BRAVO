@@ -125,6 +125,7 @@ class PatientInformationUpdate(RestViews.APIView):
                     "PatientFirstName": request.data["PatientID"],
                     "PatientLastName": request.data["StudyID"],
                     "Diagnosis": request.data["Diagnosis"],
+                    "PatientGender": "Unknown",
                     "PatientDateOfBirth": 0,
                     "PatientId": "Unknown",
                 }, request.user.email)
