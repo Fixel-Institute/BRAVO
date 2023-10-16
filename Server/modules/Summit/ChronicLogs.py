@@ -100,39 +100,51 @@ def saveChronicLogs(deviceID, ChronicLogs, sourceFile):
             sortedIndex = np.argsort(ChronicData["ChronicLogs"]["DateTime"],axis=0).flatten()
             ChronicData["ChronicLogs"]["DateTime"] = ChronicData["ChronicLogs"]["DateTime"][sortedIndex]
             ChronicData["ChronicLogs"]["State"] = ChronicData["ChronicLogs"]["State"][sortedIndex]
-            filename = Database.saveSourceFiles({
-                "ChronicLogs": ChronicData["ChronicLogs"]
-            }, "SummitChronicLogs", "SummitRCS", recording.recording_id, recording.device_deidentified_id)
+            filename = Database.saveSourceFiles(ChronicData, "SummitChronicLogs", "SummitRCS", recording.recording_id, recording.device_deidentified_id)
             
             NewRecordingFound = True
 
     return NewRecordingFound
 
 def processPowerBand(device, ChronicLFPs):
+    if not "IncludedRecordings" in ChronicLFPs.keys():
+        ChronicLFPs["IncludedRecordings"] = []
+    
+    if not "PowerBand" in ChronicLFPs.keys():
+        ChronicLFPs["PowerBand"] = {}
+
+    Updated = False
+
     recordings = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="SummitStreamingPower")
-    PowerStreams = {}
+    PowerStreams = ChronicLFPs["PowerBand"]
     for recording in recordings:
-        PowerStream = Database.loadSourceDataPointer(recording.recording_datapointer)
-        if not "LfpConfig" in PowerStream["Descriptor"].keys():
-            continue
-        
-        PowerStream["Time"] = np.arange(PowerStream["Data"].shape[0])/PowerStream["SamplingRate"] + PowerStream["StartTime"]
-        for i in range(len(PowerStream["Descriptor"]["PowerBands"])):
-            FrequencyResolution = PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["SamplingRate"] / PowerStream["Descriptor"]["NFFT"]
-            if i < 4:
-                ChannelNames = "Left " + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][0] + "-" + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][1]
-            else:
-                ChannelNames = "Right " + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][0] + "-" + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][1]
-            #ChannelNames += f" {PowerStream['ChannelNames'][i]}"
-            ChannelNames += f" {PowerStream['Descriptor']['PowerBands'][i][0]*FrequencyResolution:.2f}-{PowerStream['Descriptor']['PowerBands'][i][1]*FrequencyResolution:.2f} Hz"
+        if not str(recording.recording_id) in ChronicLFPs["IncludedRecordings"]:
+            ChronicLFPs["IncludedRecordings"].append(str(recording.recording_id))
+            print(str(recording.recording_id))
+
+            PowerStream = Database.loadSourceDataPointer(recording.recording_datapointer)
+            if not "LfpConfig" in PowerStream["Descriptor"].keys():
+                continue
             
-            if not ChannelNames in PowerStreams.keys():
+            PowerStream["Time"] = np.arange(PowerStream["Data"].shape[0])/PowerStream["SamplingRate"] + PowerStream["StartTime"]
+            for i in range(len(PowerStream["Descriptor"]["PowerBands"])):
+                FrequencyResolution = PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["SamplingRate"] / PowerStream["Descriptor"]["NFFT"]
                 if i < 4:
-                    PowerStreams[ChannelNames] = {"Hemisphere": "Left", "PowerBand": PowerStream['ChannelNames'][i], "Power": np.array((0,1)), "Time": np.array((0,1))}
+                    ChannelNames = "Left " + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][0] + "-" + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][1]
                 else:
-                    PowerStreams[ChannelNames] = {"Hemisphere": "Right", "PowerBand": PowerStream['ChannelNames'][i], "Power": np.array((0,1)), "Time": np.array((0,1))}
-            PowerStreams[ChannelNames]["Power"] = np.concatenate((PowerStreams[ChannelNames]["Power"], PowerStream["Data"][:,i]))
-            PowerStreams[ChannelNames]["Time"] = np.concatenate((PowerStreams[ChannelNames]["Time"], PowerStream["Time"]))
+                    ChannelNames = "Right " + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][0] + "-" + PowerStream["Descriptor"]["LfpConfig"][int(i/2)]["Channels"][1]
+                #ChannelNames += f" {PowerStream['ChannelNames'][i]}"
+                ChannelNames += f" {PowerStream['Descriptor']['PowerBands'][i][0]*FrequencyResolution:.2f}-{PowerStream['Descriptor']['PowerBands'][i][1]*FrequencyResolution:.2f} Hz"
+                
+                if not ChannelNames in PowerStreams.keys():
+                    if i < 4:
+                        PowerStreams[ChannelNames] = {"Hemisphere": "Left", "PowerBand": PowerStream['ChannelNames'][i], "Power": np.array((0,1)), "Time": np.array((0,1))}
+                    else:
+                        PowerStreams[ChannelNames] = {"Hemisphere": "Right", "PowerBand": PowerStream['ChannelNames'][i], "Power": np.array((0,1)), "Time": np.array((0,1))}
+                PowerStreams[ChannelNames]["Power"] = np.concatenate((PowerStreams[ChannelNames]["Power"], PowerStream["Data"][:,i]))
+                PowerStreams[ChannelNames]["Time"] = np.concatenate((PowerStreams[ChannelNames]["Time"], PowerStream["Time"]))
+            
+            Updated = True
     
     for key in PowerStreams.keys():
         SortIndex = np.argsort(PowerStreams[key]["Time"])
@@ -152,7 +164,7 @@ def processPowerBand(device, ChronicLFPs):
         PowerStreams[key]["Time"] = np.array(NewTimestamp)
 
     ChronicLFPs["PowerBand"] = PowerStreams
-    return ChronicLFPs
+    return ChronicLFPs, Updated
 
 def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
     """ Query Chronic LFPs based on Therapy History.
@@ -182,9 +194,13 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
         recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="SummitChronicLogs", recording_info__Hemisphere="AllHemisphere").first()
         if not recording == None:
             ChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
-
-            if not "PowerBand" in ChronicLFPs.keys():
-                ChronicLFPs = processPowerBand(device, ChronicLFPs)
+            
+            if not "IncludedRecordings" in ChronicLFPs.keys():
+                ChronicLFPs["IncludedRecordings"] = []
+                ChronicLFPs["PowerBand"] = {}
+    
+            ChronicLFPs, Updated = processPowerBand(device, ChronicLFPs)
+            if Updated:
                 Database.saveSourceFiles(ChronicLFPs, "SummitChronicLogs", "SummitRCS", recording.recording_id, recording.device_deidentified_id)
 
             ChronicLFPChannels = ChronicLFPs["PowerBand"].keys()
