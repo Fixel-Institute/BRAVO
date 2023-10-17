@@ -20,3 +20,11 @@ Frontend webpage is designed to work with user's local database if the user only
 ## Feature Requests and BUG Report
 
 Please use Github's "Issues" feature to request features or report BUGs. This is an ongoing project and your support in identifying issues in the project will be significantly important for future users. 
+
+## Citation
+
+Cagle, J. N., Johnson, K. A., Almeida, L., Wong, J. K., Ramirez-Zamora, A., Okun, M. S., ... & de Hemptinne, C. (2023). Brain Recording Analysis and Visualization Online (BRAVO): An open-source visualization tool for deep brain stimulation data. Brain Stimulation, 16(3), 793-797.
+
+## References
+
+Strelow, J. N., Dembek, T. A., Baldermann, J. C., Andrade, P., Jergas, H., Visser-Vandewalle, V., & Barbe, M. T. (2022). Local field potential-guided contact selection using chronically implanted sensing devices for deep brain stimulation in Parkinson’s disease. Brain Sciences, 12(12), 1726.

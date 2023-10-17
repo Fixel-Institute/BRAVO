@@ -53,7 +53,7 @@ export const formatSegmentString = (channels) => {
         break;
     }
 
-    if (i == 0) {
+    if (i == 0 && channels.length > 1) {
       channelName += " - ";
     }
   }

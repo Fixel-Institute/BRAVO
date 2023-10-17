@@ -83,6 +83,12 @@ def retrieveProcessingSettings(config=dict()):
                 "options": ["Estimated Medtronic PSD","Short-time Fourier Transform"],
                 "value": "Short-time Fourier Transform"
             },
+            "MonopolarEstimation": {
+                "name": "Monopolar Estimation Algorithm",
+                "description": "",
+                "options": ["No Estimation", "DETEC Algorithm (Strelow et. al., 2022)"],
+                "value": "No Estimation"
+            },
         }
     }
 

@@ -133,13 +133,24 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
 
             survey = Database.loadSourceDataPointer(recording.recording_datapointer)
             if not "Spectrum" in survey.keys():
-                survey = processBrainSenseSurvey(survey)
+                survey = processBrainSenseSurvey(survey, options)
                 Database.saveSourceFiles(survey, "BrainSenseSurvey", "Combined", recording.recording_id, recording.device_deidentified_id)
             
             if not "MedtronicPSD" in survey.keys():
-                survey = processBrainSenseSurvey(survey)
+                survey = processBrainSenseSurvey(survey, options)
                 Database.saveSourceFiles(survey, "BrainSenseSurvey", "Combined", recording.recording_id, recording.device_deidentified_id)
             
+            # Monopolar Estimation
+            if not options["MonopolarEstimation"]["value"] == "No Estimation":
+                if not "Monopolar" in survey.keys():
+                    survey = processBrainSenseSurvey(survey, options) 
+                elif not survey["Monopolar"] == options["MonopolarEstimation"]["value"]:
+                    survey = processBrainSenseSurvey(survey, options) 
+            else:
+                if "Monopolar" in survey.keys():
+                    survey = processBrainSenseSurvey(survey, options)
+
+            MonopolarEstimation = []
             for i in range(len(survey["ChannelNames"])):
                 data = dict()
                 if device.device_name == "":
@@ -170,7 +181,63 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
                         data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
                         data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
 
-                BrainSenseData.append(data)
+                MonopolarEstimation.append(data)
+
+            print([MonopolarEstimation[i]["Channel"] for i in range(len(MonopolarEstimation))])
+            print(MonopolarEstimation[0]["Timestamp"])
+
+            if options["MonopolarEstimation"]["value"] == "DETEC Algorithm (Strelow et. al., 2022)":
+                for hemisphere in ["Left", "Right"]:
+                    HemisphereCount = len(["Match" for i in range(len(MonopolarEstimation)) if MonopolarEstimation[i]["Hemisphere"].startswith(hemisphere)])
+                    
+                    if HemisphereCount < 6:
+                        continue
+                    print(HemisphereCount)
+                    for channel in [0,1,2,3]:
+                        data = dict()
+                        data["Channel"] = [channel]
+                        data["MeanPower"] = []
+                        Estimator = 0
+                        for i in range(len(MonopolarEstimation)):
+                            if channel in MonopolarEstimation[i]["Channel"] and MonopolarEstimation[i]["Hemisphere"].startswith(hemisphere):
+                                if len(data["MeanPower"]) == 0:
+                                    data["DeviceName"] = MonopolarEstimation[i]["DeviceName"]
+                                    data["Timestamp"] = MonopolarEstimation[i]["Timestamp"]
+                                    data["Hemisphere"] = MonopolarEstimation[i]["Hemisphere"]
+                                    data["Frequency"] = MonopolarEstimation[i]["Frequency"]
+                                    data["MeanPower"] = np.array(MonopolarEstimation[i]["MeanPower"]) / np.diff(MonopolarEstimation[i]["Channel"])
+                                    data["StdPower"] = np.zeros(len(MonopolarEstimation[i]["Frequency"]))
+                                else:
+                                    data["MeanPower"] += np.array(MonopolarEstimation[i]["MeanPower"]) / np.diff(MonopolarEstimation[i]["Channel"])
+                                Estimator += (1/np.diff(MonopolarEstimation[i]["Channel"]))
+                        
+                        if Estimator > 0:
+                            data["MeanPower"] /= Estimator
+                            BrainSenseData.append(data)
+  
+                    for channel in [1.1,1.2,1.3,2.1,2.2,2.3]:
+                        data = dict()
+                        data["Channel"] = [channel]
+                        data["MeanPower"] = []
+                        Estimator = 0
+                        for i in range(len(MonopolarEstimation)):
+                            if channel in MonopolarEstimation[i]["Channel"] and MonopolarEstimation[i]["Hemisphere"].startswith(hemisphere):
+                                if len(data["MeanPower"]) == 0:
+                                    data["DeviceName"] = MonopolarEstimation[i]["DeviceName"]
+                                    data["Timestamp"] = MonopolarEstimation[i]["Timestamp"]
+                                    data["Hemisphere"] = MonopolarEstimation[i]["Hemisphere"]
+                                    data["Frequency"] = MonopolarEstimation[i]["Frequency"]
+                                    data["MeanPower"] = np.array(MonopolarEstimation[i]["MeanPower"]) / np.diff(MonopolarEstimation[i]["Channel"])
+                                    data["StdPower"] = np.zeros(len(MonopolarEstimation[i]["Frequency"]))
+                                else:
+                                    data["MeanPower"] += np.array(MonopolarEstimation[i]["MeanPower"]) / np.diff(MonopolarEstimation[i]["Channel"])
+                                Estimator += (1/np.diff(MonopolarEstimation[i]["Channel"]))
+                        
+                        if Estimator > 0:
+                            data["MeanPower"] /= Estimator
+                            BrainSenseData.append(data)
+            else:
+                BrainSenseData.extend(MonopolarEstimation)
     return BrainSenseData
 
 def processBrainSenseSurvey(survey, method="spectrogram"):

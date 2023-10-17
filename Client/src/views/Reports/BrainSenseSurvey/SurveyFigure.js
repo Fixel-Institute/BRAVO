@@ -69,13 +69,31 @@ function SurveyFigure({dataToRender, height, config, figureTitle}) {
 
     for (var i in data) {
       var colorText = "#000000"
-      var legendGroupName = `E${data[i]["Channel"][0]}-E${data[i]["Channel"][1]}`
+      var legendGroupName = `E${data[i]["Channel"][0]}`
+      if (data[i]["Channel"].length > 1) {
+        legendGroupName = legendGroupName + `-E${data[i]["Channel"][1]}`
+      } else {
+        legendGroupName = legendGroupName + ` Monopolar`
+      }
       if (matchArray(data[i]["Channel"],[0,1])) colorText = "#9c27b0"
       else if (matchArray(data[i]["Channel"],[0,2])) colorText = "#f44336"
       else if (matchArray(data[i]["Channel"],[0,3])) colorText = "#ffeb3b"
       else if (matchArray(data[i]["Channel"],[1,2])) colorText = "#3f51b5"
       else if (matchArray(data[i]["Channel"],[1,3])) colorText = "#03a9f4"
       else if (matchArray(data[i]["Channel"],[2,3])) colorText = "#4caf50"
+
+      else if (matchArray(data[i]["Channel"],[0])) colorText = "#9c27b0"
+      else if (matchArray(data[i]["Channel"],[1])) colorText = "#f44336"
+      else if (matchArray(data[i]["Channel"],[2])) colorText = "#03a9f4"
+      else if (matchArray(data[i]["Channel"],[3])) colorText = "#4caf50"
+
+      else if (matchArray(data[i]["Channel"],[1.1])) colorText = "#a31545"
+      else if (matchArray(data[i]["Channel"],[1.2])) colorText = "#00a152"
+      else if (matchArray(data[i]["Channel"],[1.3])) colorText = "#007bb2"
+
+      else if (matchArray(data[i]["Channel"],[2.1])) colorText = "#ed4b82"
+      else if (matchArray(data[i]["Channel"],[2.2])) colorText = "#33eb91"
+      else if (matchArray(data[i]["Channel"],[2.3])) colorText = "#33bfff"
 
       else if (matchArray(data[i]["Channel"],[1.1,2.1])) {
         colorText = "#dd0000";
@@ -116,7 +134,7 @@ function SurveyFigure({dataToRender, height, config, figureTitle}) {
         color: colorText,
         linewidth: 2,
         showlegend: true,
-        hovertemplate: `E${data[i]["Channel"][0]}-E${data[i]["Channel"][1]} %{y:.2f} μV<sup>2</sup>/Hz <extra></extra>`,
+        hovertemplate: `${legendGroupName} %{y:.2f} μV<sup>2</sup>/Hz <extra></extra>`,
       }, {
         color: colorText,
         alpha: 0.3,
