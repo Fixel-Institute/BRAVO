@@ -183,16 +183,12 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
 
                 MonopolarEstimation.append(data)
 
-            print([MonopolarEstimation[i]["Channel"] for i in range(len(MonopolarEstimation))])
-            print(MonopolarEstimation[0]["Timestamp"])
-
             if options["MonopolarEstimation"]["value"] == "DETEC Algorithm (Strelow et. al., 2022)":
                 for hemisphere in ["Left", "Right"]:
                     HemisphereCount = len(["Match" for i in range(len(MonopolarEstimation)) if MonopolarEstimation[i]["Hemisphere"].startswith(hemisphere)])
                     
                     if HemisphereCount < 6:
                         continue
-                    print(HemisphereCount)
                     for channel in [0,1,2,3]:
                         data = dict()
                         data["Channel"] = [channel]

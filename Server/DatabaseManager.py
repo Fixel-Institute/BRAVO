@@ -49,6 +49,16 @@ def processInput(argv):
           patient.delete()
         return True
     
+    if argv[1] == "ChangePassword":
+      from BRAVO import asgi
+      from Backend import models
+      from modules.Percept import Sessions
+
+      user = models.PlatformUser.objects.get(email=argv[2])
+      user.set_password(argv[3])
+      user.save()
+      return True
+
     elif argv[1] == "SetupBRAVO":
       import socket
       from cryptography import fernet
