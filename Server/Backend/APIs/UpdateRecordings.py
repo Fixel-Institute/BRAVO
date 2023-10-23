@@ -154,7 +154,7 @@ class PatientInformationUpdate(RestViews.APIView):
         elif "updatePatientInfo" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["updatePatientInfo"])
-            if Authority["Level"] == 0 or Authority["Level"] == 2:
+            if Authority["Level"] == 0:
                 return Response(status=404)
 
             patient = models.Patient.objects.get(deidentified_id=request.data["updatePatientInfo"])
