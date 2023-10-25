@@ -151,6 +151,10 @@ def queryMontageDataOverview(user, patientUniqueID, authority):
         for recording in allSurveys:
             if not recording.recording_id in authority["Permission"] and authority["Level"] == 2:
                 continue
+            
+            # Skip data with less than 1 second data
+            if recording.recording_duration < 1:
+                continue
 
             data = dict()
             if device.device_name == "":
@@ -201,6 +205,11 @@ def queryMontageData(user, devices, timestamps, authority):
                     continue
 
                 stream = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+                # Skip this because this recording doesn't have enough data
+                if stream["Duration"] < 1:
+                    continue 
+
                 if not "Spectrums" in stream.keys():
                     stream = processMontageStreams(stream)
                     Database.saveSourceFiles(stream,"IndefiniteStream","Combined",recording.recording_id, recording.device_deidentified_id)

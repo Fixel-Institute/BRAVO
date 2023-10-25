@@ -584,6 +584,9 @@ class QueryIndefiniteStreaming(RestViews.APIView):
                 } for item in annotations]
             EventPSDs, EventOnsetSpectrum = IndefiniteStream.processAnnotationAnalysis(data)
 
+            if len(data) == 0:
+                return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
+
             return Response(status=200, data={
                 "data": data, 
                 "eventPSDs": EventPSDs,
