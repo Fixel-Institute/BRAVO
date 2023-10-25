@@ -32,11 +32,12 @@ import LoadingProgress from "components/LoadingProgress";
 
 import DatabaseLayout from "layouts/DatabaseLayout";
 
-import TimeFrequencyAnalysis from "../../Reports/BrainSenseStreaming/TimeFrequencyAnalysis";
+import TimeFrequencyAnalysis from "./TimeFrequencyAnalysis";
 import StimulationPSD from "./StimulationPSD";
 import StimulationBoxPlot from "./StimulationBoxPlot";
 
 import TherapeuticPredictionTable from "./TherapeuticPredictionTable";
+import MuiAlertDialog from "components/MuiAlertDialog";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
@@ -51,12 +52,10 @@ function TherapeuticPrediction() {
   const [data, setData] = React.useState([]);
   const [predictionModel, setPredictionModel] = React.useState([]);
   const [predictionToRender, setPredictionToRender] = React.useState([]);
+  const [annotations, setAnnotations] = React.useState([]);
   const [dataToRender, setDataToRender] = React.useState(false);
   const [channelInfos, setChannelInfos] = React.useState([]);
-  const [leftHemispherePSD, setLeftHemispherePSD] = React.useState(false);
-  const [rightHemispherePSD, setRightHemispherePSD] = React.useState(false);
-  const [leftHemisphereBox, setLeftHemisphereBox] = React.useState(false);
-  const [rightHemisphereBox, setRightHemisphereBox] = React.useState(false);
+  const [channelPSDs, setChannelPSDs] = React.useState([]);
 
   const [timeFrequencyPlotHeight, setTimeFrequencyPlotHeight] = React.useState(600)
   const [alert, setAlert] = React.useState(null);
@@ -111,7 +110,6 @@ function TherapeuticPrediction() {
         ChannelInfos = data[i].Channels;
       }
     }
-
     var centerFrequencies = [];
     for (var i in predictionModel) {
       if (predictionModel[i].AnalysisID == timestamp) {
@@ -130,8 +128,6 @@ function TherapeuticPrediction() {
       requestFrequency: centerFrequencies,
       requestData: true
     }).then((response) => {
-      if (response.data.Channels.length == 2) setTimeFrequencyPlotHeight(7*200);
-      else setTimeFrequencyPlotHeight(4*200);
       setChannelInfos(ChannelInfos);
       setDataToRender(response.data);
       setAlert(null);
@@ -139,96 +135,136 @@ function TherapeuticPrediction() {
       SessionController.displayError(error, setAlert);
     });
   };
+  
+  React.useEffect(() => {
+    if (dataToRender.Stream) {
+      setChannelPSDs(dataToRender.Stream.map((data) => data.StimPSD));
+    } else {
+      setChannelPSDs([]);
+    }
+  }, [dataToRender]);
 
   const onCenterFrequencyChange = (side, freq) => {
-    var channelName = "";
-    if (side === "Left") {
-      for (var i in dataToRender.Channels) {
-        if (dataToRender.Channels[i].endsWith("LEFT")) {
-          channelName = dataToRender.Channels[i];
-        }
-      }
-      SessionController.query("/api/queryPredictionModel", {
-        updateStimulationPSD: true,
-        id: patientID,
-        recordingId: recordingId,
-        channel: channelName,
-        centerFrequency: freq,
-        stimulationReference: "Ipsilateral"
-      }).then((response) => {
-        setLeftHemisphereBox(response.data.StimPSD);
-        setPredictionModel((models) => {
-          for (var j in models) {
-            if (models[j].AnalysisID == recordingId) {
-              for (var k in models[j]["Channels"]) {
-                if (models[j]["Channels"][k]["Hemisphere"].startsWith("Left")) {
-                  models[j].Prediction[k] = response.data.PredictionModel;
-                }
-              }
-            }
-          }
-          return [...models]
-        });
-      }).catch((error) => {
-        SessionController.displayError(error, setAlert);
-      });
-    } else {
-      for (var i in dataToRender.Channels) {
-        if (!dataToRender.Channels[i].endsWith("LEFT")) {
-          channelName = dataToRender.Channels[i];
-        }
-      }
-      SessionController.query("/api/queryPredictionModel", {
-        updateStimulationPSD: true,
-        id: patientID,
-        recordingId: recordingId,
-        channel: channelName,
-        centerFrequency: freq,
-        stimulationReference: "Ipsilateral"
-      }).then((response) => {
-        setRightHemisphereBox(response.data.StimPSD);
-        for (var j in predictionModel) {
-          if (predictionModel[j].AnalysisID == recordingId) {
-            for (var k in predictionModel[j]["Channels"]) {
-              if (predictionModel[j]["Channels"][k]["Hemisphere"].startsWith("Right")) {
-                predictionModel[j].Prediction[k] = response.data.PredictionModel;
-              }
-            }
-          }
-        }
-        setPredictionModel([...predictionModel]);
-      }).catch((error) => {
-        SessionController.displayError(error, setAlert);
-      });
-    }
-  };
-
-  const toggleCardiacFilter = () => {
-    setAlert(<LoadingProgress/>);
+    var reference = "Ipsilateral";
+    
     SessionController.query("/api/queryBrainSenseStreaming", {
-      updateCardiacFilter: !dataToRender.Info.CardiacFilter,
+      updateStimulationPSD: true,
       id: patientID,
       recordingId: recordingId,
+      channel: side,
+      centerFrequency: freq,
+      stimulationReference: reference
     }).then((response) => {
-      setDataToRender(response.data);
+      setChannelPSDs((channelPSDs) => {
+        for (let i in channelInfos) {
+          if (channelInfos[i] == side) {
+            channelPSDs[i] = response.data;
+          }
+        }
+        return [...channelPSDs];
+      });
       setAlert(null);
     }).catch((error) => {
       SessionController.displayError(error, setAlert);
     });
-  }
+  };
 
-  // Divide all PSDs by day or by channel
-  React.useEffect(() => {
-    for (var i in dataToRender.Channels) {
-      if (dataToRender.Channels[i].endsWith("LEFT")) {
-        setLeftHemispherePSD(dataToRender.Stream[i].StimPSD);
-        setLeftHemisphereBox(dataToRender.Stream[i].StimPSD);
-      } else {
-        setRightHemispherePSD(dataToRender.Stream[i].StimPSD);
-        setRightHemisphereBox(dataToRender.Stream[i].StimPSD);
+  const handleAddEvent = async (eventInfo) => {
+    try {
+      const response = await SessionController.query("/api/queryCustomAnnotations", {
+        id: patientID,
+        addEvent: true,
+        name: eventInfo.name,
+        time: eventInfo.time / 1000,
+        duration: parseFloat(eventInfo.duration)
+      });
+
+      if (response.status == 200) {
+        setDataToRender((dataToRender) => {
+          dataToRender.Annotations = [...dataToRender.Annotations, {
+            Time: eventInfo.time / 1000,
+            Name: eventInfo.name,
+            Duration: parseFloat(eventInfo.duration)
+          }];
+          return {...dataToRender};
+        });
+
+        setAnnotations((annotations) => {
+          if (!annotations.includes(eventInfo.name)) {
+            annotations.push(eventInfo.name);
+          }
+          return [...annotations];
+        });
+      }
+    } catch (error) {
+      SessionController.displayError(error, setAlert);
+    }
+  };
+
+  const handleDeleteEvent = async (eventInfo) => {
+    if (dataToRender.Annotations.length > 0) {
+      eventInfo.targetInfo = eventInfo;
+      eventInfo.targetInfo.timeDiff = 10;
+    }
+
+    for (let i = 0; i < dataToRender.Annotations.length; i++) {
+      let absoluteDiffTime = Math.abs(dataToRender.Annotations[i].Time - eventInfo.time/1000);
+      if (absoluteDiffTime < eventInfo.targetInfo.timeDiff) {
+        eventInfo.targetInfo = dataToRender.Annotations[i];
+        eventInfo.targetInfo.timeDiff = absoluteDiffTime;
       }
     }
-  }, [dataToRender]);
+    
+    if (eventInfo.targetInfo.timeDiff < 10) {
+      setAlert(<MuiAlertDialog 
+        title={`Remove ${eventInfo.targetInfo.Name} Event`}
+        message={`Are you sure you want to delete the entry [${eventInfo.targetInfo.Name}] @ ${new Date(eventInfo.targetInfo.Time*1000)} ?`}
+        confirmText={"YES"}
+        denyText={"NO"}
+        denyButton
+        handleClose={() => setAlert(null)}
+        handleDeny={() => setAlert(null)}
+        handleConfirm={() => {
+          SessionController.query("/api/queryCustomAnnotations", {
+            id: patientID,
+            deleteEvent: true,
+            name: eventInfo.targetInfo.Name,
+            time: eventInfo.targetInfo.Time
+          }).then(() => {
+            setDataToRender((dataToRender) => {
+              dataToRender.Annotations = dataToRender.Annotations.filter((a) => {
+                if (a.Name == eventInfo.targetInfo.Name && a.Time == eventInfo.targetInfo.Time && a.Duration == eventInfo.targetInfo.Duration) {
+                  return false;
+                }
+                return true;
+              })
+              return {...dataToRender};
+            });
+            setAlert(null);
+          }).catch((error) => {
+            SessionController.displayError(error, setAlert);
+          });
+        }}
+      />)
+    }
+  }
+
+  const handleAdjustAlignment = async (alignment) => {
+    try {
+      const response = await SessionController.query("/api/updateBrainSenseStream", {
+        id: patientID,
+        recordingId: recordingId,
+        adjustAlignment: true,
+        alignment: alignment
+      });
+
+      if (response.status == 200) {
+        return true;
+      }
+    } catch (error) {
+      SessionController.displayError(error, setAlert);
+    }
+  }
 
   return (
     <>
@@ -279,13 +315,17 @@ function TherapeuticPrediction() {
                     <Grid container>
                       <Grid item xs={12}>
                         <MDBox display={"flex"} justifyContent={"space-between"} p={3}>
-                          <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
-                            {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
-                          </MDTypography>
+                          <MDBox display={"flex"} flexDirection={"column"}>
+                            <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
+                              {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
+                            </MDTypography>
+                          </MDBox>
                         </MDBox>
                       </Grid>
                       <Grid item xs={12}>
-                        <TimeFrequencyAnalysis dataToRender={dataToRender} channelInfos={channelInfos} figureTitle={"TimeFrequencyAnalysis"} height={timeFrequencyPlotHeight}/>
+                        <TimeFrequencyAnalysis dataToRender={dataToRender} channelInfos={channelInfos} 
+                          handleAddEvent={handleAddEvent} handleDeleteEvent={handleDeleteEvent} handleAdjustAlignment={handleAdjustAlignment} annotations={annotations}
+                          figureTitle={"TimeFrequencyAnalysis"} height={700}/>
                       </Grid>
                     </Grid>
                   </Card>
@@ -302,18 +342,19 @@ function TherapeuticPrediction() {
                           </MDTypography>
                         </MDBox>
                       </Grid>
-                      <Grid item xs={12} lg={6}>
-                        <StimulationPSD dataToRender={leftHemispherePSD} channelInfos={channelInfos} type={"Left"} figureTitle={"LeftStimulationPSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>
-                      </Grid>
-                      <Grid item xs={12} lg={6}>
-                        <StimulationBoxPlot dataToRender={leftHemisphereBox} predictionTrend={predictionToRender} channelInfos={channelInfos} type={"Left"} figureTitle={"LeftStimulationBar"} height={600}/>
-                      </Grid>
-                      <Grid item xs={12} lg={6}>
-                        <StimulationPSD dataToRender={rightHemispherePSD} channelInfos={channelInfos} type={"Right"} figureTitle={"RightStimulationPSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>
-                      </Grid>
-                      <Grid item xs={12} lg={6}>
-                        <StimulationBoxPlot dataToRender={rightHemisphereBox} predictionTrend={predictionToRender} channelInfos={channelInfos} type={"Right"} figureTitle={"RightStimulationBar"} height={600}/>
-                      </Grid>
+                      {channelPSDs.map((channelData, index) => {
+                        if (!channelInfos[index]) return;
+                        return <React.Fragment key={index}>
+                          <Grid item xs={12} lg={6}>
+                            <MDBox display={"flex"} flexDirection={"column"}>
+                              <StimulationPSD dataToRender={channelData} channelInfos={channelInfos[index]} type={"Left"} figureTitle={channelInfos[index].Hemisphere + index.toFixed(0) + " PSD"} onCenterFrequencyChange={onCenterFrequencyChange} height={600}/>
+                            </MDBox>
+                          </Grid>
+                          <Grid item xs={12} lg={6}>
+                            <StimulationBoxPlot dataToRender={channelData} channelInfos={channelInfos[index]} type={"Left"} figureTitle={channelInfos[index].Hemisphere + index.toFixed(0) + " Box"} height={600}/>
+                          </Grid>
+                        </React.Fragment>
+                      })}
                     </Grid>
                   </Card>
                 </Grid>
