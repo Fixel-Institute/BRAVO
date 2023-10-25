@@ -383,7 +383,14 @@ class QueryBrainSenseStreaming(RestViews.APIView):
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
                 
-                BrainSenseData["Annotations"] = []
+                annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=PatientInfo.authorized_patient_id, 
+                                                                    event_time__gte=datetime.fromtimestamp(BrainSenseData["TimeDomain"]["StartTime"], tz=pytz.utc), 
+                                                                    event_time__lte=datetime.fromtimestamp(BrainSenseData["TimeDomain"]["StartTime"]+BrainSenseData["TimeDomain"]["Duration"], tz=pytz.utc))
+                BrainSenseData["Annotations"] = [{
+                    "Name": item.event_name,
+                    "Time": item.event_time.timestamp(),
+                    "Duration": item.event_duration
+                } for item in annotations]
 
                 data = RealtimeStream.processRealtimeStreamRenderingData(BrainSenseData, request.user.configuration["ProcessingSettings"]["RealtimeStream"], centerFrequencies=centerFrequencies)
                 data = RealtimeStream.processAnnotationAnalysis(data)
@@ -567,7 +574,7 @@ class QueryIndefiniteStreaming(RestViews.APIView):
             data = IndefiniteStream.queryMontageData(request.user, devices, timestamps, Authority)
 
             for i in range(len(data)):
-                annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=request.data["id"], 
+                annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=PatientID, 
                                                                     event_time__gte=datetime.fromtimestamp(data[i]["Timestamp"], tz=pytz.utc), 
                                                                     event_time__lte=datetime.fromtimestamp(data[i]["Timestamp"]+data[i]["Duration"], tz=pytz.utc))
                 data[i]["Annotations"] = [{
@@ -607,7 +614,7 @@ class QueryIndefiniteStreaming(RestViews.APIView):
             data = IndefiniteStream.queryMontageData(request.user, devices, timestamps, Authority)
 
             for i in range(len(data)):
-                annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=request.data["id"], 
+                annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=PatientID, 
                                                                     event_time__gte=datetime.fromtimestamp(data[i]["Timestamp"], tz=pytz.utc), 
                                                                     event_time__lte=datetime.fromtimestamp(data[i]["Timestamp"]+data[i]["Duration"], tz=pytz.utc))
                 data[i]["Annotations"] = [{
@@ -925,12 +932,17 @@ class QueryCustomAnnotations(RestViews.APIView):
     def post(self, request):
         Authority = {}
         Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-        if Authority["Level"] != 1:
-            return Response(status=404)
+        if Authority["Level"] == 0:
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
         elif Authority["Level"] == 1:
             Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "ChronicLFPs")
             PatientID = request.data["id"]
+
+        elif Authority["Level"] == 2:
+            PatientInfo = Database.extractAccess(request.user, request.data["id"])
+            Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "ChronicLFPs")
+            PatientID = PatientInfo.authorized_patient_id
         
         if "requestOverview" in request.data:
             pass 
