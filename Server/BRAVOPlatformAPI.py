@@ -122,6 +122,21 @@ class BRAVOPlatformRequest:
             else:
                 raise Exception(f"Network Error: {response.status_code}")
         
+    def RequestBrainSenseSurveysRaw(self, PatientID):
+        form = {"id": PatientID, "requestRaw": True}
+        response = requests.post(self.__Server + "/api/queryBrainSenseSurveys", json.dumps(form), headers=self.__Headers)
+        if response.status_code == 200:
+            payload = response.json()
+            return payload
+        else:
+            if response.status_code == 400:
+                raise Exception(f"Network Error: {response.json()}")
+            elif response.status_code == 401:
+                self.refreshAuthToken()
+                return self.RequestBrainSenseSurveysRaw(PatientID)
+            else:
+                raise Exception(f"Network Error: {response.status_code}")
+        
     def RequestBrainSenseStreamList(self, PatientID):
         form = {"id": PatientID, "requestOverview": True}
         response = requests.post(self.__Server + "/api/queryBrainSenseStreaming", json.dumps(form), headers=self.__Headers)
@@ -220,8 +235,19 @@ class BRAVOPlatformRequest:
                 raise Exception(f"Network Error: {response.status_code}")
         
     def RequestPredictionModelOverview(self, PatientID):
-        # TODO 
-        return 
+        form = {"id": PatientID, "requestOverview": True}
+        response = requests.post(self.__Server + "/api/queryPredictionModel", json.dumps(form), headers=self.__Headers)
+        if response.status_code == 200:
+            payload = response.json()
+            return payload
+        else:
+            if response.status_code == 400:
+                raise Exception(f"Network Error: {response.json()}")
+            elif response.status_code == 401:
+                self.refreshAuthToken()
+                return self.RequestPatientEvents(PatientID)
+            else:
+                raise Exception(f"Network Error: {response.status_code}")
         
     def RequestPredictionModel(self, PatientID, RecordingID):
         form = {"id": PatientID, "recordingId": RecordingID, "updatePredictionModels": True}
@@ -232,4 +258,7 @@ class BRAVOPlatformRequest:
         else:
             if response.status_code == 400:
                 raise Exception(f"Network Error: {response.json()}")
+            elif response.status_code == 401:
+                self.refreshAuthToken()
+                return self.RequestPatientEvents(PatientID)
             raise Exception(f"Network Error: {response.status_code}")

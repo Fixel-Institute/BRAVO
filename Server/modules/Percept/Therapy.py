@@ -142,34 +142,35 @@ def queryTherapyHistory(user, device, authority):
             
             else:
                 TherapyChangeData["therapy"].append(BriefTherapy)
-            
-        for i in range(len(TherapyHistory["therapy_date"])):
-            if TherapyHistory["therapy_date"][i].timestamp() > TherapyChangeData["date_of_change"][-1]/1000000000 and (TherapyHistory["therapy_date"][i].timestamp() < authority["Permission"][1] or authority["Permission"][1] == 0):
-                TherapyChangeData["date_of_change"].append(TherapyHistory["therapy_date"][i].timestamp()*1000000000)
-                TherapyChangeData["previous_group"].append(TherapyChangeData["new_group"][-1])
-                TherapyChangeData["new_group"].append(TherapyChangeData["new_group"][-1])
+        
+        if len(TherapyChangeData["date_of_change"]) > 0:
+            for i in range(len(TherapyHistory["therapy_date"])):
+                if TherapyHistory["therapy_date"][i].timestamp() > TherapyChangeData["date_of_change"][-1]/1000000000 and (TherapyHistory["therapy_date"][i].timestamp() < authority["Permission"][1] or authority["Permission"][1] == 0):
+                    TherapyChangeData["date_of_change"].append(TherapyHistory["therapy_date"][i].timestamp()*1000000000)
+                    TherapyChangeData["previous_group"].append(TherapyChangeData["new_group"][-1])
+                    TherapyChangeData["new_group"].append(TherapyChangeData["new_group"][-1])
 
-                DetailTherapy, DetailTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Pre-visit Therapy")
-                BriefTherapy, BriefTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Past Therapy")
-                PostVisitTherapy, PostVisitTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Post-visit Therapy")
-                
-                if not DetailTherapy == None and not BriefTherapy == None:
-                    if datetime.fromtimestamp(BriefTherapy_date).date() < datetime.fromtimestamp(DetailTherapy_date).date():
-                        TherapyChangeData["therapy"].append(BriefTherapy)
-                    else:
+                    DetailTherapy, DetailTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Pre-visit Therapy")
+                    BriefTherapy, BriefTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Past Therapy")
+                    PostVisitTherapy, PostVisitTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Post-visit Therapy")
+                    
+                    if not DetailTherapy == None and not BriefTherapy == None:
+                        if datetime.fromtimestamp(BriefTherapy_date).date() < datetime.fromtimestamp(DetailTherapy_date).date():
+                            TherapyChangeData["therapy"].append(BriefTherapy)
+                        else:
+                            TherapyChangeData["therapy"].append(DetailTherapy)
+                    
+                    elif not DetailTherapy == None:
                         TherapyChangeData["therapy"].append(DetailTherapy)
-                
-                elif not DetailTherapy == None:
-                    TherapyChangeData["therapy"].append(DetailTherapy)
 
-                elif not PostVisitTherapy == None:
-                    TherapyChangeData["therapy"].append(PostVisitTherapy)
-                
-                else:
-                    TherapyChangeData["therapy"].append(BriefTherapy)
-                
-        # 5 Seconds Adjustment Due to TherapyChangeDate is actually logged slightly later than when the Group is actually changed.
-        TherapyChangeData["date_of_change"] = np.array(TherapyChangeData["date_of_change"]) - 5*1000000000
+                    elif not PostVisitTherapy == None:
+                        TherapyChangeData["therapy"].append(PostVisitTherapy)
+                    
+                    else:
+                        TherapyChangeData["therapy"].append(BriefTherapy)
+                    
+            # 5 Seconds Adjustment Due to TherapyChangeDate is actually logged slightly later than when the Group is actually changed.
+            TherapyChangeData["date_of_change"] = np.array(TherapyChangeData["date_of_change"]) - 5*1000000000
 
     return TherapyChangeData
 

@@ -298,8 +298,12 @@ class UpdatePatientAccess(RestViews.APIView):
                 if not Database.verifyAccess(request.user, patientId) == 1:
                     return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
             
+            authorization_time_range = request.data["patientsConfiguration"]
             shareLink = ''.join(random.choice(string.ascii_uppercase) for i in range(32))
-            models.ResearchAccessShareLink(share_link=shareLink, authorized_patient_list=request.data["patientList"], expiration_time=datetime.datetime.fromtimestamp(datetime.datetime.now().timestamp() + 3600)).save()
+            models.ResearchAccessShareLink(share_link=shareLink, 
+                                           authorized_patient_list=request.data["patientList"], 
+                                           expiration_time=datetime.datetime.fromtimestamp(datetime.datetime.now().timestamp() + 3600),
+                                           authorized_time_range=authorization_time_range).save()
             return Response(status=200, data={
                 "shareLink": shareLink
             })
@@ -310,7 +314,12 @@ class UpdatePatientAccess(RestViews.APIView):
             
             access = models.ResearchAccessShareLink.objects.filter(share_link=request.data["accessCode"], expiration_time__gt=datetime.datetime.now()).first()
             for patientId in access.authorized_patient_list:
-                Database.AuthorizeResearchAccess(request.user, request.user.unique_user_id, patientId, True)
+                if not patientId in access.authorized_time_range.keys():
+                    authorized_time_range = [0, datetime.utcnow().timestamp()]
+                else:
+                    authorized_time_range = [datetime.datetime.fromisoformat(timestamp[:-1]+"+00:00").timestamp() for timestamp in access.authorized_time_range[patientId]]
+
+                Database.AuthorizeResearchAccess(request.user, request.user.unique_user_id, patientId, True, authorized_time_range=authorized_time_range)
                 Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="TherapyHistory")
                 Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="BrainSenseSurvey")
                 Database.AuthorizeRecordingAccess(request.user, request.user.unique_user_id, patientId, recording_type="BrainSenseStreamTimeDomain")

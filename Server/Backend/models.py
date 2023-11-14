@@ -196,6 +196,7 @@ class ResearchAccessShareLink(models.Model):
     authorized_patient_list = models.JSONField(default=list)
     share_link = models.CharField(default="", max_length=64)
     expiration_time = models.DateTimeField(default=timezone.now)
+    authorized_time_range = models.JSONField(default=dict, null=True)
     
 class DeidentifiedPatientID(models.Model):
     researcher_id = models.UUIDField(default=uuid.uuid1)

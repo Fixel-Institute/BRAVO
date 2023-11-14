@@ -189,13 +189,20 @@ def saveDeidentificationLookupTable(user, table, key):
         except Exception as e:
             print(e)
         
-def AuthorizeResearchAccess(user, researcher_id, patient_id, permission):
+def AuthorizeResearchAccess(user, researcher_id, patient_id, permission, authorized_time_range=[0,0]):
     if permission:
         if not models.DeidentifiedPatientID.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id).exists():
             identified_patient = models.Patient.objects.get(deidentified_id=patient_id)
-            patient = models.Patient(first_name="Deidentified", last_name=patient_id, birth_date=datetime.now(tz=pytz.utc), diagnosis="", medical_record_number="", institute=researcher_id)
+            patient = models.Patient(first_name=patient_id, last_name="Deidentified", birth_date=datetime.now(tz=pytz.utc), diagnosis="", medical_record_number="", institute=researcher_id)
             patient.save()
-            models.DeidentifiedPatientID(researcher_id=researcher_id, authorized_patient_id=patient_id, deidentified_id=patient.deidentified_id).save()
+            models.DeidentifiedPatientID(researcher_id=researcher_id, authorized_patient_id=patient_id, deidentified_id=patient.deidentified_id, authorized_time_range={
+                "TherapyHistory": authorized_time_range,
+                "BrainSenseSurvey": authorized_time_range,
+                "BrainSenseStreamTimeDomain": authorized_time_range,
+                "BrainSenseStreamPowerDomain": authorized_time_range,
+                "IndefiniteStream": authorized_time_range,
+                "ChronicLFPs": authorized_time_range
+            }).save()
     else:
         if models.DeidentifiedPatientID.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id).exists():
             DeidentifiedID = models.DeidentifiedPatientID.objects.get(researcher_id=researcher_id, authorized_patient_id=patient_id)

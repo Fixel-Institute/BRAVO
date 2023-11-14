@@ -29,6 +29,10 @@ import {
   TableRow
 } from "@mui/material";
 
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";
@@ -52,7 +56,9 @@ export default function ResearchAccessView() {
   const [filterOptions, setFilterOptions] = useState({});
   const [patients, setPatients] = useState([]);
   const [patientsToExport, setPatientsToExport] = useState([]);
+  const [patientsConfiguration, setPatientsConfiguration] = useState({});
   const [addPatientInterface, setAddPatientInterface] = useState({show: false});
+  const [editPermissionRange, setEditPermissionRange] = useState({show: false});
   const [showUpload, setShowUpload] = useState(false);
 
   useEffect(() => {
@@ -93,12 +99,15 @@ export default function ResearchAccessView() {
       handleConfirm={() => {
         SessionController.query("/api/updatePatientAccess", {
           createLink: true,
-          patientList: patientsToExport
+          patientList: patientsToExport,
+          patientsConfiguration: patientsConfiguration
         }).then((response) => {
           setAlert(<MuiAlertDialog title={"Export Success"} message={`Please share the following one-time access code to others: ${response.data.shareLink}`}
             handleConfirm={() => setAlert(null)}
             handleClose={() => setAlert(null)}
-          />)
+          />);
+          setPatientsConfiguration({});
+          setPatientsToExport([]);
         }).catch((error) => {
           SessionController.displayError(error, setAlert);
         })
@@ -210,8 +219,11 @@ export default function ResearchAccessView() {
                           <TableCell style={{paddingBottom: 1, display: "flex", flexDirection: "row", borderBottom: "0px solid rgba(224, 224, 224, 0.4)"}}>
                             <Checkbox label={"Merge"} checked={patientsToExport.includes(patient.ID)} disabled={user.Institute != patient.Uploader} style={{padding: 0, paddingRight: 5}} onClick={() => {
                               setPatientsToExport((patientsToExport) => {
-                                if (patientsToExport.includes(patient.ID)) patientsToExport = patientsToExport.filter((id) => id != patient.ID);
-                                else patientsToExport.push(patient.ID);
+                                if (patientsToExport.includes(patient.ID)) {
+                                  patientsToExport = patientsToExport.filter((id) => id != patient.ID);
+                                } else {
+                                  setEditPermissionRange({patientId: patient.ID, start: null, end: null, show: true})
+                                }
                                 return [...patientsToExport];
                               })
                             }} />
@@ -264,6 +276,55 @@ export default function ResearchAccessView() {
         <DialogActions>
           <MDButton color="secondary" onClick={() => setAddPatientInterface({...addPatientInterface, accessCode: "", show: false})}>{"Cancel"}</MDButton>
           <MDButton color="info" onClick={handleImportPatients}>{"Request"}</MDButton>
+        </DialogActions>
+      </Dialog>
+      
+      <Dialog open={editPermissionRange.show} onClose={() => setEditPermissionRange({...editPermissionRange, show: false})}>
+        <MDBox px={2} pt={2}>
+          <MDTypography variant="h5">
+            {"Edit Permission Time Range"} 
+          </MDTypography>
+        </MDBox>
+        <DialogContent>
+          <MDTypography variant={"h6"} fontSize={24} pr={2}>
+            {"From"}
+          </MDTypography>
+          <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale={"us"}>
+            <DatePicker
+              label="Start Date"
+              value={editPermissionRange.start}
+              onChange={(newDate) => {
+                setEditPermissionRange({...editPermissionRange, start: newDate});
+              }}
+              renderInput={(params) => <TextField {...params} />}
+            />
+          </LocalizationProvider>
+          <MDTypography variant={"h6"} fontSize={24}>
+            {"To"}
+          </MDTypography>
+          <LocalizationProvider dateAdapter={AdapterMoment}>
+            <DatePicker
+              label="End Date"
+              value={editPermissionRange.end}
+              onChange={(newDate) => {
+                setEditPermissionRange({...editPermissionRange, end: newDate});
+              }}
+              renderInput={(params) => <TextField {...params} />}
+            />
+          </LocalizationProvider>
+        </DialogContent>
+        <DialogActions>
+          <MDButton color="secondary" onClick={() => setEditPermissionRange({...editPermissionRange, show: false})}>{"Cancel"}</MDButton>
+          <MDButton color="info" onClick={() => {
+            patientsToExport.push(editPermissionRange.patientId);
+            if (editPermissionRange.end || editPermissionRange.start) {
+              setPatientsConfiguration((patientsConfiguration) => {
+                patientsConfiguration[editPermissionRange.patientId] = [editPermissionRange.start, editPermissionRange.end];
+                return {...patientsConfiguration};
+              });
+            }
+            setEditPermissionRange({...editPermissionRange, show: false});
+          }}>{"Set"}</MDButton>
         </DialogActions>
       </Dialog>
     </DatabaseLayout>
