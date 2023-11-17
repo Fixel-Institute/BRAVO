@@ -315,7 +315,7 @@ class UpdatePatientAccess(RestViews.APIView):
             access = models.ResearchAccessShareLink.objects.filter(share_link=request.data["accessCode"], expiration_time__gt=datetime.datetime.now()).first()
             for patientId in access.authorized_patient_list:
                 if not patientId in access.authorized_time_range.keys():
-                    authorized_time_range = [0, datetime.utcnow().timestamp()]
+                    authorized_time_range = [0, datetime.datetime.utcnow().timestamp()]
                 else:
                     authorized_time_range = [datetime.datetime.fromisoformat(timestamp[:-1]+"+00:00").timestamp() for timestamp in access.authorized_time_range[patientId]]
 
