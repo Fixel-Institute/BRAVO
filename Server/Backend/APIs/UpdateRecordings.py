@@ -194,6 +194,25 @@ class PatientInformationUpdate(RestViews.APIView):
 
                 return Response(status=200)
 
+        elif "mergePatientInfo" in request.data:
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["mergePatientInfo"])
+            if not Authority["Level"] == 1:
+                return Response(status=404)
+            
+            SourcePatient = models.Patient.objects.filter(deidentified_id=request.data["targetPatientInfo"]).first()
+            MergePatient = models.Patient.objects.filter(deidentified_id=request.data["mergePatientInfo"]).first()
+
+            if MergePatient and SourcePatient:
+                for device_id in SourcePatient.device_deidentified_id:
+                    device = models.PerceptDevice.objects.filter(deidentified_id=device_id).first()
+                    device.patient_deidentified_id = MergePatient.deidentified_id
+                    device.save()
+                    MergePatient.addDevice(str(device.deidentified_id))
+
+            SourcePatient.delete()
+            return Response(status=200)
+
         return Response(status=400)
 
 class BrainSenseStreamUpdate(RestViews.APIView):

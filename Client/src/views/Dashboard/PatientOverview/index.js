@@ -73,6 +73,7 @@ export default function PatientOverview() {
   const [editPatientInfo, setEditPatientInfo] = useState({show: false});
   const [editDeviceInfo, setEditDeviceInfo] = useState({LeadInfo: [], show: false});
   const [uploadNewJson, setUploadNewJson] = useState({show: false});
+  const [mergeRecords, setMergeRecords] = useState({show: false});
   const [addNewDevice, setAddNewDevice] = useState({show: false});
   const [availableTags, setAvailableTags] = useState([]);
 
@@ -156,6 +157,17 @@ export default function PatientOverview() {
       SessionController.displayError(error, setAlert);
     });
   };
+
+  const requestPatientRecordMerging = () => {
+    SessionController.query("/api/updatePatientInformation", {
+      mergePatientInfo: patientID,
+      targetPatientInfo: mergeRecords.mergePatientId,
+    }).then(() => {
+      window.location.reload();
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
+  }
 
   const updateDeviceInformation = () => {
     SessionController.query("/api/updatePatientInformation", {
@@ -380,7 +392,12 @@ export default function PatientOverview() {
                         </MDButton>
                       </MDBox>
                       <MDBox style={{marginLeft: "auto", paddingRight: 5}}>
-                        <MDButton color={"secondary"} 
+                        <MDButton color={"success"} 
+                          onClick={() => setMergeRecords({...mergeRecords, show: true})}
+                        >
+                          Merge Records
+                        </MDButton>
+                        <MDButton color={"secondary"} style={{marginLeft: 10}} 
                           onClick={() => setEditPatientInfo({...editPatientInfo, show: false})}
                         >
                           Cancel
@@ -474,6 +491,38 @@ export default function PatientOverview() {
                 </Table>
               </Card>
 
+              <Dialog open={mergeRecords.show} onClose={() => setMergeRecords({...mergeRecords, show: false})}>
+                <DialogContent style={{minWidth: 200}}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <TextField
+                        variant="standard"
+                        margin="dense"
+                        label="Patient ID"
+                        placeholder="Patient ID"
+                        value={mergeRecords.mergePatientId}
+                        onChange={(event) => setMergeRecords({...mergeRecords, mergePatientId: event.target.value})}
+                        fullWidth
+                      />
+                    </Grid>
+                  </Grid>
+                </DialogContent>
+                <DialogActions>
+                  <MDBox style={{marginLeft: "auto", paddingRight: 5}}>
+                    <MDButton color={"secondary"} 
+                      onClick={() => setMergeRecords({...mergeRecords, show: false})}
+                    >
+                      Cancel
+                    </MDButton>
+                    <MDButton color={"info"} 
+                      onClick={() => requestPatientRecordMerging()} style={{marginLeft: 10}}
+                    >
+                      Merge
+                    </MDButton>
+                  </MDBox>
+                </DialogActions>
+              </Dialog>
+              
               <Dialog open={editDeviceInfo.show} onClose={() => setEditDeviceInfo({...editDeviceInfo, show: false})}>
                 <MDBox px={2} pt={2}>
                   <MDTypography variant="h5">
