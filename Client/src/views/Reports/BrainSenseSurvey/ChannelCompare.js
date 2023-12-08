@@ -54,6 +54,8 @@ function ChannelCompare({dataToRender, height, config, figureTitle}) {
       }
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Frequency", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)})`, {fontSize: 15});
       fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)})`, {fontSize: 15});
+      
+      fig.setLegend({xanchor: "left"});
     }
 
     const colors = colormap({

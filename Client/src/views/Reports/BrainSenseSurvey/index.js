@@ -234,7 +234,7 @@ function BrainSenseSurvey() {
                 </Card>
               </Grid>
               {viewChannels.length > 0 ? (
-              <Grid item xs={12} lg={6}>
+              <Grid item xs={12} lg={8}>
                 <Card sx={{width: "100%"}}>
                   <Grid container>
                     <Grid item xs={12}>
@@ -258,7 +258,7 @@ function BrainSenseSurvey() {
                       </MDBox>
                     </Grid>
                     <Grid item xs={12}>
-                      <ChannelCompare dataToRender={chronicDataToCompare} height={500} config={drawerOpen.config} figureTitle="ChannelSurveyAcrossTime"/>
+                      <ChannelCompare dataToRender={chronicDataToCompare} height={700} config={drawerOpen.config} figureTitle="ChannelSurveyAcrossTime"/>
                     </Grid>
                   </Grid>
                 </Card>
