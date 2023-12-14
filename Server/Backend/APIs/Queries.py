@@ -813,8 +813,6 @@ class QueryPredictionModel(RestViews.APIView):
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
                 deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id, deidentifiedId=request.data["id"])
                 DeviceIDs = [str(deidentification["Devices"][i]["ID"]) for i in range(len(deidentification["Devices"]))]
-                if not request.data["requestData"] in DeviceIDs:
-                    return Response(status=403)
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
             else:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
