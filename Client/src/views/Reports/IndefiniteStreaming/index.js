@@ -179,6 +179,7 @@ function IndefiniteStreaming() {
   }
 
   const exportCurrentStream = () => {
+    /*
     var csvData = "Time";
     for (var i = 0; i < dataToRender.data[0]["Channels"].length; i++) {
       csvData += "," + dataToRender.data[0]["Channels"][i] + " Raw";
@@ -194,11 +195,21 @@ function IndefiniteStreaming() {
         csvData += "\n";
       }
     }
+    */
+    var csvData = JSON.stringify(dataToRender);
 
     var downloader = document.createElement('a');
-    downloader.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData);
+    downloader.href = 'data:text/json;charset=utf-8,' + encodeURI(csvData);
     downloader.target = '_blank';
-    downloader.download = 'IndefiniteStreamExport.csv';
+    downloader.download = 'IndefiniteStreamExport.json';
+    downloader.click();
+    
+    csvData = JSON.stringify(eventPSDs);
+
+    downloader = document.createElement('a');
+    downloader.href = 'data:text/json;charset=utf-8,' + encodeURI(csvData);
+    downloader.target = '_blank';
+    downloader.download = 'IndefiniteStreamEventPSDs.json';
     downloader.click();
   };
 
