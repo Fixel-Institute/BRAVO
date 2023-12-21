@@ -195,6 +195,12 @@ function IndefiniteStreaming() {
         csvData += "\n";
       }
     }
+    
+    var downloader = document.createElement('a');
+    downloader.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData);
+    downloader.target = '_blank';
+    downloader.download = 'IndefiniteStreamExport.json';
+    downloader.click();
     */
     var csvData = JSON.stringify(dataToRender);
 

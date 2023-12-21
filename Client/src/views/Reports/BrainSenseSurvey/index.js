@@ -87,6 +87,13 @@ function BrainSenseSurvey() {
     }
   }, [patientID]);
 
+  const verifySessionInclusion = (data, criteria) => {
+    if (criteria.timestamp - 120 < data.Timestamp && criteria.timestamp >= data.Timestamp && criteria.device >= data.DeviceName) {
+      return (data.Channel[0] % 1 == 0 ? "Ring" : "Segmented") == criteria.segmented;
+    }
+    return false;
+  }
+
   // Divide all PSDs by day or by channel
   useEffect(() => {
     var uniqueSurveySession = [];
@@ -95,17 +102,19 @@ function BrainSenseSurvey() {
 
       var found = false
       for (var session of uniqueSurveySession) {
-        if (session.timestamp-60 < data[i]["Timestamp"] && session.timestamp >= data[i]["Timestamp"] && session.device == data[i]["DeviceName"]) {
+        if (verifySessionInclusion(data[i], session)) {
           found = true;
           break;
         }
       }
       if (!found) {
+        const segmented = data[i].Channel[0] % 1 == 0 ? "Ring" : "Segmented";
         uniqueSurveySession.push({
+          segmented: segmented,
           timestamp: data[i]["Timestamp"],
           device: data[i]["DeviceName"],
           value: "[" + data[i]["DeviceName"] + "] " + timestruct.toLocaleString(language),
-          label: "[" + data[i]["DeviceName"] + "] " + timestruct.toLocaleString(language)
+          label: "[" + data[i]["DeviceName"] + "] (" + timestruct.toLocaleString(language) + ") " + segmented + " Survey"
         });
       }
     }
@@ -152,7 +161,7 @@ function BrainSenseSurvey() {
     setDateOfView(value);
     var collectiveData = [];
     for (var i = 0; i < data.length; i++) {
-      if (data[i]["Timestamp"] > value.timestamp - 60 && data[i]["Timestamp"] <= value.timestamp && data[i]["Hemisphere"].startsWith("Left") && data[i]["DeviceName"] == value.device) {
+      if (verifySessionInclusion(data[i], value) && data[i]["Hemisphere"].startsWith("Left")) {
         collectiveData.push(data[i]);
       }
     }
@@ -160,7 +169,7 @@ function BrainSenseSurvey() {
 
     collectiveData = [];
     for (var i = 0; i < data.length; i++) {
-      if (data[i]["Timestamp"] > value.timestamp - 60 && data[i]["Timestamp"] <= value.timestamp && data[i]["Hemisphere"].startsWith("Right") && data[i]["DeviceName"] == value.device) {
+      if (verifySessionInclusion(data[i], value) && data[i]["Hemisphere"].startsWith("Right")) {
         collectiveData.push(data[i]);
       }
     }
