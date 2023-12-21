@@ -40,9 +40,9 @@ export default function HomePage() {
 
   useEffect(() => {
     if (connectionStatus.status) {
-      if (connectionStatus.version !== "2.2.1") {
+      if (connectionStatus.version !== "2.2.2") {
         setAlert(<MuiAlertDialog title={"Server Version Imcompatible"} message={<>
-          {"Current frontend page support Version 2.2.1. Please upgrade your server by following instructions at"}
+          {"Current frontend page support Version 2.2.2. Please upgrade your server by following instructions at"}
           <Link target="_blank" href="https://bravo-documentation.jcagle.solutions/Tutorials/MigrationGuide2.1" underline="always" sx={{color: "blue"}} > <i>GitHub Page</i> </Link>
           <br></br>
           <br></br>
