@@ -94,7 +94,7 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
       let firstLegend = true;
       if (newTherapyStatus[0] == 3.5) {
         /*
-        fig.addShadedArea([xdata[0], therapyStatusDate[0]], {
+        fig.addShadedArea([xdata[0], therapyStatusDate[0]], null, {
           color: "#FF0000",
           name: "Stimulation Off",
           legendgroup: "Stimulation Off",
@@ -107,7 +107,7 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
         if (newTherapyStatus[j] == -0.5) {
           if (j == newTherapyStatus.length-1) {
             /*
-            fig.addShadedArea([therapyStatusDate[j], new Date(data[i]["date_of_change"][data[i]["date_of_change"].length-1]/1000000)], {
+            fig.addShadedArea([therapyStatusDate[j], new Date(data[i]["date_of_change"][data[i]["date_of_change"].length-1]/1000000)], null, {
               color: "#FF0000",
               name: "Stimulation Off",
               legendgroup: "Stimulation Off",
@@ -116,7 +116,7 @@ function TherapyHistoryFigure({dataToRender, height, figureTitle}) {
             firstLegend = false;
             */
           } else {
-            fig.addShadedArea([therapyStatusDate[j], therapyStatusDate[j+1]], {
+            fig.addShadedArea([therapyStatusDate[j], therapyStatusDate[j+1]], null, {
               color: "#FF0000",
               name: "Stimulation Off",
               legendgroup: "Stimulation Off",

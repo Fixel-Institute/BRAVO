@@ -115,8 +115,10 @@ function DefaultNavbar({ transparent, light, action }) {
   const setBRAVOVersion = (server) => {
     handleCloseMenu();
 
-    if (server == "Latest (v2.2.1)") {
+    if (server == "Latest (v2.2.2)") {
       window.location.href = 'https://uf-bravo.jcagle.solutions/index';
+    } else if (server == "V2.2.1") {
+      window.location.href = 'https://9e07c89c.uf-bravo.pages.dev/index';
     } else if (server == "V2.2.0") {
       window.location.href = 'https://970d2c92.uf-bravo.pages.dev/index';
     } else if (server == "V2.1.1") {
@@ -216,7 +218,7 @@ function DefaultNavbar({ transparent, light, action }) {
       onClose={handleCloseMenu}
       sx={{ mt: 2 }}
     >
-      {["Latest (v2.2.1)","V2.2.0","V2.1.1"].map((server) => (
+      {["Latest (v2.2.2)","v2.2.1","V2.2.0","V2.1.1"].map((server) => (
         <MenuItem key={server} onClick={() => setBRAVOVersion(server)}>
           <Icon sx={{ mr: 1 }}>{
             <StorageIcon/>

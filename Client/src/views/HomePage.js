@@ -89,7 +89,7 @@ export default function HomePage() {
             {"Host: " + (server || (window.location.protocol + "//" + window.location.hostname))}
           </MDTypography>
           <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
-            {"Current Frontend Version: 2.2.1"}
+            {"Current Frontend Version: 2.2.2"}
             <br></br>
             {"Connected Backend Version: "} {connectionStatus.version === "" ? "Unknown" : connectionStatus.version}
           </MDTypography>

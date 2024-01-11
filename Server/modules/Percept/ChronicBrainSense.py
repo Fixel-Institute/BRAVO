@@ -302,6 +302,21 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
 
     return LFPTrends
 
+def normalizeCircadianPower(Power, Timestamp):
+    normPower = np.zeros(Power.shape)
+    for i in range(len(Power)):
+        refPower = 0
+        PeriodSelection = rangeSelection(Timestamp, [Timestamp[i]-12*3600, Timestamp[i]+12*3600])
+        while np.sum(PeriodSelection) < 3:
+            refPower += 1
+            PeriodSelection = rangeSelection(Timestamp, [Timestamp[i]-12*refPower*3600, Timestamp[i]+12*refPower*3600])
+            
+        #normPower[i] = (Power[i] - np.mean(Power[PeriodSelection])) / stats.sem(Power[PeriodSelection])
+        normPower[i] = (Power[i] - np.mean(Power[PeriodSelection])) / np.std(Power[PeriodSelection])
+        #normPower[i] = Power[i]
+    
+    return normPower
+
 def processChronicLFPs(LFPTrends, timezoneOffset=0):
     """ Process Chronic LFPs based on Therapy History.
 
@@ -380,6 +395,8 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
 
             LFPTrends[i]["CircadianPowers"][-1]["Power"] = np.array(LFPTrends[i]["CircadianPowers"][-1]["Power"])
             LFPTrends[i]["CircadianPowers"][-1]["Timestamp"] = np.array(LFPTrends[i]["CircadianPowers"][-1]["Timestamp"])
+            LFPTrends[i]["CircadianPowers"][-1]["Power"] = normalizeCircadianPower(LFPTrends[i]["CircadianPowers"][-1]["Power"], LFPTrends[i]["CircadianPowers"][-1]["Timestamp"])
+            LFPTrends[i]["CircadianPowers"][-1]["Normalized"] = True
 
             # Event Locked Power
             EventToInclude = list()

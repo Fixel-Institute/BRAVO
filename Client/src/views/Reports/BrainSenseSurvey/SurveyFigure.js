@@ -60,7 +60,7 @@ function SurveyFigure({dataToRender, height, config, figureTitle}) {
     }
 
     // Beta Band
-    fig.addShadedArea([12,30], {
+    fig.addShadedArea([12,30], null, {
       color: "#03f4fc", 
       alpha: 0.3, 
       showlegend: true, 

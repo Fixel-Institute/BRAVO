@@ -58,6 +58,7 @@ function CircadianRhythm({dataToRender, selector, height, figureTitle}) {
           if (data[k].CircadianPowers[j].Therapy == selector.therapyName) {
             var timeArray = Array(data[k].CircadianPowers[j]["AverageTimestamp"].length).fill(0).map((value, index) => new Date(data[k].CircadianPowers[j]["AverageTimestamp"][index]*1000));
             fig.shadedErrorBar(timeArray, data[k].CircadianPowers[j]["AveragePower"].map((value) => {
+              if (data[k].CircadianPowers[j].Normalized) return value;
               return value > 0 ? value : null
             }), data[k].CircadianPowers[j]["StdErrPower"], {
               color: "#AA0000",

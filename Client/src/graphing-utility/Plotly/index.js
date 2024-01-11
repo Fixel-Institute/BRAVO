@@ -536,7 +536,7 @@ class PlotlyRenderManager {
    * 
    * @return {Object} The shaded error plot object created.
    */
-  addShadedArea(x, options={}, ax=null) {
+  addShadedArea(x, y, options={}, ax=null) {
     if (!ax) {
       ax = this.gca;
     } else {
@@ -549,10 +549,14 @@ class PlotlyRenderManager {
     }
 
     var ylim = [];
-    if (this.layout[this.gca["ylayout"]].type == "log") {
-      ylim = [Math.pow(10, this.layout[this.gca["ylayout"]].range[0]), Math.pow(10, this.layout[this.gca["ylayout"]].range[1])];
+    if (!y) {
+      if (this.layout[this.gca["ylayout"]].type == "log") {
+        ylim = [Math.pow(10, this.layout[this.gca["ylayout"]].range[0]), Math.pow(10, this.layout[this.gca["ylayout"]].range[1])];
+      } else {
+        ylim = this.layout[this.gca["ylayout"]].range;
+      }
     } else {
-      ylim = this.layout[this.gca["ylayout"]].range;
+      ylim = y;
     }
 
     var trace = JSON.parse(JSON.stringify(defaultShadedAreaOptions));

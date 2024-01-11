@@ -101,7 +101,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, hand
         }, ax[i*2 + 0]);
 
         if (data.Annotations[j].Duration > 0) {
-          fig.addShadedArea([new Date(data.Annotations[j].Time*1000), new Date((data.Annotations[j].Time+data.Annotations[j].Duration)*1000)], {
+          fig.addShadedArea([new Date(data.Annotations[j].Time*1000), new Date((data.Annotations[j].Time+data.Annotations[j].Duration)*1000)], null, {
             color: "#AA0000",
             name: data.Annotations[j].Name,
             legendgroup: data.Annotations[j].Name,
@@ -188,7 +188,7 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, hand
         }, ax[0]);
           
         if (data.Annotations[j].Duration > 0) {
-          fig.addShadedArea([new Date(data.Annotations[j].Time*1000), new Date((data.Annotations[j].Time+data.Annotations[j].Duration)*1000)], {
+          fig.addShadedArea([new Date(data.Annotations[j].Time*1000), new Date((data.Annotations[j].Time+data.Annotations[j].Duration)*1000)], null, {
             color: "#AA0000",
             name: data.Annotations[j].Name,
             legendgroup: data.Annotations[j].Name,

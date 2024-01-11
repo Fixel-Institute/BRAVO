@@ -103,7 +103,7 @@ function TimeDomainFigure({dataToRender, height, handleAddEvent, handleDeleteEve
               }, ax[k]);
                 
               if (data[i].Annotations[l].Duration > 0) {
-                fig.addShadedArea([new Date(data[i].Annotations[l].Time*1000), new Date((data[i].Annotations[l].Time+data[i].Annotations[l].Duration)*1000)], {
+                fig.addShadedArea([new Date(data[i].Annotations[l].Time*1000), new Date((data[i].Annotations[l].Time+data[i].Annotations[l].Duration)*1000)], null, {
                   color: "#AA0000",
                   name: data[i].Annotations[l].Name,
                   legendgroup: data[i].Annotations[l].Name,
@@ -129,7 +129,7 @@ function TimeDomainFigure({dataToRender, height, handleAddEvent, handleDeleteEve
               }, ax[k]);
                 
               if (data[i].Annotations[l].Duration > 0) {
-                fig.addShadedArea([new Date(data[i].Annotations[l].Time*1000), new Date((data[i].Annotations[l].Time+data[i].Annotations[l].Duration)*1000)], {
+                fig.addShadedArea([new Date(data[i].Annotations[l].Time*1000), new Date((data[i].Annotations[l].Time+data[i].Annotations[l].Duration)*1000)], null, {
                   color: "#AA0000",
                   name: data[i].Annotations[l].Name,
                   legendgroup: data[i].Annotations[l].Name,
