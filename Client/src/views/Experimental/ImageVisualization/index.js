@@ -54,6 +54,7 @@ import {
   Model,
   Tractography,
   VolumetricObject,
+  SphereObject,
   retrieveModels,
   computeElectrodePlacement
 } from "graphing-utility/Volumetric";
@@ -124,6 +125,8 @@ function ImageVisualization() {
           if (item.type === "electrode") {
             if (descriptor[item.file].targetPoint) data[0].targetPts = descriptor[item.file].targetPoint;
             if (descriptor[item.file].entryPoint) data[0].entryPts = descriptor[item.file].entryPoint;
+          } else if (item.type === "sphere") {
+            data[0].targetPts = descriptor[item.file].targetPoints;
           } else {
             const index = checkItemIndex(item);    
             availableItems[index].downloaded = true;
@@ -333,7 +336,7 @@ function ImageVisualization() {
                                     color: item.color,
                                     specular: 0x111111,
                                     shininess: 200,
-                                    opacity: item.opacity
+                                    opacity: 0.8
                                   }} matrix={item.matrix}></Model>
                                 } else if (item.type === "electrode") {
                                   let matrix = computeElectrodePlacement(item.targetPts, item.entryPts);
@@ -347,6 +350,10 @@ function ImageVisualization() {
                                       }} matrix={matrix}></Model>
                                     })}
                                   </group>
+                                } else if (item.type === "sphere") {
+                                  return item.data.map((arrayPoints, index) => {
+                                    return <SphereObject key={item.filename} pointArray={arrayPoints} color={item.color} size={0.5} matrix={item.matrix}/>
+                                  })
                                 } else if (item.type === "points") {
                                   return item.data.map((arrayPoints, index) => {
                                     return <Tractography key={item.filename + index} pointArray={arrayPoints} color={item.color} linewidth={item.thickness} matrix={item.matrix}/>

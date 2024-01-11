@@ -69,7 +69,15 @@ def extractAvailableModels(patient_id, authority):
                                 "type": "electrode",
                                 "mode": "multiple"
                             })
-                            
+                        elif descriptor[key]["type"] == "sphere":
+                            availableModels.append({
+                                "file": key,
+                                "sphereDiameter": 2,
+                                "targetPoints": descriptor[key]["targetPoints"],
+                                "type": "sphere",
+                                "mode": "single"
+                            })
+
             elif file.endswith(".stl"):
                 availableModels.append({
                     "file": file,

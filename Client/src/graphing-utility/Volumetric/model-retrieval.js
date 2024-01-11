@@ -93,6 +93,17 @@ const retrieveModels = async (directory, item, color) => {
         show: true,
       });
 
+    } else if (item.type == "sphere") {
+      controlledItems.push({
+        filename: item.file,
+        type: item.type,
+        downloaded: true,
+        data: item.targetPoints,
+        color: color ? color : "#FFFFFF",
+        matrix: identityMatrix(),
+        show: true,
+      });
+
     } else if (item.type == "electrode") {
       const response = await SessionController.query("/api/queryImageModel", {
         "Directory": directory,

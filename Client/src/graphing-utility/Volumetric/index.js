@@ -23,6 +23,7 @@ import retrieveModels from "./model-retrieval";
 import Model from "./Model";
 import Tractography from "./Tractography";
 import VolumetricObject from "./VolumetricObject";
+import SphereObject from "./SphereObject";
 
 /**
  * Convert Byte-size R/G/B values to hex color string.
@@ -208,6 +209,7 @@ export {
 
   Model,
   VolumetricObject,
+  SphereObject,
   Tractography,
 
   retrieveModels
