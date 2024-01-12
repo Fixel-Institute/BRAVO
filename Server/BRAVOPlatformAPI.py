@@ -205,7 +205,7 @@ class BRAVOPlatformRequest:
             raise Exception(f"Network Error: {response.status_code}")
     
     def RequestChronicLFP(self, PatientID):
-        form = {"id": PatientID, "requestData": True, "timezoneOffset": 3600*5}
+        form = {"id": PatientID, "requestData": True, "timezoneOffset": 3600*5, "normalizeCircadianRhythm": False}
         response = requests.post(self.__Server + "/api/queryChronicBrainSense", json.dumps(form), headers=self.__Headers)
         if response.status_code == 200:
             payload = response.json()
