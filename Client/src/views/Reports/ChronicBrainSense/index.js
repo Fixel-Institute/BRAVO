@@ -50,6 +50,7 @@ function ChronicBrainSense() {
   const [circadianData, setCircadianData] = useState({});
   const [eventLockedPowerData, setEventLockedPowerData] = useState({});
   const [eventPSDData, setEventPSDData] = useState({});
+  const [normalizeCircadianRhythm, setNormalizeCircadianRhythm] = useState(false);
 
   const [alert, setAlert] = useState(null);
 
@@ -61,7 +62,8 @@ function ChronicBrainSense() {
       SessionController.query("/api/queryChronicBrainSense", {
         id: patientID, 
         requestData: true, 
-        timezoneOffset: new Date().getTimezoneOffset()*60
+        timezoneOffset: new Date().getTimezoneOffset()*60,
+        normalizeCircadianRhythm: normalizeCircadianRhythm
       }).then((response) => {
         if (response.data.ChronicData.length > 0) {
           setData(response.data);

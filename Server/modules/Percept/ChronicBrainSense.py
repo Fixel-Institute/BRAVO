@@ -303,6 +303,9 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
     return LFPTrends
 
 def normalizeCircadianPower(Power, Timestamp):
+    if len(Power) < 3: 
+        return stats.zscore(Power) 
+    
     normPower = np.zeros(Power.shape)
     for i in range(len(Power)):
         refPower = 0
@@ -317,7 +320,7 @@ def normalizeCircadianPower(Power, Timestamp):
     
     return normPower
 
-def processChronicLFPs(LFPTrends, timezoneOffset=0):
+def processChronicLFPs(LFPTrends, timezoneOffset=0, normalizeCircadian=False):
     """ Process Chronic LFPs based on Therapy History.
 
     This pipeline will take the Chronic BrainSense data extracted from ``queryChronicLFPs`` and further processed 
@@ -395,8 +398,9 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0):
 
             LFPTrends[i]["CircadianPowers"][-1]["Power"] = np.array(LFPTrends[i]["CircadianPowers"][-1]["Power"])
             LFPTrends[i]["CircadianPowers"][-1]["Timestamp"] = np.array(LFPTrends[i]["CircadianPowers"][-1]["Timestamp"])
-            LFPTrends[i]["CircadianPowers"][-1]["Power"] = normalizeCircadianPower(LFPTrends[i]["CircadianPowers"][-1]["Power"], LFPTrends[i]["CircadianPowers"][-1]["Timestamp"])
-            LFPTrends[i]["CircadianPowers"][-1]["Normalized"] = True
+            if normalizeCircadian:
+                LFPTrends[i]["CircadianPowers"][-1]["Power"] = normalizeCircadianPower(LFPTrends[i]["CircadianPowers"][-1]["Power"], LFPTrends[i]["CircadianPowers"][-1]["Timestamp"])
+                LFPTrends[i]["CircadianPowers"][-1]["Normalized"] = True
 
             # Event Locked Power
             EventToInclude = list()

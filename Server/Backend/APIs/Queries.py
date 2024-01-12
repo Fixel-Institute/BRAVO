@@ -683,7 +683,7 @@ class QueryChronicBrainSense(RestViews.APIView):
                 TherapyHistory = Therapy.queryTherapyHistory(request.user, PatientID, Authority)
                 data["ChronicData"] = ChronicBrainSense.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)
                 data["EventPSDs"] = BrainSenseEvent.queryPatientEventPSDs(request.user, PatientID, TherapyHistory, Authority)
-                data["ChronicData"] = ChronicBrainSense.processChronicLFPs(data["ChronicData"], int(request.data["timezoneOffset"]))
+                data["ChronicData"] = ChronicBrainSense.processChronicLFPs(data["ChronicData"], int(request.data["timezoneOffset"]), normalizeCircadian=request.data["normalizeCircadianRhythm"])
                 data["EventPSDs"] = BrainSenseEvent.processEventPSDs(data["EventPSDs"])
 
             return Response(status=200, data=data)
