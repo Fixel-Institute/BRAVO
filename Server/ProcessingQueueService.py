@@ -250,6 +250,91 @@ def processExternalRecordingUpload():
                 except Exception as e:
                     print(e)
                 
+    if models.ProcessingQueue.objects.filter(type="externalMDATs", state="InProgress").exists():
+        print(datetime.datetime.now())
+        BatchQueues = models.ProcessingQueue.objects.filter(type="externalMDATs", state="InProgress").order_by("datetime").all()
+        for queue in BatchQueues:
+            if not models.ProcessingQueue.objects.filter(state="InProgress", queue_id=queue.queue_id).exists():
+                continue
+            queue.state = "Processing"
+            queue.save()
+            ErrorMessage = ""
+            try:
+                ws.connect("ws://localhost:3001/socket/notification")
+                ws.send(json.dumps({
+                    "NotificationType": "TaskProcessing",
+                    "TaskUser": str(queue.owner),
+                    "TaskID": str(queue.queue_id),
+                    "Authorization": os.environ["ENCRYPTION_KEY"],
+                    "State": "Processing",
+                    "Message": "",
+                }))
+                ws.close()
+            except Exception as e:
+                print(e)
+
+            print(f"Start Processing {queue.descriptor['filename']}")
+            try:
+                ProcessedDataList = AnalysisBuilder.processMDATRecordings(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"])
+            except Exception as e:
+                print(e)
+                queue.state = "Error"
+                queue.descriptor["Message"] = str(e)
+                print(queue.descriptor["Message"])
+                queue.save()
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
+                continue
+
+            try:
+                for ProcessedData in ProcessedDataList:
+                    recording = models.ExternalRecording(patient_deidentified_id=queue.descriptor["patientId"], 
+                                            recording_type="DelsysMDAT." + ProcessedData["ChannelNames"][0].split(".")[0], 
+                                            recording_date=datetime.datetime.fromtimestamp(ProcessedData["StartTime"]).astimezone(pytz.utc),
+                                            recording_duration=ProcessedData["Duration"])
+                    filename = Database.saveSourceFiles(ProcessedData, "ExternalRecording", "Raw", recording.recording_id, recording.patient_deidentified_id)
+                    recording.recording_datapointer = filename
+                    recording.save()
+                
+            except Exception as e:
+                ErrorMessage = str(e)
+
+            print(f"End Processing {queue.descriptor['filename']}")
+            if ErrorMessage == "":
+                queue.state = "Complete"
+                queue.save()
+            else:
+                print(ErrorMessage)
+                queue.state = "Error"
+                queue.descriptor["Message"] = ErrorMessage
+                queue.save()
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
+                
 def processSummitZIPUpload():
     ws = websocket.WebSocket()
     if models.ProcessingQueue.objects.filter(type="decodeSummitZIP", state="InProgress").exists():

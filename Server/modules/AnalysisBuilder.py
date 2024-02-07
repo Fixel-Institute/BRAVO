@@ -36,6 +36,7 @@ from Backend import models
 from modules import Database
 from modules.Percept import BrainSenseStream
 
+from decoder import DelsysTrigno
 from utility import PythonUtility
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
@@ -114,8 +115,9 @@ def queryAvailableRecordings(user, patientId, authority):
             if recording.recording_type == "BrainSenseSurvey":
                 continue
             
-            if not "Channel" in recording.recording_info.keys() and not recording.recording_type == "ChronicLFPs":
+            if not "Channel" in recording.recording_info.keys() and not (recording.recording_type == "ChronicLFPs" or recording.recording_type == "SummitChronicLogs"):
                 RecordingData = Database.loadSourceDataPointer(recording.recording_datapointer)
+                print(recording.recording_type)
                 recording.recording_info = {
                     "Channel": RecordingData["ChannelNames"]
                 }
@@ -124,7 +126,7 @@ def queryAvailableRecordings(user, patientId, authority):
             AvailableRecordings.append({
                 "RecordingId": recording.recording_id,
                 "RecordingType": recording.recording_type,
-                "RecordingChannels": recording.recording_info["Hemisphere"].replace("HemisphereLocationDef.","") if recording.recording_type == "ChronicLFPs" else recording.recording_info["Channel"],
+                "RecordingChannels": recording.recording_info["Hemisphere"].replace("HemisphereLocationDef.","") if (recording.recording_type == "ChronicLFPs" or recording.recording_type == "SummitChronicLogs") else recording.recording_info["Channel"],
                 "Time": recording.recording_date.timestamp(),
                 "Duration": recording.recording_duration,
                 "RecordingLabel": deviceName + " " + recording.recording_info["Hemisphere"].replace("HemisphereLocationDef.","") if recording.recording_type == "ChronicLFPs" else deviceName
@@ -417,6 +419,54 @@ def processExternalRecordings(filename):
     for i in range(len(Data["ChannelNames"])):
         Data["Data"][:,i] = df[Data["ChannelNames"][i]]
     return Data
+
+def processMDATRecordings(filename):
+    secureEncoder = Fernet(key)
+    with open(filename, "rb") as file:
+        mdatFile = secureEncoder.decrypt(file.read())
+
+    Trigno = DelsysTrigno.decodeBMLDelsysFormat(mdatFile)
+    TrignoSensorList = []
+    
+    Data = {"ChannelNames": []}
+    for i in range(len(Trigno["EMG"])):
+        if len(Trigno["EMG"][i]) > 0:
+            Data["ChannelNames"].append("EMG." + str(i+1))
+    
+    Data["Data"] = np.zeros((len(Trigno["EMGTime"]), len(Data["ChannelNames"])))
+    Counter = 0
+    for i in range(len(Trigno["EMG"])):
+        if len(Trigno["EMG"][i]) > 0:
+            Data["Data"][:len(Trigno["EMG"][i]),Counter] = Trigno["EMG"][i].flatten()
+            Counter += 1
+    Data["SamplingRate"] = np.around(1/np.median(np.diff(Trigno["EMGTime"])),3)
+    Data["StartTime"] = Trigno['Triggers']["Time"][0] # Javascript Time is in Milliseconds
+    Data["Missing"] = np.zeros(Data["Data"].shape)
+    Data["Duration"] = Data["Data"].shape[0]/Data["SamplingRate"]
+    TrignoSensorList.append(Data)
+
+    for sensorKey in ["Acc", "Gyro", "Mag"]:
+        Data = {"ChannelNames": []}
+        for i in range(len(Trigno[sensorKey])):
+            if len(Trigno[sensorKey][i]) > 0:
+                Data["ChannelNames"].append(sensorKey + "." + str(i+1) + ".X")
+                Data["ChannelNames"].append(sensorKey + "." + str(i+1) + ".Y")
+                Data["ChannelNames"].append(sensorKey + "." + str(i+1) + ".Z")
+    
+        Data["Data"] = np.zeros((len(Trigno["IMUTime"]), len(Data["ChannelNames"])))
+        Counter = 0
+        for i in range(len(Trigno[sensorKey])):
+            if Trigno[sensorKey][i].shape[0] > 0:
+                for j in range(3):
+                    Data["Data"][:Trigno[sensorKey][i].shape[0],Counter] = Trigno[sensorKey][i][:,j].flatten()
+                    Counter += 1
+        Data["SamplingRate"] = np.around(1/np.median(np.diff(Trigno["IMUTime"])),3)
+        Data["StartTime"] = Trigno['Triggers']["Time"][0] # Javascript Time is in Milliseconds
+        Data["Missing"] = np.zeros(Data["Data"].shape)
+        Data["Duration"] = Data["Data"].shape[0]/Data["SamplingRate"]
+        TrignoSensorList.append(Data)
+
+    return TrignoSensorList
 
 def getRawRecordingData(user, patientId, analysisId, recordingId, authority):
     if not authority["Permission"]:

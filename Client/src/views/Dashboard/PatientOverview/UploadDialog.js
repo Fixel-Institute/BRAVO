@@ -52,6 +52,7 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
   const [decryptionKey, setDecryptionKey] = useState("");
   const [selectedDevice, setSelectedDevice] = useState({label: "New Device", value: "NewDevice"});
   const [externalDataInfo, setExternalDataInfo] = useState({
+    format: "CSV",
     label: "External Recording",
     samplingRate: "100",
     startDate: formatAsDate(new Date()),
@@ -88,6 +89,7 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
       formData.append("patientId", patientID);
       formData.append("batchSessionId", batchSessionId);
       if (deviceId === "ExternalRecordings") {
+        formData.append("Format", externalDataInfo.format);
         formData.append("SamplingRate", externalDataInfo.samplingRate);
         formData.append("StartTime", new Date(externalDataInfo.startDate + " " + externalDataInfo.startTime).getTime());
         formData.append("RecordingLabel", externalDataInfo.label);
@@ -121,6 +123,20 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
     onCancel();
   };
 
+  const getDeviceType = (selectedDeviceConfig, externalDataInfoConfig) => {
+    console.log(selectedDeviceConfig)
+    if (selectedDeviceConfig.value === "ExternalRecordings") {
+      if (externalDataInfoConfig.format === "CSV") {
+        return ".csv";
+      } else if (externalDataInfoConfig.format === "MDAT") {
+        return ".mdat";
+      }
+    } else {
+      return ".json,.zip";
+    }
+    return ".json,.zip";
+  }
+
   return <>
   <Dialog open={show} onClose={cancelUpload}>
     <MDBox px={2} pt={2}>
@@ -149,46 +165,69 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
         </Grid>
         {selectedDevice.value === "ExternalRecordings" ? (
           <Grid item xs={12} style={{display: "flex", flexDirection: "column"}}>
-            <TextField
-              variant="standard"
-              margin="dense"
-              label="Recording Name"
-              placeholder="External Recording"
-              value={externalDataInfo.label}
-              onChange={(event) => setExternalDataInfo({...externalDataInfo, label: event.target.value})}
+            <Autocomplete
+              value={externalDataInfo.format}
+              options={[{label: "CSV", value: "CSV"}, {label: "UF MDAT Format", value: "MDAT"}]}
+              onChange={(event, value) => {
+                setExternalDataInfo({...externalDataInfo, format: value.value})
+              }}
+              isOptionEqualToValue={(option, value) => {
+                return option.value == value;
+              }}
+              renderInput={(params) => (
+                <FormField
+                  {...params}
+                  label={"External Recording Format"}
+                  InputLabelProps={{ shrink: true }}
+                />
+              )}
+              disableClearable
+            />
+            {externalDataInfo.format === "CSV" ? (
+              <>
+                <TextField
+                  variant="standard"
+                  margin="dense"
+                  label="Recording Name"
+                  placeholder="External Recording"
+                  value={externalDataInfo.label}
+                  onChange={(event) => setExternalDataInfo({...externalDataInfo, label: event.target.value})}
 
-            />
-            <TextField
-              variant="standard"
-              margin="dense"
-              label="Sampling Rate (Hz)"
-              placeholder="Sampling Rate (Hz)"
-              value={externalDataInfo.samplingRate}
-              type="number"
-              onChange={(event) => setExternalDataInfo({...externalDataInfo, samplingRate: event.target.value})}
-            />
-            <MDBox style={{display: "flex", flexDirection: "row", justifyContent: "space-between"}}>
-              <TextField
-                variant="standard"
-                margin="dense"
-                label="Recording Date"
-                placeholder="Recording Time"
-                value={externalDataInfo.startDate}
-                type={"date"}
-                onChange={(event) => setExternalDataInfo({...externalDataInfo, startDate: event.target.value})}
-                fullWidth
-              />
-              <TextField
-                variant="standard"
-                margin="dense"
-                label="Recording Time"
-                placeholder="Recording Time"
-                value={externalDataInfo.startTime}
-                type={"time"}
-                onChange={(event) => setExternalDataInfo({...externalDataInfo, startTime: event.target.value})}
-                fullWidth
-              />
-            </MDBox>
+                />
+                <TextField
+                  variant="standard"
+                  margin="dense"
+                  label="Sampling Rate (Hz)"
+                  placeholder="Sampling Rate (Hz)"
+                  value={externalDataInfo.samplingRate}
+                  type="number"
+                  onChange={(event) => setExternalDataInfo({...externalDataInfo, samplingRate: event.target.value})}
+                />
+                <MDBox style={{display: "flex", flexDirection: "row", justifyContent: "space-between"}}>
+                  <TextField
+                    variant="standard"
+                    margin="dense"
+                    label="Recording Date"
+                    placeholder="Recording Time"
+                    value={externalDataInfo.startDate}
+                    type={"date"}
+                    onChange={(event) => setExternalDataInfo({...externalDataInfo, startDate: event.target.value})}
+                    fullWidth
+                  />
+                  <TextField
+                    variant="standard"
+                    margin="dense"
+                    label="Recording Time"
+                    placeholder="Recording Time"
+                    value={externalDataInfo.startTime}
+                    type={"time"}
+                    onChange={(event) => setExternalDataInfo({...externalDataInfo, startTime: event.target.value})}
+                    fullWidth
+                  />
+                </MDBox>
+              </>
+            ) : null }
+            
           </Grid>
         ) : null}
       </Grid>
@@ -198,7 +237,7 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
           url: SessionController.getServer() + (selectedDevice.value === "ExternalRecordings" ? "/api/uploadExternalFiles" : "/api/uploadSessionFiles"),
           paramName: "file",
           addRemoveLinks: true,
-          acceptedFiles: selectedDevice.value === "ExternalRecordings" ? ".csv" : ".json,.zip",
+          acceptedFiles: getDeviceType(selectedDevice, externalDataInfo),
           autoDiscover: false,
           autoProcessQueue: false,
           uploadMultiple: true,
