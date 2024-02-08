@@ -30,7 +30,7 @@ from cryptography.fernet import Fernet
 import json
 from io import BytesIO
 import websocket
-from scipy import signal
+from scipy import signal, io
 
 from Backend import models
 from modules import Database
@@ -578,6 +578,17 @@ def startAnalysis(user, patientId, analysisId, authority):
 
     return "Success"
 
+def createResultMATFile(Data, patientId, recordingType, recordingDuration):
+    recording = models.ExternalRecording(patient_deidentified_id=patientId, 
+                                recording_type=recordingType, 
+                                recording_date=datetime.now().astimezone(pytz.utc),
+                                recording_duration=recordingDuration)
+
+    filename = Database.saveResultMATFiles(Data, "AnalysisOutput", "Raw", recording.recording_id, recording.patient_deidentified_id)
+    recording.recording_datapointer = filename
+    recording.save()
+    return recording
+
 def createResultDataFile(Data, patientId, recordingType, recordingDuration):
     recording = models.ExternalRecording(patient_deidentified_id=patientId, 
                                 recording_type=recordingType, 
@@ -598,7 +609,7 @@ def removeResultDataFile(recordingId):
             pass
         recording.delete()
 
-def queryResultData(user, patientId, analysisId, resultId, authority):
+def queryResultData(user, patientId, analysisId, resultId, download, authority):
     analysis = models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=patientId, deidentified_id=analysisId).first()
     if not analysis:
         return None
@@ -607,7 +618,10 @@ def queryResultData(user, patientId, analysisId, resultId, authority):
     if not recording:
         return None
     
-    ProcessedData = Database.loadSourceDataPointer(recording.recording_datapointer)
+    ProcessedData = Database.loadSourceDataPointer(recording.recording_datapointer, bytes=download)
+    if download:
+        return ProcessedData, {}
+    
     GraphOptions = {}
     if ProcessedData[0]["ResultType"] == "TimeDomain":
         GraphOptions["RecommendedYLimit"] = []
@@ -623,9 +637,76 @@ def queryResultData(user, patientId, analysisId, resultId, authority):
                         break
 
                 GraphOptions["RecommendedYLimit"][index] = [np.min([GraphOptions["RecommendedYLimit"][index][0], -np.std(ProcessedData[i]["Data"][:,j])*10]), np.max([GraphOptions["RecommendedYLimit"][index][1], np.std(ProcessedData[i]["Data"][:,j])*10])]
-
     return ProcessedData, GraphOptions
-    
+
+def handleFilterProcessing(step, RecordingIds, Configuration, analysis):
+    targetSignal = step["config"]["targetRecording"]
+    filterType = "Butterworth"
+
+    if step["config"]["highpass"] == "":
+        step["config"]["highpass"] = "0"
+    elif step["config"]["lowpass"] == "":
+        step["config"]["lowpass"] = "0"
+
+    highpass = float(step["config"]["highpass"])
+    lowpass = float(step["config"]["lowpass"])
+
+    ProcessedData = []
+    for recordingId in RecordingIds:
+        if Configuration["Descriptor"][recordingId]["Type"] == targetSignal:
+            if models.ExternalRecording.objects.filter(recording_id=recordingId).exists():
+                recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
+                RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+            elif models.BrainSenseRecording.objects.filter(recording_id=recordingId).exists():
+                recording = models.BrainSenseRecording.objects.filter(recording_id=recordingId).first()
+                RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+            if highpass == 0:
+                [b,a] = signal.butter(5, np.array([lowpass])*2/RawData["SamplingRate"], 'lp', output='ba')
+            elif lowpass == 0:
+                [b,a] = signal.butter(5, np.array([highpass])*2/RawData["SamplingRate"], 'hp', output='ba')
+            else:
+                [b,a] = signal.butter(5, np.array([highpass, lowpass])*2/RawData["SamplingRate"], 'bp', output='ba')
+
+            RawData["Data"] = signal.filtfilt(b, a, RawData["Data"], axis=0)
+            RawData["ResultType"] = "TimeDomain"
+            ProcessedData.append(RawData)
+
+    recording = createResultDataFile(ProcessedData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
+    analysis.recording_type.append(recording.recording_type)
+    analysis.recording_list.append(str(recording.recording_id))
+
+    return {
+        "ResultLabel": step["config"]["output"],
+        "Id": step["id"],
+        "ProcessedData": str(recording.recording_id),
+        "Type": "TimeDomain"
+    }
+
+def handleExportStructure(step, RecordingIds, Configuration, analysis):
+    ProcessedData = []
+    for recordingId in RecordingIds:
+        if models.ExternalRecording.objects.filter(recording_id=recordingId).exists():
+            recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
+            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+        elif models.BrainSenseRecording.objects.filter(recording_id=recordingId).exists():
+            recording = models.BrainSenseRecording.objects.filter(recording_id=recordingId).first()
+            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+        RawData["ResultType"] = "AlignedData"
+        RawData["Time"] = np.arange(RawData["Data"].shape[0]) + RawData["StartTime"] + Configuration["Descriptor"][recordingId]["TimeShift"]
+        ProcessedData.append(RawData)
+
+    recording = createResultMATFile({"ProcessedData": ProcessedData}, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
+    analysis.recording_type.append(recording.recording_type)
+    analysis.recording_list.append(str(recording.recording_id))
+    return {
+        "ResultLabel": step["config"]["output"] + ".mat",
+        "Id": step["id"],
+        "ProcessedData": str(recording.recording_id),
+        "Type": "AlignedData"
+    }
+
 def processAnalysis(user, analysisId):
     analysis = models.CombinedRecordingAnalysis.objects.filter(deidentified_id=analysisId).first()
     if not analysis:
@@ -648,48 +729,12 @@ def processAnalysis(user, analysisId):
     for step in Configuration["AnalysisSteps"]:
         try:
             if step["type"]["value"] == "filter":
-                targetSignal = step["config"]["targetRecording"]
-                filterType = "Butterworth"
-
-                if step["config"]["highpass"] == "":
-                    step["config"]["highpass"] = "0"
-                elif step["config"]["lowpass"] == "":
-                    step["config"]["lowpass"] = "0"
-
-                highpass = float(step["config"]["highpass"])
-                lowpass = float(step["config"]["lowpass"])
-
-                ProcessedData = []
-                for recordingId in RecordingIds:
-                    if Configuration["Descriptor"][recordingId]["Type"] == targetSignal:
-                        if models.ExternalRecording.objects.filter(recording_id=recordingId).exists():
-                            recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
-                            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-                        elif models.BrainSenseRecording.objects.filter(recording_id=recordingId).exists():
-                            recording = models.BrainSenseRecording.objects.filter(recording_id=recordingId).first()
-                            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-
-                        if highpass == 0:
-                            [b,a] = signal.butter(5, np.array([lowpass])*2/RawData["SamplingRate"], 'lp', output='ba')
-                        elif lowpass == 0:
-                            [b,a] = signal.butter(5, np.array([highpass])*2/RawData["SamplingRate"], 'hp', output='ba')
-                        else:
-                            [b,a] = signal.butter(5, np.array([highpass, lowpass])*2/RawData["SamplingRate"], 'bp', output='ba')
-
-                        RawData["Data"] = signal.filtfilt(b, a, RawData["Data"], axis=0)
-                        RawData["ResultType"] = "TimeDomain"
-                        ProcessedData.append(RawData)
-
-                recording = createResultDataFile(ProcessedData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
-                analysis.recording_type.append(recording.recording_type)
-                analysis.recording_list.append(str(recording.recording_id))
-
-                Results.append({
-                    "ResultLabel": step["config"]["output"],
-                    "Id": step["id"],
-                    "ProcessedData": str(recording.recording_id),
-                    "Type": "TimeDomain"
-                })
+                Result = handleFilterProcessing(step, RecordingIds, Configuration, analysis)
+                Results.append(Result)
+            elif step["type"]["value"] == "export":
+                Result = handleExportStructure(step, RecordingIds, Configuration, analysis)
+                Results.append(Result)
+                
         except Exception as e:
             print(e)
             Results.append({

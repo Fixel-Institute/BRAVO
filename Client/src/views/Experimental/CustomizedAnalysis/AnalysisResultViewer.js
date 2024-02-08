@@ -74,22 +74,32 @@ function AnalysisResultViewer({analysisId, analysisData}) {
   }, [patientID, analysisId]);
 
   useEffect(() => {
+  }, [selectedRecording]);
+
+  const handleDownloadData = () => {
     if (selectedRecording) {
+      setAlert(<LoadingProgress/>);
       SessionController.query("/api/queryCustomizedAnalysis", {
         id: patientID, 
         requestResult: analysisId,
-        resultId: selectedRecording.value
-      }).then((response) => {
-        setDataToRender({
-          RecordingInfo: selectedRecording,
-          Data: response.data.Data,
-          GraphOptions: response.data.Options
-        });
+        resultId: selectedRecording.value,
+        download: true
+      }, {}, null, "arraybuffer").then((response) => {
+        setAlert(null);
+
+        const url = window.URL.createObjectURL(
+          new Blob([response.data]),
+        );
+        var downloader = document.createElement('a');
+        downloader.href = url;
+        downloader.target = '_blank';
+        downloader.download = selectedRecording.title;
+        downloader.click();
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
     }
-  }, [selectedRecording]);
+  }
 
   return data ? (
     <Card width={"100%"} style={{paddingTop: 15, paddingBottom: 15, paddingLeft: 15, paddingRight: 15}}>
@@ -139,9 +149,17 @@ function AnalysisResultViewer({analysisId, analysisData}) {
               value={selectedRecording}
               options={availableResults}
               onChange={(event, newValue) => setSelectedRecording(newValue)}
+              disableClearable
             />
           </Grid>
           <Grid item xs={12}>
+            {selectedRecording ? (
+            <MDButton color={"info"} 
+              onClick={handleDownloadData} style={{marginLeft: 10}}
+            >
+              {selectedRecording.type === "AlignedData" ? "Download" : ""}
+            </MDButton>
+            ) : null}
             <ResultViewer data={dataToRender} />
           </Grid>
         </Grid>

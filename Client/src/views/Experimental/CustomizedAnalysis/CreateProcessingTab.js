@@ -141,6 +141,43 @@ const FilterEditor = ({currentState, newProcess, availableRecordings, updateConf
   );
 };
 
+const ExportEditor = ({currentState, newProcess, updateConfiguration}) => {
+  const [outputOptions, setOutputOptions] = useState(newProcess ? {
+    output: ""
+  } : currentState);
+
+  return (
+    <MDBox style={{marginTop: 20, paddingTop: 5, paddingBottom: 15}}>
+      <TextField
+        variant="standard"
+        margin="dense"
+        value={outputOptions.output}
+        placeholder={"Disable"}
+        onChange={(event) => setOutputOptions({...outputOptions, output: event.target.value})}
+        label={"Output Result Label"} type={"text"}
+        autoComplete={"off"}
+        fullWidth
+      />
+      <MDBox style={{display: "flex", paddingLeft: 15, paddingRight: 15, paddingTop: 15, justifyContent: "flex-end"}}>
+        <MDButton color={"secondary"} 
+          onClick={() => updateConfiguration(false)}
+        >
+          {"Cancel"}
+        </MDButton>
+        <MDButton color={"info"} 
+          onClick={() => {
+            updateConfiguration({
+              output: outputOptions.output
+            });
+          }} style={{marginLeft: 10}}
+        >
+          {newProcess ? "Add" : "Update"}
+        </MDButton>
+      </MDBox>
+    </MDBox>
+  );
+};
+
 function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, updateProcessingResult}) {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
@@ -302,6 +339,9 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
   const availableProcessings = [{
     value: "filter",
     label: "Apply Filter"
+  }, {
+    value: "export",
+    label: "Export Data"
   }]
 
   return (
@@ -335,6 +375,15 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
                                 {'Highpass: ' + (step.config.highpass === "" ? "Disabled" : step.config.highpass + " Hz")}
                                 <br></br>
                                 {'Lowpass: ' + (step.config.lowpass === "" ? "Disabled" : step.config.lowpass + " Hz")}
+                              </MDTypography>
+                            </MDBox>
+                          </MDBox>
+                        ) : null}
+                        {step.type.value === "export" ? (
+                          <MDBox style={{flexDirection: "column"}}>
+                            <MDBox>
+                              <MDTypography variant={"h4"} fontFamily={"lato"} fontWeight={"bold"}>
+                                {step.type.label}
                               </MDTypography>
                             </MDBox>
                           </MDBox>
@@ -405,6 +454,11 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
               }}/>
             {editProcessingStep.type.value === "filter" ? (
               <FilterEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
+              updateConfiguration={updateConfiguration}
+              />
+            ) : null}
+            {editProcessingStep.type.value === "export" ? (
+              <ExportEditor newProcess={editProcessingStep.new} 
               updateConfiguration={updateConfiguration}
               />
             ) : null}

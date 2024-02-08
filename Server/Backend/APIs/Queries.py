@@ -1026,10 +1026,16 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data, options = AnalysisBuilder.queryResultData(request.user, request.data["id"], request.data["requestResult"], request.data["resultId"], Authority)
+                data, options = AnalysisBuilder.queryResultData(request.user, request.data["id"], request.data["requestResult"], request.data["resultId"], request.data["download"], Authority)
                 if not data:
                     return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-                return Response(status=200, data={"Data": data, "Options": options})
+                
+                if request.data["download"]:
+                    return HttpResponse(bytes(data), status=200, headers={
+                        "Content-Type": "application/octet-stream"
+                    })
+                else:
+                    return Response(status=200, data={"Data": data, "Options": options})
 
         elif "updateAnalysisSteps" in request.data:
             Authority = {}

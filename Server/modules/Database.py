@@ -27,6 +27,7 @@ import dateutil, pytz
 import numpy as np
 import pandas as pd
 from cryptography.fernet import Fernet
+import scipy.io as sio
 import json
 
 from Backend import models
@@ -563,6 +564,16 @@ def extractAvailableRecordingList(user, researcher_id, patient_id):
 
     return RecordingList
 
+def saveResultMATFiles(datastruct, datatype, info, id, device_id):
+    try:
+        os.mkdir(DATABASE_PATH + "recordings" + os.path.sep + str(device_id))
+    except Exception:
+        pass
+
+    filename = str(device_id) + os.path.sep + datatype + "_" + info + "_" + str(id) + ".mat"
+    sio.savemat(DATABASE_PATH + "recordings" + os.path.sep + filename, datastruct)
+    return filename
+
 def saveSourceFiles(datastruct, datatype, info, id, device_id):
     try:
         os.mkdir(DATABASE_PATH + "recordings" + os.path.sep + str(device_id))
@@ -574,9 +585,15 @@ def saveSourceFiles(datastruct, datatype, info, id, device_id):
         pickle.dump(datastruct, file)
     return filename
 
-def loadSourceDataPointer(filename):
+def loadSourceDataPointer(filename, bytes=False):
     with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "rb") as file:
-        datastruct = pickle.load(file)
+        if bytes:
+            datastruct = file.read()
+        else:
+            if filename.endswith(".pkl"):
+                datastruct = pickle.load(file)
+            else:
+                datastruct = sio.loadmat(file)
     return datastruct
 
 def deleteSourceDataPointer(filename):
