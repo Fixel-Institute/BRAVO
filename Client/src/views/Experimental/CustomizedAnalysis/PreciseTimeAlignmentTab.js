@@ -121,10 +121,10 @@ function PreciseTimeAlignmentTab({analysisId, analysisData, updateAnalysisData})
         }
       }).map((recording) => {
         const descriptor = analysisData.Configuration.Descriptor[recording.RecordingId];
-        
+
         return {
           key: recording.RecordingId,
-          title: "[" + descriptor.Type + "] - " + descriptor.Label,
+          title: "[" + descriptor.Type + "] - " + (descriptor.Label || (recording.RecordingLabel + " " + recording.RecordingId)),
           value: recording.RecordingId
         }
       }));

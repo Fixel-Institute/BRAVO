@@ -278,7 +278,7 @@ def removeRecordingFromAnalysis(user, patientId, analysisId, recordingId, author
     analysis.save()
     return True
 
-def addRecordingToAnalysis(user, patientId, analysisId, recordingId, authority):
+def addRecordingToAnalysis(user, patientId, analysisId, recordingId, recordingType, authority):
     if not authority["Permission"]:
         return None
     
@@ -311,7 +311,7 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, authority):
         Data["Descriptor"][recordingId] = {
             "TimeShift": 0,
             "Label": "",
-            "Type": "Signal",
+            "Type": recordingType,
             "Version": 1,
             "Channels": {}
         }
@@ -356,7 +356,7 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, authority):
                 Data["Descriptor"][recordingId] = {
                     "TimeShift": 0,
                     "Label": "",
-                    "Type": "Signal",
+                    "Type": recordingType,
                     "Version": 1,
                     "Channels": {}
                 }

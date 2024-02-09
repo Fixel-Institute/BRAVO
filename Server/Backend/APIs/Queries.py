@@ -1060,7 +1060,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data = AnalysisBuilder.addRecordingToAnalysis(request.user, request.data["id"], request.data["analysisId"], request.data["addRecording"], Authority)
+                data = AnalysisBuilder.addRecordingToAnalysis(request.user, request.data["id"], request.data["analysisId"], request.data["addRecording"], request.data["recordingType"], Authority)
                 if not data:
                     return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
                 

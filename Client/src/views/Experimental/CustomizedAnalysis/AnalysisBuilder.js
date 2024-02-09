@@ -62,6 +62,7 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
   const [availableRecordings, setAvailableRecordings] = useState([]);
   const [selectedRecording, setSelectedRecording] = useState({
     value: "",
+    type: "Signal",
     show: false
   });
 
@@ -111,8 +112,8 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
   }, [availableRecordings]);
 
   const handleNewRecordingForAnalysis = (recordingInfo) => {
-    if (!recordingInfo) return;
-    
+    if (!recordingInfo.value) return;
+
     if (analysisData.Analysis.ProcessingQueued) {
       setAlert(<MuiAlertDialog 
         title={"Currently Processing"}
@@ -128,7 +129,8 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
     SessionController.query("/api/queryCustomizedAnalysis", {
       id: patientID, 
       analysisId: analysisId,
-      addRecording: recordingInfo.value, 
+      addRecording: recordingInfo.value.value, 
+      recordingType: recordingInfo.type, 
     }).then((response) => {
       setData((data) => {
         data.Recordings = [...data.Recordings, response.data.recording];
@@ -466,8 +468,18 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
               options={availableRecordings}
               onChange={(event, newValue) => setSelectedRecording({...selectedRecording, value: newValue})}
             />
+            <TextField
+              variant="standard"
+              margin="dense"
+              value={selectedRecording.type}
+              placeholder={"Signal"}
+              onChange={(event) => setSelectedRecording({...selectedRecording, type: event.target.value})}
+              label={"Input Data Type"} type={"text"}
+              autoComplete={"off"}
+              fullWidth
+            />
 
-            <MDButton variant={"gradient"} color={"success"} style={{minWidth: 300, marginTop: 15}} onClick={() => handleNewRecordingForAnalysis(selectedRecording.value)}>
+            <MDButton variant={"gradient"} color={"success"} style={{minWidth: 300, marginTop: 15}} onClick={() => handleNewRecordingForAnalysis(selectedRecording)}>
               {"Add"}
             </MDButton>
           </Grid>
