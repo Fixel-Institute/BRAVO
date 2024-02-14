@@ -139,9 +139,10 @@ class QueryProcessingQueue(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
     def post(self, request):
+        processingType = ["decodeJSON", "decodeSummitZIP", "externalCSVs", "externalMDATs"]
         if "clearQueue" in request.data:
             if request.data["clearQueue"] == "All":
-                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, type__in=["decodeJSON", "decodeSummitZIP", "externalCSVs"])
+                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, type__in=processingType)
                 for queue in queues:
                     try:
                         os.remove(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"])
@@ -149,13 +150,13 @@ class QueryProcessingQueue(RestViews.APIView):
                         pass
                     queue.delete()
             else:
-                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, type__in=["decodeJSON", "decodeSummitZIP", "externalCSVs"], state=request.data["clearQueue"]).delete()
+                queues = models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, type__in=processingType, state=request.data["clearQueue"]).delete()
             return Response(status=200)
         else:
             queues = models.ProcessingQueue.objects.all()
             data = []
             for i in range(len(queues)):
-                if queues[i].owner == request.user.unique_user_id and queues[i].type in ["decodeJSON", "decodeSummitZIP", "externalCSVs"]:
+                if queues[i].owner == request.user.unique_user_id and queues[i].type in processingType:
                     data.append({
                         "currentIndex": i,
                         "taskId": queues[i].queue_id,
