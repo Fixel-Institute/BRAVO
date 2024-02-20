@@ -489,7 +489,7 @@ def extractPatientAccessTable(user):
         AuthorizedUsers = []
         if models.DeidentifiedPatientID.objects.filter(authorized_patient_id=info["ID"]).exists():
             AuthorizedUsers = models.DeidentifiedPatientID.objects.filter(authorized_patient_id=info["ID"]).values("researcher_id").all()
-            AuthorizedUsers = [str(user["researcher_id"]) for user in AuthorizedUsers]
+            AuthorizedUsers = [str(AuthUser["researcher_id"]) for AuthUser in AuthorizedUsers]
             for userId in AuthorizedUsers:
                 if not userId in researcherIds.keys():
                     researcherIds[userId] = models.PlatformUser.objects.filter(unique_user_id=userId).first()
@@ -507,6 +507,10 @@ def extractPatientAccessTable(user):
     for deidentified_patient in DeidentifiedPatientID:
         deidentified = models.Patient.objects.filter(deidentified_id=deidentified_patient.deidentified_id).first()
         patient = extractAccess(user, deidentified_patient.authorized_patient_id)
+        if patient == 0:
+            AuthorizeResearchAccess(user, user.unique_user_id, deidentified_patient.deidentified_id, False)
+            continue
+
         info = extractPatientTableRow(user, deidentified)
         
         PatientInfo.append({
@@ -571,7 +575,7 @@ def saveResultMATFiles(datastruct, datatype, info, id, device_id):
         pass
 
     filename = str(device_id) + os.path.sep + datatype + "_" + info + "_" + str(id) + ".mat"
-    sio.savemat(DATABASE_PATH + "recordings" + os.path.sep + filename, datastruct)
+    sio.savemat(DATABASE_PATH + "recordings" + os.path.sep + filename, datastruct, long_field_names=True)
     return filename
 
 def saveSourceFiles(datastruct, datatype, info, id, device_id):
