@@ -468,6 +468,7 @@ function BrainSenseStreaming() {
         addEvent: true,
         name: eventInfo.name,
         time: eventInfo.time / 1000,
+        type: "Streaming",
         duration: parseFloat(eventInfo.duration)
       });
 

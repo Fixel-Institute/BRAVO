@@ -44,6 +44,7 @@ import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
 import { dictionary } from "assets/translation.js";
 import EventPowerSpectrum from "./EventPowerSpectrum";
+import PatientEventsTable from "components/Tables/PatientEventsTable";
 
 function PatientEvents() {
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ function PatientEvents() {
   const { patientID, language } = controller;
 
   const [data, setData] = useState(false);
+  const [annotations, setAnnotations] = useState([]);
   const [eventList, setEventList] = useState({});
   const [eventGroupingDuration, setEventGroupingDuration] = useState("Week");
 
@@ -66,7 +68,8 @@ function PatientEvents() {
       SessionController.query("/api/queryPatientEvents", {
         id: patientID
       }).then((response) => {
-        console.log(response.data.EventPSDs)
+        setAnnotations(response.data.ClinicianEvents);
+        console.log(response.data)
         setData(response.data.EventPSDs);
         setAlert(null);
       }).catch((error) => {
@@ -103,6 +106,25 @@ function PatientEvents() {
       setEventList(eventNames);
     }
   }, [data]);
+
+  const deleteRecords = (records) => {
+    if (records.length < 1) return;
+
+    setAlert(<LoadingProgress/>);
+    SessionController.query("/api/queryCustomAnnotations", {
+      id: patientID,
+      deleteEvents: records
+    }).then((response) => {
+      setAnnotations((annotations) => {
+        return annotations.filter((event) => {
+          return !records.includes(event.ID);
+        });
+      });
+      setAlert(null);
+    }).catch((error) => {
+      SessionController.displayError(error, setAlert);
+    });
+  }
 
   const adapterLocales = {
     "zh": "zh-CN",
@@ -205,6 +227,24 @@ function PatientEvents() {
                   </Grid>
                 </Card>
               </Grid>
+              {annotations.length > 0 ? (
+              <Grid item xs={12}>
+                <Card sx={{width: "100%"}}>
+                  <Grid container>
+                    <Grid item xs={12}>
+                      <MDBox p={2}>
+                        <MDTypography variant={"h6"} fontSize={24}>
+                          {dictionary.PatientEvents.Figure.ClinicianEvents[language]}
+                        </MDTypography>
+                      </MDBox>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <PatientEventsTable data={annotations} deleteRecords={deleteRecords}/>
+                    </Grid>
+                  </Grid>
+                </Card>
+              </Grid>
+              ) : null}
             </Grid>
           </MDBox>
         </MDBox>

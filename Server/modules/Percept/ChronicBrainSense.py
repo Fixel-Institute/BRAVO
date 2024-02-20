@@ -210,6 +210,11 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
         return LFPTrends
 
     availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
+    
+    ClinicianAnnotationsDjango = models.CustomAnnotations.objects.filter(patient_deidentified_id=patientUniqueID, event_type="Chronic Event").all()
+    ClinicianAnnotations = pd.DataFrame.from_records(ClinicianAnnotationsDjango.values("event_name", "event_time"))
+    ClinicianAnnotations.drop_duplicates(inplace=True)
+
     for device in availableDevices:
         leads = device.device_lead_configurations
         for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
@@ -288,7 +293,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                                 if "event_time" in ChronicEvents.keys() and len(LFPTrends[-1]["Power"][-1]) > 0:
                                     SelectedTime = np.bitwise_and(ChronicEvents["event_time"] > datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc), ChronicEvents["event_time"] < datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc))
                                     if np.any(SelectedTime):
-                                        LFPTrends[-1]["EventName"].append(ChronicEvents["event_name"][SelectedTime])
+                                        LFPTrends[-1]["EventName"].append(ChronicEvents["event_name"][SelectedTime].tolist())
                                         LFPTrends[-1]["EventTime"].append([time.timestamp() for time in ChronicEvents["event_time"][SelectedTime]])
                                         LFPTrends[-1]["EventPower"].append([LFPTrends[-1]["Power"][-1][findClosest(LFPTrends[-1]["Timestamp"][-1], time)[1]] for time in LFPTrends[-1]["EventTime"][-1]])
                                     else:
@@ -300,6 +305,12 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
                                     LFPTrends[-1]["EventTime"].append([])
                                     LFPTrends[-1]["EventPower"].append([])
 
+                                if "event_time" in ClinicianAnnotations.keys() and len(LFPTrends[-1]["Power"][-1]) > 0:
+                                    SelectedTime = np.bitwise_and(ClinicianAnnotations["event_time"] > datetime.fromtimestamp(therapy["date_of_change"][i]/1000000000,tz=pytz.utc), ClinicianAnnotations["event_time"] < datetime.fromtimestamp(therapy["date_of_change"][i+1]/1000000000,tz=pytz.utc))
+                                    if np.any(SelectedTime):
+                                        LFPTrends[-1]["EventName"][-1].extend(ClinicianAnnotations["event_name"][SelectedTime].tolist())
+                                        LFPTrends[-1]["EventTime"][-1].extend([time.timestamp() for time in ClinicianAnnotations["event_time"][SelectedTime]])
+                                        LFPTrends[-1]["EventPower"][-1].extend([LFPTrends[-1]["Power"][-1][findClosest(LFPTrends[-1]["Timestamp"][-1], time)[1]] for time in [time.timestamp() for time in ClinicianAnnotations["event_time"][SelectedTime]]])
     return LFPTrends
 
 def normalizeCircadianPower(Power, Timestamp):
@@ -406,11 +417,13 @@ def processChronicLFPs(LFPTrends, timezoneOffset=0, normalizeCircadian=False):
             EventToInclude = list()
             LFPTrends[i]["EventLockedPower"][-1]["TimeArray"] = np.arange(37)*600 - 180*60
             EventLockedPower = np.zeros((len(LFPTrends[i]["EventLockedPower"][-1]["EventName"]),len(LFPTrends[i]["EventLockedPower"][-1]["TimeArray"])))
+            
             for iEvent in range(len(LFPTrends[i]["EventLockedPower"][-1]["EventName"])):
+                print(LFPTrends[i]["EventLockedPower"][-1]["EventName"][iEvent])
                 dataSelected = rangeSelection(LFPTrends[i]["CircadianPowers"][-1]["Timestamp"], [LFPTrends[i]["EventLockedPower"][-1]["Timestamp"][iEvent]+LFPTrends[i]["EventLockedPower"][-1]["TimeArray"][0], LFPTrends[i]["EventLockedPower"][-1]["Timestamp"][iEvent]+LFPTrends[i]["EventLockedPower"][-1]["TimeArray"][-1]])
                 PowerTrend = LFPTrends[i]["CircadianPowers"][-1]["Power"][dataSelected]
                 Timestamp = LFPTrends[i]["CircadianPowers"][-1]["Timestamp"][dataSelected]
-                if len(Timestamp) > 35:
+                if len(Timestamp) >= 35:
                     index = np.argsort(Timestamp)
                     EventLockedPower[iEvent,:] = np.interp(LFPTrends[i]["EventLockedPower"][-1]["TimeArray"]+LFPTrends[i]["EventLockedPower"][-1]["Timestamp"][iEvent], Timestamp[index], PowerTrend[index])
                     EventToInclude.append(iEvent)

@@ -15,6 +15,10 @@ import React, { useCallback } from "react";
 import { useResizeDetector } from 'react-resize-detector';
 
 import MDBox from "components/MDBox";
+import MDTypography from "components/MDTypography";
+import MDButton from "components/MDButton";
+import { Menu, MenuItem, Dialog, DialogContent, Grid, Autocomplete, TextField, DialogActions } from "@mui/material";
+import { createFilterOptions } from "@mui/material/Autocomplete";
 
 import colormap from "colormap";
 
@@ -23,11 +27,23 @@ import { PlotlyRenderManager } from "graphing-utility/Plotly";
 import { dictionary, dictionaryLookup } from "assets/translation";
 import { usePlatformContext } from "context";
 
-function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figureTitle}) {
+const filter = createFilterOptions();
+
+function ChronicPowerTrend({dataToRender, events, selectedDevice, handleAddEvent, handleDeleteEvent, annotations, height, figureTitle}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
   const [show, setShow] = React.useState(false);
+  const [contextMenu, setContextMenu] = React.useState(null);
+  const [annotationTypes, setAnnotationTypes] = React.useState([]);
+  const [eventInfo, setEventInfo] = React.useState({
+    name: "",
+    time: 0,
+    duration: 0,
+    lastClick: 0,
+    show: false
+  });
+
   const [figureHeight, setFigureHeight] = React.useState(height);
   const fig = new PlotlyRenderManager(figureTitle, language);
   
@@ -84,10 +100,14 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
 
     for (let i = 0; i < data.length; i++) {
       const eventData = {};
+      const annotationData = {};
       for (let j = 0; j < events.length; j++) {
         eventData[events[j]] = {xdata: [], ydata: []};
       }
-
+      for (let j = 0; j < annotationTypes.length; j++) {
+        annotationData[annotationTypes[j]] = {xdata: [], ydata: []};
+      }
+      
       for (let j = 0; j < data[i].Timestamp.length; j++) {
         var therapyString = ""
         if (data[i]["Therapy"][j].hasOwnProperty("TherapyOverview")) therapyString = data[i]["Therapy"][j]["TherapyOverview"]
@@ -125,6 +145,13 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
             eventData[data[i].EventName[j][k]].ydata.push(data[i].EventPower[j][k]);
           }
         }
+        
+        for (let k in annotations) {
+          if (Object.keys(eventData).includes(annotations[k].Name)) {
+            annotationData[annotations[k].Name].xdata.push(annotations[k].Time*1000);
+            annotationData[annotations[k].Name].ydata.push(0);
+          }
+        }
       }
 
       const colors = colormap({
@@ -133,11 +160,14 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
         format: "hex",
         alpha: 1
       });
-      const increment = Math.floor(25 / events.length);
+      const increment = Math.floor(25 / (events.length + annotationTypes.length));
   
       const getColor = (name) => {
         for (let k = 0; k < events.length; k++) {
           if (name.startsWith(events[k])) return colors[k * increment];
+        }
+        for (let k = 0; k < annotationTypes.length; k++) {
+          if (name.startsWith(annotationTypes[k])) return colors[k * increment + events.length];
         }
         return colors[0];
       }
@@ -150,6 +180,17 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
           showlegend: true,
           legendgroup: events[j],
           hovertemplate: "  %{x} <br>  " + events[j] + "<extra></extra>"
+        }, ax[i*2])
+      }
+      
+      for (let j = 0; j < annotationTypes.length; j++) {
+        fig.scatter(annotationData[annotationTypes[j]].xdata, annotationData[annotationTypes[j]].ydata, {
+          color: getColor(annotationTypes[j]),
+          size: 5,
+          name: "Clinician Events: " + annotationTypes[j],
+          showlegend: true,
+          legendgroup: "Clinician Events: " + annotationTypes[j],
+          hovertemplate: "  %{x} <br>  Clinician Events: " + annotationTypes[j] + "<extra></extra>"
         }, ax[i*2])
       }
     }
@@ -165,6 +206,13 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
+    for (let i in annotations) {
+      if (!annotationTypes.includes(annotations[i].Name)) {
+        annotationTypes.push(annotations[i].Name)
+      }
+    }
+    setAnnotationTypes([...annotationTypes]);
+
     if (dataToRender) {
       const channelData = dataToRender.ChronicData.filter((channel) => channel.Device == selectedDevice);
       if (channelData.length > 0) {
@@ -172,7 +220,7 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
         handleGraphing(channelData)
       };
     };
-  }, [dataToRender, events, selectedDevice, language]);
+  }, [dataToRender, events, selectedDevice, annotations, language]);
 
   const onResize = useCallback(() => {
     fig.refresh();
@@ -185,8 +233,129 @@ function ChronicPowerTrend({dataToRender, events, selectedDevice, height, figure
     skipOnMount: false
   });
 
+  React.useEffect(() => {
+    if (ref.current.on) {
+      ref.current.on("plotly_click", (data) => {
+        setEventInfo((eventInfo) => {
+          eventInfo.lastClick = new Date().getTime();
+          eventInfo.time = new Date(data.points[0].x).getTime();
+          return {...eventInfo};
+        });
+      });
+    }
+  }, [ref.current, dataToRender]);
+
   return (
-    <MDBox ref={ref} id={figureTitle} style={{marginTop: 5, marginBottom: 10, height: figureHeight, width: "100%", display: show ? "" : "none"}}/>
+    <MDBox ref={ref} onContextMenu={(event) => {
+      event.preventDefault();
+      setContextMenu(
+        contextMenu === null ? {
+          mouseX: event.clientX + 2,
+          mouseY: event.clientY - 6,
+        } : null
+      );
+    }} id={figureTitle} style={{marginTop: 5, marginBottom: 10, height: figureHeight, width: "100%", display: show ? "" : "none"}}>
+      <Menu
+        open={contextMenu !== null}
+        onClose={() => setContextMenu(null)}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenu !== null
+            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+            : undefined
+        }
+        disableScrollLock={true}
+      >
+        <MenuItem onClick={() => {
+          setContextMenu(null);
+          if (new Date().getTime() - eventInfo.lastClick> 1000) return;
+          setEventInfo({...eventInfo, name: "", show: true});
+        }}>{"Add New Event"}</MenuItem>
+        <MenuItem onClick={() => {
+          setContextMenu(null);
+          handleDeleteEvent(eventInfo);
+          }}>{"Delete Event"}</MenuItem>
+      </Menu>
+      <Dialog open={eventInfo.show} onClose={() => setEventInfo({...eventInfo, show: false})}>
+        <MDBox px={2} pt={2}>
+          <MDTypography variant="h5">
+            {"New Custom Event"} 
+          </MDTypography>
+        </MDBox>
+        <DialogContent>
+          <Grid container spacing={2}>
+            <Grid item xs={12} style={{display: "flex", flexDirection: "column"}}>
+              <Autocomplete 
+                selectOnFocus clearOnBlur
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="standard"
+                    placeholder={dictionary.PatientOverview.TagNames[language]}
+                  />
+                )}
+                filterOptions={(options, params) => {
+                  const filtered = filter(options, params);
+                  const { inputValue } = params;
+
+                  // Suggest the creation of a new value
+                  const isExisting = options.some((option) => inputValue === option.title);
+                  if (inputValue !== '' && !isExisting) {
+                    filtered.push({
+                      value: inputValue,
+                      title: `Add "${inputValue}"`,
+                    });
+                  }
+                  return filtered;
+                }}
+                getOptionLabel={(option) => {
+                  if (typeof option === 'string') {
+                    return option;
+                  }
+                  if (option.inputValue) {
+                    return option.inputValue;
+                  }
+                  return option.title;
+                }}
+                isOptionEqualToValue={(option, value) => {
+                  return option.value === value.value;
+                }}
+                renderOption={(props, option) => <li {...props}>{option.title}</li>}
+
+                value={{
+                  title: eventInfo.name,
+                  value: eventInfo.name
+                }}
+                options={annotationTypes.map((value) => ({
+                  title: value,
+                  value: value
+                }))}
+                onChange={(event, newValue) => setEventInfo({...eventInfo, name: newValue ? newValue.value : ""})}
+              />
+            </Grid>
+            <Grid item xs={12} style={{display: "flex", flexDirection: "column"}}>
+              <TextField
+                variant="standard"
+                margin="dense"
+                type={"number"}
+                label="Event Duration"
+                placeholder={"0 for Instant Event"}
+                value={eventInfo.duration}
+                onChange={(event) => setEventInfo({...eventInfo, duration: event.target.value})}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <MDButton color="secondary" onClick={() => setEventInfo({...eventInfo, show: false})}>Cancel</MDButton>
+          <MDButton color="info" onClick={() => {
+            handleAddEvent(eventInfo);
+            setEventInfo({...eventInfo, show: false});
+          }}>Add</MDButton>
+        </DialogActions>
+      </Dialog>
+      
+    </MDBox>
   );
 }
 

@@ -25,6 +25,7 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import FormField from "components/MDInput/FormField";
 import LoadingProgress from "components/LoadingProgress";
+import MuiAlertDialog from "components/MuiAlertDialog";
 
 // core components
 import ChronicPowerTrend from "./ChronicPowerTrend";
@@ -178,6 +179,80 @@ function ChronicBrainSense() {
     }
   }, [data]);
 
+  const handleAddEvent = async (eventInfo) => {
+    try {
+      const response = await SessionController.query("/api/queryCustomAnnotations", {
+        id: patientID,
+        addEvent: true,
+        name: eventInfo.name,
+        time: eventInfo.time / 1000,
+        type: "Chronic Event",
+        duration: parseFloat(eventInfo.duration)
+      });
+
+      if (response.status == 200) {
+        setData((data) => {
+          data.ClinicianEvents = [...data.ClinicianEvents, {
+            Time: eventInfo.time / 1000,
+            Name: eventInfo.name,
+            Duration: parseFloat(eventInfo.duration)
+          }];
+          return {...data};
+        });
+      }
+    } catch (error) {
+      SessionController.displayError(error, setAlert);
+    }
+  };
+
+  const handleDeleteEvent = async (eventInfo) => {
+    if (data.ClinicianEvents.length > 0) {
+      eventInfo.targetInfo = eventInfo;
+      eventInfo.targetInfo.timeDiff = 10;
+    }
+
+    for (let i = 0; i < data.ClinicianEvents.length; i++) {
+      let absoluteDiffTime = Math.abs(data.ClinicianEvents[i].Time - eventInfo.time/1000);
+      if (absoluteDiffTime < eventInfo.targetInfo.timeDiff) {
+        eventInfo.targetInfo = data.ClinicianEvents[i];
+        eventInfo.targetInfo.timeDiff = absoluteDiffTime;
+      }
+    }
+    
+    if (eventInfo.targetInfo.timeDiff < 10) {
+      setAlert(<MuiAlertDialog 
+        title={`Remove ${eventInfo.targetInfo.Name} Event`}
+        message={`Are you sure you want to delete the entry [${eventInfo.targetInfo.Name}] @ ${new Date(eventInfo.targetInfo.Time*1000)} ?`}
+        confirmText={"YES"}
+        denyText={"NO"}
+        denyButton
+        handleClose={() => setAlert(null)}
+        handleDeny={() => setAlert(null)}
+        handleConfirm={() => {
+          SessionController.query("/api/queryCustomAnnotations", {
+            id: patientID,
+            deleteEvent: true,
+            name: eventInfo.targetInfo.Name,
+            time: eventInfo.targetInfo.Time
+          }).then(() => {
+            setData((data) => {
+              data.ClinicianEvents = data.ClinicianEvents.filter((a) => {
+                if (a.Name == eventInfo.targetInfo.Name && a.Time == eventInfo.targetInfo.Time && a.Duration == eventInfo.targetInfo.Duration) {
+                  return false;
+                }
+                return true;
+              })
+              return {...data};
+            });
+            setAlert(null);
+          }).catch((error) => {
+            SessionController.displayError(error, setAlert);
+          });
+        }}
+      />)
+    }
+  }
+
   const exportCurrentStream = () => {
     var csvData = "Time,Power,Therapy,Amplitude,Device,Hemisphere";
     csvData += "\n";
@@ -242,7 +317,7 @@ function ChronicBrainSense() {
                           </MDBox>
                         </Grid>
                         <Grid item xs={12} lg={12}>
-                          <ChronicPowerTrend dataToRender={data} height={400} selectedDevice={availableDevice.current} events={eventList} figureTitle={"ChronicPowerTrend"}/>
+                          <ChronicPowerTrend dataToRender={data} height={400} selectedDevice={availableDevice.current} events={eventList} handleAddEvent={handleAddEvent} handleDeleteEvent={handleDeleteEvent} annotations={data.ClinicianEvents} figureTitle={"ChronicPowerTrend"}/>
                         </Grid>
                       </>
                     ) : (

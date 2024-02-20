@@ -29,7 +29,7 @@ function EventLockedPower({dataToRender, selector, events, height, figureTitle})
 
   const [show, setShow] = React.useState(false);
   const fig = new PlotlyRenderManager(figureTitle, language);
-  
+
   const handleGraphing = (data) => {
     fig.clearData();
 

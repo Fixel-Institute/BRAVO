@@ -736,6 +736,28 @@ export const dictionary = {
       EventFrequencyTimeRange: {
         en: "Patient Events Frequency (Within Time-Range)",
         zh: "标记事件记录时间表（限定时间范围）"
+      },
+      ClinicianEvents: {
+        en: "Event Annotations",
+        zh: "Event Annotations"
+      }
+    },
+    Table: {
+      Checked: {
+        en: "",
+        zh: ""
+      },
+      EventName: {
+        en: "Event Name",
+        zh: "Event Name"
+      },
+      EventTime: {
+        en: "Event Time",
+        zh: "Event Time"
+      },
+      EventType: {
+        en: "Event Type",
+        zh: "Event Type"
       }
     }
   },

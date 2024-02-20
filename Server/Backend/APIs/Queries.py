@@ -686,6 +686,13 @@ class QueryChronicBrainSense(RestViews.APIView):
                 data["EventPSDs"] = BrainSenseEvent.queryPatientEventPSDs(request.user, PatientID, TherapyHistory, Authority)
                 data["ChronicData"] = ChronicBrainSense.processChronicLFPs(data["ChronicData"], int(request.data["timezoneOffset"]), normalizeCircadian=request.data["normalizeCircadianRhythm"])
                 data["EventPSDs"] = BrainSenseEvent.processEventPSDs(data["EventPSDs"])
+            
+            annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=PatientID)
+            data["ClinicianEvents"] = [{
+                "Name": item.event_name,
+                "Time": item.event_time.timestamp(),
+                "Duration": item.event_duration
+            } for item in annotations]
 
             return Response(status=200, data=data)
 
@@ -926,6 +933,15 @@ class QueryPatientEvents(RestViews.APIView):
 
         data = dict()
         data["EventPSDs"] = BrainSenseEvent.getAllPatientEvents(request.user, PatientID, Authority)
+
+        annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=PatientID)
+        data["ClinicianEvents"] = [{
+            "ID": item.deidentified_id,
+            "Type": item.event_type,
+            "Name": item.event_name,
+            "Time": item.event_time.timestamp(),
+            "Duration": item.event_duration,
+        } for item in annotations]
         return Response(status=200, data=data)
 
 class QueryCustomAnnotations(RestViews.APIView):
@@ -953,6 +969,7 @@ class QueryCustomAnnotations(RestViews.APIView):
             annotation = models.CustomAnnotations(patient_deidentified_id=PatientID, 
                                      event_name=request.data["name"], 
                                      event_time=datetime.fromtimestamp(request.data["time"],tz=pytz.utc),
+                                     event_type=request.data["type"] if request.data["type"] else "Streaming",
                                      event_duration=request.data["duration"])
             models.SearchTags.objects.get_or_create(tag_name=request.data["name"], tag_type="Annotations", institute=request.user.email)
             annotation.save()
@@ -962,6 +979,13 @@ class QueryCustomAnnotations(RestViews.APIView):
             annotation = models.CustomAnnotations.objects.filter(patient_deidentified_id=PatientID, 
                                      event_name=request.data["name"], 
                                      event_time=datetime.fromtimestamp(request.data["time"],tz=pytz.utc)).first()
+            if annotation:
+                annotation.delete()
+                return Response(status=200)
+
+        elif "deleteEvents" in request.data:
+            annotation = models.CustomAnnotations.objects.filter(patient_deidentified_id=PatientID, 
+                                     deidentified_id__in=request.data["deleteEvents"]).all()
             if annotation:
                 annotation.delete()
                 return Response(status=200)
