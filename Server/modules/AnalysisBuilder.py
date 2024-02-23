@@ -694,7 +694,8 @@ def handleExportStructure(step, RecordingIds, Configuration, analysis):
             RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
 
         RawData["ResultType"] = "AlignedData"
-        RawData["Time"] = np.arange(RawData["Data"].shape[0]) + RawData["StartTime"] + Configuration["Descriptor"][recordingId]["TimeShift"]
+        RawData["DataType"] = Configuration["Descriptor"][recordingId]["Type"]
+        RawData["Time"] = (np.arange(RawData["Data"].shape[0])/RawData["SamplingRate"]) + RawData["StartTime"] + (Configuration["Descriptor"][recordingId]["TimeShift"]/1000)
         ProcessedData.append(RawData)
 
     recording = createResultMATFile({"ProcessedData": ProcessedData}, str(analysis.device_deidentified_id), "AnalysisOutput", 0)

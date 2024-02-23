@@ -1054,6 +1054,10 @@ export const dictionary = {
       en: "Analysis Builder",
       zh: "Analysis Builder"
     },
+    TremorStudy: {
+      en: "Tremor Study",
+      zh: "Tremor Study"
+    },
     Surveys: {
       en: "Surveys",
       zh: "Surveys"

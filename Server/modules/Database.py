@@ -597,7 +597,7 @@ def loadSourceDataPointer(filename, bytes=False):
             if filename.endswith(".pkl"):
                 datastruct = pickle.load(file)
             else:
-                datastruct = sio.loadmat(file)
+                datastruct = sio.loadmat(file, simplify_cells=True)["ProcessedData"]
     return datastruct
 
 def deleteSourceDataPointer(filename):

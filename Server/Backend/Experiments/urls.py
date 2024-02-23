@@ -1,4 +1,5 @@
-/**
+""""""
+"""
 =========================================================
 * UF BRAVO Platform
 =========================================================
@@ -9,20 +10,13 @@
  =========================================================
 
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
+"""
 
-const enabledPlugins = [
-  "TherapeuticPrediction",
-  "TremorStudy",
-  "MultipleSegmentAnalysis",
-  "AdaptiveStimulation",
-  "CircadianThreshold",
-  "PatientEvents",
-  "ImageVisualization",
-  "CustomizedAnalysis",
-  "MobileManager"
-];
+from django.urls import path
+from django.conf import settings
 
-export const experimentalRoutes = enabledPlugins.map((plugin) => {
-  return require("views/Experimental/" + plugin + "/route.js").default;
-});
+from . import Queries
+
+urlpatterns = [
+	path('queryTremorStudyResults', Queries.QueryTremorStudyResults.as_view()),
+]

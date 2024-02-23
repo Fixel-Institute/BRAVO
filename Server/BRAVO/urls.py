@@ -36,6 +36,7 @@ from Backend.MobileEndpoints import urls as MobileURLs
 urlpatterns = [
     path('', include('Backend.urls')),
     path('api/', include('Backend.APIs.urls')),
+    path('experiment/', include('Backend.Experiments.urls')),
     path('mobile/', include('Backend.MobileEndpoints.urls')),
 ]
 
