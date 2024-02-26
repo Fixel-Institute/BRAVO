@@ -692,9 +692,12 @@ def handleExportStructure(step, RecordingIds, Configuration, analysis):
         elif models.BrainSenseRecording.objects.filter(recording_id=recordingId).exists():
             recording = models.BrainSenseRecording.objects.filter(recording_id=recordingId).first()
             RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-
+        
         RawData["ResultType"] = "AlignedData"
         RawData["DataType"] = Configuration["Descriptor"][recordingId]["Type"]
+        for i in range(len(RawData["ChannelNames"])):
+            if RawData["ChannelNames"][i] in Configuration["Descriptor"][recordingId]["Channels"].keys():
+                RawData["ChannelNames"][i] = Configuration["Descriptor"][recordingId]["Channels"][RawData["ChannelNames"][i]]["name"]
         RawData["Time"] = (np.arange(RawData["Data"].shape[0])/RawData["SamplingRate"]) + RawData["StartTime"] + (Configuration["Descriptor"][recordingId]["TimeShift"]/1000)
         ProcessedData.append(RawData)
 
