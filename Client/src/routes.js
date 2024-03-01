@@ -20,18 +20,7 @@
   10. The `component` key is used to store the component of its route.
 */
 
-// BRAVO Platform Layouts
-import DashboardOverview from "views/Dashboard/Overview";
-import PatientLookupTable from "views/Dashboard/PatientLookupTable";
-import ResearchAccessView from "views/Dashboard/ShareResearchAccess";
-import PatientOverview from "views/Dashboard/PatientOverview";
-import SurveyList from "views/Survey/Overview";
-import TherapyHistory from "views/Reports/TherapyHistory";
-import BrainSenseSurvey from "views/Reports/BrainSenseSurvey";
-import BrainSenseStreaming from "views/Reports/BrainSenseStreaming";
-import IndefiniteStreaming from "views/Reports/IndefiniteStreaming";
-import ChronicBrainSense from "views/Reports/ChronicBrainSense";
-import SessionOverview from "views/Reports/SessionsOverview";
+import {Suspense, lazy} from "react";
 
 // Material Dashboard 2 React components
 import MDAvatar from "components/MDAvatar";
@@ -51,6 +40,19 @@ import BiotechIcon from '@mui/icons-material/Biotech';
 import { AccessAlarm, People, Article, IosShare } from "@mui/icons-material";
 
 import { experimentalRoutes } from "views/Experimental/plugins";
+
+// BRAVO Platform Layouts
+const DashboardOverview = lazy(() => import('views/Dashboard/Overview'));
+const PatientLookupTable = lazy(() => import('views/Dashboard/PatientLookupTable'));
+const ResearchAccessView = lazy(() => import('views/Dashboard/ShareResearchAccess'));
+const PatientOverview = lazy(() => import('views/Dashboard/PatientOverview'));
+const SurveyList = lazy(() => import('views/Survey/Overview'));
+const TherapyHistory = lazy(() => import('views/Reports/TherapyHistory'));
+const BrainSenseSurvey = lazy(() => import('views/Reports/BrainSenseSurvey'));
+const BrainSenseStreaming = lazy(() => import('views/Reports/BrainSenseStreaming'));
+const IndefiniteStreaming = lazy(() => import('views/Reports/IndefiniteStreaming'));
+const ChronicBrainSense = lazy(() => import('views/Reports/ChronicBrainSense'));
+const SessionOverview = lazy(() => import('views/Reports/SessionsOverview'));
 
 const routes = [
   {

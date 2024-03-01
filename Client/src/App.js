@@ -11,7 +11,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 // @mui material components
@@ -23,6 +23,7 @@ import {
 
 import MDBox from "components/MDBox";
 import SideMenu from "components/SideMenu";
+import LoadingProgress from "components/LoadingProgress";
 
 import theme from "assets/theme";
 import themeDark from "assets/theme-dark";
@@ -144,18 +145,20 @@ export default function App() {
           />
         </>
       )}
-      <Routes>
-        <Route path="/index" element={<HomePage />} />
-        <Route path="/login" element={<SignIn />} />
-        <Route path="/register" element={<Register />} />
-        {getRoutes(routes)}
-        <Route path="/inertiaSensorViewer" element={<InertiaSensorViewer />} />
-        <Route path="/reports/*" element={<Navigate to="/patient-overview" />} />
-        <Route path="/experimental/*" element={<Navigate to="/patient-overview" />} />
-        <Route exact path="/survey/:surveyId/edit" element={<SurveyEditor />} />
-        <Route exact path="/survey/:surveyId" element={<SurveyViewer />} />
-        <Route path="*" element={<Navigate to="/index" />} />
-      </Routes>
+      <Suspense fallback={<LoadingProgress/>}>
+        <Routes>
+          <Route path="/index" element={<HomePage />} />
+          <Route path="/login" element={<SignIn />} />
+          <Route path="/register" element={<Register />} />
+          {getRoutes(routes)}
+          <Route path="/inertiaSensorViewer" element={<InertiaSensorViewer />} />
+          <Route path="/reports/*" element={<Navigate to="/patient-overview" />} />
+          <Route path="/experimental/*" element={<Navigate to="/patient-overview" />} />
+          <Route exact path="/survey/:surveyId/edit" element={<SurveyEditor />} />
+          <Route exact path="/survey/:surveyId" element={<SurveyViewer />} />
+          <Route path="*" element={<Navigate to="/index" />} />
+        </Routes>
+      </Suspense>
     </ThemeProvider>
   ) : null;
 }
