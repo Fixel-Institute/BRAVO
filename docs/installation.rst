@@ -11,6 +11,20 @@ however, users may choose to use only one components without the other based on 
 A common example would be to use *Python Server ONLY* to process and organize session files but without a web interface. 
 The users then can perform custom analysis pipeline using Python, MATLAB, or R on the structured Percept object. 
 
+To obtain the source code, please use the `GitHub Repository <https://github.com/Fixel-Institute/BRAVO>`_.
+
+.. code-block:: bash
+
+  # Retrieve BRAVO Repository
+  git clone https://github.com/Fixel-Institute/BRAVO.git
+  cd BRAVO
+
+  # Get the most recent version
+  git checkout development
+
+  # Update Submodules
+  git submodule update --init --recursive 
+
 Dependencies
 -----------------------------------------------
 
@@ -155,7 +169,7 @@ All procedure assume that your working directory is the main directory of the cl
   # Create Virutal Environment for Python called "venv"
   virtualenv $SCRIPT_DIR/venv
   source $SCRIPT_DIR/venv/bin/activate
-
+  
   pip3 install -r requirements.txt
 
 Linux Step 1: SQL Databse Setup
