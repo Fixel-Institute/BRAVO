@@ -104,8 +104,7 @@ function CustomizedAnalysis() {
           if (analysisIdRef.current == content["TaskID"]) {
             setAnalysisData((analysisData) => {
               analysisData.Analysis.ProcessingQueued = false;
-              analysisData.Result = content["Message"];
-              console.log(analysisData)
+              analysisData.Configuration.Results = content["Message"];
               return {...analysisData};
             });
           }
@@ -143,7 +142,6 @@ function CustomizedAnalysis() {
         id: patientID, 
         requestAnalysis: analysisId, 
       }).then((response) => {
-        console.log(response.data)
         setAnalysisData(response.data);
         setAlert(null);
       }).catch((error) => {
@@ -247,8 +245,8 @@ function CustomizedAnalysis() {
             <Grid container spacing={2}>
               {analysisList.map((analysis) => {
                 return (
-                  <Grid key={analysis.AnalysisID} item xs={6} md={3}>
-                    <Card sx={{width: "100%", padding: 3, display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center"}}>
+                  <Grid key={analysis.AnalysisID} item xs={6} md={4}>
+                    <Card sx={{width: "100%", padding: 3, display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "start"}}>
                       <MDBox>
                         <MDTypography fontWeight={"bold"}>
                           {analysis.AnalysisName}

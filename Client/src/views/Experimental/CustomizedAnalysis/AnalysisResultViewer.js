@@ -71,7 +71,7 @@ function AnalysisResultViewer({analysisId, analysisData}) {
         }
       }));
     }
-  }, [patientID, analysisId]);
+  }, [patientID, analysisId, analysisData]);
 
   useEffect(() => {
   }, [selectedRecording]);

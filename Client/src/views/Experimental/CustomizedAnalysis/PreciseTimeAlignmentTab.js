@@ -164,7 +164,7 @@ function PreciseTimeAlignmentTab({analysisId, analysisData, updateAnalysisData})
   }, [dataToRender]);
 
   useEffect(() => {
-    console.log(analysisData)
+    setDataToRender([]);
   }, [analysisData]);
 
   const handleAddDataToDisplay = () => {

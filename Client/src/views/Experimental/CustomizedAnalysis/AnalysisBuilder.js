@@ -218,6 +218,11 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
     }).then((response) => {
       setData((data) => {
         data.Configuration.Descriptor[configureRecording.recordingId] = configureRecording.configuration;
+        for (let i in data.Recordings) {
+          if (data.Recordings[i].RecordingId == configureRecording.recordingId) {
+            delete data.Recordings[i].data;
+          }
+        }
         updateAnalysisData(data);
         return {...data};
       });
@@ -259,7 +264,7 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
         configureRecording.configuration.Channels[configureRecording.channels[i]].show = !configureRecording.configuration.Channels[configureRecording.channels[i]].show;
       }
       setConfigureRecording({...configureRecording});
-    }
+    };
 
     var updateTimeout = null;
     var singleClicked = false;

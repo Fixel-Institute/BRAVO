@@ -36,8 +36,6 @@ function PreciseTimeAlignmentView({dataToRender, configuration, onStreamClicked,
       if (!data[i].data) return;
     }
 
-    console.log(configuration)
-
     if (fig.fresh) {
       var axLength = data.length;
 
@@ -64,7 +62,7 @@ function PreciseTimeAlignmentView({dataToRender, configuration, onStreamClicked,
         fig.plot(timeArray.filter((value, index) => index % downScaleFactor == 0), data[i].data.Data[j].filter((value, index) => index % downScaleFactor == 0), {
           linewidth: 0.5,
           hovertemplate: `  %{y:.2f} ${" (unit) "}<extra></extra>`,
-          name: data[i].data.ChannelNames[j],
+          name: configuration[data[i].RecordingId]["Channels"][data[i].data.ChannelNames[j]].name,
           showlegend: true,
         }, ax[i]);
       }
