@@ -13,7 +13,6 @@
 
 const enabledPlugins = [
   "TherapeuticPrediction",
-  "TremorStudy",
   "MultipleSegmentAnalysis",
   "AdaptiveStimulation",
   "CircadianThreshold",
