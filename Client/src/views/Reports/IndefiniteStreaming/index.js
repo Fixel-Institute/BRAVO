@@ -408,7 +408,7 @@ function IndefiniteStreaming() {
                       <Grid item xs={12}>
                         <MDBox display={"flex"} flexDirection={"row"} justifyContent={"space-between"}>
                           <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
-                            {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
+                            {"Event-State Power Spectrum"}
                           </MDTypography>
                           <ToggleButtonGroup
                             value={eventPSDSelector.type}
@@ -463,7 +463,7 @@ function IndefiniteStreaming() {
                       <Grid item xs={12}>
                         <MDBox display={"flex"} flexDirection={"row"} justifyContent={"space-between"}>
                           <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
-                            {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
+                            {"Event-Onset Spectrogram"}
                           </MDTypography>
                         </MDBox>
                       </Grid>

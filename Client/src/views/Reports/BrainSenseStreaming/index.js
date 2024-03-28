@@ -52,6 +52,7 @@ import TimeFrequencyAnalysis from "./TimeFrequencyAnalysis";
 import StimulationPSD from "./StimulationPSD";
 import StimulationBoxPlot from "./StimulationBoxPlot";
 import EventPSDs from "./EventPSDs";
+import EventOnsetSpectrogram from "./EventOnsetSpectrum";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
@@ -184,7 +185,6 @@ function BrainSenseStreaming() {
         {text: value, value: value}
       ));
       eventPSDSelector.value = eventPSDSelector.options[0];
-      console.log(eventPSDSelector)
       setEventPSDSelector({...eventPSDSelector});
     } else {
       const Events = Object.keys(eventPSDs);
@@ -211,8 +211,9 @@ function BrainSenseStreaming() {
 
     const Events = Object.keys(eventSpectrograms);
     if (Events.length > 0) {
-      eventSpectrogramSelector.options = Events
+      eventSpectrogramSelector.options = Events;
       eventSpectrogramSelector.value = eventSpectrogramSelector.options[0];
+      eventSpectrogramSelector.type = "Non-Normalized";
       setEventSpectrogramSelector({...eventSpectrogramSelector});
     } else {
       setEventSpectrogramSelector({options: [], value: ""});
@@ -318,7 +319,6 @@ function BrainSenseStreaming() {
       stimulationReference: reference
 
     }).then((response) => {
-      console.log(response.data)
       setChannelPSDs((channelPSDs) => {
         for (let i in channelInfos) {
           if (channelInfos[i] == side) {
@@ -649,13 +649,13 @@ function BrainSenseStreaming() {
                 </Grid>
               ) : null}
               {(!BrainSensestreamLayout.EventStatePSD && eventPSDs) ? (
-                <Grid item xs={6}> 
+                <Grid item xs={12} md={6}> 
                   <Card sx={{width: "100%"}}>
                     <Grid container p={2}>
                       <Grid item xs={12}>
                         <MDBox display={"flex"} flexDirection={"row"} justifyContent={"space-between"}>
                           <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
-                            {dictionaryLookup(dictionary.BrainSenseStreaming.Figure, "RawData", language)}
+                            {"Event-State Power Spectrum"}
                           </MDTypography>
                           <ToggleButtonGroup
                             value={eventPSDSelector.type}
@@ -698,6 +698,61 @@ function BrainSenseStreaming() {
                       </Grid>
                       <Grid item xs={12}>
                         <EventPSDs dataToRender={eventPSDs} selector={eventPSDSelector} height={500} figureTitle={"EventPSDComparison"}/>
+                      </Grid>
+                    </Grid>
+                  </Card>
+                </Grid>
+              ) : null}
+              {(!BrainSensestreamLayout.EventOnsetSpectrum && eventSpectrograms) ? (
+                <Grid item xs={12} md={6}> 
+                  <Card sx={{width: "100%"}}>
+                    <Grid container p={2}>
+                      <Grid item xs={12}>
+                        <MDBox display={"flex"} flexDirection={"row"} justifyContent={"space-between"}>
+                          <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
+                            {"Event-Onset Spectrogram"}
+                          </MDTypography>
+                          <ToggleButtonGroup
+                            value={eventSpectrogramSelector.type}
+                            exclusive
+                            onChange={(event, newSelector) => setEventSpectrogramSelector({...eventSpectrogramSelector, type: newSelector})}
+                            aria-label="Event Comparisons"
+                          >
+                            <ToggleButton value="Non-Normalized" aria-label="by events">
+                              <MDTypography variant="p" fontWeight={"bold"} fontSize={12}>
+                                {"Non-Normalized"}
+                              </MDTypography>
+                            </ToggleButton>
+                            <ToggleButton value="Normalized" aria-label="by channels">
+                              <MDTypography variant="p" fontWeight={"bold"} fontSize={12}>
+                                {"Normalized"}
+                              </MDTypography>
+                            </ToggleButton>
+                          </ToggleButtonGroup>
+                        </MDBox>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <MDBox lineHeight={1}>
+                          <Autocomplete
+                            value={eventSpectrogramSelector.value}
+                            options={eventSpectrogramSelector.options}
+                            onChange={(event, value) => setEventSpectrogramSelector({...eventSpectrogramSelector, value: value})}
+                            getOptionLabel={(option) => {
+                              return option;
+                            }}
+                            renderInput={(params) => (
+                              <FormField
+                                {...params}
+                                label={"Comparison Selector"}
+                                InputLabelProps={{ shrink: true }}
+                              />
+                            )}
+                            disableClearable
+                          />
+                        </MDBox>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <EventOnsetSpectrogram dataToRender={eventSpectrograms} selector={eventSpectrogramSelector} height={500} normalize={eventSpectrogramSelector.type=="Normalized"} figureTitle={"EventSpectrogramComparison"}/>
                       </Grid>
                     </Grid>
                   </Card>

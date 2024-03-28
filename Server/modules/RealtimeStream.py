@@ -714,8 +714,8 @@ def processAnnotationAnalysis(data):
                     EventPSDs[data["Annotations"][j]["Name"]][ChannelFound]["Frequency"] = data["Stream"][k]["Spectrogram"]["Frequency"]
 
             else:
-                for k in range(len(data["Spectrums"])):
-                    key = data["ChannelNames"][k] + " " + data["Annotations"][j]["Name"]
+                for k in range(len(data["Channels"])):
+                    key = data["Channels"][k] + " " + data["Annotations"][j]["Name"]
                     
                     if not key in EventOnsetSpectrum.keys():
                         EventOnsetSpectrum[key] = {
@@ -726,11 +726,11 @@ def processAnnotationAnalysis(data):
                         }
 
                     EventStartTime = data["Annotations"][j]["Time"] - data["Timestamp"]
-                    TimeSelection = rangeSelection(data["Spectrums"][k]["Time"], [EventStartTime-5, EventStartTime+5])
-                    EventOnsetSpectrum[key]["Frequency"] = data["Spectrums"][k]["Frequency"]
-                    EventOnsetSpectrum[key]["Time"] = data["Spectrums"][k]["Time"][TimeSelection] - EventStartTime
+                    TimeSelection = rangeSelection(data["Stream"][k]["Spectrogram"]["Time"], [EventStartTime-5, EventStartTime+5])
+                    EventOnsetSpectrum[key]["Frequency"] = data["Stream"][k]["Spectrogram"]["Frequency"]
+                    EventOnsetSpectrum[key]["Time"] = data["Stream"][k]["Spectrogram"]["Time"][TimeSelection] - EventStartTime
 
-                    PSDs = data["Spectrums"][k]["logPower"][:, TimeSelection]
+                    PSDs = data["Stream"][k]["Spectrogram"]["Power"][:, TimeSelection]
                     EventOnsetSpectrum[key]["Count"] += 1
                     EventOnsetSpectrum[key]["Spectrum"].append(PSDs)
 
