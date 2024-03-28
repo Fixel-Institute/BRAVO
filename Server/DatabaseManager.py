@@ -24,6 +24,7 @@ from datetime import datetime
 import pytz
 from pathlib import Path
 
+import pickle, blosc
 import uuid
 import json
 
@@ -443,6 +444,7 @@ def processInput(argv):
       from BRAVO import asgi
       from Backend import models
       from modules.Percept import Sessions
+      from modules import Database
       from decoder import Percept
 
       if argv[2] == "TherapyHistory":
@@ -558,4 +560,22 @@ def processInput(argv):
           if "Impedance" in Data.keys():
             models.ImpedanceHistory(impedance_record=Data["Impedance"], device_deidentified_id=sessionFile.device_deidentified_id, session_date=sessionFile.session_date).save()
           
+      elif argv[2] == "Recordings":
+        DATABASE_PATH = os.environ.get('DATASERVER_PATH')
+
+        Recordings = models.ExternalRecording.objects.all()
+        for recording in Recordings:
+          if recording.recording_datapointer.endswith(".pkl"):
+            try:
+              datastruct = Database.loadSourceDataPointer(recording.recording_datapointer)
+            except:
+              continue
+            filename = recording.recording_datapointer.replace(".pkl",".bpkl")
+            pData = pickle.dumps(datastruct)
+            with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
+              file.write(blosc.compress(pData))
+            Database.deleteSourceDataPointer(recording.recording_datapointer)
+            recording.recording_datapointer = filename
+            recording.save()
+
       return True

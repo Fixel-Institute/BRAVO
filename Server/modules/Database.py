@@ -29,6 +29,7 @@ import pandas as pd
 from cryptography.fernet import Fernet
 import scipy.io as sio
 import json
+import blosc
 
 from Backend import models
 from decoder import Percept
@@ -584,9 +585,10 @@ def saveSourceFiles(datastruct, datatype, info, id, device_id):
     except Exception:
         pass
 
-    filename = str(device_id) + os.path.sep + datatype + "_" + info + "_" + str(id) + ".pkl"
+    filename = str(device_id) + os.path.sep + datatype + "_" + info + "_" + str(id) + ".bpkl"
+    pData = pickle.dumps(datastruct)
     with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
-        pickle.dump(datastruct, file)
+        file.write(blosc.compress(pData))
     return filename
 
 def loadSourceDataPointer(filename, bytes=False):
@@ -596,6 +598,8 @@ def loadSourceDataPointer(filename, bytes=False):
         else:
             if filename.endswith(".pkl"):
                 datastruct = pickle.load(file)
+            elif filename.endswith(".bpkl"):
+                datastruct = pickle.loads(blosc.decompress(file.read()))
             else:
                 datastruct = sio.loadmat(file, simplify_cells=True)["ProcessedData"]
     return datastruct
