@@ -578,4 +578,19 @@ def processInput(argv):
             recording.recording_datapointer = filename
             recording.save()
 
+        Recordings = models.BrainSenseRecording.objects.all()
+        for recording in Recordings:
+          if recording.recording_datapointer.endswith(".pkl"):
+            try:
+              datastruct = Database.loadSourceDataPointer(recording.recording_datapointer)
+            except:
+              continue
+            filename = recording.recording_datapointer.replace(".pkl",".bpkl")
+            pData = pickle.dumps(datastruct)
+            with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
+              file.write(blosc.compress(pData))
+            Database.deleteSourceDataPointer(recording.recording_datapointer)
+            recording.recording_datapointer = filename
+            recording.save()
+
       return True
