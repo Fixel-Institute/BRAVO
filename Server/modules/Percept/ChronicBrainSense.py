@@ -89,6 +89,10 @@ def saveChronicLFP(deviceID, ChronicLFPs, sourceFile):
                 filename = Database.saveSourceFiles(pastChronicLFPs, "ChronicLFPs", key.replace("HemisphereLocationDef.",""), recording.recording_id, recording.device_deidentified_id)
                 NewRecordingFound = True
 
+                if recording.recording_datapointer.endswith(".pkl"):
+                    recording.recording_datapointer.replace(".pkl",".bpkl")
+                    recording.save()
+
     return NewRecordingFound
 
 def queryChronicLFPsByTime(user, patientUniqueID, timeRange, authority):
