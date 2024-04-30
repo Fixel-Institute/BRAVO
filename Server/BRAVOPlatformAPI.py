@@ -107,9 +107,9 @@ class BRAVOPlatformRequest:
         
         return 
             
-    def RequestBrainSenseSurveys(self, PatientID):
+    def RequestAverageNeuralActivity(self, PatientID):
         form = {"id": PatientID}
-        response = requests.post(self.__Server + "/api/queryBrainSenseSurveys", json.dumps(form), headers=self.__Headers)
+        response = requests.post(self.__Server + "/api/queryAverageNeuralActivity", json.dumps(form), headers=self.__Headers)
         if response.status_code == 200:
             payload = response.json()
             return payload
@@ -118,13 +118,13 @@ class BRAVOPlatformRequest:
                 raise Exception(f"Network Error: {response.json()}")
             elif response.status_code == 401:
                 self.refreshAuthToken()
-                return self.RequestBrainSenseSurveys(PatientID)
+                return self.RequestAverageNeuralActivity(PatientID)
             else:
                 raise Exception(f"Network Error: {response.status_code}")
         
-    def RequestBrainSenseSurveysRaw(self, PatientID):
+    def RequestAverageNeuralActivitiesRaw(self, PatientID):
         form = {"id": PatientID, "requestRaw": True}
-        response = requests.post(self.__Server + "/api/queryBrainSenseSurveys", json.dumps(form), headers=self.__Headers)
+        response = requests.post(self.__Server + "/api/requestAverageNeuralActivity", json.dumps(form), headers=self.__Headers)
         if response.status_code == 200:
             payload = response.json()
             return payload
@@ -133,13 +133,13 @@ class BRAVOPlatformRequest:
                 raise Exception(f"Network Error: {response.json()}")
             elif response.status_code == 401:
                 self.refreshAuthToken()
-                return self.RequestBrainSenseSurveysRaw(PatientID)
+                return self.RequestAverageNeuralActivitiesRaw(PatientID)
             else:
                 raise Exception(f"Network Error: {response.status_code}")
         
-    def RequestBrainSenseStreamList(self, PatientID):
+    def RequestNeuralActivityStreaming(self, PatientID):
         form = {"id": PatientID, "requestOverview": True}
-        response = requests.post(self.__Server + "/api/queryBrainSenseStreaming", json.dumps(form), headers=self.__Headers)
+        response = requests.post(self.__Server + "/api/queryNeuralActivityStreaming", json.dumps(form), headers=self.__Headers)
         if response.status_code == 200:
             payload = response.json()
             return payload
@@ -148,43 +148,43 @@ class BRAVOPlatformRequest:
                 raise Exception(f"Network Error: {response.json()}")
             elif response.status_code == 401:
                 self.refreshAuthToken()
-                return self.RequestBrainSenseStreamList(PatientID)
+                return self.RequestNeuralActivityStreaming(PatientID)
             else:
                 raise Exception(f"Network Error: {response.status_code}")
         
-    def RequestBrainSenseStream(self, PatientID, RecordingID):
+    def RequestNeuralActivityStream(self, PatientID, RecordingID):
         form = {"id": PatientID, "recordingId": RecordingID, "requestData": True}
-        response = requests.post(self.__Server + "/api/queryBrainSenseStreaming", json.dumps(form), headers=self.__Headers)
+        response = requests.post(self.__Server + "/api/queryNeuralActivityStreaming", json.dumps(form), headers=self.__Headers)
         if response.status_code == 200:
             payload = response.json()
             return payload
         elif response.status_code == 401:
             self.refreshAuthToken()
-            return self.RequestBrainSenseStream(PatientID, RecordingID)
+            return self.RequestNeuralActivityStream(PatientID, RecordingID)
         else:
             raise Exception(f"Network Error: {response.status_code}")
         
-    def RequestIndefiniteStreamList(self, PatientID):
+    def RequestMultiChannelStreamList(self, PatientID):
         form = {"id": PatientID, "requestOverview": True}
-        response = requests.post(self.__Server + "/api/queryIndefiniteStreaming", json.dumps(form), headers=self.__Headers)
+        response = requests.post(self.__Server + "/api/queryMultiChannelStreaming", json.dumps(form), headers=self.__Headers)
         if response.status_code == 200:
             payload = response.json()
             return payload
         elif response.status_code == 401:
             self.refreshAuthToken()
-            return self.RequestIndefiniteStreamList(PatientID)
+            return self.RequestMultiChannelStreamList(PatientID)
         else:
             raise Exception(f"Network Error: {response.status_code}")
         
-    def RequestIndefiniteStream(self, PatientID, Timestamps, Devices):
+    def RequestMultiChannelStream(self, PatientID, Timestamps, Devices):
         form = {"id": PatientID, "timestamps": Timestamps, "devices": Devices, "requestData": True}
-        response = requests.post(self.__Server + "/api/queryIndefiniteStreaming", json.dumps(form), headers=self.__Headers)
+        response = requests.post(self.__Server + "/api/queryMultiChannelStreaming", json.dumps(form), headers=self.__Headers)
         if response.status_code == 200:
             payload = response.json()
             return payload
         elif response.status_code == 401:
             self.refreshAuthToken()
-            return self.RequestIndefiniteStream(PatientID, Timestamps, Devices)
+            return self.RequestMultiChannelStream(PatientID, Timestamps, Devices)
         else:
             raise Exception(f"Network Error: {response.status_code}")
         
@@ -206,7 +206,7 @@ class BRAVOPlatformRequest:
     
     def RequestChronicLFP(self, PatientID):
         form = {"id": PatientID, "requestData": True, "timezoneOffset": 3600*5, "normalizeCircadianRhythm": False}
-        response = requests.post(self.__Server + "/api/queryChronicBrainSense", json.dumps(form), headers=self.__Headers)
+        response = requests.post(self.__Server + "/api/queryChronicNeuralActivity", json.dumps(form), headers=self.__Headers)
         if response.status_code == 200:
             payload = response.json()
             return payload

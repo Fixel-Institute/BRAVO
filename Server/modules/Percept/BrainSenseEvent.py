@@ -60,13 +60,13 @@ def saveBrainSenseEvents(deviceID, LfpFrequencySnapshotEvents, sourceFile):
         if not models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist).exists():
             customEvent = models.PatientCustomEvents(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist, source_file=sourceFile)
             if SensingExist:
-                customEvent.brainsense_psd = EventData
+                customEvent.neural_psd = EventData
             batchStorage.append(customEvent)
         else:
             if SensingExist:
                 customEvent = models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist).first()
-                if len(customEvent.brainsense_psd.keys()) == 0:
-                    customEvent.brainsense_psd = EventData
+                if len(customEvent.neural_psd.keys()) == 0:
+                    customEvent.neural_psd = EventData
                     customEvent.save()
 
     if len(batchStorage) > 0:
@@ -95,18 +95,18 @@ def queryPatientEventPSDsByTime(user, patientUniqueID, timeRange, authority):
 
                 TherapyKey = hemisphere.replace("HemisphereLocationDef.","") + "Hemisphere"
                 for eventPSD in EventPSDs:
-                    if hemisphere in eventPSD.brainsense_psd.keys():
-                        EventTimestamp = Percept.getTimestamp(eventPSD.brainsense_psd[hemisphere]["DateTime"])
+                    if hemisphere in eventPSD.neural_psd.keys():
+                        EventTimestamp = Percept.getTimestamp(eventPSD.neural_psd[hemisphere]["DateTime"])
                         if EventTimestamp > authority["Permission"][0]:
                             if authority["Permission"][1] > 0 and EventTimestamp < authority["Permission"][1]:
                                 PatientEventPSDs[-1]["Therapy"].append("Generic")
-                                PatientEventPSDs[-1]["PSDs"].append(eventPSD.brainsense_psd[hemisphere]["FFTBinData"])
+                                PatientEventPSDs[-1]["PSDs"].append(eventPSD.neural_psd[hemisphere]["FFTBinData"])
                                 PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
                                 PatientEventPSDs[-1]["EventTime"].append(EventTimestamp)
                                 break
                             elif authority["Permission"][1] == 0:
                                 PatientEventPSDs[-1]["Therapy"].append("Generic")
-                                PatientEventPSDs[-1]["PSDs"].append(eventPSD.brainsense_psd[hemisphere]["FFTBinData"])
+                                PatientEventPSDs[-1]["PSDs"].append(eventPSD.neural_psd[hemisphere]["FFTBinData"])
                                 PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
                                 PatientEventPSDs[-1]["EventTime"].append(EventTimestamp)
                                 break
@@ -143,25 +143,25 @@ def queryPatientEventPSDs(user, patientUniqueID, TherapyHistory, authority):
 
                 TherapyKey = hemisphere.replace("HemisphereLocationDef.","") + "Hemisphere"
                 for eventPSD in EventPSDs:
-                    if hemisphere in eventPSD.brainsense_psd.keys():
-                        EventTimestamp = Percept.getTimestamp(eventPSD.brainsense_psd[hemisphere]["DateTime"])
+                    if hemisphere in eventPSD.neural_psd.keys():
+                        EventTimestamp = Percept.getTimestamp(eventPSD.neural_psd[hemisphere]["DateTime"])
                         if EventTimestamp > authority["Permission"][0]:
                             if authority["Permission"][1] > 0 and EventTimestamp < authority["Permission"][1]:
                                 for therapy in TherapyConfigurations:
-                                    if therapy["DeviceID"] == str(device.deidentified_id) and therapy["TherapyGroup"] == eventPSD.brainsense_psd[hemisphere]["GroupId"] and therapy["TherapyDate"] > EventTimestamp and TherapyKey in therapy["Therapy"].keys():
+                                    if therapy["DeviceID"] == str(device.deidentified_id) and therapy["TherapyGroup"] == eventPSD.neural_psd[hemisphere]["GroupId"] and therapy["TherapyDate"] > EventTimestamp and TherapyKey in therapy["Therapy"].keys():
                                         PatientEventPSDs[-1]["Therapy"].append(therapy["Therapy"][TherapyKey])
-                                        if len(eventPSD.brainsense_psd[hemisphere]["FFTBinData"]) < 100: 
-                                            eventPSD.brainsense_psd[hemisphere]["FFTBinData"].extend([0 for i in range(100-len(eventPSD.brainsense_psd[hemisphere]["FFTBinData"]))])
-                                        PatientEventPSDs[-1]["PSDs"].append(eventPSD.brainsense_psd[hemisphere]["FFTBinData"])
+                                        if len(eventPSD.neural_psd[hemisphere]["FFTBinData"]) < 100: 
+                                            eventPSD.neural_psd[hemisphere]["FFTBinData"].extend([0 for i in range(100-len(eventPSD.neural_psd[hemisphere]["FFTBinData"]))])
+                                        PatientEventPSDs[-1]["PSDs"].append(eventPSD.neural_psd[hemisphere]["FFTBinData"])
                                         PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
                                         break
                             elif authority["Permission"][1] == 0:
                                 for therapy in TherapyConfigurations:
-                                    if therapy["DeviceID"] == str(device.deidentified_id) and therapy["TherapyGroup"] == eventPSD.brainsense_psd[hemisphere]["GroupId"] and therapy["TherapyDate"] > EventTimestamp and TherapyKey in therapy["Therapy"].keys():
+                                    if therapy["DeviceID"] == str(device.deidentified_id) and therapy["TherapyGroup"] == eventPSD.neural_psd[hemisphere]["GroupId"] and therapy["TherapyDate"] > EventTimestamp and TherapyKey in therapy["Therapy"].keys():
                                         PatientEventPSDs[-1]["Therapy"].append(therapy["Therapy"][TherapyKey])
-                                        if len(eventPSD.brainsense_psd[hemisphere]["FFTBinData"]) < 100: 
-                                            eventPSD.brainsense_psd[hemisphere]["FFTBinData"].extend([0 for i in range(100-len(eventPSD.brainsense_psd[hemisphere]["FFTBinData"]))])
-                                        PatientEventPSDs[-1]["PSDs"].append(eventPSD.brainsense_psd[hemisphere]["FFTBinData"])
+                                        if len(eventPSD.neural_psd[hemisphere]["FFTBinData"]) < 100: 
+                                            eventPSD.neural_psd[hemisphere]["FFTBinData"].extend([0 for i in range(100-len(eventPSD.neural_psd[hemisphere]["FFTBinData"]))])
+                                        PatientEventPSDs[-1]["PSDs"].append(eventPSD.neural_psd[hemisphere]["FFTBinData"])
                                         PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
                                         break
 
@@ -232,7 +232,7 @@ def getAllPatientEvents(user, patientUniqueID, authority):
             for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
                 PatientEventPSDs[-1][hemisphere] = list()
 
-            EventPSDsDF = pd.DataFrame.from_records(EventPSDs.values("brainsense_psd", "event_name", "event_time"))
+            EventPSDsDF = pd.DataFrame.from_records(EventPSDs.values("neural_psd", "event_name", "event_time"))
             EventPSDsDF.drop_duplicates(subset=['event_name', 'event_time'], inplace=True)
 
             for i in EventPSDsDF.index:
@@ -240,8 +240,8 @@ def getAllPatientEvents(user, patientUniqueID, authority):
                 if EventTimestamp > authority["Permission"][0]:
                     if authority["Permission"][1] > 0 and EventTimestamp < authority["Permission"][1]:
                         for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
-                            if hemisphere in EventPSDsDF["brainsense_psd"][i]:
-                                PatientEventPSDs[-1][hemisphere].append(EventPSDsDF["brainsense_psd"][i][hemisphere]["FFTBinData"])
+                            if hemisphere in EventPSDsDF["neural_psd"][i]:
+                                PatientEventPSDs[-1][hemisphere].append(EventPSDsDF["neural_psd"][i][hemisphere]["FFTBinData"])
                             else:
                                 PatientEventPSDs[-1][hemisphere].append(None)
                         PatientEventPSDs[-1]["EventName"].append(EventPSDsDF["event_name"][i])
@@ -249,8 +249,8 @@ def getAllPatientEvents(user, patientUniqueID, authority):
                         
                     elif authority["Permission"][1] == 0:
                         for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
-                            if hemisphere in EventPSDsDF["brainsense_psd"][i]:
-                                PatientEventPSDs[-1][hemisphere].append(EventPSDsDF["brainsense_psd"][i][hemisphere]["FFTBinData"])
+                            if hemisphere in EventPSDsDF["neural_psd"][i]:
+                                PatientEventPSDs[-1][hemisphere].append(EventPSDsDF["neural_psd"][i][hemisphere]["FFTBinData"])
                             else:
                                 PatientEventPSDs[-1][hemisphere].append(None)
                         PatientEventPSDs[-1]["EventName"].append(EventPSDsDF["event_name"][i])

@@ -47,10 +47,10 @@ urlpatterns = [
 	path('queryProcessingQueue', Queries.QueryProcessingQueue.as_view()),
 
 	path('queryTherapyHistory', Queries.QueryTherapyHistory.as_view()),
-	path('queryBrainSenseSurveys', Queries.QueryBrainSenseSurveys.as_view()),
-	path('queryBrainSenseStreaming', Queries.QueryBrainSenseStreaming.as_view()),
-	path('queryIndefiniteStreaming', Queries.QueryIndefiniteStreaming.as_view()),
-	path('queryChronicBrainSense', Queries.QueryChronicBrainSense.as_view()),
+	path('queryAverageNeuralActivity', Queries.QueryAverageNeuralActivity.as_view()),
+	path('queryNeuralActivityStreaming', Queries.QueryNeuralActivityStreaming.as_view()),
+	path('queryMultiChannelStreaming', Queries.QueryMultiChannelStreaming.as_view()),
+	path('queryChronicNeuralActivity', Queries.QueryChronicNeuralActivity.as_view()),
 	path('querySessionOverview', Queries.QuerySessionOverview.as_view()),
 
 	path('queryPredictionModel', Queries.QueryPredictionModel.as_view()),

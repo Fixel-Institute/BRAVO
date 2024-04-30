@@ -75,7 +75,7 @@ function BrainSenseSurvey() {
       navigate("/dashboard", {replace: false});
     } else {
       setAlert(<LoadingProgress/>);
-      SessionController.query("/api/queryBrainSenseSurveys", {
+      SessionController.query("/api/queryAverageNeuralActivity", {
         id: patientID
       }).then((response) => {
         setData(response.data.data)
@@ -344,7 +344,7 @@ function BrainSenseSurvey() {
                   "BrainSenseSurvey": drawerOpen.config
                 }).then(() => {
                   
-                  SessionController.query("/api/queryBrainSenseSurveys", {
+                  SessionController.query("/api/queryAverageNeuralActivity", {
                     id: patientID
                   }).then((response) => {
                     setData(response.data.data)

@@ -87,7 +87,7 @@ function IndefiniteStreaming() {
     if (!patientID) {
       navigate("/dashboard", {replace: false});
     } else {
-      SessionController.query("/api/queryIndefiniteStreaming", {
+      SessionController.query("/api/queryMultiChannelStreaming", {
         id: patientID, 
         requestOverview: true
       }).then((response) => {
@@ -117,7 +117,7 @@ function IndefiniteStreaming() {
     setDataList({devices, timestamps, channelInfos});
 
     setAlert(<LoadingProgress/>);
-    SessionController.query("/api/queryIndefiniteStreaming", {
+    SessionController.query("/api/queryMultiChannelStreaming", {
       id: patientID, 
       requestData: true, 
       devices: devices, 
@@ -149,7 +149,7 @@ function IndefiniteStreaming() {
 
   const refreshEventAnalysis = () => {
     setAlert(<LoadingProgress/>);
-    SessionController.query("/api/queryIndefiniteStreaming", {
+    SessionController.query("/api/queryMultiChannelStreaming", {
       id: patientID, 
       requestEventData: true, 
       devices: dataList.devices, 
@@ -564,7 +564,7 @@ function IndefiniteStreaming() {
                     "BrainSenseSurvey": drawerOpen.config
                   }).then(() => {
                     
-                    SessionController.query("/api/queryBrainSenseSurveys", {
+                    SessionController.query("/api/queryAverageNeuralActivity", {
                       id: patientID
                     }).then((response) => {
                       setData(response.data.data)

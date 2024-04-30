@@ -568,7 +568,7 @@ export const dictionary = {
     },
     Figure: {
       RawData: {
-        en: "BrainSense Streaming Raw Data",
+        en: "Neural Streaming Raw Data",
         zh: "脑电波记录原始数据"
       },
       CardiacFilter: {
@@ -654,7 +654,7 @@ export const dictionary = {
     },
     Figure: {
       FigureTitle: {
-        en: "Chronic BrainSense Timeline",
+        en: "Chronic Neural Activity Timeline",
         zh: "长期脑电记录时间线"
       }
     }
@@ -846,7 +846,7 @@ export const dictionary = {
     },
     Figure: {
       FigureTitle: {
-        en: "Chronic BrainSense Timeline",
+        en: "Chronic Neural Activity Timeline",
         zh: "长期脑电记录时间线"
       }
     }
@@ -860,7 +860,7 @@ export const dictionary = {
     },
     Figure: {
       FigureTitle: {
-        en: "Chronic BrainSense Timeline",
+        en: "Chronic Neural Activity Timeline",
         zh: "长期脑电记录时间线"
       }
     }
@@ -905,19 +905,19 @@ export const dictionary = {
       zh: "过去治疗记录"
     },
     survey: {
-      en: "BrainSense Survey",
+      en: "Average Neural Activity",
       zh: "脑电信号测量"
     },
     stream: {
-      en: "BrainSense Streaming",
+      en: "Neural Activity Streaming",
       zh: "脑电实时记录"
     },
     multistream: {
-      en: "Indefinite Streaming",
+      en: "Multi-Channel Streaming",
       zh: "多线程脑电实时记录"
     },
     "chronic-recordings": {
-      en: "Chronic BrainSense Recordings",
+      en: "Chronic Neural Activity Recordings",
       zh: "长期脑电记录"
     },
     "session-overview": {
@@ -999,19 +999,19 @@ export const dictionary = {
       zh: "过去治疗记录"
     },
     BrainSenseSurvey: {
-      en: "BrainSense Survey",
+      en: "Average Neural Activity",
       zh: "脑电信号测量"
     },
     BrainSenseStreaming: {
-      en: "BrainSense Streaming",
+      en: "Neural Activity Streaming",
       zh: "脑电实时记录"
     },
     IndefiniteStreaming: {
-      en: "Indefinite Streaming",
+      en: "Multi-Channel Activity",
       zh: "多线程脑电实时记录"
     },
     ChronicRecordings: {
-      en: "Chronic LFP Sensing",
+      en: "Chronic Neural Activity",
       zh: "长期脑电记录"
     },
     SessionOverview: {

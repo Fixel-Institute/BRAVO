@@ -122,7 +122,7 @@ function TherapeuticPrediction() {
     setRecordingId(timestamp);
 
     setAlert(<LoadingProgress/>);
-    SessionController.query("/api/queryBrainSenseStreaming", {
+    SessionController.query("/api/queryNeuralActivityStreaming", {
       id: patientID, 
       recordingId: timestamp, 
       requestFrequency: centerFrequencies,
@@ -147,7 +147,7 @@ function TherapeuticPrediction() {
   const onCenterFrequencyChange = (side, freq) => {
     var reference = "Ipsilateral";
     
-    SessionController.query("/api/queryBrainSenseStreaming", {
+    SessionController.query("/api/queryNeuralActivityStreaming", {
       updateStimulationPSD: true,
       id: patientID,
       recordingId: recordingId,

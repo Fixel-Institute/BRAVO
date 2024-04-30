@@ -306,7 +306,7 @@ class PatientCustomEvents(models.Model):
     event_name = models.CharField(default="", max_length=32)
     event_time = models.DateTimeField(default=timezone.now)
     sensing_exist = models.BooleanField(default=False)
-    brainsense_psd = models.JSONField(default=list, null=True)
+    neural_psd = models.JSONField(default=list, null=True)
 
     source_file = models.CharField(default="", max_length=256)
 

@@ -61,7 +61,7 @@ function MultipleSegmentAnalysis() {
     if (!patientID) {
       navigate("/dashboard", {replace: false});
     } else {
-      SessionController.query("/api/queryBrainSenseStreaming", {
+      SessionController.query("/api/queryNeuralActivityStreaming", {
         id: patientID,
         requestOverview: true,
       }).then((response) => {

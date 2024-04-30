@@ -212,22 +212,22 @@ class QueryTherapyHistory(RestViews.APIView):
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
-class QueryBrainSenseSurveys(RestViews.APIView):
-    """ Query all BrainSense Survey data.
+class QueryAverageNeuralActivity(RestViews.APIView):
+    """ Query all Average Neural Activity data.
 
-    The BrainSense Survey query will return processed power spectral density calculated from time-domain data. 
+    The Average Neural Activity query will return processed power spectral density calculated from time-domain data. 
     This is not the same as the on-board FFT result shown on Medtronic Tablet. 
 
     Raw time-domain data will not be returned from this route.
 
-    **POST**: ``/api/queryBrainSenseSurveys``
+    **POST**: ``/api/queryAverageNeuralActivity``
 
     Args:
       id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
 
     Returns:
       Response Code 200 if success or 400 if error. 
-      Response Body contains list of all BrainSense Surveys.
+      Response Body contains list of all Average Neural Activity.
     """
 
     parser_classes = [RestParsers.JSONParser]
@@ -256,14 +256,14 @@ class QueryBrainSenseSurveys(RestViews.APIView):
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
-class QueryBrainSenseStreaming(RestViews.APIView):
-    """ Query BrainSense Streaming Data.
+class QueryNeuralActivityStreaming(RestViews.APIView):
+    """ Query Neural Activity Streaming Data.
 
-    The BrainSense Streaming query allows for multiple type of requests, based on what is sent in request body. 
+    The Neural Activity Streaming query allows for multiple type of requests, based on what is sent in request body. 
 
-    **POST**: ``/api/queryBrainSenseStreaming``
+    **POST**: ``/api/queryNeuralActivityStreaming``
 
-    **Request List of Available BrainSense Streaming Data**
+    **Request List of Available Neural Activity Streaming Data**
     
     .. code-block:: json
 
@@ -272,7 +272,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
         "id": "(uuid)",
       }
 
-    **Request specific BrainSense Streaming Recording based on recording ID**
+    **Request specific Neural Activity Streaming Recording based on recording ID**
     
     ``requestFrequency`` is optional if user want to request power value from different frequency instead of the automated algorithm
       
@@ -289,7 +289,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
 
     ``channel`` is the Medtronic convention of channel identification, which is usually CONTACT_CONTACT_HEMISPHERE (i.e.: ZERO_TWO_LEFT)
 
-    This is a faster operation than request BrainSense Streaming Recording using ``requestFrequency`` because
+    This is a faster operation than request Neural Activity Streaming Recording using ``requestFrequency`` because
     this operation does not transmit raw data.
 
     .. code-block:: json
@@ -303,7 +303,7 @@ class QueryBrainSenseStreaming(RestViews.APIView):
         "stimulationReference": "(string)",
       }
 
-    **Update BrainSense Streaming result with or without cardiac filter**
+    **Update Neural Activity Streaming result with or without cardiac filter**
 
     Permission denied unless you are the data owner (Permission == 1)
 
@@ -489,12 +489,12 @@ class QueryBrainSenseStreaming(RestViews.APIView):
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
-class QueryIndefiniteStreaming(RestViews.APIView):
-    """ Query all Indefinite Streaming Data.
+class QueryMultiChannelStreaming(RestViews.APIView):
+    """ Query all Multi-Channel Streaming Data.
 
     The Indefinite Streaming query allows for multiple type of requests, based on what is sent in request body. 
 
-    **POST**: ``/api/queryIndefiniteStreaming``
+    **POST**: ``/api/queryMultiChannelStreaming``
 
     **Request List of Available Indefinite Streaming Data**
     
@@ -635,13 +635,13 @@ class QueryIndefiniteStreaming(RestViews.APIView):
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
-class QueryChronicBrainSense(RestViews.APIView):
+class QueryChronicNeuralActivity(RestViews.APIView):
     """ Query all Chronic BrainSense Data.
 
-    The Chronic BrainSense data includes single power-band recorded using BrainSense-enabled group,
+    The Chronic Neural Activity data includes single power-band recorded using sensing-enabled settings,
     patient-reported events and event power spectrums. 
 
-    **POST**: ``/api/queryChronicBrainSense``
+    **POST**: ``/api/queryChronicNeuralActivity``
 
     Args:
       id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
@@ -651,7 +651,7 @@ class QueryChronicBrainSense(RestViews.APIView):
 
     Returns:
       Response Code 200 if success or 400 if error. 
-      Response Body contains Chronic BrainSense and Event PSDs. 
+      Response Body contains Chronic Neural Activity and Event PSDs. 
     """
 
     parser_classes = [RestParsers.JSONParser]

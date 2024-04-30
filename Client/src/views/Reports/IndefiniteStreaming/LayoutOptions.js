@@ -42,7 +42,7 @@ function LayoutOptions({setAlert}) {
     <Dialog open={true} onClose={() => setAlert(null)}>
       <MDBox px={2} pt={2}>
         <MDTypography variant="h5">
-          {"Indefinite Streaming Layout Toggles"} 
+          {"Multi-Channel Streaming Layout Toggles"} 
         </MDTypography>
       </MDBox>
       <DialogContent>

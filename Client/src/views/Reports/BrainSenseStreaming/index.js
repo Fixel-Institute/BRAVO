@@ -127,7 +127,7 @@ function BrainSenseStreaming() {
       navigate("/dashboard", {replace: false});
     } else {
       setAlert(<LoadingProgress/>);
-      SessionController.query("/api/queryBrainSenseStreaming", {
+      SessionController.query("/api/queryNeuralActivityStreaming", {
         id: patientID,
         requestOverview: true,
       }).then((response) => {
@@ -151,7 +151,7 @@ function BrainSenseStreaming() {
     setRecordingId(timestamp);
 
     setAlert(<LoadingProgress/>);
-    SessionController.query("/api/queryBrainSenseStreaming", {
+    SessionController.query("/api/queryNeuralActivityStreaming", {
       id: patientID, 
       recordingId: timestamp, 
       requestData: true
@@ -222,11 +222,11 @@ function BrainSenseStreaming() {
 
   const handleMerge = async (toggleMerge) => {
     try {
-      let mergeResponse = await SessionController.query("/api/updateBrainSenseStream", {
+      let mergeResponse = await SessionController.query("/api/queryNeuralActivityStreaming", {
         mergeRecordings: toggleMerge.merge
       });
       if (mergeResponse.status == 200) {
-        const response = await SessionController.query("/api/queryBrainSenseStreaming", {
+        const response = await SessionController.query("/api/queryNeuralActivityStreaming", {
           id: patientID,
           requestOverview: true,
         });
@@ -246,7 +246,7 @@ function BrainSenseStreaming() {
       }
     }
 
-    SessionController.query("/api/queryBrainSenseStreaming", {
+    SessionController.query("/api/queryNeuralActivityStreaming", {
       updateStimulationPSD: true,
       id: patientID,
       recordingId: recordingId,
@@ -270,7 +270,7 @@ function BrainSenseStreaming() {
 
   const toggleCardiacFilter = () => {
     setAlert(<LoadingProgress/>);
-    SessionController.query("/api/queryBrainSenseStreaming", {
+    SessionController.query("/api/queryNeuralActivityStreaming", {
       updateCardiacFilter: !dataToRender.Info.CardiacFilter,
       id: patientID,
       recordingId: recordingId,
@@ -284,7 +284,7 @@ function BrainSenseStreaming() {
 
   const toggleWaveletTransform = () => {
     setAlert(<LoadingProgress/>);
-    SessionController.query("/api/queryBrainSenseStreaming", {
+    SessionController.query("/api/queryNeuralActivityStreaming", {
       updateWaveletTransform: drawerOpen.config.SpectrogramMethod.value === "Wavelet" ? "Spectrogram" : "Wavelet",
       id: patientID,
       recordingId: recordingId,
@@ -310,7 +310,7 @@ function BrainSenseStreaming() {
     if (!reference) return;
     if (channelInfos.length == 1) return;
     
-    SessionController.query("/api/queryBrainSenseStreaming", {
+    SessionController.query("/api/queryNeuralActivityStreaming", {
       updateStimulationPSD: true,
       id: patientID,
       recordingId: recordingId,
