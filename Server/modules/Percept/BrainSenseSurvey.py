@@ -93,8 +93,8 @@ def saveBrainSenseSurvey(deviceID, streamList, sourceFile):
         Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
         recording_info = {"Channel": Recording["ChannelNames"]}
 
-        if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="BrainSenseSurvey", recording_date=date, recording_info=recording_info).exists():
-            recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_date=date, recording_type="BrainSenseSurvey", recording_info=recording_info, source_file=sourceFile)
+        if not models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="BrainSenseSurvey", recording_date=date, recording_info=recording_info).exists():
+            recording = models.NeuralActivityRecording(device_deidentified_id=deviceID, recording_date=date, recording_type="BrainSenseSurvey", recording_info=recording_info, source_file=sourceFile)
             filename = Database.saveSourceFiles(Recording, "BrainSenseSurvey", "Combined", recording.recording_id, recording.device_deidentified_id)
             recording.recording_datapointer = filename
             recording.save()
@@ -123,7 +123,7 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
 
     availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
     for device in availableDevices:
-        allSurveys = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="BrainSenseSurvey").order_by("-recording_date").all()
+        allSurveys = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="BrainSenseSurvey").order_by("-recording_date").all()
         if len(allSurveys) > 0:
             leads = device.device_lead_configurations
 

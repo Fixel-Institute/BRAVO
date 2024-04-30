@@ -93,8 +93,8 @@ def saveMontageStreams(deviceID, streamList, sourceFile):
         Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
         recording_info = {"Channel": Recording["ChannelNames"]}
 
-        if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="IndefiniteStream", recording_date=date, recording_info=recording_info).exists():
-            recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_date=date, source_file=sourceFile,
+        if not models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="IndefiniteStream", recording_date=date, recording_info=recording_info).exists():
+            recording = models.NeuralActivityRecording(device_deidentified_id=deviceID, recording_date=date, source_file=sourceFile,
                                   recording_type="IndefiniteStream", recording_info=recording_info)
             filename = Database.saveSourceFiles(Recording, "IndefiniteStream", "Combined", recording.recording_id, recording.device_deidentified_id)
             recording.recording_datapointer = filename
@@ -144,7 +144,7 @@ def queryMontageDataOverview(user, patientUniqueID, authority):
 
     availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
     for device in availableDevices:
-        allSurveys = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="IndefiniteStream").order_by("recording_date").all()
+        allSurveys = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="IndefiniteStream").order_by("recording_date").all()
         if len(allSurveys) > 0:
             leads = device.device_lead_configurations
 
@@ -199,7 +199,7 @@ def queryMontageData(user, devices, timestamps, authority):
 
         if not device == None:
             leads = device.device_lead_configurations
-            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=devices[i], recording_date=datetime.fromtimestamp(timestamps[i],tz=pytz.utc), recording_type="IndefiniteStream").first()
+            recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=devices[i], recording_date=datetime.fromtimestamp(timestamps[i],tz=pytz.utc), recording_type="IndefiniteStream").first()
             if not recording == None:
                 if not recording.recording_id in authority["Permission"] and authority["Level"] == 2:
                     continue

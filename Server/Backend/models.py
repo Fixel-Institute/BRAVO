@@ -322,7 +322,7 @@ class CustomAnnotations(models.Model):
     event_time = models.DateTimeField(default=timezone.now)
     event_duration = models.FloatField(default=0)
 
-class BrainSenseRecording(models.Model):
+class NeuralActivityRecording(models.Model):
     recording_id = models.UUIDField(default=uuid.uuid4, unique=True)
     device_deidentified_id = models.UUIDField(default=uuid.uuid4)
     recording_type = models.CharField(default="", max_length=32)

@@ -84,8 +84,8 @@ def saveRealtimeStreams(deviceID, Data, sourceFile):
         for i in range(len(TimeDomainRecordings)):
             recording_date = datetime.fromtimestamp(TimeDomainRecordings[i]["StartTime"]).astimezone(tz=pytz.utc)
             recording_info = {"Channel": TimeDomainRecordings[i]["ChannelNames"]}
-            if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitLfp", recording_date=recording_date, recording_info__Channel=TimeDomainRecordings[i]["ChannelNames"]).exists():
-                recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_date=recording_date, source_file=sourceFile, recording_type="SummitLfp", recording_info=recording_info)
+            if not models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitLfp", recording_date=recording_date, recording_info__Channel=TimeDomainRecordings[i]["ChannelNames"]).exists():
+                recording = models.NeuralActivityRecording(device_deidentified_id=deviceID, recording_date=recording_date, source_file=sourceFile, recording_type="SummitLfp", recording_info=recording_info)
                 filename = Database.saveSourceFiles(TimeDomainRecordings[i], "SummitLfp", "Raw", recording.recording_id, recording.device_deidentified_id)
                 recording.recording_datapointer = filename
                 recording.recording_duration = TimeDomainRecordings[i]["Duration"]
@@ -138,8 +138,8 @@ def saveRealtimeStreams(deviceID, Data, sourceFile):
         for i in range(len(PowerDomainRecordings)):
             recording_date = datetime.fromtimestamp(PowerDomainRecordings[i]["StartTime"]).astimezone(tz=pytz.utc)
             recording_info = {"Channel": PowerDomainRecordings[i]["ChannelNames"]}
-            if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitAdaptive", recording_date=recording_date, recording_info__Channel=PowerDomainRecordings[i]["ChannelNames"]).exists():
-                recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_date=recording_date, source_file=sourceFile, recording_type="SummitAdaptive", recording_info=recording_info)
+            if not models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitAdaptive", recording_date=recording_date, recording_info__Channel=PowerDomainRecordings[i]["ChannelNames"]).exists():
+                recording = models.NeuralActivityRecording(device_deidentified_id=deviceID, recording_date=recording_date, source_file=sourceFile, recording_type="SummitAdaptive", recording_info=recording_info)
                 filename = Database.saveSourceFiles(PowerDomainRecordings[i], "SummitAdaptive", "Raw", recording.recording_id, recording.device_deidentified_id)
                 recording.recording_datapointer = filename
                 recording.recording_duration = PowerDomainRecordings[i]["Duration"]
@@ -219,8 +219,8 @@ def savePowerStreams(deviceID, StreamingSession, sourceFile):
     for i in range(len(FormattedRecordings)):
         recording_date = datetime.fromtimestamp(FormattedRecordings[i]["StartTime"]).astimezone(tz=pytz.utc)
         recording_info = {"Channel": FormattedRecordings[i]["ChannelNames"]}
-        if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitStreamingPower", recording_date=recording_date, recording_info__Channel=FormattedRecordings[i]["ChannelNames"]).exists():
-            recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_date=recording_date, source_file=sourceFile, recording_type="SummitStreamingPower", recording_info=recording_info)
+        if not models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitStreamingPower", recording_date=recording_date, recording_info__Channel=FormattedRecordings[i]["ChannelNames"]).exists():
+            recording = models.NeuralActivityRecording(device_deidentified_id=deviceID, recording_date=recording_date, source_file=sourceFile, recording_type="SummitStreamingPower", recording_info=recording_info)
             filename = Database.saveSourceFiles(FormattedRecordings[i], "SummitStreamingPower", "Raw", recording.recording_id, recording.device_deidentified_id)
             recording.recording_datapointer = filename
             recording.recording_duration = FormattedRecordings[i]["Duration"]
@@ -331,7 +331,7 @@ def queryRealtimeStreamRecording(analysis, cardiacFilter=False, refresh=False):
     PowerRecording = None
     TimeRecording = None
 
-    allRecordings = models.BrainSenseRecording.objects.filter(recording_id__in=analysis.recording_list)
+    allRecordings = models.NeuralActivityRecording.objects.filter(recording_id__in=analysis.recording_list)
     for recording in allRecordings:
         if recording.recording_type == "SummitAdaptive":
             PowerRecording = recording
@@ -394,7 +394,7 @@ def queryMultipleSegmentComparison(user, recordingIds, authority):
     
     SegmentSummaries = {}
 
-    recordings = models.BrainSenseRecording.objects.filter(recording_id__in=recordingIds, recording_type="BrainSenseStream").all()
+    recordings = models.NeuralActivityRecording.objects.filter(recording_id__in=recordingIds, recording_type="BrainSenseStream").all()
     for recording in recordings:
         if str(recording.device_deidentified_id) in authority["Devices"]:
             BrainSenseData = Database.loadSourceDataPointer(recording.recording_datapointer)

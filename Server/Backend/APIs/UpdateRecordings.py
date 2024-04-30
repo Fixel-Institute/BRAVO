@@ -243,7 +243,7 @@ class BrainSenseStreamUpdate(RestViews.APIView):
                 if not models.PerceptDevice.objects.filter(deidentified_id=request.data["requestData"], authority_level="Research", authority_user=request.user.email).exists():
                   return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
-            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=request.data["requestData"], recording_id__in=request.data["updateRecordingContactType"], recording_type="BrainSenseStreamPowerDomain").first()
+            recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=request.data["requestData"], recording_id__in=request.data["updateRecordingContactType"], recording_type="BrainSenseStreamPowerDomain").first()
             recording.recording_info["ContactType"][request.data["contactIndex"]] = request.data["contactType"]
             recording.save()
             return Response(status=200)
@@ -261,7 +261,7 @@ class BrainSenseStreamUpdate(RestViews.APIView):
             if not str(analysis.device_deidentified_id) in [str(device.deidentified_id) for device in availableDevices]:
                 return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
-            allRecordings = models.BrainSenseRecording.objects.filter(recording_id__in=analysis.recording_list)
+            allRecordings = models.NeuralActivityRecording.objects.filter(recording_id__in=analysis.recording_list)
             for recording in allRecordings:
                 if recording.recording_type == "BrainSenseStreamPowerDomain":
                     recording.recording_info["Alignment"] = float(request.data["alignment"])
@@ -270,7 +270,7 @@ class BrainSenseStreamUpdate(RestViews.APIView):
             return Response(status=200)
         
         elif "mergeRecordings" in request.data:
-            recordings = models.BrainSenseRecording.objects.filter(recording_id__in=request.data["mergeRecordings"], recording_type="BrainSenseStream").all()
+            recordings = models.NeuralActivityRecording.objects.filter(recording_id__in=request.data["mergeRecordings"], recording_type="BrainSenseStream").all()
             if not len(recordings) == len(request.data["mergeRecordings"]):
                 return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
             

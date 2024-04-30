@@ -184,7 +184,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                 if not ("SummitLfp" in analysis.recording_type and "SummitAdaptive" in analysis.recording_type):
                     continue 
 
-                allRecordings = models.BrainSenseRecording.objects.filter(recording_id__in=analysis.recording_list)
+                allRecordings = models.NeuralActivityRecording.objects.filter(recording_id__in=analysis.recording_list)
                 if len(allRecordings) == 0:
                     analysis.delete()
                     continue 
@@ -240,7 +240,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                 data["Channels"] = list()
                 data["ContactTypes"] = list()
 
-                allRecordings = models.BrainSenseRecording.objects.filter(recording_id__in=analysis.recording_list)
+                allRecordings = models.NeuralActivityRecording.objects.filter(recording_id__in=analysis.recording_list)
                 for recording in allRecordings:
                     if recording.recording_type == "BrainSenseStreamPowerDomain":
                         PowerRecording = recording
@@ -347,7 +347,7 @@ def queryMultipleSegmentComparison(user, recordingIds, authority):
     
     SegmentSummaries = {}
 
-    recordings = models.BrainSenseRecording.objects.filter(recording_id__in=recordingIds, recording_type="BrainSenseStream").all()
+    recordings = models.NeuralActivityRecording.objects.filter(recording_id__in=recordingIds, recording_type="BrainSenseStream").all()
     for recording in recordings:
         if str(recording.device_deidentified_id) in authority["Devices"]:
             BrainSenseData = Database.loadSourceDataPointer(recording.recording_datapointer)

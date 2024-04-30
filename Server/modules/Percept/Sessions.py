@@ -509,16 +509,16 @@ def queryAvailableSessionFiles(user, patient_id, authority):
             sessionInfo["SessionID"] = session.deidentified_id
             sessionInfo["SessionTimestamp"] = session.session_date.timestamp()
             sessionInfo["AvailableRecording"] = {
-                "BrainSenseStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseStreamTimeDomain").count(),
-                "IndefiniteStreaming": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="IndefiniteStream").count(),
-                "BrainSenseSurvey": models.BrainSenseRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseSurvey").count(),
+                "BrainSenseStreaming": models.NeuralActivityRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseStreamTimeDomain").count(),
+                "IndefiniteStreaming": models.NeuralActivityRecording.objects.filter(source_file=session.deidentified_id, recording_type="IndefiniteStream").count(),
+                "BrainSenseSurvey": models.NeuralActivityRecording.objects.filter(source_file=session.deidentified_id, recording_type="BrainSenseSurvey").count(),
                 "TherapyHistory": models.TherapyHistory.objects.filter(source_file=session.deidentified_id).count(),
             }
             sessions.append(sessionInfo)
     return sessions
 
 def deleteDevice(device_id):
-    recordings = models.BrainSenseRecording.objects.filter(device_deidentified_id=device_id).all()
+    recordings = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device_id).all()
     for recording in recordings:
         try:
             os.remove(DATABASE_PATH + "recordings" + os.path.sep + recording.recording_datapointer)
@@ -544,7 +544,7 @@ def deleteSession(session_id):
     models.TherapyHistory.objects.filter(source_file=str(session_id)).delete()
     models.TherapyChangeLog.objects.filter(source_file=str(session_id)).delete()
     models.PatientCustomEvents.objects.filter(source_file=str(session_id)).delete()
-    recordings = models.BrainSenseRecording.objects.filter(source_file=str(session_id)).all()
+    recordings = models.NeuralActivityRecording.objects.filter(source_file=str(session_id)).all()
     for recording in recordings:
         try:
             os.remove(DATABASE_PATH + "recordings" + os.path.sep + recording.recording_datapointer)

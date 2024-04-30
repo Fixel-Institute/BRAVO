@@ -106,7 +106,7 @@ def queryAvailableRecordings(user, patientId, authority):
         else:
             deviceName = device.device_name
 
-        recordings = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id).all()
+        recordings = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id).all()
         for recording in recordings:
             if not recording.recording_id in authority["Permission"] and authority["Level"] == 2:
                 continue
@@ -204,23 +204,23 @@ def queryAnalysis(user, patientId, analysisId, authority):
     return Data
 
 def saveAnalysisConfiguration(Data, user, patientId, analysisId):
-    if models.BrainSenseRecording.objects.filter(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)}).exists():
-        recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)}).first()
+    if models.NeuralActivityRecording.objects.filter(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)}).exists():
+        recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)}).first()
         filename = Database.saveSourceFiles(Data, "AnalysisConfiguration", "Raw", recording.recording_id, recording.device_deidentified_id)
     else:
-        recording = models.BrainSenseRecording(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)})
+        recording = models.NeuralActivityRecording(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)})
         filename = Database.saveSourceFiles(Data, "AnalysisConfiguration", "Raw", recording.recording_id, recording.device_deidentified_id)
         recording.recording_datapointer = filename
         recording.save()
     return recording
 
 def loadAnalysisConfiguration(user, patientId, analysisId):
-    analysisConfig = models.BrainSenseRecording.objects.filter(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)}).first()
+    analysisConfig = models.NeuralActivityRecording.objects.filter(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)}).first()
     Data = Database.loadSourceDataPointer(analysisConfig.recording_datapointer)
     return Data
 
 def deleteAnalysisConfiguration(user, patientId, analysisId):
-    analysisConfig = models.BrainSenseRecording.objects.filter(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)}).first()
+    analysisConfig = models.NeuralActivityRecording.objects.filter(device_deidentified_id=patientId, recording_type="AnalysisConfiguration", recording_info={"Creator": str(user.unique_user_id), "Analysis": str(analysisId)}).first()
     try: 
         os.remove(DATABASE_PATH + "recordings" + os.path.sep + analysisConfig.recording_datapointer)
     except:
@@ -290,7 +290,7 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, recordingTy
         return None
 
     isExternalRecording = False
-    recording = models.BrainSenseRecording.objects.filter(recording_id=recordingId).first()
+    recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
     if not recording:
         recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
         isExternalRecording = True
@@ -480,7 +480,7 @@ def getRawRecordingData(user, patientId, analysisId, recordingId, authority):
         return None
 
     isExternalRecording = False
-    recording = models.BrainSenseRecording.objects.filter(recording_id=recordingId).first()
+    recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
     if not recording:
         recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
         isExternalRecording = True
@@ -657,8 +657,8 @@ def handleFilterProcessing(step, RecordingIds, Configuration, analysis):
             if models.ExternalRecording.objects.filter(recording_id=recordingId).exists():
                 recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
                 RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-            elif models.BrainSenseRecording.objects.filter(recording_id=recordingId).exists():
-                recording = models.BrainSenseRecording.objects.filter(recording_id=recordingId).first()
+            elif models.NeuralActivityRecording.objects.filter(recording_id=recordingId).exists():
+                recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
                 RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
 
             if highpass == 0:
@@ -689,8 +689,8 @@ def handleExportStructure(step, RecordingIds, Configuration, analysis):
         if models.ExternalRecording.objects.filter(recording_id=recordingId).exists():
             recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
             RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-        elif models.BrainSenseRecording.objects.filter(recording_id=recordingId).exists():
-            recording = models.BrainSenseRecording.objects.filter(recording_id=recordingId).first()
+        elif models.NeuralActivityRecording.objects.filter(recording_id=recordingId).exists():
+            recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
             RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
         
         RawData["ResultType"] = "AlignedData"

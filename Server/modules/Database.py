@@ -233,7 +233,7 @@ def AuthorizeRecordingAccess(user, researcher_id, patient_id, recording_id="", r
                 TimeRange = [datetime.fromtimestamp(timestamp) for timestamp in DeidentifiedPatientID.authorized_time_range[recording_type]]
                 AvailableDevices = models.PerceptDevice.objects.filter(patient_deidentified_id=patient_id).all()
                 for device in AvailableDevices:
-                    AvailableRecordings = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type=recording_type, recording_date__gte=TimeRange[0], recording_date__lte=TimeRange[1]).order_by("-recording_date").all()
+                    AvailableRecordings = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type=recording_type, recording_date__gte=TimeRange[0], recording_date__lte=TimeRange[1]).order_by("-recording_date").all()
                     for recording in AvailableRecordings:
                         if not models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type, authorized_recording_id=recording.recording_id).exists():
                             models.ResearchAuthorizedAccess(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type, authorized_recording_id=recording.recording_id).save()
@@ -556,7 +556,7 @@ def extractAvailableRecordingList(user, researcher_id, patient_id):
 
     AvailableDevices = models.PerceptDevice.objects.filter(patient_deidentified_id=patient_id, authority_level="Clinic", authority_user=user.institute).all()
     for device in AvailableDevices:
-        AvailableRecordings = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id).order_by("-recording_date").all()
+        AvailableRecordings = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id).order_by("-recording_date").all()
         for recording in AvailableRecordings:
             if recording.recording_type == "ChronicLFPs":
                 continue

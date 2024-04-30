@@ -66,12 +66,12 @@ def saveChronicLogs(deviceID, ChronicLogs, sourceFile):
     
     NewRecordingFound = False
     recording_info = {"Hemisphere": "AllHemisphere"}
-    if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitChronicLogs", recording_info__Hemisphere=recording_info["Hemisphere"]).exists():
+    if not models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitChronicLogs", recording_info__Hemisphere=recording_info["Hemisphere"]).exists():
         sortedIndex = np.argsort(ChronicLogTimestamp,axis=0).flatten()
         ChronicLogTimestamp = ChronicLogTimestamp[sortedIndex]
         ChronicLogState = ChronicLogState[sortedIndex]
         
-        recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_type="SummitChronicLogs", recording_info=recording_info)
+        recording = models.NeuralActivityRecording(device_deidentified_id=deviceID, recording_type="SummitChronicLogs", recording_info=recording_info)
         filename = Database.saveSourceFiles({
             "ChronicLogs": {
                 "DateTime": ChronicLogTimestamp,
@@ -82,7 +82,7 @@ def saveChronicLogs(deviceID, ChronicLogs, sourceFile):
         recording.save()
         NewRecordingFound = True
     else:
-        recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitChronicLogs", recording_info__Hemisphere=recording_info["Hemisphere"]).first()
+        recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="SummitChronicLogs", recording_info__Hemisphere=recording_info["Hemisphere"]).first()
         ChronicData = Database.loadSourceDataPointer(recording.recording_datapointer)
 
         Common = set(ChronicLogTimestamp) & set(ChronicData["ChronicLogs"]["DateTime"])
@@ -115,7 +115,7 @@ def processPowerBand(device, ChronicLFPs):
 
     Updated = False
 
-    recordings = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="SummitStreamingPower")
+    recordings = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="SummitStreamingPower")
     PowerStreams = ChronicLFPs["PowerBand"]
     for recording in recordings:
         if not str(recording.recording_id) in ChronicLFPs["IncludedRecordings"]:
@@ -191,7 +191,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
 
     for device in availableDevices:
         leads = device.device_lead_configurations
-        recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="SummitChronicLogs", recording_info__Hemisphere="AllHemisphere").first()
+        recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="SummitChronicLogs", recording_info__Hemisphere="AllHemisphere").first()
         if not recording == None:
             ChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
             

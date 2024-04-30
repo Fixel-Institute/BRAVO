@@ -861,7 +861,7 @@ class QueryPredictionModel(RestViews.APIView):
                 if not "CenterFrequency" in BrainSenseData["Info"]:
                     BrainSenseData["Info"]["CenterFrequency"] = dict()
                 BrainSenseData["Info"]["CenterFrequency"][request.data["channel"]] = request.data["centerFrequency"]
-                models.BrainSenseRecording.objects.filter(recording_id=RecordingID).update(recording_info=BrainSenseData["Info"])
+                models.NeuralActivityRecording.objects.filter(recording_id=RecordingID).update(recording_info=BrainSenseData["Info"])
 
                 for stimulationSide in BrainSenseData["PowerDomain"]["Stimulation"]:
                     if len(np.unique(stimulationSide["Amplitude"])) > 3 and stimulationSide["Name"] == request.data["channel"]:

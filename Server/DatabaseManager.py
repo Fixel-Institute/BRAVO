@@ -372,7 +372,7 @@ def processInput(argv):
       models.TherapyChangeLog.objects.all().delete()
       models.TherapyHistory.objects.all().delete()
       models.ImpedanceHistory.objects.all().delete()
-      models.BrainSenseRecording.objects.all().delete()
+      models.NeuralActivityRecording.objects.all().delete()
 
       # Run Processing Script
       from ProcessingQueueService import processJSONUploads 
@@ -578,7 +578,7 @@ def processInput(argv):
             recording.recording_datapointer = filename
             recording.save()
 
-        Recordings = models.BrainSenseRecording.objects.all()
+        Recordings = models.NeuralActivityRecording.objects.all()
         for recording in Recordings:
           if recording.recording_datapointer.endswith(".pkl"):
             try:

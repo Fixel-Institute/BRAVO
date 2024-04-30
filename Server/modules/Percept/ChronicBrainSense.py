@@ -59,14 +59,14 @@ def saveChronicLFP(deviceID, ChronicLFPs, sourceFile):
     NewRecordingFound = False
     for key in ChronicLFPs.keys():
         recording_info = {"Hemisphere": key}
-        if not models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="ChronicLFPs", recording_info__Hemisphere=recording_info["Hemisphere"]).exists():
-            recording = models.BrainSenseRecording(device_deidentified_id=deviceID, recording_type="ChronicLFPs", recording_info=recording_info)
+        if not models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="ChronicLFPs", recording_info__Hemisphere=recording_info["Hemisphere"]).exists():
+            recording = models.NeuralActivityRecording(device_deidentified_id=deviceID, recording_type="ChronicLFPs", recording_info=recording_info)
             filename = Database.saveSourceFiles(ChronicLFPs[key], "ChronicLFPs", key.replace("HemisphereLocationDef.",""), recording.recording_id, recording.device_deidentified_id)
             recording.recording_datapointer = filename
             recording.save()
             NewRecordingFound = True
         else:
-            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=deviceID, recording_type="ChronicLFPs", recording_info__Hemisphere=recording_info["Hemisphere"]).first()
+            recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="ChronicLFPs", recording_info__Hemisphere=recording_info["Hemisphere"]).first()
             pastChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
 
             Common = set(ChronicLFPs[key]["DateTime"]) & set(pastChronicLFPs["DateTime"])
@@ -101,7 +101,7 @@ def queryChronicLFPsByTime(user, patientUniqueID, timeRange, authority):
     for device in availableDevices:
         leads = device.device_lead_configurations
         for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
-            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="ChronicLFPs", recording_info__Hemisphere=hemisphere).first()
+            recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="ChronicLFPs", recording_info__Hemisphere=hemisphere).first()
             if not recording == None:
                 ChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
                 if device.device_name == "":
@@ -222,7 +222,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
     for device in availableDevices:
         leads = device.device_lead_configurations
         for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
-            recording = models.BrainSenseRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="ChronicLFPs", recording_info__Hemisphere=hemisphere).first()
+            recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type="ChronicLFPs", recording_info__Hemisphere=hemisphere).first()
             if not recording == None:
                 ChronicLFPs = Database.loadSourceDataPointer(recording.recording_datapointer)
                 if device.device_name == "":
