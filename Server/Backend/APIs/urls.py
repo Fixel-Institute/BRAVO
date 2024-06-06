@@ -4,7 +4,7 @@
 * UF BRAVO Platform
 =========================================================
 
-* Copyright 2023 by Jackson Cagle, Fixel Institute
+* Copyright 2024 by Jackson Cagle, Fixel Institute
 * The source code is made available under a Creative Common NonCommercial ShareAlike License (CC BY-NC-SA 4.0) (https://creativecommons.org/licenses/by-nc-sa/4.0/) 
 
  =========================================================
@@ -15,7 +15,7 @@
 from django.urls import path
 from django.conf import settings
 
-from . import Auth, Session, Queries, Upload, UpdateRecordings, Surveys, RealtimeUpdates
+from . import Auth, Session, ParticipantManager, DataHandler, Queries, Test
 
 urlpatterns = [
 	path('handshake', Auth.Handshake.as_view()),
@@ -23,65 +23,32 @@ urlpatterns = [
 	path('authenticate', Auth.UserAuth.as_view()),
 	path('authRefresh', Auth.UserTokenRefresh.as_view()),
 	path('logout', Auth.UserSignout.as_view()), 
-	#path('authorizedInstitute', Auth.FetchAuthorizedInstitute.as_view()), 
-	
-	path('deidentificationTable', Upload.DeidentificationTable.as_view()),
-	path('uploadSessionFiles', Upload.SessionUpload.as_view()),
-	path('uploadExternalFiles', Upload.ExternalRecordingUpload.as_view()),
-	path('deleteSessionFiles', Upload.SessionRemove.as_view()),
-	path('requestProcessing', Upload.RequestProcessingQueue.as_view()),
-	path('extractSessionEMR', Upload.ExtractSessionEMR.as_view()),
-
+  path('queryProfile', Auth.QueryProfile.as_view()), 
+  path('requestSecureKey', Auth.RequestSecureKey.as_view()), 
+  
 	path('updateSession', Session.UpdateSessionConfig.as_view()),
 	path('querySessions', Session.QuerySessionConfigs.as_view()),
-	path('setPatientID', Session.SetPatientID.as_view()),
-
-	path('updatePatientInformation', UpdateRecordings.PatientInformationUpdate.as_view()),
-	path('updateBrainSenseStream', UpdateRecordings.BrainSenseStreamUpdate.as_view()),
-	path('updatePatientAccess', UpdateRecordings.UpdatePatientAccess.as_view()),
-
-	path('queryDatabaseInfo', Queries.QueryDatabaseInfo.as_view()),
-	path('queryPatientAccessTable', Queries.QueryPatientAccessTable.as_view()),
-	path('queryPatients', Queries.QueryPatientList.as_view()),
-	path('queryPatientInfo', Queries.QueryPatientInfo.as_view()),
-	path('queryProcessingQueue', Queries.QueryProcessingQueue.as_view()),
-
+  
+	path('createStudyParticipant', ParticipantManager.CreateStudyParticipant.as_view()),
+	path('updateStudyParticipant', ParticipantManager.UpdateStudyParticipant.as_view()),
+	path('updateDeviceInformation', ParticipantManager.UpdateDeviceInformation.as_view()),
+	path('deleteStudyParticipant', ParticipantManager.DeleteStudyParticipant.as_view()),
+	path('queryStudyParticipant', ParticipantManager.QueryStudyParticipant.as_view()),
+	path('queryParticipantInformation', ParticipantManager.QueryParticipantInformation.as_view()),
+	path('CheckAccessPermission', ParticipantManager.CheckAccessPermission.as_view()),
+  
+	path('uploadData', DataHandler.DataUpload.as_view()),
+  path('queryProcessingQueue', DataHandler.QueryProcessingQueue.as_view()),
+  path('clearProcessingQueue', DataHandler.ClearProcessingQueue.as_view()),
+  path('getFernetKey', DataHandler.GetSecretKeyFromPassword.as_view()),
+  path('queryDatabaseInfo', DataHandler.QueryDatabaseInfo.as_view()),
+  path('deleteData', DataHandler.DeleteData.as_view()),
+  
 	path('queryTherapyHistory', Queries.QueryTherapyHistory.as_view()),
-	path('queryAverageNeuralActivity', Queries.QueryAverageNeuralActivity.as_view()),
-	path('queryNeuralActivityStreaming', Queries.QueryNeuralActivityStreaming.as_view()),
-	path('queryMultiChannelStreaming', Queries.QueryMultiChannelStreaming.as_view()),
-	path('queryChronicNeuralActivity', Queries.QueryChronicNeuralActivity.as_view()),
-	path('querySessionOverview', Queries.QuerySessionOverview.as_view()),
-
-	path('queryPredictionModel', Queries.QueryPredictionModel.as_view()),
-	path('queryMultipleSegmentComparison', Queries.QueryMultipleSegmentComparison.as_view()),
-	path('queryPatientEvents', Queries.QueryPatientEvents.as_view()),
-  path('queryAdaptiveStimulation', Queries.QueryAdaptiveStimulation.as_view()),
-	path('queryCircadianPower', Queries.QueryCircadianPower.as_view()),
-    
-	path('queryCustomAnnotations', Queries.QueryCustomAnnotations.as_view()),
-	path('queryCustomizedAnalysis', Queries.QueryCustomizedAnalysis.as_view()),
-	path('queryRecordingsForAnalysis', Queries.QueryRecordingsForAnalysis.as_view()),
-	path('queryMobileRecordings', Queries.QueryMobileRecordings.as_view()),
-
-	path('queryImageDirectory', Queries.QueryImageModelDirectory.as_view()),
-	path('queryImageModel', Queries.QueryImageModel.as_view()),
-
-	path('addNewSurvey', Surveys.AddNewSurvey.as_view()),
-	path('queryAvailableSurveys', Surveys.QueryAvailableSurveys.as_view()),
-	path('queryAvailableRedcapSchedule', Surveys.QueryAvailableRedcapSchedule.as_view()),
-	path('querySurveyContent', Surveys.QuerySurveyContent.as_view()),
-	path('updateSurveyContent', Surveys.UpdateSurveyContent.as_view()),
-	path('requestSurveyAccessCode', Surveys.RequestSurveyAccessCode.as_view()),
-	path('querySurveyResults', Surveys.QuerySurveyResults.as_view()),
-	path('deleteSurvey', Surveys.ArchiveSurvey.as_view()),
-	path('submitSurvey', Surveys.SubmitSurveyResults.as_view()),
-
-	path('verifyRedcapLink', Surveys.RedcapVerification.as_view()),
-	path('surveySchedulerSetup', Surveys.SetupSurveyScheduler.as_view()),
-	path('surveySchedulerStatus', Surveys.SurveySchedulerStatus.as_view()),
+	path('queryBaselinePSDs', Queries.QueryBaselinePSDs.as_view()),
+	path('queryTimeSeriesAnalysis', Queries.QueryTimeSeriesAnalysis.as_view()),
+	path('queryTimeSeriesRecording', Queries.QueryTimeSeriesRecording.as_view())
 ]
 
-websocket_urlpatterns = [
-    path("socket/notification", RealtimeUpdates.NotificationSystem.as_asgi()),
-]
+if settings.DEBUG:
+  urlpatterns.append(path('test', Test.TestAPIEndPoint.as_view()),)

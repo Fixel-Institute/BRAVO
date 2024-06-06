@@ -271,18 +271,6 @@ function DefaultNavbar({ transparent, light, action }) {
         </MDBox>
         <MDBox color="inherit" display={{ xs: "none", lg: "flex" }} m={0} p={0}>
           <DefaultNavbarLink 
-            icon={<StorageIcon/>}
-            name={dictionary.SimplifiedNavbar.ChangeBRAVOVersion[language]}
-            onClick={(event) => handleOpenMenu(event, "BRAVOVersion")} 
-            light={light} 
-          />
-          <DefaultNavbarLink 
-            icon={<StorageIcon/>}
-            name={dictionary.SimplifiedNavbar.ChangeServer[language]}
-            onClick={(event) => handleOpenMenu(event, "ServerMenu")} 
-            light={light} 
-          />
-          <DefaultNavbarLink 
             icon={<ChangeCircleIcon/>}
             name={dictionary.SimplifiedNavbar.ChangeLanguage[language]}
             onClick={(event) => handleOpenMenu(event, "LanguageMenu")} 
@@ -301,44 +289,6 @@ function DefaultNavbar({ transparent, light, action }) {
             light={light}
           />
           {renderLanguageSelectionMenu()}
-          {renderServerSelectionMenu()}
-          {renderBRAVOSelectMenu()}
-
-          <Dialog open={customServer.show} onClose={() => setCustomServer({...customServer, show: false})}>
-            <MDBox px={2} pt={2} sx={{minWidth: 500}}>
-              <MDTypography variant="h5">
-                {"Set Custom Server Address"}
-              </MDTypography>
-            </MDBox>
-            <DialogContent>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    variant="standard"
-                    margin="dense"
-                    placeholder="Server Address (i.e.: http://localhost:3001)"
-                    value={customServer.address}
-                    onChange={(event) => setCustomServer({...customServer, address: event.target.value})}
-                    fullWidth
-                  />
-                </Grid>
-              </Grid>
-            </DialogContent>
-            <DialogActions>
-              <MDBox style={{marginLeft: "auto", paddingRight: 5}}>
-                <MDButton color={"secondary"} 
-                  onClick={() => setCustomServer({...customServer, show: false})}
-                >
-                  Cancel
-                </MDButton>
-                <MDButton color={"info"} 
-                  onClick={() => setServer()} style={{marginLeft: 10}}
-                >
-                  Update
-                </MDButton>
-              </MDBox>
-            </DialogActions>
-          </Dialog>
         </MDBox>
         {action &&
           (action.type === "internal" ? (

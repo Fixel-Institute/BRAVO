@@ -991,7 +991,6 @@ class PlotlyRenderManager {
     }
 
     this.traces = this.traces.filter((trace) => !(trace.xaxis == this.gca.xaxis && trace.yaxis == this.gca.yaxis));
-    console.log(this.traces)
   }
 
   /**

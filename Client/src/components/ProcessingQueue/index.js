@@ -84,10 +84,10 @@ export default function ProcessingQueue({queues, clearQueue}) {
         </TableHead>
         <TableBody>
           {queues.map((queue) => {
-            return <TableRow key={queue.taskId}>
+            return <TableRow key={queue.uid}>
               <TableCell>
                 <MDTypography variant="p" align="center" fontSize={9}>
-                  {queue.descriptor.filename}
+                  {queue.filename}
                 </MDTypography>
               </TableCell>
               <TableCell>
@@ -99,10 +99,10 @@ export default function ProcessingQueue({queues, clearQueue}) {
               </TableCell>
               <TableCell>
                 <MDBox style={{display: "flex", alignItems: "center"}}>
-                  {queue.state === "InProgress" ? <PendingOutlined fontSize={"medium"}/> : null}
-                  {queue.state === "Processing" ? <CircularProgress size={"20px"}/> : null}
-                  {queue.state === "Complete" ? <TaskAlt color={"success"} fontSize="medium"/> : null}
-                  {queue.state === "Error" ? (
+                  {queue.state === "created" ? <PendingOutlined fontSize={"medium"}/> : null}
+                  {queue.state === "in_progress" ? <CircularProgress size={"20px"}/> : null}
+                  {queue.state === "complete" ? <TaskAlt color={"success"} fontSize="medium"/> : null}
+                  {queue.state === "error" ? (
                     <Tooltip title={queue.descriptor.Message}>
                       <Error color={"error"} fontSize="medium"/>
                     </Tooltip>

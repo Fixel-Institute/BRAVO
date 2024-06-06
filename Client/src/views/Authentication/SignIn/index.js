@@ -51,8 +51,6 @@ export default function SignIn() {
       SessionController.setUser({
         ...response.data.user,
       });
-      SessionController.setAuthToken(response.data.access);
-      SessionController.setRefreshToken(response.data.refresh);
       SessionController.syncSession();
       setAuthInfo({...authInfo, password: ""});
       setContextState(dispatch, "user", {
@@ -97,10 +95,10 @@ export default function SignIn() {
         <MDBox pt={4} pb={3} px={3}>
           <MDBox component="form" role="form">
             <MDBox mb={2}>
-              <MDInput type="email" label={dictionary.Login.Email[language]} value={authInfo.email} onChange={(event) => setAuthInfo({...authInfo, email: event.currentTarget.value})} fullWidth/>
+              <MDInput type="email" id="email" label={dictionary.Login.Email[language]} value={authInfo.email} onChange={(event) => setAuthInfo({...authInfo, email: event.currentTarget.value})} fullWidth/>
             </MDBox>
             <MDBox mb={2}>
-              <MDInput type="password" label={dictionary.Login.Password[language]} onKeyPress={handlePasswordKeyPress} value={authInfo.password} onChange={(event) => setAuthInfo({...authInfo, password: event.currentTarget.value})} fullWidth/>
+              <MDInput type="password" id="password" label={dictionary.Login.Password[language]} onKeyPress={handlePasswordKeyPress} value={authInfo.password} onChange={(event) => setAuthInfo({...authInfo, password: event.currentTarget.value})} fullWidth/>
             </MDBox>
             <MDBox display="flex" alignItems="center" ml={-1}>
               <Switch checked={rememberMe} onChange={handleSetRememberMe} />

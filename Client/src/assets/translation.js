@@ -158,8 +158,8 @@ export const dictionary = {
       en: "An overview of our datbase statistic so far",
       zh: "目前服务器内的数据总结"
     },
-    TotalPatients: {
-      en: "Total Patients",
+    TotalParticipants: {
+      en: "Total Participants",
       zh: "病人数"
     },
     TotalRecordings: {
@@ -170,103 +170,49 @@ export const dictionary = {
       en: "Storage Used",
       zh: "服务器已用容量"
     },
-    PatientTable: {
-      en: "Accessible Patients",
+    ParticipantTable: {
+      en: "Accessible Participants",
       zh: "可查询的病人"
     },
     AddNewSession: {
       en: "Add New Sessions",
       zh: "上传新数据"
     },
-    SearchPatient: {
-      en: "Search Patient Here",
+    SearchParticipant: {
+      en: "Search Participants Here",
       zh: "检索病人数据"
     },
     SearchResult: {
-      en: "Total Patient Count: ",
+      en: "Total Participant Count: ",
       zh: "检索数："
     },
-    PatientTableName: {
+    ParticipantTableName: {
       en: "Name",
       zh: "名字"
     },
-    PatientTableDiagnosis: {
+    ParticipantTableDiagnosis: {
       en: "Diagnosis",
       zh: "诊断"
     },
-    PatientTableDevice: {
+    ParticipantTableDevice: {
       en: "Devices",
       zh: "仪器名字"
     },
-    PatientTableLastVisit: {
+    ParticipantTableLastVisit: {
       en: "Last Visit Date",
       zh: "最后会诊时间"
     },
-    PatientTableLastModified: {
+    ParticipantTableLastModified: {
       en: "Last Modified Date",
       zh: "最后上传时间"
     },
-    PatientTablePrevious: {
+    ParticipantTablePrevious: {
       en: "PREVIOUS",
       zh: "上一页"
     },
-    PatientTableNext: {
+    ParticipantTableNext: {
       en: "NEXT",
       zh: "下一页"
-    }
-  },
-  SessionUpload: {
-    ResearchTitle: {
-      en: "Create New Deidentified Patient",
-      zh: "创建病人文档"
-    },
-    ClinicTitle: {
-      en: "Batch Upload Session JSON file (identified)",
-      zh: "上传JSON文档"
-    },
-    PatientFirstName: {
-      en: "First Name",
-      zh: "名"
-    },
-    PatientIdentifier: {
-      en: "Patient Identifier",
-      zh: "病人ID"
-    },
-    PatientLastName: {
-      en: "Last Name",
-      zh: "姓"
-    },
-    StudyIdentifier: {
-      en: "Study Identifier",
-      zh: "考察项目ID"
-    },
-    Diagnosis: {
-      en: "Diagnosis",
-      zh: "诊断"
-    },
-    DeviceType: {
-      en: "Device Type",
-      zh: "脉冲发生器类型"
-    },
-    DeviceName: {
-      en: "Deidentified Device Name",
-      zh: "脉冲发生器名字"
-    },
-    MRN: {
-      en: "Medical Record Number",
-      zh: "Medical Record Number"
-    },
-    Dropzone: {
-      en: "Drag and Drop to Upload Session Files (*.json)",
-      zh: "Drag and Drop to Upload Session Files (*.json)"
-    },
-    Upload: {
-      en: "Upload",
-      zh: "上传"
-    },
-    Cancel: {
-      en: "Cancel",
-      zh: "取消"
     }
   },
   Surveys: {
@@ -310,44 +256,18 @@ export const dictionary = {
       en: "Current Schedule",
       zh: "Current Schedule"
     },
-    PatientTablePrevious: {
+    ParticipantTablePrevious: {
       en: "PREVIOUS",
       zh: "上一页"
     },
-    PatientTableNext: {
+    ParticipantTableNext: {
       en: "NEXT",
       zh: "下一页"
     }
   },
-  ResearchAccess: {
-    AccessTable: {
-      en: "Patient Access Table",
-      zh: "Patient Access Table"
-    },
-    PatientTableName: {
-      en: "Patient Name",
-      zh: "Patient Name"
-    },
-    PatientTableDiagnosis: {
-      en: "Diagnosis",
-      zh: "Diagnosis"
-    },
-    UploaderInfo: {
-      en: "Uploader",
-      zh: "Uploader"
-    },
-    SharedInfo: {
-      en: "Shared with",
-      zh: "Shared with"
-    },
-    AddViewAccess: {
-      en: "Add View Access",
-      zh: "Add View Access"
-    }
-  },
-  PatientOverview: {
-    EditPatientInfo: {
-      en: "Edit Patient Information",
+  ParticipantOverview: {
+    EditParticipantInfo: {
+      en: "Edit Participant Information",
       zh: "修改病人信息"
     },
     EditDeviceInfo: {
@@ -366,8 +286,8 @@ export const dictionary = {
       en: "Add New Device",
       zh: "添加新脉冲发生器"
     },
-    DeletePatient: {
-      en: "Delete Patient Entry",
+    DeleteParticipant: {
+      en: "Delete Participant Entry",
       zh: "删除病人数据"
     },
     DeviceTable: {
@@ -412,14 +332,10 @@ export const dictionary = {
         zh: "剩余电量"
       },
     },
-    PatientInformation: {
-      FirstName: {
-        en: "First Name",
-        zh: "名"
-      },
-      LastName: {
-        en: "Last Name",
-        zh: "姓"
+    ParticipantInformation: {
+      Name: {
+        en: "Name",
+        zh: "姓名"
       },
       Diagnosis: {
         en: "Diagnosis",
@@ -896,8 +812,8 @@ export const dictionary = {
       en: "Experimental",
       zh: "实验功能"
     },
-    "patient-overview": {
-      en: "Patient Overview",
+    "participant-overview": {
+      en: "Participant Overview",
       zh: "病人数据总结"
     },
     "therapy-history": {
@@ -905,7 +821,7 @@ export const dictionary = {
       zh: "过去治疗记录"
     },
     survey: {
-      en: "Average Neural Activity",
+      en: "BrainSense™ Surveys",
       zh: "脑电信号测量"
     },
     stream: {
@@ -974,10 +890,6 @@ export const dictionary = {
       en: "Dashboard",
       zh: "主平台"
     },
-    PatientLookupTable: {
-      en: "Patient Lookup Table",
-      zh: "Patient Lookup Table"
-    },
     ShareResearchAccess: {
       en: "Access Permission List",
       zh: "Access Permission List"
@@ -990,8 +902,8 @@ export const dictionary = {
       en: "Experimental",
       zh: "实验功能"
     },
-    PatientOverview: {
-      en: "Patient Overview",
+    ParticipantOverview: {
+      en: "Participant Overview",
       zh: "病人数据总结"
     },
     TherapyHistory: {
@@ -999,7 +911,7 @@ export const dictionary = {
       zh: "过去治疗记录"
     },
     BrainSenseSurvey: {
-      en: "Average Neural Activity",
+      en: "BrainSense™ Surveys",
       zh: "脑电信号测量"
     },
     BrainSenseStreaming: {
@@ -1026,7 +938,7 @@ export const dictionary = {
       en: "Multiple Segment Analysis",
       zh: "Multiple Segment Analysis"
     },
-    PatientEvents: {
+    ParticipantEvents: {
       en: "Patient Events",
       zh: "标记事件记录"
     },

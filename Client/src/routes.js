@@ -40,20 +40,96 @@ import BiotechIcon from '@mui/icons-material/Biotech';
 import { AccessAlarm, People, Article, IosShare } from "@mui/icons-material";
 
 import { experimentalRoutes } from "views/Experimental/plugins";
+import TimeSeriesAnalysis from "views/Reports/TimeSeriesAnalysis";
 
 // BRAVO Platform Layouts
 const DashboardOverview = lazy(() => import('views/Dashboard/Overview'));
 const PatientLookupTable = lazy(() => import('views/Dashboard/PatientLookupTable'));
+const UploadDataView = lazy(() => import('views/Dashboard/UploadDataView'));
 const ResearchAccessView = lazy(() => import('views/Dashboard/ShareResearchAccess'));
-const PatientOverview = lazy(() => import('views/Dashboard/PatientOverview'));
+const ParticipantOverview = lazy(() => import('views/Dashboard/ParticipantOverview'));
 const SurveyList = lazy(() => import('views/Survey/Overview'));
-const TherapyHistory = lazy(() => import('views/Reports/TherapyHistory'));
-const BrainSenseSurvey = lazy(() => import('views/Reports/BrainSenseSurvey'));
+const TherapyHistory = lazy(() => import('views/Reports/Percept/TherapyHistory'));
+const BrainSenseSurvey = lazy(() => import('views/Reports/Percept/BrainSenseSurvey'));
 const BrainSenseStreaming = lazy(() => import('views/Reports/BrainSenseStreaming'));
 const IndefiniteStreaming = lazy(() => import('views/Reports/IndefiniteStreaming'));
 const ChronicBrainSense = lazy(() => import('views/Reports/ChronicBrainSense'));
 const SessionOverview = lazy(() => import('views/Reports/SessionsOverview'));
 
+
+const routes = [
+  {
+    type: "collapse",
+    name: "Dashboard",
+    key: "dashboard",
+    component: <DashboardOverview />,
+    route: "/dashboard",
+    icon: <DashboardIcon/>,
+    noCollapse: true,
+  },
+  {
+    type: "collapse",
+    name: "UploadData",
+    key: "upload-data",
+    component: <UploadDataView />,
+    route: "/upload-data",
+    icon: <IosShare/>,
+    noCollapse: true,
+  },
+  { type: "divider", key: "divider-1" },
+  {
+    type: "collapse",
+    name: "ParticipantOverview",
+    key: "participant-overview",
+    component: <ParticipantOverview />,
+    route: "/participant-overview",
+    icon: <PersonIcon/>,
+    noCollapse: true,
+  },
+  { type: "title", name: "Reports for Percept™", key: "Percept-Reports-title", report_type: "PerceptReport"},
+  {
+    type: "collapse",
+    name: "Reports",
+    key: "percept-reports",
+    icon: <DescriptionIcon/>,
+    report_type: "PerceptReport",
+    collapse: [
+      {
+        name: "TherapyHistory",
+        key: "medtronic-therapy-history",
+        icon: <BoltIcon style={{color: "white", margin: 0, padding: 0}}/>,
+        route: "/percept/therapy-history",
+        component: <TherapyHistory />,
+      },
+      {
+        name: "BrainSenseSurvey",
+        key: "survey",
+        icon: <PollIcon style={{color: "white", margin: 0, padding: 0}}/>,
+        route: "/percept/survey",
+        component: <BrainSenseSurvey />,
+      },
+    ]
+  },
+  { type: "title", name: "General Reports", key: "Reports-title", report_type: "GeneralReport"},
+  {
+    type: "collapse",
+    name: "Reports",
+    key: "reports",
+    icon: <DescriptionIcon/>,
+    report_type: "GeneralReport",
+    collapse: [
+      {
+        name: "TimeSeriesAnalysis",
+        key: "time-series",
+        icon: <SensorsIcon style={{color: "white", margin: 0, padding: 0}}/>,
+        route: "/reports/time-series",
+        component: <TimeSeriesAnalysis />,
+      },
+    ]
+  },
+];
+
+/*
 const routes = [
   {
     type: "collapse",
@@ -188,5 +264,6 @@ const routes = [
     deidentified: true
   },
 ];
+*/
 
 export default routes;

@@ -38,7 +38,7 @@ export default function SurveyLayout({viewOnly, children}) {
         if (!state) {
           SessionController.nullifyUser();
           setContextState(dispatch, "user", {});
-          setContextState(dispatch, "patientID", null);
+          setContextState(dispatch, "participant_uid", null);
 
           const handleTimeout = () => {
             navigate("/", {replace: false});

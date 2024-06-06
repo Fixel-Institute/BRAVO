@@ -46,15 +46,13 @@ export default function Register() {
 
   const [alert, setAlert] = useState(null);
   const [displayDisclaimer, setDisplayDisclaimer] = useState(false);
-  const [authInfo, setAuthInfo] = useState({email: "", password: ""});
+  const [authInfo, setAuthInfo] = useState({username: "", email: "", password: ""});
   const [agree, setAgreeDisclaimer] = useState(false);
 
   const handleRegistration = () => {
     if (agree) {
       SessionController.register(authInfo.username, authInfo.email, authInfo.password, authInfo.email).then((response) => {
         SessionController.setUser(response.data.user);
-        SessionController.setAuthToken(response.data.access);
-        SessionController.setRefreshToken(response.data.refresh); 
         SessionController.syncSession();
         setAuthInfo({...authInfo, password: ""});
         setContextState(dispatch, "user", response.data.user);
@@ -98,13 +96,13 @@ export default function Register() {
         <MDBox pt={4} pb={3} px={3}>
           <MDBox component="form" role="form">
             <MDBox mb={2}>
-              <MDInput type="text" label={dictionary.Register.UserName[language]} value={authInfo.username} onChange={(event) => setAuthInfo({...authInfo, username: event.currentTarget.value})} fullWidth/>
+              <MDInput type="text" id="name" label={dictionary.Register.UserName[language]} value={authInfo.username} onChange={(event) => setAuthInfo({...authInfo, username: event.currentTarget.value})} fullWidth/>
             </MDBox>
             <MDBox mb={2}>
-              <MDInput type="email" label={dictionary.Register.Email[language]} value={authInfo.email} onChange={(event) => setAuthInfo({...authInfo, email: event.currentTarget.value})} fullWidth/>
+              <MDInput type="email" id="email" label={dictionary.Register.Email[language]} value={authInfo.email} onChange={(event) => setAuthInfo({...authInfo, email: event.currentTarget.value})} fullWidth/>
             </MDBox>
             <MDBox mb={2}>
-              <MDInput type="password" label={dictionary.Register.Password[language]} value={authInfo.password} onChange={(event) => setAuthInfo({...authInfo, password: event.currentTarget.value})} fullWidth/>
+              <MDInput type="password" id="password" label={dictionary.Register.Password[language]} value={authInfo.password} onChange={(event) => setAuthInfo({...authInfo, password: event.currentTarget.value})} fullWidth/>
             </MDBox>
             <MDBox display="flex" alignItems="center" ml={-1}>
               <Checkbox value={agree} onClick={() => setAgreeDisclaimer(!agree)} />

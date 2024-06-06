@@ -82,9 +82,7 @@ function CustomizedAnalysis() {
       console.log('Connection Error');
     };
     client.onopen = () => {
-      client.send(JSON.stringify({
-        "Authorization": SessionController.getRefreshToken()
-      }));
+      
     };
     client.onclose = () => {
       console.log('Connection Closed');

@@ -35,7 +35,6 @@ if os.path.exists(os.path.join(BASE_DIR, '.env')):
         config = json.load(file)
     for key in config.keys():
         os.environ[key] = config[key]
-
     sys.path.append(os.environ["PYTHON_UTILITY"])
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'BRAVO.settings')

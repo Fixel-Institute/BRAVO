@@ -18,186 +18,262 @@ Therapy History Module
 @email: jackson.cagle@neurology.ufl.edu
 """
 
-import os, sys, pathlib
-RESOURCES = str(pathlib.Path(__file__).parent.parent.resolve())
-sys.path.append(os.environ.get("PYTHON_UTILITY"))
-
+import os
 from datetime import datetime
 import copy
 import numpy as np
 import pandas as pd
 
 from Backend import models
-from modules import Database
 from decoder import Percept
+from neomodel import Q
 
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveTherapySettings(deviceID, therapyList, sessionDate, type, sourceFile):
-    """ Save Indefinite Streaming Data in Database Storage
+def matchAttribute(obj, item):
+    for key in item.keys():
+        if not obj.__getattribute__(key) == item[key]:
+            return False 
+    return True
+    
+def saveTherapyEvents(participant, device, therapyList):
+    """ Save Therapy Change History in Database
 
     Args:
-      deviceID: UUID4 deidentified id for each unique Percept device.
+      participant: Participant node object. Therapy is direct child node of Participant
+      device: Device Object that the therapy is delivered from.
+      therapyList: Array of Therapy Configuration structures extracted from Medtronic JSON file.
+
+    Returns:
+      Array of Newly Created Therapy History
+    """
+
+    NewTherapies = list()
+    PreviousChangeGroups = participant.events.filter(type="TherapyStatus").all()
+    for therapy in therapyList:
+        if "TherapyStatus" in therapy.keys():
+            LogFound = False
+            for group in PreviousChangeGroups:
+                if matchAttribute(group, {
+                    "new_group": "ON" if therapy["TherapyStatus"] else "OFF",
+                    "date": therapy["DateTime"].timestamp(),
+                }):
+                    LogFound = True 
+                    break
+
+            if not LogFound:
+                event = models.TherapyModification(name="TherapyStatus", type="TherapyStatus", date=therapy["DateTime"].timestamp())
+                event.new_group = "ON" if therapy["TherapyStatus"] else "OFF"
+                event.old_group = "OFF" if therapy["TherapyStatus"] else "ON"
+                event.device = device.uid
+                event.save()
+                participant.events.connect(event)
+                NewTherapies.append(event)
+
+    PreviousChangeGroups = participant.events.filter(type="TherapyChangeGroup").all()
+    for therapy in therapyList:
+        if not "TherapyStatus" in therapy.keys():
+            LogFound = False
+            for group in PreviousChangeGroups:
+                if matchAttribute(group, {
+                    "new_group": therapy["NewGroupId"],
+                    "old_group": therapy["OldGroupId"],
+                    "date": therapy["DateTime"].timestamp(),
+                }):
+                    LogFound = True 
+                    break
+            if not LogFound:
+                event = models.TherapyModification(name="TherapyChangeGroup", type="TherapyChangeGroup", date=therapy["DateTime"].timestamp(),
+                                                    new_group=therapy["NewGroupId"], old_group=therapy["OldGroupId"], device=device.uid).save()
+                participant.events.connect(event)
+                NewTherapies.append(event)
+
+    return NewTherapies
+
+def saveTherapySettings(participant, device, therapyList, sessionDate, type):
+    """ Save Therapy Settings in Database
+
+    Args:
+      participant: Participant node object. Therapy is direct child node of Participant
+      device: Device Object that the therapy is delivered from.
       therapyList: Array of Therapy Configuration structures extracted from Medtronic JSON file.
       sessionDate: DateTime object indicating when the therapy configuration is saved.
       type: One of three data types: ["Past Therapy","Pre-visit Therapy","Post-visit Therapy"].
-      sourceFile: filename of the raw JSON file that the original data extracted from.
 
     Returns:
-      Boolean indicating if new data is found (to be saved).
+      Array of Newly Created Therapy Settings
     """
 
-    NewTherapyFound = False
-    TheraySavingList = list()
+    NewTherapies = []
+    ExistingTherapies = [therapy for therapy in participant.therapies if therapy.group_name]
     for therapy in therapyList:
-        TherapyObject = models.TherapyHistory.objects.filter(device_deidentified_id=deviceID, therapy_date=sessionDate, therapy_type=type, group_id=therapy["GroupId"]).all()
-        TherapyFound = False
+        for hemisphere in ["LeftHemisphere", "RightHemisphere"]:
+            if hemisphere in therapy.keys():
+                therapyObject = None
+                for item in ExistingTherapies:
+                    if matchAttribute(item, {
+                        "name": "Left Channel DBS Setting" if hemisphere == "LeftHemisphere" else "Right Channel DBS Setting",
+                        "group_name": therapy["GroupId"] if therapy["GroupName"] == "" else therapy["GroupName"],
+                        "type": type,
+                        "date": sessionDate,
+                    }):
+                        therapyObject = item
+                        break
+                    
+                if not therapyObject:
+                    if therapy[hemisphere]["Mode"] == "Adaptive":
+                        therapyObject = models.AdaptiveTherapy(
+                            name= "Left Channel DBS Setting" if hemisphere == "LeftHemisphere" else "Right Channel DBS Setting",
+                            group_name= therapy["GroupId"] if therapy["GroupName"] == "" else therapy["GroupName"],
+                            type= type,
+                            date= sessionDate,
+                            device= device.uid
+                        )
+                        
+                    else:
+                        therapyObject = models.ElectricalTherapy(
+                            name= "Left Channel DBS Setting" if hemisphere == "LeftHemisphere" else "Right Channel DBS Setting",
+                            group_name= therapy["GroupId"] if therapy["GroupName"] == "" else therapy["GroupName"],
+                            type= type,
+                            date= sessionDate,
+                            device= device.uid
+                        )
+                
+                if len(therapyObject.settings) > 0:
+                    continue 
+                
+                therapyObject.stimulation_type = therapy[hemisphere]["Mode"]
+                therapyObject.save()
+                participant.therapies.connect(therapyObject)
+                NewTherapies.append(therapyObject)
 
-        for pastTherapy in TherapyObject:
-            if pastTherapy.extractTherapy() == therapy:
-                TherapyFound = True
-                break
-        if not TherapyFound:
-            TheraySavingList.append(models.TherapyHistory(device_deidentified_id=deviceID, therapy_date=sessionDate, source_file=sourceFile,
-                                  group_name=therapy["GroupName"], group_id=therapy["GroupId"], active_group=therapy["ActiveGroup"],
-                                  therapy_type=type, therapy_details=therapy))
-            NewTherapyFound = True
+                if therapyObject.stimulation_type == "Interleaving":
+                    for i in range(len(therapy[hemisphere]["Frequency"])):
+                        stimulationSetting = models.ElectricalStimulation(amplitude_unit=therapy[hemisphere]["Unit"][i],
+                                                                        pulsewidth=therapy[hemisphere]["PulseWidth"][i],
+                                                                        pulsewidth_unit="uS",
+                                                                        frequency=therapy[hemisphere]["Frequency"][i])
+                        
+                        contact = []
+                        amplitude = []
+                        return_contact = []
+                        for channel in therapy[hemisphere]["Channel"][i]:
+                            ChannelName, ChannelIndex = Percept.reformatElectrodeDef(channel["Electrode"])
+                            if channel["ElectrodeStateResult"] == "ElectrodeStateDef.Positive":
+                                stimulationSetting.return_contact = ChannelIndex
+                                return_contact.append(ChannelIndex)
+                            elif channel["ElectrodeStateResult"] == "ElectrodeStateDef.Negative":
+                                contact.append(ChannelIndex)
+                                if "ElectrodeAmplitudeInMilliAmps" in channel.keys():
+                                    amplitude.append(channel["ElectrodeAmplitudeInMilliAmps"])
+                                else:
+                                    amplitude.append(therapy[hemisphere]["Amplitude"][i])
+                        
+                        stimulationSetting.amplitude = amplitude
+                        stimulationSetting.contact = contact
+                        stimulationSetting.return_contact = return_contact
+                        
+                        try:
+                            if therapy["GroupSettings"]["Cycling"]["Enabled"]:
+                                stimulationSetting.cycling_period = therapy["GroupSettings"]["Cycling"]["OnDurationInMilliSeconds"] + therapy["GroupSettings"]["Cycling"]["OffDurationInMilliSeconds"]
+                                stimulationSetting.cycling = therapy["GroupSettings"]["Cycling"]["OnDurationInMilliSeconds"] / stimulationSetting.cycling_period
+                            else:
+                                stimulationSetting.cycling = 1
+                        except:
+                            pass
 
-    if len(TheraySavingList) > 0:
-        models.TherapyHistory.objects.bulk_create(TheraySavingList,ignore_conflicts=True)
+                        stimulationSetting.save()
+                        therapyObject.settings.connect(stimulationSetting)
+                        for electrode in device.electrodes:
+                            if hemisphere.startswith(electrode.name.split(" ")[0]):
+                                stimulationSetting.electrode.connect(electrode)
+                                break
 
-    return NewTherapyFound
+                elif therapyObject.stimulation_type == "Standard" or therapyObject.stimulation_type == "BrainSense" or therapyObject.stimulation_type == "Adaptive":
+                    stimulationSetting = models.ElectricalStimulation(amplitude_unit=therapy[hemisphere]["Unit"],
+                                                                    pulsewidth=therapy[hemisphere]["PulseWidth"],
+                                                                    pulsewidth_unit="uS",
+                                                                    frequency=therapy[hemisphere]["Frequency"])
+                    
+                    contact = []
+                    return_contact = []
+                    amplitude = []
+                    for channel in therapy[hemisphere]["Channel"]:
+                        ChannelName, ChannelIndex = Percept.reformatElectrodeDef(channel["Electrode"])
+                        if channel["ElectrodeStateResult"] == "ElectrodeStateDef.Positive":
+                            return_contact.append(ChannelIndex)
+                        elif channel["ElectrodeStateResult"] == "ElectrodeStateDef.Negative":
+                            contact.append(ChannelIndex)
+                            if "ElectrodeAmplitudeInMilliAmps" in channel.keys():
+                                amplitude.append(channel["ElectrodeAmplitudeInMilliAmps"])
+                            else:
+                                amplitude.append(therapy[hemisphere]["Amplitude"])
+                            
+                    stimulationSetting.amplitude = amplitude
+                    stimulationSetting.contact = contact
+                    stimulationSetting.return_contact = return_contact
 
-def queryTherapyHistory(user, device, authority):
-    """ Extract all therapy change logs related to a specific device.
+                    try:
+                        if therapy["GroupSettings"]["Cycling"]["Enabled"]:
+                            stimulationSetting.cycling_period = therapy["GroupSettings"]["Cycling"]["OnDurationInMilliSeconds"] + therapy["GroupSettings"]["Cycling"]["OffDurationInMilliSeconds"]
+                            stimulationSetting.cycling = therapy["GroupSettings"]["Cycling"]["OnDurationInMilliSeconds"] / stimulationSetting.cycling_period
+                        else:
+                            stimulationSetting.cycling = 1
+                    except:
+                        pass
+
+                    stimulationSetting.save()
+                    therapyObject.settings.connect(stimulationSetting)
+                    for electrode in device.electrodes:
+                        if hemisphere.startswith(electrode.name.split(" ")[0]):
+                            stimulationSetting.electrode.connect(electrode)
+                            break
+
+    return NewTherapies
+
+def queryTherapyHistory(participant):
+    """ Extract all therapy change logs in Percept related to a specific participant.
 
     This pipeline go through all therapy change logs and extract the time at which a group changes is made. 
     The pipeline will also extract the actual setting that the device is on before and after changes.
 
     Args:
       user: BRAVO Platform User object. 
-      device: QuerySet Device Object. 
-      authority: User permission structure indicating the type of access the user has.
+      participant: Participant object (for uid). 
 
     Returns:
       List of therapy group history ordered by time. 
     """
 
-    TherapyChangeData = dict()
-    TherapyChangeData["device"] = device.deidentified_id
-    DeviceName = device.device_name
-    if DeviceName == "":
-        DeviceName = str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key)
-    TherapyChangeData["device_name"] = DeviceName
-    TherapyChangeHistory = models.TherapyChangeLog.objects.filter(device_deidentified_id=device.deidentified_id).order_by("date_of_change").all()
-    if len(TherapyChangeHistory) > 0:
-        TherapyChangeHistory = pd.DataFrame.from_records(TherapyChangeHistory.values("date_of_change", "previous_group", "new_group"))
-        TherayHistoryObjs = models.TherapyHistory.objects.filter(device_deidentified_id=device.deidentified_id).order_by("therapy_date").all()
-        TherapyHistory = pd.DataFrame.from_records(TherayHistoryObjs.values("therapy_date", "group_id", "therapy_type","therapy_details"))
-        DateSelection = pd.to_datetime(TherapyChangeHistory["date_of_change"]).view(np.int64) > authority["Permission"][0]*1000000000
-        if authority["Permission"][1] > 0:
-            DateSelection = np.bitwise_and(DateSelection, pd.to_datetime(TherapyChangeHistory["date_of_change"]).view(np.int64) < authority["Permission"][1]*1000000000)
-        TherapyGroupSelection = [not TherapyChangeHistory["previous_group"][i].startswith("TherapyChangeStatusDef") for i in range(len(TherapyChangeHistory["previous_group"]))]
-        
-        if np.sum(TherapyGroupSelection) == 0:
-            return TherapyChangeData
+    TherapyChangeData = list()
+    TherapyChangeHistory = sorted(models.filterNodesByType(participant.events, models.TherapyModification, Q(type="TherapyChangeGroup")), key=lambda item: item.date)
+    TherapyHistoryObjs = sorted(models.filterNodesByType(participant.therapies, models.ElectricalTherapy), key=lambda item: item.date)
+    for device in participant.devices:
+        DeviceTherapyChange = [item for item in TherapyChangeHistory if item.device == device.uid]
+        DeviceTherapyHistory = [item for item in TherapyHistoryObjs if item.device == device.uid]
 
-        TherapyChangeData["date_of_change"] = TherapyChangeHistory["date_of_change"].values[np.bitwise_and(DateSelection, TherapyGroupSelection)].tolist()
-        TherapyChangeData["previous_group"] = TherapyChangeHistory["previous_group"].values[np.bitwise_and(DateSelection, TherapyGroupSelection)].tolist()
-        TherapyChangeData["new_group"] = TherapyChangeHistory["new_group"].values[np.bitwise_and(DateSelection, TherapyGroupSelection)].tolist()
-        
-        TherapyChangeData["date_of_status"] = TherapyChangeHistory["date_of_change"].values[np.bitwise_and(DateSelection, [not i for i in TherapyGroupSelection])].tolist()
-        TherapyChangeData["new_status"] = TherapyChangeHistory["new_group"].values[np.bitwise_and(DateSelection, [not i for i in TherapyGroupSelection])].tolist()
-        TherapyChangeData["previous_status"] = TherapyChangeHistory["previous_group"].values[np.bitwise_and(DateSelection, [not i for i in TherapyGroupSelection])].tolist()
-        TherapyChangeData["previous_status"] = [i == "TherapyChangeStatusDef.ON" for i in TherapyChangeData["previous_status"]]
-        TherapyChangeData["new_status"] = [i == "True" for i in TherapyChangeData["new_status"]]
-
-        VisitTimestamps = np.unique(TherapyHistory["therapy_date"])
+        VisitTimestamps = np.unique([item.date for item in DeviceTherapyHistory])
         for i in range(len(VisitTimestamps)):
-            SessionTime = VisitTimestamps[i].timestamp() * 1000000000
-            for j in range(1, len(TherapyChangeData["date_of_change"])):
-                if TherapyChangeData["date_of_change"][j] > SessionTime:
-                    TherapyChangeData["date_of_change"].insert(j, SessionTime)
-                    TherapyChangeData["previous_group"].insert(j, TherapyChangeData["new_group"][j-1])
-                    TherapyChangeData["new_group"].insert(j, TherapyChangeData["new_group"][j-1])
+            SessionTime = VisitTimestamps[i]
+            for j in range(1, len(DeviceTherapyChange)):
+                if DeviceTherapyChange[j].date > SessionTime:
+                    DeviceTherapyChange.insert(j, models.TherapyModification(date=SessionTime, old_group=DeviceTherapyChange[j-1].new_group,
+                                                                             new_group= DeviceTherapyChange[j-1].new_group))
                     break
-
-        TherapyChangeData["therapy"] = list()
-        for i in range(len(TherapyChangeData["date_of_change"])):
-            DetailTherapy, DetailTherapy_date = getTherapyDetails(TherapyHistory, TherapyChangeData["date_of_change"][i]/1000000000, TherapyChangeData["new_group"][i], "Pre-visit Therapy")
-            BriefTherapy, BriefTherapy_date = getTherapyDetails(TherapyHistory, TherapyChangeData["date_of_change"][i]/1000000000, TherapyChangeData["new_group"][i], "Past Therapy")
-            PostVisitTherapy, PostVisitTherapy_date = getTherapyDetails(TherapyHistory, TherapyChangeData["date_of_change"][i]/1000000000, TherapyChangeData["new_group"][i], "Post-visit Therapy")
-
-            if not DetailTherapy == None and not BriefTherapy == None:
-                if datetime.fromtimestamp(BriefTherapy_date).date() < datetime.fromtimestamp(DetailTherapy_date).date():
-                    TherapyChangeData["therapy"].append(BriefTherapy)
-                else:
-                    TherapyChangeData["therapy"].append(DetailTherapy)
-            
-            elif not DetailTherapy == None:
-                TherapyChangeData["therapy"].append(DetailTherapy)
-
-            elif not PostVisitTherapy == None:
-                TherapyChangeData["therapy"].append(PostVisitTherapy)
-            
-            else:
-                TherapyChangeData["therapy"].append(BriefTherapy)
         
-        if len(TherapyChangeData["date_of_change"]) > 0:
-            for i in range(len(TherapyHistory["therapy_date"])):
-                if TherapyHistory["therapy_date"][i].timestamp() > TherapyChangeData["date_of_change"][-1]/1000000000 and (TherapyHistory["therapy_date"][i].timestamp() < authority["Permission"][1] or authority["Permission"][1] == 0):
-                    TherapyChangeData["date_of_change"].append(TherapyHistory["therapy_date"][i].timestamp()*1000000000)
-                    TherapyChangeData["previous_group"].append(TherapyChangeData["new_group"][-1])
-                    TherapyChangeData["new_group"].append(TherapyChangeData["new_group"][-1])
-
-                    DetailTherapy, DetailTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Pre-visit Therapy")
-                    BriefTherapy, BriefTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Past Therapy")
-                    PostVisitTherapy, PostVisitTherapy_date = getTherapyDetails(TherapyHistory, TherapyHistory["therapy_date"][i].timestamp(), TherapyChangeData["new_group"][-1], "Post-visit Therapy")
-                    
-                    if not DetailTherapy == None and not BriefTherapy == None:
-                        if datetime.fromtimestamp(BriefTherapy_date).date() < datetime.fromtimestamp(DetailTherapy_date).date():
-                            TherapyChangeData["therapy"].append(BriefTherapy)
-                        else:
-                            TherapyChangeData["therapy"].append(DetailTherapy)
-                    
-                    elif not DetailTherapy == None:
-                        TherapyChangeData["therapy"].append(DetailTherapy)
-
-                    elif not PostVisitTherapy == None:
-                        TherapyChangeData["therapy"].append(PostVisitTherapy)
-                    
-                    else:
-                        TherapyChangeData["therapy"].append(BriefTherapy)
-                    
+        TherapyChangeData.append({
+            "device": device.getDeviceName(),
+            "device_inheritance": device.implanted_location,
             # 5 Seconds Adjustment Due to TherapyChangeDate is actually logged slightly later than when the Group is actually changed.
-            TherapyChangeData["date_of_change"] = np.array(TherapyChangeData["date_of_change"]) - 5*1000000000
-
+            "date_of_change": [item.date-5 for item in DeviceTherapyChange],
+            "new_group": [item.new_group.replace("GroupIdDef.","").replace("_"," ").title() for item in DeviceTherapyChange],
+            "old_group": [item.old_group.replace("GroupIdDef.","").replace("_"," ").title() for item in DeviceTherapyChange],
+            "therapy": getTherapyDetails(DeviceTherapyHistory),
+            "electrodes": [electrode.__properties__ for electrode in device.electrodes]
+        })
     return TherapyChangeData
 
-def queryTherapyConfigurations(user, device, TherapyHistoryObjs, authority):
-    TherapyHistory = []
-
-    deviceName = device.device_name
-    if deviceName == "":
-        deviceName = str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key)
-
-    for therapy in TherapyHistoryObjs:
-        TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": deviceName, "DeviceLocation": device.device_location}
-        TherapyInfo["TherapyDate"] = therapy.therapy_date.timestamp()
-        TherapyInfo["TherapyGroup"] = therapy.group_id
-        TherapyInfo["TherapyType"] = therapy.therapy_type
-        TherapyInfo["LogID"] = str(therapy.history_log_id)
-        TherapyInfo["Therapy"] = therapy.therapy_details
-        TherapyInfo["LeadInfo"] = device.device_lead_configurations
-
-        if TherapyInfo["TherapyDate"] > authority["Permission"][0]:
-            if authority["Permission"][1] > 0 and TherapyInfo["TherapyDate"] < authority["Permission"][1]:
-                TherapyHistory.append(TherapyInfo)
-            elif authority["Permission"][1] == 0:
-                TherapyHistory.append(TherapyInfo)
-    return TherapyHistory
-
-def getTherapyDetails(TherapyHistory, timestamp, groupID, typeID):
+def getTherapyDetails(TherapyHistory):
     """ Extract detail therapy configuration of specific group at specific time.
 
     This pipeline will go through all configurations and extract the detail therapy configurations 
@@ -216,111 +292,14 @@ def getTherapyDetails(TherapyHistory, timestamp, groupID, typeID):
       A tuple of Therapy Details dictionary and unix timestamp at which the setting is programmed.
     """
 
-    DateFound = 0
-    if typeID == "Post-visit Therapy":
-        for j in range(len(TherapyHistory["therapy_date"])-1, -1, -1):
-            if TherapyHistory["therapy_type"][j] == typeID:
-                if TherapyHistory["therapy_date"][j].timestamp() < timestamp:
-                    if DateFound == 0:
-                        DateFound = TherapyHistory["therapy_date"][j].timestamp()
-                    elif TherapyHistory["therapy_date"][j].timestamp() < DateFound:
-                        return None, None
-
-                    if TherapyHistory["group_id"][j] == groupID:
-                        therapy_details = copy.deepcopy(TherapyHistory["therapy_details"][j])
-                        if "LeftHemisphere" in therapy_details.keys():
-                            if type(therapy_details["LeftHemisphere"]["Channel"][0]) == list:
-                                for i in range(len(therapy_details["LeftHemisphere"]["Channel"])):
-                                    therapy_details["LeftHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"][i])
-                            else:
-                                therapy_details["LeftHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"])
-                        if "RightHemisphere" in therapy_details.keys():
-                            if type(therapy_details["RightHemisphere"]["Channel"][0]) == list:
-                                for i in range(len(therapy_details["RightHemisphere"]["Channel"])):
-                                    therapy_details["RightHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"][i])
-                            else:
-                                therapy_details["RightHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"])
-                        therapy_details["TherapyDate"] = TherapyHistory["therapy_date"][j].timestamp()
-                        return therapy_details, TherapyHistory["therapy_date"][j].timestamp()
-
-    for j in range(len(TherapyHistory["therapy_date"])):
-        if TherapyHistory["therapy_type"][j] == typeID:
-            if TherapyHistory["therapy_date"][j].timestamp() > timestamp:
-                if DateFound == 0:
-                    DateFound = TherapyHistory["therapy_date"][j].timestamp()
-                elif TherapyHistory["therapy_date"][j].timestamp() > (DateFound + 3600*24):
-                    return None, None
-
-                if TherapyHistory["group_id"][j] == groupID:
-                    therapy_details = copy.deepcopy(TherapyHistory["therapy_details"][j])
-                    if "LeftHemisphere" in therapy_details.keys():
-                        if type(therapy_details["LeftHemisphere"]["Channel"][0]) == list:
-                            for i in range(len(therapy_details["LeftHemisphere"]["Channel"])):
-                                therapy_details["LeftHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"][i])
-                        else:
-                            therapy_details["LeftHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["LeftHemisphere"]["Channel"])
-                    if "RightHemisphere" in therapy_details.keys():
-                        if type(therapy_details["RightHemisphere"]["Channel"][0]) == list:
-                            for i in range(len(therapy_details["RightHemisphere"]["Channel"])):
-                                therapy_details["RightHemisphere"]["Channel"][i] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"][i])
-                        else:
-                            therapy_details["RightHemisphere"]["Channel"] = Percept.reformatStimulationChannel(therapy_details["RightHemisphere"]["Channel"])
-                    therapy_details["TherapyDate"] = TherapyHistory["therapy_date"][j].timestamp()
-                    return therapy_details, TherapyHistory["therapy_date"][j].timestamp()
-    return None, None
-
-def extractTherapyDetails(therapy):
-    """ General pipeline to extract therapy details for visualization. 
-
-    The pipeline will go through all timestamp first to identify all unique programming dates.
-    The unique dates were used to identify all TherapyChangeLog between visits to calculate percent time 
-    for each group in between visit. 
-
-    Then a processed organized dictionary of therapy settings called "Overview" will be generated for each therapy group. 
-
-    Args:
-      TherapyConfigurations: List of therapy configurations ordered by time extracted from ``queryTherapyConfigurations``. 
-      TherapyChangeLog: List of therapy change logs ordered by time extracted from ``queryTherapyHistory``. 
-
-    Returns:
-      A list of processed Therapy Data organized by time and by group.
-    """
-    therapy["Overview"] = dict()
-    if "TherapyDutyPercent" in therapy.keys():
-        totalHours = np.sum([therapy["TherapyDutyPercent"][key] for key in therapy["TherapyDutyPercent"].keys()])
-        if not therapy["Therapy"]["GroupId"] in therapy["TherapyDutyPercent"].keys():
-            therapy["Overview"]["DutyPercent"] = "(0%)"
-        else:
-            therapy["Overview"]["DutyPercent"] = f"({therapy['TherapyDutyPercent'][therapy['Therapy']['GroupId']]/totalHours*100:.2f}%)"
-
-    therapy["Overview"]["GroupName"] = therapy["Therapy"]["GroupId"].replace("GroupIdDef.GROUP_","Group ")
-
-    therapy["Overview"]["TherapyUsage"] = 0
-    for hemisphere in ["LeftHemisphere","RightHemisphere"]:
-        if hemisphere in therapy["Therapy"].keys():
-            if therapy["Therapy"][hemisphere]["Mode"] == "Interleaving":
-                for i in range(len(therapy['Therapy'][hemisphere]['Channel'])):
-                    for contact in therapy['Therapy'][hemisphere]['Channel'][i]:
-                        if contact["ElectrodeStateResult"] == "ElectrodeStateDef.Negative":
-                            ContactPolarity = '-'
-                        elif contact["ElectrodeStateResult"] == "ElectrodeStateDef.Positive":
-                            ContactPolarity = '+'
-                        else:
-                            ContactPolarity = ""
-
-                        ContactName, ContactID = Percept.reformatElectrodeDef(contact["Electrode"])
-                        if not ContactName == "CAN" or len(therapy['Therapy'][hemisphere]['Channel']) == 2:
-                            contact["Electrode"] = ContactName + ContactPolarity
-            else:
-                for contact in therapy['Therapy'][hemisphere]['Channel']:
-                    if contact["ElectrodeStateResult"] == "ElectrodeStateDef.Negative":
-                        ContactPolarity = '-'
-                    elif contact["ElectrodeStateResult"] == "ElectrodeStateDef.Positive":
-                        ContactPolarity = '+'
-                    else:
-                        ContactPolarity = ""
-
-                    ContactName, ContactID = Percept.reformatElectrodeDef(contact["Electrode"])
-                    if not ContactName == "CAN" or len(therapy['Therapy'][hemisphere]['Channel']) == 2:
-                        contact["Electrode"] = ContactName + ContactPolarity
-    return therapy
+    therapyDetails = []
+    for therapy in TherapyHistory:
+        therapyDetail = {"name": therapy.group_name, "mode": therapy.stimulation_type, 
+                           "date": therapy.date, "type": therapy.type, 
+                           "channel": therapy.name.replace(" DBS Setting",""),
+                           "settings": []}
+        for setting in therapy.settings:
+            stimSetting = setting.__properties__
+            therapyDetail["settings"].append(stimSetting)
+        therapyDetails.append(therapyDetail)
+    return therapyDetails

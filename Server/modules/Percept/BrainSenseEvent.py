@@ -32,48 +32,40 @@ from utility import SignalProcessingUtility as SPU
 from utility.PythonUtility import *
 
 from Backend import models
-from modules import Database, Therapy
+from modules import Database
 
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveBrainSenseEvents(deviceID, LfpFrequencySnapshotEvents, sourceFile):
-    """ Save BrainSense Events Data in MySQL Database.
+def saveBrainSenseEvents(participant, device, LfpFrequencySnapshotEvents):
+    """ Save BrainSense Events Data in NoSQL Database.
 
     Args:
-      deviceID: UUID4 deidentified id for each unique Percept device.
+      participant: Study participant model
+      device: Recording device model
       LfpFrequencySnapshotEvents: Event-snapshot Power Spectrum data extracted from Medtronic JSON file.
-      sourceFile: filename of the raw JSON file that the original data extracted from.
 
     Returns:
       Boolean indicating if new data is found (to be saved).
     """
 
-    NewRecordingFound = False
-    batchStorage = list()
+    NewRecordings = []
+
     for event in LfpFrequencySnapshotEvents:
-        EventTime = datetime.fromtimestamp(Percept.getTimestamp(event["DateTime"]),tz=pytz.utc)
+        EventTime = event["DateTime"].timestamp()
         SensingExist = False
         if "LfpFrequencySnapshotEvents" in event.keys():
             SensingExist = True
             EventData = event["LfpFrequencySnapshotEvents"]
 
-        if not models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist).exists():
-            customEvent = models.PatientCustomEvents(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist, source_file=sourceFile)
+        if len(participant.events.filter(name=event["EventName"], type="PatientControllerEvent", date=EventTime)) == 0:
+            event = models.BaseEvent(name=event["EventName"], type="PatientControllerEvent", date=EventTime).save()
             if SensingExist:
-                customEvent.neural_psd = EventData
-            batchStorage.append(customEvent)
-        else:
-            if SensingExist:
-                customEvent = models.PatientCustomEvents.objects.filter(device_deidentified_id=deviceID, event_name=event["EventName"], event_time=EventTime, sensing_exist=SensingExist).first()
-                if len(customEvent.neural_psd.keys()) == 0:
-                    customEvent.neural_psd = EventData
-                    customEvent.save()
-
-    if len(batchStorage) > 0:
-        NewRecordingFound = True
-        models.PatientCustomEvents.objects.bulk_create(batchStorage,ignore_conflicts=True)
-
-    return NewRecordingFound
+                recording = models.InMemoryRecording(type="PatientControllerEvent", date=EventTime, in_memory_storage=EventData).save()
+                recording.devices.connect(device)
+                event.data.connect(recording)
+            participant.events.connect(event)
+            NewRecordings.append(event)
+    return NewRecordings
 
 def queryPatientEventPSDsByTime(user, patientUniqueID, timeRange, authority):
     PatientEventPSDs = list()
@@ -121,58 +113,7 @@ def queryPatientEventPSDsByTime(user, patientUniqueID, timeRange, authority):
     return PatientEventPSDs
 
 def queryPatientEventPSDs(user, patientUniqueID, TherapyHistory, authority):
-    PatientEventPSDs = list()
-    if not authority["Permission"]:
-        return PatientEventPSDs
-
-    availableDevices = Database.getPerceptDevices(user, patientUniqueID, authority)
-    TherapyConfigurations = Therapy.queryTherapyConfigurations(user, patientUniqueID, authority, therapyType="Past Therapy")
-    for device in availableDevices:
-        EventPSDs = models.PatientCustomEvents.objects.filter(device_deidentified_id=device.deidentified_id, sensing_exist=True).all()
-        if len(EventPSDs) > 0:
-            leads = device.device_lead_configurations
-            for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
-                if device.device_name == "":
-                    PatientEventPSDs.append({"Device": str(device.deidentified_id) if not (user.is_admin or user.is_clinician) else device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "Therapy": list()})
-                else:
-                    PatientEventPSDs.append({"Device": device.device_name, "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "Therapy": list()})
-
-                for lead in leads:
-                    if lead["TargetLocation"].startswith(hemisphere.replace("HemisphereLocationDef.","")):
-                        PatientEventPSDs[-1]["Hemisphere"] = lead["TargetLocation"]
-
-                TherapyKey = hemisphere.replace("HemisphereLocationDef.","") + "Hemisphere"
-                for eventPSD in EventPSDs:
-                    if hemisphere in eventPSD.neural_psd.keys():
-                        EventTimestamp = Percept.getTimestamp(eventPSD.neural_psd[hemisphere]["DateTime"])
-                        if EventTimestamp > authority["Permission"][0]:
-                            if authority["Permission"][1] > 0 and EventTimestamp < authority["Permission"][1]:
-                                for therapy in TherapyConfigurations:
-                                    if therapy["DeviceID"] == str(device.deidentified_id) and therapy["TherapyGroup"] == eventPSD.neural_psd[hemisphere]["GroupId"] and therapy["TherapyDate"] > EventTimestamp and TherapyKey in therapy["Therapy"].keys():
-                                        PatientEventPSDs[-1]["Therapy"].append(therapy["Therapy"][TherapyKey])
-                                        if len(eventPSD.neural_psd[hemisphere]["FFTBinData"]) < 100: 
-                                            eventPSD.neural_psd[hemisphere]["FFTBinData"].extend([0 for i in range(100-len(eventPSD.neural_psd[hemisphere]["FFTBinData"]))])
-                                        PatientEventPSDs[-1]["PSDs"].append(eventPSD.neural_psd[hemisphere]["FFTBinData"])
-                                        PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
-                                        break
-                            elif authority["Permission"][1] == 0:
-                                for therapy in TherapyConfigurations:
-                                    if therapy["DeviceID"] == str(device.deidentified_id) and therapy["TherapyGroup"] == eventPSD.neural_psd[hemisphere]["GroupId"] and therapy["TherapyDate"] > EventTimestamp and TherapyKey in therapy["Therapy"].keys():
-                                        PatientEventPSDs[-1]["Therapy"].append(therapy["Therapy"][TherapyKey])
-                                        if len(eventPSD.neural_psd[hemisphere]["FFTBinData"]) < 100: 
-                                            eventPSD.neural_psd[hemisphere]["FFTBinData"].extend([0 for i in range(100-len(eventPSD.neural_psd[hemisphere]["FFTBinData"]))])
-                                        PatientEventPSDs[-1]["PSDs"].append(eventPSD.neural_psd[hemisphere]["FFTBinData"])
-                                        PatientEventPSDs[-1]["EventName"].append(eventPSD.event_name)
-                                        break
-
-    i = 0
-    while i < len(PatientEventPSDs):
-        if not "Hemisphere" in PatientEventPSDs[i]:
-            del(PatientEventPSDs[i])
-        else:
-            i += 1
-
-    return PatientEventPSDs
+    pass
 
 def processEventPSDs(PatientEventPSDs):
     def formatTherapyString(Therapy):

@@ -20,33 +20,15 @@ import MuiAlertDialog from "components/MuiAlertDialog"
 //import { Manager } from "socket.io-client"
 
 export const SessionController = (function () {
-  //let server = "https://bravo-server.jcagle.solutions";
-  let server = "http://localhost:3001";
+  let server = "https://localhost";
   let connectionStatus = false;
 
   let synced = false;
   let session = {language: "en"};
   let user = {};
-  let authToken = "";
-  let refreshToken = "";
   let serverVersion = "";
-
-  const setAuthToken = (token) => {
-    authToken = token;
-  };
-
-  const getAuthToken = () => {
-    return authToken;
-  };
-
-  const setRefreshToken = (token) => {
-    refreshToken = token;
-    localStorage.setItem("refreshToken", refreshToken);
-  };
-
-  const getRefreshToken = () => {
-    return refreshToken;
-  };
+  let decryptionPassword = null;
+  let decryptionShift = 0;
 
   const setServer = (address) => {
     server = address;
@@ -57,6 +39,37 @@ export const SessionController = (function () {
     return server;
   };
 
+  const setDecryptionPassword = (password, shift) => {
+    if (password == "") {
+      decryptionPassword = null;
+      decryptionShift = 0;
+      return;
+    };
+
+    decryptionPassword = new fernet.Secret(password);
+    decryptionShift = shift;
+  };
+
+  const decodeMessage = (text) => {
+    if (!decryptionPassword) return text;
+
+    var token = new fernet.Token({
+      secret: decryptionPassword,
+      token: text,
+      ttl: 0
+    });
+    try {
+      token.decode();
+      return token.message;
+    } catch {
+      return text;
+    }
+  };
+
+  const decodeTimestamp = (time) => {
+    return Math.round(time + decryptionShift);
+  }
+
   const getConnectionStatus = () => {
     return {
       version: serverVersion,
@@ -65,17 +78,27 @@ export const SessionController = (function () {
   };
 
   const query = (url, form, config, timeout, responseType) => {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
     return axios.post(server + url, form, {
       timeout: timeout,
       responseType: responseType,
       headers: {
-        "Authorization": authToken === "" ? null : "Bearer " + authToken,
         ...config,
+        "X-CSRFToken": csrftoken
       }
     });
   };
 
   const displayError = (error, setAlert) => {
+    if (typeof(error) === "string" && setAlert) {
+      setAlert(
+        <MuiAlertDialog title={"ERROR"} message={error}
+          handleClose={() => setAlert()} 
+          handleConfirm={() => setAlert()}/>
+      );
+      return;
+    }
     if (setAlert && error.response) {
       var errorMessage = dictionary.ErrorMessage.UNKNOWN_ERROR[session.language];
       if (error.response.status === 500) {
@@ -96,8 +119,6 @@ export const SessionController = (function () {
           console.log(error.response.data);
         }
       } else if (error.response.status == 401) {
-        setAuthToken("");
-        setRefreshToken("");
         errorMessage = dictionary.ErrorMessage["CONNECTION_TIMEDOUT"][session.language]
       } else {
         console.log(error);
@@ -114,9 +135,7 @@ export const SessionController = (function () {
 
   const verifyServerAddress = async (storedServer) => {
     // Reset Credentials in case of 401
-    authToken = "";
     server = storedServer;
-
     connectionStatus = false;
     try {
       const response = await query("/api/handshake", {}, {}, 2000);
@@ -138,29 +157,11 @@ export const SessionController = (function () {
   };
 
   const refreshAuthToken = async () => {
-    if (refreshToken === "") return {status: 500};
-
     try {
-      const refreshResponse = await query("/api/authRefresh", {
-        refresh: refreshToken
-      });
-      setAuthToken(refreshResponse.data.access);
+      const refreshResponse = await query("/api/authRefresh");
       return refreshResponse;
     } catch(error) {
-      setAuthToken("");
-      setRefreshToken("");
       return error;
-    }
-  };
-
-  const verifyToken = async (token) => {
-    // Token can be empty, which is common if you are not logged in.
-    if (token === "") return;
-
-    refreshToken = token;
-    const response = await refreshAuthToken();
-    if (response.status !== 200) {
-      setRefreshToken("");
     }
   };
 
@@ -172,15 +173,8 @@ export const SessionController = (function () {
       session: session,
     });
     session = {...session, ...response.data.session};
-
-    if (!Object.keys(session).includes("IndefiniteStreamLayout")) {
-      session.BrainSenseSurveyLayout = {};
-      session.BrainSensestreamLayout = {};
-      session.IndefiniteStreamLayout = {};
-      session.ChronicBrainSenseLayout = {};
-    }
-
     localStorage.setItem("sessionContext", JSON.stringify(session));
+
     user = response.data.user;
     return getSession();
   };
@@ -216,7 +210,7 @@ export const SessionController = (function () {
   };
 
   const handShake = async () => {
-    if (Object.keys(user).length === 0 || refreshToken === "") {
+    if (Object.keys(user).length === 0) {
       return false;
     }
     
@@ -234,25 +228,16 @@ export const SessionController = (function () {
   };
 
   const register = (username, email, password, institute) => {
-    return query("/api/registration", {UserName: username, Email: email, Institute: institute, Password: password});
+    return query("/api/registration", {UserName: username, Email: email, Password: password});
   };
 
   const logout = () => {
-    return query("/api/logout", {
-      refresh: refreshToken,
-    });
+    return query("/api/logout");
   };
 
   const nullifyUser = () => {
     user = {};
     session = {};
-    authToken = "";
-    if (localStorage.getItem("accessToken")) {
-      localStorage.setItem("accessToken", authToken);
-    }
-    if (localStorage.getItem("refreshToken")) {
-      localStorage.setItem("refreshToken", refreshToken);
-    }
     if (localStorage.getItem("sessionContext")) {
       localStorage.setItem("sessionContext", session);
     }
@@ -266,20 +251,14 @@ export const SessionController = (function () {
     return user;
   };
 
-  const setPatientID = async (id) => {
+  const setParticipantUID = async (id) => {
     try {
-      await query("/api/setPatientID", { id: id });  
-      session.patientID = id;
+      await query("/api/CheckAccessPermission", { participant_uid: id });  
+      session.participant_uid = id;
       return true;
     } catch (error) {
       return false;
     }
-  };
-
-  const getPatientInfo = (patientID) => {
-    return query("/api/queryPatientInfo", {
-      id: patientID
-    });
   };
 
   const setPageIndex = (type, index) => {
@@ -287,17 +266,15 @@ export const SessionController = (function () {
   };
 
   return {
-    setAuthToken: setAuthToken,
-    getAuthToken: getAuthToken,
-    setRefreshToken: setRefreshToken,
-    getRefreshToken: getRefreshToken,
     refreshAuthToken: refreshAuthToken,
     setServer: setServer,
     getServer: getServer,
+    setDecryptionPassword: setDecryptionPassword,
+    decodeTimestamp: decodeTimestamp,
+    decodeMessage: decodeMessage,
     getConnectionStatus: getConnectionStatus,
 
     verifyServerAddress: verifyServerAddress,
-    verifyToken: verifyToken,
 
     query: query,
     displayError: displayError,
@@ -317,8 +294,7 @@ export const SessionController = (function () {
     getUser: getUser,
     setUser: setUser,
 
-    setPatientID: setPatientID,
-    getPatientInfo: getPatientInfo,
+    setParticipantUID: setParticipantUID,
     setPageIndex: setPageIndex
   }
 

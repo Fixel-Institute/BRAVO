@@ -4,7 +4,7 @@
 * UF BRAVO Platform
 =========================================================
 
-* Copyright 2023 by Jackson Cagle, Fixel Institute
+* Copyright 2024 by Jackson Cagle, Fixel Institute
 * The source code is made available under a Creative Common NonCommercial ShareAlike License (CC BY-NC-SA 4.0) (https://creativecommons.org/licenses/by-nc-sa/4.0/) 
 
  =========================================================
@@ -24,6 +24,10 @@ import rest_framework.parsers as RestParsers
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.conf import settings
+
 from modules import Database
 import json
 from copy import deepcopy
@@ -42,8 +46,9 @@ defaultSessionConfigs = {
 
 def formatRequestSession(session):
     formattedSession = dict()
-    if "patient_deidentified_id" in session.keys():
-        formattedSession["patientID"] = session["patient_deidentified_id"]
+    #TODO: Verify all patient_deidentified_id will be updated in final version
+    if "subject_deidentified_id" in session.keys():
+        formattedSession["subjectID"] = session["subject_deidentified_id"]
 
     for key in defaultSessionConfigs.keys():
         if key in session.keys():
@@ -57,57 +62,45 @@ def formatRequestSession(session):
     return formattedSession
 
 class QuerySessionConfigs(RestViews.APIView):
-    parser_classes = [RestParsers.JSONParser]
     permission_classes = [AllowAny]
+    parser_classes = [RestParsers.JSONParser]
+    
+    @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
         if request.user.is_authenticated:
-            request.user.configuration["ProcessingSettings"], changed = Database.retrieveProcessingSettings(request.user.configuration)
-            if not changed:
-                request.user.save()
+            userConfig = request.user.getConfiguration()
+            userConfig["ProcessingSettings"], changed = Database.retrieveProcessingSettings(userConfig)
+            if changed:
+                request.user.setConfiguration(userConfig)
 
-            userSession = formatRequestSession(request.user.configuration)
+            userSession = formatRequestSession(userConfig)
             for key in request.data["session"].keys():
                 if not key in userSession.keys():
                     userSession[key] = request.data["session"][key]
             return Response(status=200, data={"session": userSession, "user": Database.extractUserInfo(request.user)})
         
         userSession = formatRequestSession({})
-        return Response(status=200, data={"session": userSession, "user": {}})
+
+        response = Response(status=200)
+        response.delete_cookie("refreshToken")
+        response.delete_cookie("accessToken")
+        response.data = {"session": userSession, "user": {}}
+        return response
 
 class UpdateSessionConfig(RestViews.APIView):
-    parser_classes = [RestParsers.JSONParser]
     permission_classes = [AllowAny]
+    parser_classes = [RestParsers.JSONParser]
+
+    @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
         if request.user.is_authenticated:
-            request.user.configuration["ProcessingSettings"], _ = Database.retrieveProcessingSettings(request.user.configuration)
+            userConfig = request.user.getConfiguration()
+            userConfig["ProcessingSettings"], _ = Database.retrieveProcessingSettings(userConfig)
 
             for key in request.data.keys():
-                if key in ["language","miniSidenav","darkMode"]:
-                    request.user.configuration[key] = request.data[key]
+                if key in defaultSessionConfigs.keys():
+                    if key in request.data.keys():
+                        userConfig[key] = request.data[key]
 
-                if key in ["BrainSenseSurvey", "RealtimeStream"]:
-                    print(request.user.configuration["ProcessingSettings"][key])
-                    for subkey in request.data[key]:
-                        if request.data[key][subkey]["value"] in request.user.configuration["ProcessingSettings"][key][subkey]["options"]:
-                            request.user.configuration["ProcessingSettings"][key][subkey]["value"] = request.data[key][subkey]["value"]
-
-            request.user.save()
+            request.user.setConfiguration(userConfig)
         return Response(status=200)
-
-class SetPatientID(RestViews.APIView):
-    parser_classes = [RestParsers.JSONParser]
-    permission_classes = [IsAuthenticated]
-    def post(self, request):
-        if request.user.is_authenticated:
-            Authority = {}
-            Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 0:
-                return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-
-            if Authority["Level"] == 1:
-                return Response(status=200)
-
-            elif Authority["Level"] == 2:
-                return Response(status=200)
-
-        return Response(status=403, data={"code": ERROR_CODE["PERMISSION_DENIED"]})

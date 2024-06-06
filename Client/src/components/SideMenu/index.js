@@ -31,7 +31,7 @@ const SideMenu = ({ color, brand, brandName, routes, ...rest }) => {
   const [openCollapse, setOpenCollapse] = useState(false);
   const [openNestedCollapse, setOpenNestedCollapse] = useState(false);
   const [controller, dispatch] = usePlatformContext();
-  const { miniSidenav, transparentSidenav, hideSidenav, showSidenav, whiteSidenav, language, darkMode, user } = controller;
+  const { miniSidenav, transparentSidenav, hideSidenav, showSidenav, whiteSidenav, language, darkMode, user, report } = controller;
 
   const location = useLocation();
   const { pathname } = location;
@@ -110,22 +110,18 @@ const SideMenu = ({ color, brand, brandName, routes, ...rest }) => {
   };
 
   // Render all the routes from the routes.js (All the visible items on the Sidenav)
-  const renderRoutes = routes.map(({ type, name, icon, title, collapse, noCollapse, key, href, route, identified, deidentified }) => {
+  const renderRoutes = routes.map(({ type, name, icon, title, collapse, noCollapse, key, href, route, report_type }) => {
     let returnValue;
-
-    if (type === "collapse") {
-      if (!user.Clinician) {
-        if (!deidentified) return returnValue;
-      } else {
-        if (!identified) return returnValue;
-      }
-    }
 
     var nameString = "";
     if (Object.keys(dictionary.Routes).includes(name)) {
       nameString = dictionary.Routes[name][language];
     } else {
       nameString = name;
+    }
+
+    if (report_type && (report_type != report)) {
+      return returnValue;
     }
 
     if (type === "collapse") {

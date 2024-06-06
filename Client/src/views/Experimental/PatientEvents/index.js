@@ -69,7 +69,6 @@ function PatientEvents() {
         id: patientID
       }).then((response) => {
         setAnnotations(response.data.ClinicianEvents);
-        console.log(response.data)
         setData(response.data.EventPSDs);
         setAlert(null);
       }).catch((error) => {

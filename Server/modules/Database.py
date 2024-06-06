@@ -4,7 +4,7 @@
 * UF BRAVO Platform
 =========================================================
 
-* Copyright 2023 by Jackson Cagle, Fixel Institute
+* Copyright 2024 by Jackson Cagle, Fixel Institute
 * The source code is made available under a Creative Common NonCommercial ShareAlike License (CC BY-NC-SA 4.0) (https://creativecommons.org/licenses/by-nc-sa/4.0/) 
 
  =========================================================
@@ -22,23 +22,21 @@ import os, sys, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.parent.resolve())
 
 from datetime import datetime, date, timedelta
-import pickle, joblib
+import pickle, blosc
 import dateutil, pytz
 import numpy as np
 import pandas as pd
 from cryptography.fernet import Fernet
 import scipy.io as sio
 import json
-import blosc
 
 from Backend import models
-from decoder import Percept
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
 def retrieveProcessingSettings(config=dict()):
     options = {
-        "RealtimeStream": {
+        "TimeSeriesRecording": {
             "SpectrogramMethod": {
                 "name": "Time-Frequency Analysis Algorithm",
                 "description": "",
@@ -58,27 +56,7 @@ def retrieveProcessingSettings(config=dict()):
                 "value": "false"
             },
         },
-        "IndefiniteStream": {
-            "SpectrogramMethod": {
-                "name": "Time-Frequency Analysis Algorithm",
-                "description": "",
-                "options": ["Welch","Spectrogram","Wavelet"],
-                "value": "Spectrogram"
-            },
-            "PSDMethod": {
-                "name": "Stimulation Epoch Power Spectrum Algorithm",
-                "description": "",
-                "options": ["Welch","Time-Frequency Analysis"],
-                "value": "Welch"
-            },
-            "NormalizedPSD": {
-                "name": "Normalize Stimulation Epoch Power Spectrum",
-                "description": "",
-                "options": ["true", "false"],
-                "value": "false"
-            },
-        },
-        "BrainSenseSurvey": {
+        "PowerSpectralDensity": {
             "PSDMethod": {
                 "name": "Power Spectrum Estimation Algorithm",
                 "description": "",
@@ -95,10 +73,10 @@ def retrieveProcessingSettings(config=dict()):
     }
 
     if not "ProcessingSettings" in config.keys():
-        return options, False
+        return options, True
     
     if not type(config["ProcessingSettings"]) == dict:
-        return options, False
+        return options, True
 
     for key in config["ProcessingSettings"].keys():
         if type(config["ProcessingSettings"][key]) == dict:
@@ -107,15 +85,14 @@ def retrieveProcessingSettings(config=dict()):
                     if config["ProcessingSettings"][key][subkey]["name"] == options[key][subkey]["name"] and config["ProcessingSettings"][key][subkey]["description"] == options[key][subkey]["description"] and config["ProcessingSettings"][key][subkey]["options"] == options[key][subkey]["options"]:
                         options[key][subkey]["value"] = config["ProcessingSettings"][key][subkey]["value"]
     
-    return options, options==config["ProcessingSettings"]
+    return options, not (options==config["ProcessingSettings"])
 
 def extractUserInfo(user):
     userInfo = dict()
     userInfo["Name"] = user.user_name
     userInfo["Email"] = user.email
-    userInfo["Institute"] = user.institute
-    userInfo["Clinician"] = user.is_clinician
-    userInfo["Admin"] = user.is_admin
+    userInfo["Clinician"] = False
+    userInfo["Admin"] = False
     return userInfo
 
 def extractInstituteInfo():
@@ -157,96 +134,6 @@ def getAllResearchUsers():
     for user in users:
         ResearchUserList.append({"Username": user.email, "FirstName": user.first_name, "LastName": user.last_name, "ID": user.unique_user_id})
     return ResearchUserList
-
-def getDeidentificationLookupTable(user, key):
-    identifierTable = []
-    table = models.DeidentifiedPatientTable.objects.filter(researcher_id=user.unique_user_id).first()
-    if not table:
-        return identifierTable
-
-    try:
-        secureEncoder = Fernet(key)
-        text = secureEncoder.decrypt(table.lookup_table.encode("utf-8")).decode("utf-8")
-        dictionary = json.loads(text)
-        return dictionary
-
-    except Exception as e:
-        print(e)
-        return identifierTable
-
-def saveDeidentificationLookupTable(user, table, key):
-    existTable = models.DeidentifiedPatientTable.objects.filter(researcher_id=user.unique_user_id).first()
-    secureEncoder = Fernet(key)
-    
-    if not existTable:
-        secureText = secureEncoder.encrypt(json.dumps(table).encode("utf-8")).decode("utf-8")
-        models.DeidentifiedPatientTable(researcher_id=user.unique_user_id, lookup_table=secureText).save()
-    
-    else:
-        try:
-            secureText = secureEncoder.encrypt(json.dumps(table).encode("utf-8")).decode("utf-8")
-            existTable.lookup_table = secureText
-            existTable.save()
-
-        except Exception as e:
-            print(e)
-        
-def AuthorizeResearchAccess(user, researcher_id, patient_id, permission, authorized_time_range=[0,0]):
-    if permission:
-        if not models.DeidentifiedPatientID.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id).exists():
-            identified_patient = models.Patient.objects.get(deidentified_id=patient_id)
-            patient = models.Patient(first_name=patient_id, last_name="Deidentified", birth_date=datetime.now(tz=pytz.utc), diagnosis="", medical_record_number="", institute=researcher_id)
-            patient.save()
-            models.DeidentifiedPatientID(researcher_id=researcher_id, authorized_patient_id=patient_id, deidentified_id=patient.deidentified_id, authorized_time_range={
-                "TherapyHistory": authorized_time_range,
-                "BrainSenseSurvey": authorized_time_range,
-                "BrainSenseStreamTimeDomain": authorized_time_range,
-                "BrainSenseStreamPowerDomain": authorized_time_range,
-                "IndefiniteStream": authorized_time_range,
-                "ChronicLFPs": authorized_time_range
-            }).save()
-    else:
-        if models.DeidentifiedPatientID.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id).exists():
-            DeidentifiedID = models.DeidentifiedPatientID.objects.get(researcher_id=researcher_id, authorized_patient_id=patient_id)
-            if models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id).exists():
-                models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id).all().delete()
-            models.Patient.objects.filter(institute=researcher_id, deidentified_id=DeidentifiedID.deidentified_id).all().delete()
-            models.DeidentifiedPatientID.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id).all().delete()
-
-def AuthorizeRecordingAccess(user, researcher_id, patient_id, recording_id="", recording_type="", permission=True):
-    if recording_id == "":
-        if permission:
-            if recording_type == "TherapyHistory":
-                if not models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type).exists():
-                    models.ResearchAuthorizedAccess(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type).save()
-            elif recording_type == "ChronicLFPs":
-                if not models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type).exists():
-                    models.ResearchAuthorizedAccess(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type).save()
-            else:
-                DeidentifiedPatientID = models.DeidentifiedPatientID.objects.get(researcher_id=researcher_id, authorized_patient_id=patient_id)
-                if recording_type not in DeidentifiedPatientID.authorized_time_range.keys():
-                    CurrentStruct = DeidentifiedPatientID.authorized_time_range
-                    CurrentStruct[recording_type] = [0, datetime.utcnow().timestamp()]
-                    DeidentifiedPatientID.authorized_time_range = CurrentStruct
-                    DeidentifiedPatientID.save()
-
-                TimeRange = [datetime.fromtimestamp(timestamp) for timestamp in DeidentifiedPatientID.authorized_time_range[recording_type]]
-                AvailableDevices = models.PerceptDevice.objects.filter(patient_deidentified_id=patient_id).all()
-                for device in AvailableDevices:
-                    AvailableRecordings = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id, recording_type=recording_type, recording_date__gte=TimeRange[0], recording_date__lte=TimeRange[1]).order_by("-recording_date").all()
-                    for recording in AvailableRecordings:
-                        if not models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type, authorized_recording_id=recording.recording_id).exists():
-                            models.ResearchAuthorizedAccess(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type, authorized_recording_id=recording.recording_id).save()
-        else:
-            if models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type).exists():
-                models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_type=recording_type).all().delete()
-    else:
-        if permission:
-            if not models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_id=recording_id).exists():
-                models.ResearchAuthorizedAccess(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_id=recording_id).save()
-        else:
-            if models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_id=recording_id).exists():
-                models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_id=recording_id).all().delete()
 
 def extractPatientTableRow(user, patient, deidentifiedId=None):
     key = os.environ.get('ENCRYPTION_KEY')
@@ -579,18 +466,6 @@ def saveResultMATFiles(datastruct, datatype, info, id, device_id):
     sio.savemat(DATABASE_PATH + "recordings" + os.path.sep + filename, datastruct, long_field_names=True)
     return filename
 
-def saveSourceFiles(datastruct, datatype, info, id, device_id):
-    try:
-        os.mkdir(DATABASE_PATH + "recordings" + os.path.sep + str(device_id))
-    except Exception:
-        pass
-
-    filename = str(device_id) + os.path.sep + datatype + "_" + info + "_" + str(id) + ".bpkl"
-    pData = pickle.dumps(datastruct)
-    with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
-        file.write(blosc.compress(pData))
-    return filename
-
 def loadSourceDataPointer(filename, bytes=False):
     with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "rb") as file:
         if bytes:
@@ -600,7 +475,7 @@ def loadSourceDataPointer(filename, bytes=False):
                 datastruct = pickle.load(file)
             elif filename.endswith(".bpkl"):
                 datastruct = pickle.loads(blosc.decompress(file.read()))
-            else:
+            elif filename.endswith(".mat"):
                 datastruct = sio.loadmat(file, simplify_cells=True)["ProcessedData"]
     return datastruct
 
@@ -609,3 +484,16 @@ def deleteSourceDataPointer(filename):
         os.remove(DATABASE_PATH + "recordings" + os.path.sep + filename)
     except:
         pass
+
+def saveSourceFiles(datastruct, datatype="", uid="", participant_id="", filename=None):
+    pData = pickle.dumps(datastruct)
+    if filename:
+        with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
+            file.write(blosc.compress(pData))
+        return filename
+    
+    os.makedirs(DATABASE_PATH + "recordings" + os.path.sep + str(participant_id), exist_ok=True)
+    filename = str(participant_id) + os.path.sep + datatype + "_" + str(uid) + ".bpkl"
+    with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
+        file.write(blosc.compress(pData))
+    return filename

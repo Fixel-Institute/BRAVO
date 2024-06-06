@@ -21,7 +21,6 @@ Python Module for BrainSense Streaming
 
 import os, sys, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.parent.resolve())
-sys.path.append(os.environ.get("PYTHON_UTILITY"))
 
 import json
 import uuid
@@ -30,7 +29,7 @@ import copy
 from shutil import copyfile, rmtree
 from datetime import datetime, date, timedelta
 import dateutil, pytz
-import pickle, joblib
+import pickle
 import pandas as pd
 
 from scipy import signal, stats, optimize, interpolate
@@ -45,7 +44,7 @@ from modules import Database
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
+def saveBrainSenseStreams(participant, device, StreamingTD, StreamingPower):
     """ Save BrainSense Streaming Data in Database Storage
 
     Args:
@@ -234,38 +233,34 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
     
     TimeDomainRecordingModel = []
     for i in range(len(TimeDomainRecordings)):
-        recording_date = datetime.fromtimestamp(TimeDomainRecordings[i]["StartTime"]).astimezone(tz=pytz.utc)
-        recording_info = {"Channel": TimeDomainRecordings[i]["ChannelNames"]}
-        if not models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="BrainSenseStreamTimeDomain", recording_date=recording_date, recording_info__Channel=TimeDomainRecordings[i]["ChannelNames"]).exists():
-            recording = models.NeuralActivityRecording(device_deidentified_id=deviceID, recording_date=recording_date, source_file=sourceFile, recording_type="BrainSenseStreamTimeDomain", recording_info=recording_info)
-            filename = Database.saveSourceFiles(TimeDomainRecordings[i], "BrainSenseStreamTimeDomain", "Raw", recording.recording_id, recording.device_deidentified_id)
-            recording.recording_datapointer = filename
-            recording.recording_duration = TimeDomainRecordings[i]["Duration"]
+        recording = device.recordings.get_or_none(type="BrainSenseTimeDomain", date=TimeDomainRecordings[i]["StartTime"])
+        if not recording:
+            recording = models.TimeSeriesRecording(type="BrainSenseTimeDomain", date=TimeDomainRecordings[i]["StartTime"], 
+                                                    sampling_rate=TimeDomainRecordings[i]["SamplingRate"], duration=TimeDomainRecordings[i]["Duration"]).save()
+            filename = Database.saveSourceFiles(TimeDomainRecordings[i], "BrainSenseTimeDomain", recording.uid, participant.uid)
+            recording.channel_names = TimeDomainRecordings[i]["ChannelNames"]
+            recording.data_pointer = filename
             recording.save()
-            TimeDomainRecordingModel.append(recording)
-            NewRecordingFound = True
-        else:
-            recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="BrainSenseStreamTimeDomain", recording_date=recording_date, recording_info__Channel=TimeDomainRecordings[i]["ChannelNames"]).first()
-            TimeDomainRecordingModel.append(recording)
+            recording.devices.connect(device)
+            device.recordings.connect(recording)
+        TimeDomainRecordingModel.append(recording)
 
     PowerDomainRecordingModel = []
     for i in range(len(PowerDomainRecordings)):
-        recording_date = datetime.fromtimestamp(PowerDomainRecordings[i]["StartTime"]).astimezone(tz=pytz.utc)
-        recording_info = {"Channel": PowerDomainRecordings[i]["ChannelNames"]}
-        if not models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="BrainSenseStreamPowerDomain", recording_date=recording_date, recording_info__Channel=PowerDomainRecordings[i]["ChannelNames"]).exists():
-            recording = models.NeuralActivityRecording(device_deidentified_id=deviceID, recording_date=recording_date, source_file=sourceFile, recording_type="BrainSenseStreamPowerDomain", recording_info=recording_info)
-            filename = Database.saveSourceFiles(PowerDomainRecordings[i], "BrainSenseStreamPowerDomain", "Raw", recording.recording_id, recording.device_deidentified_id)
-            recording.recording_datapointer = filename
-            recording.recording_duration = PowerDomainRecordings[i]["Duration"]
+        recording = device.recordings.get_or_none(type="BrainSensePowerDomain", date=PowerDomainRecordings[i]["StartTime"])
+        if not recording:
+            recording = models.TimeSeriesRecording(type="BrainSensePowerDomain", date=PowerDomainRecordings[i]["StartTime"], 
+                                                    sampling_rate=PowerDomainRecordings[i]["SamplingRate"], duration=PowerDomainRecordings[i]["Duration"]).save()
+            filename = Database.saveSourceFiles(PowerDomainRecordings[i], "BrainSensePowerDomain", recording.uid, participant.uid)
+            recording.data_pointer = filename
+            recording.channel_names = PowerDomainRecordings[i]["ChannelNames"]
             recording.save()
-            PowerDomainRecordingModel.append(recording)
-            NewRecordingFound = True
-        else:
-            recording = models.NeuralActivityRecording.objects.filter(device_deidentified_id=deviceID, recording_type="BrainSenseStreamPowerDomain", recording_date=recording_date, recording_info__Channel=PowerDomainRecordings[i]["ChannelNames"]).first()
-            PowerDomainRecordingModel.append(recording)
+            recording.devices.connect(device)
+            device.recordings.connect(recording)
+        PowerDomainRecordingModel.append(recording)
 
     for i in range(len(TimeDomainRecordings)):
-        recording_date = datetime.fromtimestamp(TimeDomainRecordings[i]["StartTime"]).astimezone(tz=pytz.utc)
+        recording_date = TimeDomainRecordings[i]["StartTime"]
         CorrespondingRecordingFound = False
         for j in range(len(PowerDomainRecordings)):
             LatestStartTime = np.max((PowerDomainRecordings[j]["StartTime"], TimeDomainRecordings[i]["StartTime"]))
@@ -276,17 +271,18 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
                 if Overlap > 0.7 and Overlap < 1.3:
                     if CorrespondingRecordingFound:
                         raise Exception("Multiple Corresponding Power Channel?")
-                
-                    if not models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=deviceID, analysis_name="DefaultBrainSenseStreaming", analysis_date=recording_date).exists():
-                        recording_list = [str(TimeDomainRecordingModel[i].recording_id), str(PowerDomainRecordingModel[j].recording_id)]
-                        recording_type = ["BrainSenseRecording", "BrainSenseRecording"]
-                        models.CombinedRecordingAnalysis(device_deidentified_id=deviceID, analysis_name="DefaultBrainSenseStreaming", analysis_date=recording_date, 
-                                                                    recording_list=recording_list, recording_type=recording_type).save()
-                        CorrespondingRecordingFound = True
+                    
+                    analysis = models.CombinedAnalysis.nodes.get_or_none(name="DefaultBrainSenseStreaming", type=participant.uid, date=recording_date)
+                    if not analysis:
+                        analysis = models.CombinedAnalysis(name="DefaultBrainSenseStreaming", type=participant.uid, date=recording_date).save()
+                        
+                    analysis.recordings.connect(TimeDomainRecordingModel[i])
+                    analysis.recordings.connect(PowerDomainRecordingModel[i])
+                    CorrespondingRecordingFound = True
                 else:
                     print(f"Matching Data with low overlap: {Overlap} - {ShortestDuration}")
     
-    return NewRecordingFound
+    return TimeDomainRecordingModel + PowerDomainRecordingModel
 
 def processRealtimeStreams(stream, cardiacFilter=False):
     """ Process BrainSense Streaming Data 

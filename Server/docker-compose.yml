@@ -1,0 +1,35 @@
+version: "3.9"
+services:
+  neo4j:
+    image: neo4j:5.19
+    restart: always
+    environment:
+      NEO4J_AUTH: "neo4j/Florida1"
+    ports:
+      - '7473:7473'
+      - '7474:7474'
+      - '7687:7687'
+    volumes:
+      - Neo4jDatabase:/data
+      - Neo4jLogs:/logs
+    networks:
+      - backend
+  
+  redis:
+    image: redis:5
+    restart: always
+    ports:
+      - '6379:6379'
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  Neo4jDatabase:
+    name: neo4jdata
+  Neo4jLogs:
+    name: neo4jlogs
+  BRAVOStorage: 

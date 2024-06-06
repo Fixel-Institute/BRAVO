@@ -2,19 +2,8 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
-from pathlib import Path
-import json
 
 import DatabaseManager
-
-BASE_DIR = Path(__file__).resolve().parent
-if os.path.exists(os.path.join(BASE_DIR, '.env')):
-    with open(os.path.join(BASE_DIR, '.env'), "r") as file:
-        config = json.load(file)
-    for key in config.keys():
-        os.environ[key] = config[key]
-
-    sys.path.append(os.environ["PYTHON_UTILITY"])
 
 def main():
     """Run administrative tasks."""
@@ -28,6 +17,7 @@ def main():
             "forget to activate a virtual environment?"
         ) from exc
     execute_from_command_line(sys.argv)
+
 
 if __name__ == '__main__':
     if not DatabaseManager.processInput(sys.argv):

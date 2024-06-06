@@ -23,7 +23,7 @@ import MDTypography from "components/MDTypography";
 import { usePlatformContext } from "context";
 import { dictionary } from "assets/translation";
 
-export default function LoadingProgress() {
+export default function LoadingProgress({message}) {
   const [ context, dispatch ] = usePlatformContext();
   const { language } = context;
 
@@ -35,7 +35,7 @@ export default function LoadingProgress() {
     >
       <MDBox display={"flex"} alignItems={"center"} flexDirection={"column"}>
         <MDTypography color={"white"} fontWeight={"bold"} fontSize={30}>
-          {dictionary.WarningMessage.Loading[language]}
+          {message ? message : dictionary.WarningMessage.Loading[language]}
         </MDTypography>
         <CircularProgress color={"info"} />
       </MDBox>

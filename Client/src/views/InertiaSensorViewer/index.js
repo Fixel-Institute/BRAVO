@@ -41,7 +41,7 @@ import InertiaSensorSpectrum from "./InertiaSensorSpectrum";
 import { usePlatformContext, setContextState } from "context";
 import { dictionary } from "assets/translation";
 
-let background = require("assets/img/blue-universe-felix-mittermeier.jpg");
+const background = ""
 
 export default function InertiaSensorViewer() {
   const [context, dispatch] = usePlatformContext();

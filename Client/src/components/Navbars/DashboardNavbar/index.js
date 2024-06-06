@@ -63,7 +63,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
   const [queueState, setQueueState] = useState({queues: [], show: false})
   const [navbarType, setNavbarType] = useState();
   const [controller, dispatch] = usePlatformContext();
-  const { miniSidenav, hideSidenav, transparentNavbar, darkMode, language } = controller;
+  const { miniSidenav, hideSidenav, transparentNavbar, darkMode, language, user } = controller;
   const [openMenu, setOpenMenu] = useState(false);
   const [whichMenu, setWhichMenu] = useState("");
   const route = useLocation().pathname.split("/").slice(1);
@@ -73,6 +73,13 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
   }
 
   useEffect(() => {
+    if (Object.keys(user).length == 0) {
+      setContextState(dispatch, "user", {});
+      setContextState(dispatch, "participant_uid", null);
+      navigate("/", {replace: false});
+      return;
+    };
+
     SessionController.query("/api/queryProcessingQueue").then((response) => {
       setQueueState({...queueState, queues: response.data, show: false});
     }).catch((error) => {
@@ -84,9 +91,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       console.log('Connection Error');
     };
     client.onopen = () => {
-      client.send(JSON.stringify({
-        "Authorization": SessionController.getRefreshToken()
-      }));
+      
     };
     client.onclose = () => {
       console.log('Connection Closed');
@@ -155,13 +160,15 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
     SessionController.logout().then((response) => {
       SessionController.nullifyUser();
       setContextState(dispatch, "user", {});
-      setContextState(dispatch, "patientID", null);
+      setContextState(dispatch, "report", "");
+      setContextState(dispatch, "participant_uid", null);
       navigate("/", {replace: false});
     }).catch((error) => {
       if (error.response.status == 401) {
         SessionController.nullifyUser();
         setContextState(dispatch, "user", {});
-        setContextState(dispatch, "patientID", null);
+        setContextState(dispatch, "report", "");
+        setContextState(dispatch, "participant_uid", null);
         navigate("/", {replace: false});
       } else {
         console.log(error)
@@ -183,6 +190,14 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       onClose={handleCloseMenu}
       sx={{ mt: 2 }}
     >
+      <Link to="/profile">
+        <MenuItem>
+          <i className="fa-solid fa-user" style={{color: "black", paddingRight: 15}}></i>
+          <MDTypography variant="button" fontWeight="regular" color="text">
+            {"Profile"}
+          </MDTypography>
+        </MenuItem>
+      </Link>
       <MenuItem onClick={() => logoutUser()}>
         <i className="fa-solid fa-arrow-right-from-bracket" style={{paddingRight: 15}}></i>
         <MDTypography variant="button" fontWeight="regular" color="text">
@@ -235,9 +250,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
 
   const clearQueue = (type) => {
     if (type == "All") {
-      SessionController.query("/api/queryProcessingQueue", {
-        clearQueue: "All",
-      }).then((response) => {
+      SessionController.query("/api/clearProcessingQueue").then((response) => {
         if (response.status == 200) {
           setQueueState({...queueState, queues:[], show: false});
         }
@@ -245,9 +258,7 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
         SessionController.displayError(error,setAlert);
       })
     } else if (type == "Complete") {
-      SessionController.query("/api/queryProcessingQueue", {
-        clearQueue: "Complete",
-      }).then((response) => {
+      SessionController.query("/api/clearProcessingQueue").then((response) => {
         if (response.status == 200) {
           setQueueState(currentState => {
             currentState.queues = currentState.queues.filter((item) => item.state != "Complete");

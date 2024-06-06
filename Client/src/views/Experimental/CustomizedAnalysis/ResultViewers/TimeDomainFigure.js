@@ -78,7 +78,6 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    console.log(dataToRender)
     if (dataToRender) handleGraphing(dataToRender.Data, dataToRender.GraphOptions, dataToRender.RecordingInfo);
   }, [dataToRender, language]);
 
