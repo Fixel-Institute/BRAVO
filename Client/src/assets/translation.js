@@ -620,7 +620,7 @@ export const dictionary = {
         zh: "选择日期"
       },
       IndefiniteStreamTableDate: {
-        en: "Recordinhg Date",
+        en: "Recording Date",
         zh: "日期"
       },
       IndefiniteStreamTableCheck: {
