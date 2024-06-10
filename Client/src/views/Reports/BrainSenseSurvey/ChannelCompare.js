@@ -46,7 +46,7 @@ function ChannelCompare({dataToRender, height, config, figureTitle}) {
       fig.setXlim([0, 100]);
       fig.setTitle(figureTitle);
       if (data[0]) {
-        const [side, target] = data[0].Hemisphere.split(" ");
+        const [side, target] = data[0].CustomName.split(" ");
         const titleText = `${data[0].DeviceName} ${dictionaryLookup(dictionary.FigureStandardText, side, language)} ${dictionaryLookup(dictionary.BrainRegions, target, language)} E${data[0].Channel[0]}-E${data[0].Channel[1]}`;
         fig.setTitle(titleText);
       } else {

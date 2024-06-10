@@ -126,7 +126,7 @@ function BrainSenseSurvey() {
 
     uniqueSurveySession = [];
     for (var i = 0; i < data.length; i++) {
-      var uniqueChannel = data[i]["Hemisphere"] + ` E${data[i]["Channel"][0]}`;
+      var uniqueChannel = data[i]["CustomName"] + ` E${data[i]["Channel"][0]}`;
       if (data[i]["Channel"].length > 1) {
         uniqueChannel += `-E${data[i]["Channel"][1]}`;
       } else {
@@ -135,7 +135,7 @@ function BrainSenseSurvey() {
 
       var found = false;
       for (var session of uniqueSurveySession) {
-        if (session.channel == uniqueChannel && session.device == data[i]["DeviceName"]) {
+        if (session.channel == uniqueChannel) {
           found = true;
         }
       }
@@ -180,13 +180,13 @@ function BrainSenseSurvey() {
     setChannelOfView(value);
     var collectiveData = [];
     for (var i = 0; i < data.length; i++) {
-      var uniqueChannel = data[i]["Hemisphere"] + ` E${data[i]["Channel"][0]}`;
+      var uniqueChannel = data[i]["CustomName"] + ` E${data[i]["Channel"][0]}`;
       if (data[i]["Channel"].length > 1) {
         uniqueChannel += `-E${data[i]["Channel"][1]}`;
       } else {
         uniqueChannel += ` Monopolar`;
       }
-      if (value.channel == uniqueChannel && value.device == data[i]["DeviceName"]) {
+      if (value.channel == uniqueChannel) {
         collectiveData.push(data[i]);
       }
     }

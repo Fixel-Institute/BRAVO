@@ -17,16 +17,27 @@ import { useNavigate } from "react-router-dom";
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
 import TimeDomainFigure from "./TimeDomainFigure";
+import EventPSDs from "./EventPSDs";
 
-function ResultViewer({data}) {
+import MDBox from "components/MDBox";
+import { Grid } from "@mui/material";
+
+function ResultViewer({data, type}) {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
   const { patientID, language } = controller;
 
   if (Object.keys(data).length == 0) return null;
 
-  if (data.RecordingInfo.type == "TimeDomain") {
-    return <TimeDomainFigure dataToRender={data} height={700} figureTitle={"TimeDomainFigure"} />;
+  if (type == "TimeSeries") {
+    return <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <TimeDomainFigure dataToRender={data} height={700} figureTitle={"TimeDomainFigure"} />
+      </Grid>
+      <Grid item xs={12} lg={6}>
+        <EventPSDs dataToRender={data} height={600} figureTitle={"EventPSDs"} channelName={"Test"} />
+      </Grid>
+    </Grid>
   } else {
     return null;
   }

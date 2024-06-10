@@ -74,6 +74,23 @@ function AnalysisResultViewer({analysisId, analysisData}) {
   }, [patientID, analysisId, analysisData]);
 
   useEffect(() => {
+    if (selectedRecording) {
+      if (selectedRecording.type === "AlignedData") return;
+      
+      setAlert(<LoadingProgress/>);
+      SessionController.query("/api/queryCustomizedAnalysis", {
+        id: patientID, 
+        requestResult: analysisId,
+        resultId: selectedRecording.value,
+        download: false
+      }).then((response) => {
+        setAlert(null);
+        setDataToRender(response.data)
+        console.log(response.data)
+      }).catch((error) => {
+        SessionController.displayError(error, setAlert);
+      });
+    }
   }, [selectedRecording]);
 
   const handleDownloadData = () => {
@@ -152,16 +169,19 @@ function AnalysisResultViewer({analysisId, analysisData}) {
               disableClearable
             />
           </Grid>
-          <Grid item xs={12}>
-            {selectedRecording ? (
-            <MDButton color={"info"} 
-              onClick={handleDownloadData} style={{marginLeft: 10}}
-            >
-              {selectedRecording.type === "AlignedData" ? "Download" : ""}
-            </MDButton>
+
+          {selectedRecording ? (
+            <Grid item xs={12}>
+              {selectedRecording.type === "AlignedData" ? (
+                <MDButton color={"info"} 
+                  onClick={handleDownloadData} style={{marginLeft: 10}}
+                >
+                  {"Download"}
+                </MDButton>
+              ) : null}
+              <ResultViewer data={dataToRender} type={"TimeSeries"} />
+            </Grid>
             ) : null}
-            <ResultViewer data={dataToRender} />
-          </Grid>
         </Grid>
       </MDBox>
     </Card>

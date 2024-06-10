@@ -15,14 +15,18 @@ import React, { useCallback } from "react";
 import { useResizeDetector } from 'react-resize-detector';
 
 import MDBox from "components/MDBox";
+import MDTypography from "components/MDTypography";
+import MDButton from "components/MDButton";
+import { Autocomplete, Dialog, DialogContent, TextField, DialogActions, Grid, Menu, MenuItem } from "@mui/material";
+import { createFilterOptions } from "@mui/material/Autocomplete";
 
-import colormap from "colormap";
-
+import * as Math from "mathjs"
 import { PlotlyRenderManager } from "graphing-utility/Plotly";
-import { formatSegmentString, matchArray } from "database/helper-function";
 
-import { dictionary, dictionaryLookup } from "assets/translation";
 import { usePlatformContext } from "context";
+import { dictionary, dictionaryLookup } from "assets/translation";
+
+const filter = createFilterOptions();
 
 function TimeDomainFigure({dataToRender, height, figureTitle}) {
   const [controller, dispatch] = usePlatformContext();
@@ -31,39 +35,41 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
   const [show, setShow] = React.useState(false);
   const fig = new PlotlyRenderManager(figureTitle, language);
   
-  const handleGraphing = (data, options, recordingInfo) => {
+  const handleGraphing = (data, channelInfos) => {
     fig.clearData();
 
+    console.log(channelInfos)
+    
     if (fig.fresh) {
-      var axLength = options.ChannelNames.length;
+      var ax = fig.subplots(channelInfos.length, 1, {sharex: true, sharey: true});
 
-      var ax = fig.subplots(axLength, 1, {sharex: true, sharey: true});
+      fig.setXlabel("Time (local time)", {fontSize: 15}, ax[ax.length-1]);
       for (var i in ax) {
-        fig.setSubtitle(options.ChannelNames[i], ax[i]);
-        fig.setYlim(options.RecommendedYLimit[i], ax[i]);
+        fig.setYlim([0,100],ax[i]);
+        fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Frequency", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)})`, {fontSize: 15}, ax[i]);
+
+        fig.setSubtitle(channelInfos[i],ax[i]);
       }
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15}, ax[ax.length-1]);
+
+      fig.createColorAxis({
+        colorscale: "Jet",
+        colorbar: {y: 0.5, len: (1/2)},
+        clim: [-20, 20],
+      });
     }
 
-    for (var i in data) {
-      for (var j in data[i].ChannelNames) {
-        var timeArray = Array(data[i]["Data"].length).fill(0).map((value, index) => new Date(data[i].StartTime*1000 + index*1000/data[i].SamplingRate));
-        for (var k in ax) {
-          if (!ax[k].title) {
-            ax[k].title = data[i].ChannelNames[j];
-            fig.plot(timeArray, data[i]["Data"].map((value) => value[j]), {
-              linewidth: 0.5,
-              hovertemplate: `  %{y:.2f} <extra></extra>`,
-            }, ax[k]);
-            break;
-          } else if (ax[k].title == data[i].ChannelNames[j]) {
-            fig.plot(timeArray, data[i]["Data"].map((value) => value[j]), {
-              linewidth: 0.5,
-              hovertemplate: `  %{y:.2f} <extra></extra>`,
-            }, ax[k]);
-            break;
-          }
-        }
+    console.log(data)
+
+    for (let i in data) {
+      for (let j in data[i].Spectrogram) {
+        let axIndex = channelInfos.indexOf(data[i].ChannelNames[j]);
+        var timeArray = Array(data[i].Spectrogram[j].Time.length).fill(0).map((value, index) => new Date(data[i].StartTime*1000 + data[i].Spectrogram[j].Time[index]*1000));
+        fig.surf(timeArray, data[i].Spectrogram[j].Frequency, data[i].Spectrogram[j].Power, {
+          zlim: [-20, 20],
+          coloraxis: "coloraxis",
+          hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)}<br>  %{x} <br>  %{z:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "dB", language)} <extra></extra>`,
+        }, ax[axIndex]);
       }
     }
 
@@ -78,8 +84,17 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    console.log(dataToRender)
-    if (dataToRender) handleGraphing(dataToRender.Data, dataToRender.GraphOptions, dataToRender.RecordingInfo);
+    if (dataToRender) {
+      let ChannelNames = [];
+      for (let i in dataToRender.Data.Timeseries) {
+        for (let j in dataToRender.Data.Timeseries[i].ChannelNames) {
+          if (!ChannelNames.includes(dataToRender.Data.Timeseries[i].ChannelNames[j])) {
+            ChannelNames.push(dataToRender.Data.Timeseries[i].ChannelNames[j]);
+          }
+        }
+      }
+      handleGraphing(dataToRender.Data.Timeseries, ChannelNames);
+    }
   }, [dataToRender, language]);
 
   const onResize = useCallback(() => {

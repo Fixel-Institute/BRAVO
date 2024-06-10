@@ -391,6 +391,8 @@ def queryRealtimeStreamRecording(analysis, cardiacFilter=False, refresh=False):
     """
 
     allRecordings = models.NeuralActivityRecording.objects.filter(recording_id__in=analysis.recording_list)
+    PowerRecording = None
+    TimeRecording = None
     for recording in allRecordings:
         if recording.recording_type == "BrainSenseStreamPowerDomain":
             PowerRecording = recording
@@ -405,11 +407,13 @@ def queryRealtimeStreamRecording(analysis, cardiacFilter=False, refresh=False):
         
     BrainSenseData = dict()
     BrainSenseData["Info"] = dict({"Leads": leads})
-    BrainSenseData["Info"].update(PowerRecording.recording_info)
-    BrainSenseData["Info"].update(TimeRecording.recording_info)
-
-    BrainSenseData["TimeDomain"] = Database.loadSourceDataPointer(TimeRecording.recording_datapointer)
-    BrainSenseData["PowerDomain"] = Database.loadSourceDataPointer(PowerRecording.recording_datapointer)
+    if PowerRecording:
+        BrainSenseData["Info"].update(PowerRecording.recording_info)
+        BrainSenseData["PowerDomain"] = Database.loadSourceDataPointer(PowerRecording.recording_datapointer)
+    
+    if TimeRecording:
+        BrainSenseData["Info"].update(TimeRecording.recording_info)
+        BrainSenseData["TimeDomain"] = Database.loadSourceDataPointer(TimeRecording.recording_datapointer)
     
     if not "CardiacFilter" in TimeRecording.recording_info:
         TimeRecording.recording_info["CardiacFilter"] = cardiacFilter

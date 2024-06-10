@@ -178,6 +178,27 @@ const ExportEditor = ({currentState, newProcess, updateConfiguration}) => {
   );
 };
 
+const ViewEditor = ({currentState, newProcess, updateConfiguration}) => {
+  return (
+    <MDBox style={{marginTop: 20, paddingTop: 5, paddingBottom: 15}}>
+      <MDBox style={{display: "flex", paddingLeft: 15, paddingRight: 15, paddingTop: 15, justifyContent: "flex-end"}}>
+        <MDButton color={"secondary"} 
+          onClick={() => updateConfiguration(false)}
+        >
+          {"Cancel"}
+        </MDButton>
+        <MDButton color={"info"} 
+          onClick={() => {
+            updateConfiguration({view: true});
+          }} style={{marginLeft: 10}}
+        >
+          {newProcess ? "Add" : "Update"}
+        </MDButton>
+      </MDBox>
+    </MDBox>
+  );
+};
+
 function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, updateProcessingResult}) {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
@@ -342,6 +363,9 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
   }, {
     value: "export",
     label: "Export Data"
+  }, {
+    value: "view",
+    label: "View Data"
   }]
 
   return (
@@ -384,6 +408,15 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
                             <MDBox>
                               <MDTypography variant={"h4"} fontFamily={"lato"} fontWeight={"bold"}>
                                 {step.type.label}
+                              </MDTypography>
+                            </MDBox>
+                          </MDBox>
+                        ) : null}
+                        {step.type.value === "view" ? (
+                          <MDBox style={{flexDirection: "column"}}>
+                            <MDBox>
+                              <MDTypography variant={"h4"} fontFamily={"lato"} fontWeight={"bold"}>
+                                {"View Data and Annotations"}
                               </MDTypography>
                             </MDBox>
                           </MDBox>
@@ -459,6 +492,11 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
             ) : null}
             {editProcessingStep.type.value === "export" ? (
               <ExportEditor newProcess={editProcessingStep.new} 
+              updateConfiguration={updateConfiguration}
+              />
+            ) : null}
+            {editProcessingStep.type.value === "view" ? (
+              <ViewEditor newProcess={editProcessingStep.new} 
               updateConfiguration={updateConfiguration}
               />
             ) : null}
