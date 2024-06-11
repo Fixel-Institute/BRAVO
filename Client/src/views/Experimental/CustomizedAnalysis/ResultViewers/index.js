@@ -32,10 +32,12 @@ function ResultViewer({data, type}) {
   if (type == "TimeSeries") {
     return <Grid container spacing={2}>
       <Grid item xs={12}>
-        <TimeDomainFigure dataToRender={data} height={700} figureTitle={"TimeDomainFigure"} />
+        <TimeDomainFigure dataToRender={data} height={250} figureTitle={"TimeDomainFigure"} />
       </Grid>
       <Grid item xs={12} lg={6}>
-        <EventPSDs dataToRender={data} height={600} figureTitle={"EventPSDs"} channelName={"Test"} />
+        {Object.keys(data.Data.EventPSDs).length == 0 ? null : (
+          <EventPSDs dataToRender={data} height={600} figureTitle={"EventPSDs"} channelName={"Test"} />
+        )} 
       </Grid>
     </Grid>
   } else {

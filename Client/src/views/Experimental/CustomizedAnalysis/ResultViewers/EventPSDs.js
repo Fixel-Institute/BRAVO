@@ -18,6 +18,7 @@ import colormap from "colormap";
 
 import { Autocomplete } from "@mui/material";
 import MDBox from "components/MDBox";
+import MDButton from "components/MDButton";
 import FormField from "components/MDInput/FormField";
 
 import { PlotlyRenderManager } from "graphing-utility/Plotly";
@@ -105,7 +106,7 @@ function EventPSDs({dataToRender, channelName, height, config, figureTitle}) {
     if (eventPSDSelector.value) {
       handleGraphing(dataToRender.Data.EventPSDs[eventPSDSelector.value], eventPSDSelector.value);
     }
-  }, [eventPSDSelector])
+  }, [eventPSDSelector]);
 
   const onResize = useCallback(() => {
     fig.refresh();
@@ -117,6 +118,16 @@ function EventPSDs({dataToRender, channelName, height, config, figureTitle}) {
     refreshRate: 50,
     skipOnMount: false
   });
+
+  const exportCurrentStream = () => {
+    var csvData = JSON.stringify(dataToRender.Data.EventPSDs);
+
+    var downloader = document.createElement('a');
+    downloader.href = 'data:text/json;charset=utf-8,' + encodeURI(csvData);
+    downloader.target = '_blank';
+    downloader.download = 'EventPSDExport.json';
+    downloader.click();
+  };
 
   return (
     <MDBox lineHeight={1} p={2}>
@@ -136,6 +147,9 @@ function EventPSDs({dataToRender, channelName, height, config, figureTitle}) {
         )}
         disableClearable
       />
+      <MDButton size="large" variant="contained" color="primary" style={{marginBottom: 3, marginTop: 3, width: "100%"}} onClick={() => exportCurrentStream()}>
+        {dictionaryLookup(dictionary.FigureStandardText, "Export", language)}
+      </MDButton>
       <MDBox ref={ref} id={figureTitle} style={{marginTop: 0, marginBottom: 10, height: height, width: "100%", display: show ? "" : "none"}}/>
     </MDBox>
   );

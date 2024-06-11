@@ -375,7 +375,7 @@ function BrainSenseStreaming() {
     var downloader = document.createElement('a');
     downloader.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData);
     downloader.target = '_blank';
-    downloader.download = 'BrainSenseStreamExport.csv';
+    downloader.download = 'NeuralRecordingsExport.csv';
     downloader.click();
   };
 

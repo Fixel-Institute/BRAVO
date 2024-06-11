@@ -33,15 +33,15 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
   const { language } = controller;
 
   const [show, setShow] = React.useState(false);
+  const [realheight, setHeight] = React.useState(height);
   const fig = new PlotlyRenderManager(figureTitle, language);
   
   const handleGraphing = (data, channelInfos) => {
     fig.clearData();
 
-    console.log(channelInfos)
-    
     if (fig.fresh) {
       var ax = fig.subplots(channelInfos.length, 1, {sharex: true, sharey: true});
+      setHeight(channelInfos.length * height)
 
       fig.setXlabel("Time (local time)", {fontSize: 15}, ax[ax.length-1]);
       for (var i in ax) {
@@ -109,7 +109,7 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
   });
 
   return (
-    <MDBox ref={ref} id={figureTitle} style={{marginTop: 5, marginBottom: 10, height: height, width: "100%", display: show ? "" : "none"}}/>
+    <MDBox ref={ref} id={figureTitle} style={{marginTop: 5, marginBottom: 10, height: realheight, width: "100%", display: show ? "" : "none"}}/>
   );
 }
 

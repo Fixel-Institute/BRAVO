@@ -207,7 +207,7 @@ function IndefiniteStreaming() {
     var downloader = document.createElement('a');
     downloader.href = 'data:text/json;charset=utf-8,' + encodeURI(csvData);
     downloader.target = '_blank';
-    downloader.download = 'IndefiniteStreamExport.json';
+    downloader.download = 'MultiChannelRecordingExport.json';
     downloader.click();
     
     csvData = JSON.stringify(eventPSDs);
@@ -215,7 +215,7 @@ function IndefiniteStreaming() {
     downloader = document.createElement('a');
     downloader.href = 'data:text/json;charset=utf-8,' + encodeURI(csvData);
     downloader.target = '_blank';
-    downloader.download = 'IndefiniteStreamEventPSDs.json';
+    downloader.download = 'MultiChannelRecordingEventPSDs.json';
     downloader.click();
   };
 
