@@ -777,7 +777,7 @@ def handleViewRecordings(step, RecordingIds, Configuration, analysis):
                 [b,a] = signal.butter(5, np.array([1,100])*2/RawData["SamplingRate"], 'bp', output='ba')
                 RawData["Filtered"].append(signal.filtfilt(b, a, RawData["Data"][:,i]))
 
-                RawData["Spectrogram"].append(SPU.defaultSpectrogram(RawData["Filtered"][i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=stream["TimeDomain"]["SamplingRate"]))
+                RawData["Spectrogram"].append(SPU.defaultSpectrogram(RawData["Filtered"][i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=RawData["SamplingRate"]))
                 RawData["Spectrogram"][i]["Type"] = "Spectrogram"
                 RawData["Spectrogram"][i]["Time"] += 0 # TODO Check later
 
