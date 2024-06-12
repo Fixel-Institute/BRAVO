@@ -623,6 +623,9 @@ def queryResultData(user, patientId, analysisId, resultId, download, authority):
     if download:
         return ProcessedData, {}
     
+    if type(ProcessedData) == dict:
+        ProcessedData = [ProcessedData]
+
     GraphOptions = {}
     if ProcessedData[0]["ResultType"] == "TimeDomain":
         GraphOptions["RecommendedYLimit"] = []
@@ -645,6 +648,9 @@ def queryResultData(user, patientId, analysisId, resultId, download, authority):
             if type(ProcessedData[i]["ChannelNames"]) == str:
                 ProcessedData[i]["ChannelNames"] = [ProcessedData[i]["ChannelNames"]]
 
+            if type(ProcessedData[i]["Spectrogram"]) == dict:
+                ProcessedData[i]["Spectrogram"] = [ProcessedData[i]["Spectrogram"]]
+                
             for j in range(len(ProcessedData[i]["Spectrogram"])):
                 ProcessedData[i]["Spectrogram"][j]["Power"] = 10*np.log10(ProcessedData[i]["Spectrogram"][j]["Power"])
                 ProcessedData[i]["ChannelNames"][j] = ProcessedData[i]["ChannelNames"][j].strip()
