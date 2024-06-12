@@ -59,12 +59,11 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
       });
     }
 
-    console.log(data)
-
     for (let i in data) {
       for (let j in data[i].Spectrogram) {
         let axIndex = channelInfos.indexOf(data[i].ChannelNames[j]);
         var timeArray = Array(data[i].Spectrogram[j].Time.length).fill(0).map((value, index) => new Date(data[i].StartTime*1000 + data[i].Spectrogram[j].Time[index]*1000));
+        
         fig.surf(timeArray, data[i].Spectrogram[j].Frequency, data[i].Spectrogram[j].Power, {
           zlim: [-20, 20],
           coloraxis: "coloraxis",

@@ -105,7 +105,7 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
         }
       }));
     }
-  }, [patientID, analysisId]);
+  }, [patientID, analysisId, analysisData]);
 
   useEffect(() => {
 
@@ -183,7 +183,7 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
         }).then((response) => {
           setData((data) => {
             data.Recordings = data.Recordings.filter((recording) => recording.RecordingId != configureRecording.recordingId);
-            data.Configuration.Descriptor[configureRecording.recordingId] = null;
+            delete data.Configuration.Descriptor[configureRecording.recordingId];
             updateAnalysisData(data);
             return {...data};
           });

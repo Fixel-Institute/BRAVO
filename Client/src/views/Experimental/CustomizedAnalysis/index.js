@@ -71,9 +71,6 @@ function CustomizedAnalysis() {
     name: ""
   });
 
-  const [eventList, setEventList] = useState([]);
-  const [availableDevice, setAvailableDevices] = useState({current: null, list: []});
-
   const [alert, setAlert] = useState(null);
 
   useEffect(() => {
