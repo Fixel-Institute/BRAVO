@@ -1028,7 +1028,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                analysis = models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=request.data["id"]).first()
+                analysis = models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=request.data["id"], deidentified_id=request.data["analysisId"]).first()
                 if not analysis:
                     return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
