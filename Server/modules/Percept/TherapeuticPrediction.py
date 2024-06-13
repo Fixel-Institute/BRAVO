@@ -157,6 +157,36 @@ def extractModelParameters(stream, channel, centerFrequency):
         "ChangesInPower": np.percentile(modeled_signal, 85) - np.percentile(modeled_signal, 15),
         "FinalPower": np.percentile(modeled_signal, 5)}, xdata[modeled_signal <= threshold][0], [xdata[0], xdata[-1]], modeled_signal.tolist()
 
+def extractFullPredictionFeatures(BrainSenseData, HemisphereInfo):
+    for channel in BrainSenseData["TimeDomain"]["ChannelNames"]:
+        contacts, hemisphere = Percept.reformatChannelName(channel)
+        if HemisphereInfo.startswith(hemisphere):
+            BrainSenseData = processSpectrogram(BrainSenseData, channel)
+
+            for i in range(len(BrainSenseData["TimeDomain"]["ChannelNames"])):
+                if BrainSenseData["TimeDomain"]["ChannelNames"][i] == channel:
+                    break
+
+            constantStimulation = np.bitwise_and(BrainSenseData["TimeDomain"]["Spectrogram"][i]["ConstantStimulation"], BrainSenseData["TimeDomain"]["Spectrogram"][i]["Missing"] == 0)
+            StimulationAmplitude = BrainSenseData["TimeDomain"]["Spectrogram"][i]["Stimulation"][constantStimulation]
+            uniqueAmplitude = sorted(np.unique(StimulationAmplitude))
+            
+            FullFeatures = np.zeros((len(BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"])+1, len(uniqueAmplitude)))
+            for i in range(len(BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"])):
+                freq = BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"]
+                FrequencyOfInterest = rangeSelection(BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"], [freq - 3, freq + 3])
+                BrainPower = np.mean(BrainSenseData["TimeDomain"]["Spectrogram"][i]["Power"][:,constantStimulation][FrequencyOfInterest], axis=0)
+
+                simplifiedYData = []
+                for k in range(len(uniqueAmplitude)):
+                    simplifiedYData.append(np.median(BrainPower[StimulationAmplitude==uniqueAmplitude[k]]))
+                
+                FullFeatures[i,:] = np.array(simplifiedYData)
+            FullFeatures[-1,:] = np.array(uniqueAmplitude)
+            return FullFeatures
+
+    return None
+
 def extractPredictionFeatures(BrainSenseData, HemisphereInfo, centerFrequency=0):
     for channel in BrainSenseData["TimeDomain"]["ChannelNames"]:
         contacts, hemisphere = Percept.reformatChannelName(channel)

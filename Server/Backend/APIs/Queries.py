@@ -833,10 +833,11 @@ class QueryPredictionModel(RestViews.APIView):
             data = list()
             for stimulationSide in BrainSenseData["PowerDomain"]["Stimulation"]:
                 if len(np.unique(stimulationSide["Amplitude"])) > 3:
-                    Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
+                    #Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
+                    Features = TherapeuticPrediction.extractFullPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
                     #PredictionModel = models.PredictionModel(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"], model_details=Features)
                     #PredictionModel.save()
-                    data.append(Features)
+                    data.append({"Features": Features})
                 else:
                     data.append({"NoPrediction": True})
                 
