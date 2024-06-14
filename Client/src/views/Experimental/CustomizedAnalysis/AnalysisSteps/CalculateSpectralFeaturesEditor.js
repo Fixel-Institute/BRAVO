@@ -7,7 +7,7 @@ import { Autocomplete, TextField } from "@mui/material";
 import { createFilterOptions } from "@mui/material/Autocomplete";
 const filter = createFilterOptions();
 
-const ViewEditor = ({currentState, newProcess, availableRecordings, updateConfiguration}) => {
+const CalculateSpectralFeaturesEditor = ({currentState, newProcess, availableRecordings, updateConfiguration}) => {
   const [filterOptions, setFilterOptions] = useState(newProcess ? {
     targetRecording: "",
     output: "",
@@ -72,4 +72,4 @@ const ViewEditor = ({currentState, newProcess, availableRecordings, updateConfig
   );
 };
 
-export default ViewEditor;
+export default CalculateSpectralFeaturesEditor;

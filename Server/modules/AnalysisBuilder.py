@@ -31,6 +31,7 @@ import json
 from io import BytesIO
 import websocket
 from scipy import signal, io
+from specparam import SpectralModel
 
 from Backend import models
 from modules import Database
@@ -642,52 +643,9 @@ def queryResultData(user, patientId, analysisId, resultId, download, authority):
 
                 GraphOptions["RecommendedYLimit"][index] = [np.min([GraphOptions["RecommendedYLimit"][index][0], -np.std(ProcessedData[i]["Data"][:,j])*10]), np.max([GraphOptions["RecommendedYLimit"][index][1], np.std(ProcessedData[i]["Data"][:,j])*10])]
     
-    elif ProcessedData[0]["ResultType"] == "ViewData":
-        RenderData = {"Timeseries": [], "EventPSDs": {}}
-        for i in range(len(ProcessedData)):
-            if type(ProcessedData[i]["ChannelNames"]) == str:
-                ProcessedData[i]["ChannelNames"] = [ProcessedData[i]["ChannelNames"]]
-
-            if type(ProcessedData[i]["Spectrogram"]) == dict:
-                ProcessedData[i]["Spectrogram"] = [ProcessedData[i]["Spectrogram"]]
-                
-            for j in range(len(ProcessedData[i]["Spectrogram"])):
-                ProcessedData[i]["Spectrogram"][j]["Power"] = 10*np.log10(ProcessedData[i]["Spectrogram"][j]["Power"])
-                ProcessedData[i]["ChannelNames"][j] = ProcessedData[i]["ChannelNames"][j].strip()
-            
-            RenderData["Timeseries"].append({"Data": ProcessedData[i]["Filtered"], 
-                                            "Spectrogram": ProcessedData[i]["Spectrogram"], 
-                                            "Time": ProcessedData[i]["Time"], 
-                                            "StartTime": ProcessedData[i]["StartTime"],
-                                            "ChannelNames": ProcessedData[i]["ChannelNames"]})
-            if type(ProcessedData[i]["Annotations"]) == dict:
-                ProcessedData[i]["Annotations"] = [ProcessedData[i]["Annotations"]]
-
-            for annotation in ProcessedData[i]["Annotations"]:
-                if annotation["Duration"] > 0:
-                    EventStartTime = annotation["Time"] - ProcessedData[i]["StartTime"]
-                    for j in range(len(ProcessedData[i]["ChannelNames"])): 
-                        if not ProcessedData[i]["ChannelNames"][j] in RenderData["EventPSDs"].keys():
-                            RenderData["EventPSDs"][ProcessedData[i]["ChannelNames"][j]] = {}
-
-                        if not annotation["Name"] in RenderData["EventPSDs"][ProcessedData[i]["ChannelNames"][j]].keys():
-                            RenderData["EventPSDs"][ProcessedData[i]["ChannelNames"][j]][annotation["Name"]] = {"PSDs": []}
-                        
-                        TimeSelection = PythonUtility.rangeSelection(ProcessedData[i]["Spectrogram"][j]["Time"], [EventStartTime, EventStartTime+annotation["Duration"]])
-                        PSDs = ProcessedData[i]["Spectrogram"][j]["Power"][:, TimeSelection]
-                        RenderData["EventPSDs"][ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["PSDs"].append(np.mean(PSDs, axis=1))
-                        RenderData["EventPSDs"][ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["Frequency"] = ProcessedData[i]["Spectrogram"][j]["Frequency"]
-
-        for key in RenderData["EventPSDs"].keys():
-            for eventName in RenderData["EventPSDs"][key].keys():
-                RenderData["EventPSDs"][key][eventName]["MeanPower"] = np.mean(np.array(RenderData["EventPSDs"][key][eventName]["PSDs"]), axis=0)
-                RenderData["EventPSDs"][key][eventName]["StdPower"] = SPU.stderr(np.array(RenderData["EventPSDs"][key][eventName]["PSDs"]), axis=0)
-
-        return RenderData, GraphOptions
-        
     return ProcessedData, GraphOptions
 
-def handleFilterProcessing(step, RecordingIds, Configuration, analysis):
+def handleFilterProcessing(step, RecordingIds, Results, Configuration, analysis):
     targetSignal = step["config"]["targetRecording"]
     filterType = "Butterworth"
 
@@ -699,6 +657,18 @@ def handleFilterProcessing(step, RecordingIds, Configuration, analysis):
     highpass = float(step["config"]["highpass"])
     lowpass = float(step["config"]["lowpass"])
 
+    def processRawData(RawData):
+        if highpass == 0:
+            [b,a] = signal.butter(5, np.array([lowpass])*2/RawData["SamplingRate"], 'lp', output='ba')
+        elif lowpass == 0:
+            [b,a] = signal.butter(5, np.array([highpass])*2/RawData["SamplingRate"], 'hp', output='ba')
+        else:
+            [b,a] = signal.butter(5, np.array([highpass, lowpass])*2/RawData["SamplingRate"], 'bp', output='ba')
+
+        RawData["Data"] = signal.filtfilt(b, a, RawData["Data"], axis=0)
+        RawData["ResultType"] = "TimeDomain"
+        return RawData
+
     ProcessedData = []
     for recordingId in RecordingIds:
         if Configuration["Descriptor"][recordingId]["Type"] == targetSignal:
@@ -709,16 +679,17 @@ def handleFilterProcessing(step, RecordingIds, Configuration, analysis):
                 recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
                 RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
 
-            if highpass == 0:
-                [b,a] = signal.butter(5, np.array([lowpass])*2/RawData["SamplingRate"], 'lp', output='ba')
-            elif lowpass == 0:
-                [b,a] = signal.butter(5, np.array([highpass])*2/RawData["SamplingRate"], 'hp', output='ba')
-            else:
-                [b,a] = signal.butter(5, np.array([highpass, lowpass])*2/RawData["SamplingRate"], 'bp', output='ba')
-
-            RawData["Data"] = signal.filtfilt(b, a, RawData["Data"], axis=0)
-            RawData["ResultType"] = "TimeDomain"
+            RawData = processRawData(RawData=RawData)
             ProcessedData.append(RawData)
+    
+    for result in Results:
+        if result["ResultLabel"] == targetSignal:
+            recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
+            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+            for i in range(len(RawData)):
+                RawData[i] = processRawData(RawData=RawData[i])
+                ProcessedData.append(RawData[i])
 
     recording = createResultDataFile(ProcessedData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
     analysis.recording_type.append(recording.recording_type)
@@ -729,6 +700,189 @@ def handleFilterProcessing(step, RecordingIds, Configuration, analysis):
         "Id": step["id"],
         "ProcessedData": str(recording.recording_id),
         "Type": "TimeDomain"
+    }
+
+def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, analysis):
+    targetSignal = step["config"]["targetRecording"]
+    psdMethod = step["config"]["psdMethod"]
+
+    def processRawData(RawData):
+        RawData["ResultType"] = "PSDs"
+        for i in range(len(RawData["ChannelNames"])):
+            if RawData["ChannelNames"][i] in Configuration["Descriptor"][recordingId]["Channels"].keys():
+                RawData["ChannelNames"][i] = Configuration["Descriptor"][recordingId]["Channels"][RawData["ChannelNames"][i]]["name"]
+        RawData["Time"] = (np.arange(RawData["Data"].shape[0])/RawData["SamplingRate"]) + RawData["StartTime"] + (Configuration["Descriptor"][recordingId]["TimeShift"]/1000)
+        
+        RawData["Spectrogram"] = list()
+        for i in range(len(RawData["ChannelNames"])):
+            RawData["Spectrogram"].append(SPU.defaultSpectrogram(RawData["Data"][:,i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=RawData["SamplingRate"]))
+            RawData["Spectrogram"][i]["Type"] = "Spectrogram"
+            RawData["Spectrogram"][i]["Time"] += 0 # TODO Check later
+
+        annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=analysis.device_deidentified_id, 
+                                                            event_time__gte=datetime.fromtimestamp(RawData["Time"][0], tz=pytz.utc), 
+                                                            event_time__lte=datetime.fromtimestamp(RawData["Time"][-1], tz=pytz.utc))
+        
+        RawData["Annotations"] = [{
+            "Name": item.event_name,
+            "Time": item.event_time.timestamp(),
+            "Duration": item.event_duration
+        } for item in annotations]
+        return RawData
+
+    ProcessedData = []
+    for recordingId in RecordingIds:
+        if Configuration["Descriptor"][recordingId]["Type"] == targetSignal:
+            if models.ExternalRecording.objects.filter(recording_id=recordingId).exists():
+                recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
+                RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+            elif models.NeuralActivityRecording.objects.filter(recording_id=recordingId).exists():
+                recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
+                RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+            RawData = processRawData(RawData=RawData)
+            ProcessedData.append(RawData)
+    
+    for result in Results:
+        if result["ResultLabel"] == targetSignal:
+            recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
+            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+            for i in range(len(RawData)):
+                RawData[i] = processRawData(RawData=RawData[i])
+                ProcessedData.append(RawData[i])
+
+    ResultData = {"ResultType": "PSDs"}
+    for i in range(len(ProcessedData)):
+        if type(ProcessedData[i]["ChannelNames"]) == str:
+            ProcessedData[i]["ChannelNames"] = [ProcessedData[i]["ChannelNames"]]
+
+        if type(ProcessedData[i]["Spectrogram"]) == dict:
+            ProcessedData[i]["Spectrogram"] = [ProcessedData[i]["Spectrogram"]]
+            
+        for j in range(len(ProcessedData[i]["Spectrogram"])):
+            ProcessedData[i]["Spectrogram"][j]["Power"] = 10*np.log10(ProcessedData[i]["Spectrogram"][j]["Power"])
+            ProcessedData[i]["ChannelNames"][j] = ProcessedData[i]["ChannelNames"][j].strip()
+            
+        if type(ProcessedData[i]["Annotations"]) == dict:
+            ProcessedData[i]["Annotations"] = [ProcessedData[i]["Annotations"]]
+
+        for annotation in ProcessedData[i]["Annotations"]:
+            if annotation["Duration"] > 0:
+                EventStartTime = annotation["Time"] - ProcessedData[i]["StartTime"]
+                for j in range(len(ProcessedData[i]["ChannelNames"])): 
+                    if not ProcessedData[i]["ChannelNames"][j] in ResultData.keys():
+                        ResultData[ProcessedData[i]["ChannelNames"][j]] = {}
+
+                    if not annotation["Name"] in ResultData[ProcessedData[i]["ChannelNames"][j]].keys():
+                        ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]] = {"PSDs": []}
+                    
+                    TimeSelection = PythonUtility.rangeSelection(ProcessedData[i]["Spectrogram"][j]["Time"], [EventStartTime, EventStartTime+annotation["Duration"]])
+                    PSDs = ProcessedData[i]["Spectrogram"][j]["Power"][:, TimeSelection]
+                    ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["PSDs"].append(np.mean(PSDs, axis=1))
+                    ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["Frequency"] = ProcessedData[i]["Spectrogram"][j]["Frequency"]
+
+    recording = createResultDataFile(ResultData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
+    analysis.recording_type.append(recording.recording_type)
+    analysis.recording_list.append(str(recording.recording_id))
+
+    return {
+        "ResultLabel": step["config"]["output"],
+        "Id": step["id"],
+        "ProcessedData": str(recording.recording_id),
+        "Type": "PSDs"
+    }
+
+def handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analysis):
+    targetSignal = step["config"]["targetRecording"]
+    normalizeMethod = step["config"]["normalizeMethod"]
+
+    if normalizeMethod == "Band Normalize":
+        if step["config"]["highEdge"] == "":
+            step["config"]["highEdge"] = "90"
+        elif step["config"]["lowEdge"] == "":
+            step["config"]["lowEdge"] = "70"
+
+        highEdge = float(step["config"]["highEdge"])
+        lowEdge = float(step["config"]["lowEdge"])
+
+    ProcessedData = None
+    for result in Results:
+        if result["ResultLabel"] == targetSignal:
+            recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
+            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+            for channelName in RawData.keys():
+                if channelName == "ResultType":
+                    continue
+                for event in RawData[channelName].keys():
+                    fm = SpectralModel(peak_width_limits=[1,24])
+                    FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [2,80])
+                    for i in range(len(RawData[channelName][event]["PSDs"])):
+                        fm.fit(np.array(RawData[channelName][event]["Frequency"])[FrequencyWindow], np.power(10,RawData[channelName][event]["PSDs"][i])[FrequencyWindow], [0, 100])
+                        RawData[channelName][event]["PSDs"][i] = np.array(RawData[channelName][event]["PSDs"][i])[FrequencyWindow] - fm.get_model("aperiodic")
+                    RawData[channelName][event]["Frequency"] = np.array(RawData[channelName][event]["Frequency"])[FrequencyWindow]
+            ProcessedData = RawData
+
+    recording = createResultDataFile(ProcessedData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
+    analysis.recording_type.append(recording.recording_type)
+    analysis.recording_list.append(str(recording.recording_id))
+
+    return {
+        "ResultLabel": step["config"]["output"],
+        "Id": step["id"],
+        "ProcessedData": str(recording.recording_id),
+        "Type": "PSDs"
+    }
+
+def handleCalculateSpectralFeatures(step, RecordingIds, Results, Configuration, analysis):
+    targetSignal = step["config"]["targetRecording"]
+
+    ProcessedData = None
+    for result in Results:
+        if result["ResultLabel"] == targetSignal:
+            recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
+            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+            SpectralFeatures = []
+            for channelName in RawData.keys():
+                if channelName == "ResultType":
+                    continue
+                for event in RawData[channelName].keys():
+                    for i in range(len(RawData[channelName][event]["PSDs"])):
+                        Features = {"Channel": channelName, "Event": event}
+                        for bandName in ["Theta", "Alpha", "LowBeta", "HighBeta", "LowGamma", "HighGamma"]:
+                            if bandName == "Theta":
+                                FrequencySelection = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [4,8], "inclusive")
+                            elif bandName == "Alpha":
+                                FrequencySelection = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [8,12], "inclusive")
+                            elif bandName == "LowBeta":
+                                FrequencySelection = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [12,20], "inclusive")
+                            elif bandName == "HighBeta":
+                                FrequencySelection = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [20,30], "inclusive")
+                            elif bandName == "LowGamma":
+                                FrequencySelection = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [30,60], "inclusive")
+                            elif bandName == "HighGamma":
+                                FrequencySelection = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [60,90], "inclusive")
+                            else:
+                                continue
+
+                            Freq = np.array(RawData[channelName][event]["Frequency"])[FrequencySelection]
+                            Power = np.array(RawData[channelName][event]["PSDs"][i])[FrequencySelection]
+                            Features[bandName + "_Mean"] = np.mean(Power)
+                            Features[bandName + "_Peak"] = np.max(Power)
+                            Features[bandName + "_PeakFreq"] = Freq[np.argmax(Power)]
+                        SpectralFeatures.append(Features)
+            ProcessedData = {"ResultType": "SpectralFeatures", "Features": SpectralFeatures}
+
+    recording = createResultDataFile(ProcessedData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
+    analysis.recording_type.append(recording.recording_type)
+    analysis.recording_list.append(str(recording.recording_id))
+
+    return {
+        "ResultLabel": step["config"]["output"],
+        "Id": step["id"],
+        "ProcessedData": str(recording.recording_id),
+        "Type": "SpectralFeatures"
     }
 
 def handleExportStructure(step, RecordingIds, Configuration, analysis):
@@ -759,50 +913,27 @@ def handleExportStructure(step, RecordingIds, Configuration, analysis):
         "Type": "AlignedData"
     }
 
-def handleViewRecordings(step, RecordingIds, Configuration, analysis):
+def handleViewRecordings(step, RecordingIds, Results, Configuration, analysis):
+    targetSignal = step["config"]["targetRecording"]
     ProcessedData = []
-    for recordingId in RecordingIds:
-        if models.ExternalRecording.objects.filter(recording_id=recordingId).exists():
-            recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
+    for result in Results:
+        if result["ResultLabel"] == targetSignal:
+            recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
             RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-        elif models.NeuralActivityRecording.objects.filter(recording_id=recordingId).exists():
-            recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
-            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-        
-        RawData["ResultType"] = "ViewData"
-        RawData["DataType"] = Configuration["Descriptor"][recordingId]["Type"]
-        for i in range(len(RawData["ChannelNames"])):
-            if RawData["ChannelNames"][i] in Configuration["Descriptor"][recordingId]["Channels"].keys():
-                RawData["ChannelNames"][i] = Configuration["Descriptor"][recordingId]["Channels"][RawData["ChannelNames"][i]]["name"]
-        RawData["Time"] = (np.arange(RawData["Data"].shape[0])/RawData["SamplingRate"]) + RawData["StartTime"] + (Configuration["Descriptor"][recordingId]["TimeShift"]/1000)
-        
-        if not "Spectrogram" in RawData.keys():
-            RawData["Filtered"] = list()
-            RawData["Spectrogram"] = list()
-            for i in range(len(RawData["ChannelNames"])):
-                [b,a] = signal.butter(5, np.array([1,100])*2/RawData["SamplingRate"], 'bp', output='ba')
-                RawData["Filtered"].append(signal.filtfilt(b, a, RawData["Data"][:,i]))
-
-                RawData["Spectrogram"].append(SPU.defaultSpectrogram(RawData["Filtered"][i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=RawData["SamplingRate"]))
-                RawData["Spectrogram"][i]["Type"] = "Spectrogram"
-                RawData["Spectrogram"][i]["Time"] += 0 # TODO Check later
-
-        annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=analysis.device_deidentified_id, 
-                                                            event_time__gte=datetime.fromtimestamp(RawData["Time"][0], tz=pytz.utc), 
-                                                            event_time__lte=datetime.fromtimestamp(RawData["Time"][-1], tz=pytz.utc))
-        
-        RawData["Annotations"] = [{
-            "Name": item.event_name,
-            "Time": item.event_time.timestamp(),
-            "Duration": item.event_duration
-        } for item in annotations]
-        ProcessedData.append(RawData)
-
-    recording = createResultMATFile({"ProcessedData": ProcessedData}, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
+            if result["Type"] == "PSDs":
+                for channelName in RawData.keys():
+                    if channelName == "ResultType":
+                        continue
+                    for event in RawData[channelName].keys():
+                        RawData[channelName][event]["MeanPower"] = np.mean(np.array(RawData[channelName][event]["PSDs"]), axis=0)
+                        RawData[channelName][event]["StdPower"] = SPU.stderr(np.array(RawData[channelName][event]["PSDs"]), axis=0)
+            ProcessedData.append(RawData)
+            
+    recording = createResultDataFile(ProcessedData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
     analysis.recording_type.append(recording.recording_type)
     analysis.recording_list.append(str(recording.recording_id))
     return {
-        "ResultLabel": "View Timeseries Results",
+        "ResultLabel": step["config"]["output"],
         "Id": step["id"],
         "ProcessedData": str(recording.recording_id),
         "Type": "VisualizationData"
@@ -830,18 +961,23 @@ def processAnalysis(user, analysisId):
     for i in range(len(Configuration["AnalysisSteps"])):
         step = Configuration["AnalysisSteps"][i]
         try:
-            PreviousOutput = None
-            if i > 0:
-                PreviousOutput = Results[-1]
-                
             if step["type"]["value"] == "filter":
-                Result = handleFilterProcessing(step, RecordingIds, Configuration, analysis)
+                Result = handleFilterProcessing(step, RecordingIds, Results, Configuration, analysis)
                 Results.append(Result)
             elif step["type"]["value"] == "export":
-                Result = handleExportStructure(step, RecordingIds, Configuration, analysis)
+                Result = handleExportStructure(step, RecordingIds, Results, Configuration, analysis)
+                Results.append(Result)
+            elif step["type"]["value"] == "extractAnnotations":
+                Result = handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, analysis)
+                Results.append(Result)
+            elif step["type"]["value"] == "calculateSpectralFeatures":
+                Result = handleCalculateSpectralFeatures(step, RecordingIds, Results, Configuration, analysis)
+                Results.append(Result)
+            elif step["type"]["value"] == "normalize":
+                Result = handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analysis)
                 Results.append(Result)
             elif step["type"]["value"] == "view":
-                Result = handleViewRecordings(step, RecordingIds, Configuration, analysis)
+                Result = handleViewRecordings(step, RecordingIds, Results, Configuration, analysis)
                 Results.append(Result)
                 
         except Exception as e:

@@ -7,16 +7,19 @@ import { Autocomplete, TextField } from "@mui/material";
 import { createFilterOptions } from "@mui/material/Autocomplete";
 const filter = createFilterOptions();
 
-const ViewEditor = ({currentState, newProcess, availableRecordings, updateConfiguration}) => {
+const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings, updateConfiguration}) => {
   const [filterOptions, setFilterOptions] = useState(newProcess ? {
     targetRecording: "",
     output: "",
+    psdMethod: "",
     new: true
   } : {...currentState, new: false});
-  
+
   const checkInputComplete = () => {
     return filterOptions.targetRecording !== "" && filterOptions.output !== "";
   }
+
+  const availableMethods = ["Short-time Fourier Transform"];
 
   return (
     <MDBox style={{marginTop: 20, paddingTop: 5, paddingBottom: 15}}>
@@ -44,6 +47,31 @@ const ViewEditor = ({currentState, newProcess, availableRecordings, updateConfig
         onChange={(event, newValue) => setFilterOptions({...filterOptions, targetRecording: newValue})}
       />
 
+      <Autocomplete 
+        selectOnFocus 
+        clearOnBlur
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            variant="standard"
+            placeholder={"Select PSD Method"}
+          />
+        )}
+        filterOptions={(options, params) => {
+          const filtered = filter(options, params);
+          const { inputValue } = params;
+          return filtered;
+        }}
+        isOptionEqualToValue={(option, value) => {
+          return option === value;
+        }}
+        renderOption={(props, option) => <li {...props}>{option}</li>}
+        value={filterOptions.psdMethod}
+        options={availableMethods}
+        onChange={(event, newValue) => setFilterOptions({...filterOptions, psdMethod: newValue})}
+        style={{paddingTop: 30}}
+      />
+
       <TextField
         variant="standard"
         margin="dense"
@@ -62,7 +90,7 @@ const ViewEditor = ({currentState, newProcess, availableRecordings, updateConfig
         </MDButton>
         <MDButton color={"info"} 
           onClick={() => {
-            if (checkInputComplete()) updateConfiguration({...filterOptions});
+            if (checkInputComplete()) updateConfiguration(filterOptions);
           }} style={{marginLeft: 10}}
         >
           {newProcess ? "Add" : "Update"}
@@ -72,4 +100,4 @@ const ViewEditor = ({currentState, newProcess, availableRecordings, updateConfig
   );
 };
 
-export default ViewEditor;
+export default ExtractAnnotationsEditor;

@@ -4,13 +4,17 @@ import MDButton from "components/MDButton";
 import MDTypography from "components/MDTypography";
 import { Autocomplete, TextField } from "@mui/material";
 
+import { createFilterOptions } from "@mui/material/Autocomplete";
+const filter = createFilterOptions();
+
 const FilterEditor = ({currentState, newProcess, availableRecordings, updateConfiguration}) => {
   const [filterOptions, setFilterOptions] = useState(newProcess ? {
     targetRecording: "",
     highpass: "",
     lowpass: "",
-    output: ""
-  } : currentState);
+    output: "",
+    new: true
+  } : {...currentState, new: false});
 
   const checkInputComplete = () => {
     return filterOptions.targetRecording !== "" && filterOptions.output !== "";
@@ -84,7 +88,7 @@ const FilterEditor = ({currentState, newProcess, availableRecordings, updateConf
         </MDButton>
         <MDButton color={"info"} 
           onClick={() => {
-            if (checkInputComplete()) updateConfiguration(filterOptions);
+            if (checkInputComplete()) updateConfiguration({...filterOptions, update: !newProcess});
           }} style={{marginLeft: 10}}
         >
           {newProcess ? "Add" : "Update"}

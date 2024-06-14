@@ -28,8 +28,6 @@ import {
   TextField
 } from "@mui/material"
 
-import { createFilterOptions } from "@mui/material/Autocomplete";
-
 import SettingsIcon from '@mui/icons-material/Settings';
 import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
@@ -46,15 +44,29 @@ import { v4 as uuidv4 } from 'uuid';
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
 import { dictionary } from "assets/translation.js";
-import ExportEditor from "./AnalysisSteps/ExportEditor";
 
 import ExportEditor from "./AnalysisSteps/ExportEditor";
 import FilterEditor from "./AnalysisSteps/FilterEditor";
 import ViewEditor from "./AnalysisSteps/ViewEditor";
+import NormalizeEditor from "./AnalysisSteps/NormalizeEditor";
+import ExtractAnnotationsEditor from "./AnalysisSteps/ExtractAnnotationsEditor";
+
+import { createFilterOptions } from "@mui/material/Autocomplete";
+import CalculateSpectralFeaturesEditor from "./AnalysisSteps/CalculateSpectralFeaturesEditor";
+const filter = createFilterOptions();
 
 const availableProcessings = [{
   value: "filter",
-  label: "Apply Filter"
+  label: "Apply Filter to TimeDomain Data",
+}, {
+  value: "extractAnnotations",
+  label: "Extract Average PSDs from Annotations"
+}, {
+  value: "normalize",
+  label: "Normalize PSD Data"
+}, {
+  value: "calculateSpectralFeatures",
+  label: "Calculate Spectral Features from PSD Data"
 }, {
   value: "export",
   label: "Export Data"
@@ -62,8 +74,6 @@ const availableProcessings = [{
   value: "view",
   label: "View Data"
 }];
-
-const filter = createFilterOptions();
 
 function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, updateProcessingResult}) {
   const navigate = useNavigate();
@@ -97,6 +107,10 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
           availableRecordings.push(analysisData.Configuration.Descriptor[recordingIds[i]].Type);
         }
       }
+
+      for (let i in processingSteps) {
+        availableRecordings.push(processingSteps[i].config.output);
+      }
       setAvailableRecordings(availableRecordings);
     }
   }, [analysisId]);
@@ -120,6 +134,45 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
       ...processingConfig,
       id: uuidv4()
     }]);
+    setAvailableRecordings([...availableRecordings, processingConfig.config.output]);
+  }
+
+  const handleEditStep = (processingConfig) => {
+    if (analysisData.Analysis.ProcessingQueued) {
+      setAlert(<MuiAlertDialog 
+        title={"Currently Processing"}
+        message={"Cannot update analysis until current queue is finished."}
+        confirmText={"Confirm"}
+        handleClose={() => setAlert(null)}
+        handleDeny={() => setAlert(null)}
+        handleConfirm={() => setAlert(null)}
+      />);
+      return;
+    }
+
+    setProcessingSteps((processingSteps) => {
+      for (let i in processingSteps) {
+        if (processingSteps[i].id == processingConfig.id) {
+          processingSteps[i] = {...processingSteps[i], ...processingConfig};
+        }
+      }
+
+      setAvailableRecordings(() => {
+        let availableRecordings = [];
+        let recordingIds = Object.keys(analysisData.Configuration.Descriptor);
+        for (let i in recordingIds) {
+          if (!availableRecordings.includes(analysisData.Configuration.Descriptor[recordingIds[i]].Type)) {
+            availableRecordings.push(analysisData.Configuration.Descriptor[recordingIds[i]].Type);
+          }
+        }
+        for (let i in processingSteps) {
+          availableRecordings.push(processingSteps[i].config.output);
+        }
+        return [...availableRecordings]
+      });
+
+      return [...processingSteps];
+    })
   }
 
   const handleDeleteStep = (processId) => {
@@ -168,11 +221,13 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
       />);
       return;
     }
-    
+
     if (config) {
-      delete config["show"];
-      delete config["new"];
-      handleAddStep({...editProcessingStep, config: config});
+      if (!config.new) {
+        handleEditStep({...editProcessingStep, config: config});
+      } else {
+        handleAddStep({...editProcessingStep, config: config});
+      }
       setEditProcessingStep({...editProcessingStep, show: false});
     }
   };
@@ -240,56 +295,31 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
                 <Badge badgeContent={`${index+1}`} color="primary" anchorOrigin={{vertical: "top", horizontal: "left"}} sx={{width: "100%"}}>
                     <Card sx={{width: "100%", padding: 3}}>
                       <MDBox style={{display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "start"}}>
-                        {step.type.value === "filter" ? (
-                          <MDBox style={{flexDirection: "column"}}>
-                            <MDBox>
-                              <MDTypography variant={"h4"} fontFamily={"lato"} fontWeight={"bold"}>
-                                {step.type.label}
-                              </MDTypography>
-                              <MDTypography variant={"p"} fontFamily={"lato"} fontWeight={"regular"}>
-                                {step.config.targetRecording}
-                              </MDTypography>
-                            </MDBox>
-                            <MDBox>
-                              <MDTypography variant={"p"} fontFamily={"lato"} fontWeight={"regular"}>
-                                {'Highpass: ' + (step.config.highpass === "" ? "Disabled" : step.config.highpass + " Hz")}
-                                <br></br>
-                                {'Lowpass: ' + (step.config.lowpass === "" ? "Disabled" : step.config.lowpass + " Hz")}
-                              </MDTypography>
-                            </MDBox>
+                        <MDBox style={{flexDirection: "column"}}>
+                          <MDBox>
+                            <MDTypography variant={"h4"} fontFamily={"lato"} fontWeight={"bold"}>
+                              {step.type.label}
+                            </MDTypography>
                           </MDBox>
-                        ) : null}
-                        {step.type.value === "export" ? (
-                          <MDBox style={{flexDirection: "column"}}>
-                            <MDBox>
-                              <MDTypography variant={"h4"} fontFamily={"lato"} fontWeight={"bold"}>
-                                {step.type.label}
-                              </MDTypography>
-                            </MDBox>
-                          </MDBox>
-                        ) : null}
-                        {step.type.value === "view" ? (
-                          <MDBox style={{flexDirection: "column"}}>
-                            <MDBox>
-                              <MDTypography variant={"h4"} fontFamily={"lato"} fontWeight={"bold"}>
-                                {"View Data and Annotations"}
-                              </MDTypography>
-                            </MDBox>
-                          </MDBox>
-                        ) : null}
-                        <MDBox style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"}}>
-                          <IconButton color="info" size="small" onClick={() => setChangeOrder({show: true, currentStep: index, step: index})} sx={{paddingX: 1}}>
-                            <ChangeCircleIcon fontSize={"large"} />
-                          </IconButton>
-                          <IconButton color="error" size="small" onClick={() => handleDeleteStep(step.id)} sx={{paddingX: 1}}>
-                            <DeleteForeverIcon fontSize={"large"} />
-                          </IconButton>
                         </MDBox>
                       </MDBox>
                       <MDBox style={{paddingTop: 5}}>
-                        <MDTypography variant={"h4"} fontFamily={"lato"} fontWeight={"bold"}>
+                        <MDTypography variant={"h6"} fontFamily={"lato"} fontWeight={"bold"}>
                           {"Output Data: "} {step.config.output}
                         </MDTypography>
+                      </MDBox>
+                      <MDBox style={{display: "flex", flexDirection: "row"}}>
+                        <IconButton color="info" size="small" onClick={() => setChangeOrder({show: true, currentStep: index, step: index})} sx={{paddingX: 1}}>
+                          <ChangeCircleIcon fontSize={"large"} />
+                        </IconButton>
+                        <IconButton color="info" size="small" onClick={() => {
+                          setEditProcessingStep({show: true, new: false, id: step.id, type: step.type, config: step.config})
+                        }} sx={{paddingX: 1}}>
+                          <SettingsIcon fontSize={"large"} />
+                        </IconButton>
+                        <IconButton color="error" size="small" onClick={() => handleDeleteStep(step.id)} sx={{paddingX: 1}}>
+                          <DeleteForeverIcon fontSize={"large"} />
+                        </IconButton>
                       </MDBox>
                     </Card>
                 </Badge>
@@ -346,13 +376,28 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
               updateConfiguration={updateConfiguration}
               />
             ) : null}
+            {editProcessingStep.type.value === "extractAnnotations" ? (
+              <ExtractAnnotationsEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
+              updateConfiguration={updateConfiguration}
+              />
+            ) : null}
+            {editProcessingStep.type.value === "normalize" ? (
+              <NormalizeEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
+              updateConfiguration={updateConfiguration}
+              />
+            ) : null}
+            {editProcessingStep.type.value === "calculateSpectralFeatures" ? (
+              <CalculateSpectralFeaturesEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
+              updateConfiguration={updateConfiguration}
+              />
+            ) : null}
             {editProcessingStep.type.value === "export" ? (
               <ExportEditor newProcess={editProcessingStep.new} 
               updateConfiguration={updateConfiguration}
               />
             ) : null}
             {editProcessingStep.type.value === "view" ? (
-              <ViewEditor newProcess={editProcessingStep.new} 
+              <ViewEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
               updateConfiguration={updateConfiguration}
               />
             ) : null}
@@ -367,6 +412,7 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
 
           </DialogContent>
         </Dialog>
+
         <Dialog open={changeOrder.show} onClose={() => setChangeOrder({...changeOrder, show: false})}>
           <MDBox px={2} pt={2}>
             <MDTypography variant="h5">

@@ -86,7 +86,6 @@ function AnalysisResultViewer({analysisId, analysisData}) {
       }).then((response) => {
         setAlert(null);
         setDataToRender(response.data)
-        console.log(response.data)
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
@@ -179,7 +178,7 @@ function AnalysisResultViewer({analysisId, analysisData}) {
                   {"Download"}
                 </MDButton>
               ) : null}
-              <ResultViewer data={dataToRender} type={"TimeSeries"} />
+              <ResultViewer data={dataToRender} result={selectedRecording} type={selectedRecording.type} />
             </Grid>
             ) : null}
         </Grid>

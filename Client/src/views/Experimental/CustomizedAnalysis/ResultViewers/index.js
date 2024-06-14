@@ -21,27 +21,31 @@ import EventPSDs from "./EventPSDs";
 
 import MDBox from "components/MDBox";
 import { Grid } from "@mui/material";
+import SpectralFeatures from "./SpectralFeatures";
 
-function ResultViewer({data, type}) {
+function ResultViewer({data, result}) {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
   const { patientID, language } = controller;
 
   if (Object.keys(data).length == 0) return null;
+  const type = data.Data[0].ResultType;
 
-  if (type == "TimeSeries") {
+  if (type == "PSDs") {
     return <Grid container spacing={2}>
       <Grid item xs={12}>
-        <TimeDomainFigure dataToRender={data} height={250} figureTitle={"TimeDomainFigure"} />
-      </Grid>
-      <Grid item xs={12} lg={6}>
-        {Object.keys(data.Data.EventPSDs).length == 0 ? null : (
-          <EventPSDs dataToRender={data} height={600} figureTitle={"EventPSDs"} channelName={"Test"} />
-        )} 
+        <EventPSDs dataToRender={data.Data[0]} height={600} figureTitle={"EventPSDs"} />
       </Grid>
     </Grid>
-  } else {
+  } else if (type == "SpectralFeatures") {
+    return <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <SpectralFeatures dataToRender={data.Data[0].Features} height={600} figureTitle={result.title} />
+      </Grid>
+    </Grid>
     return null;
+  } else {
+    return null
   }
 }
 

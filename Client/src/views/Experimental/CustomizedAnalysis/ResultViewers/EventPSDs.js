@@ -27,7 +27,7 @@ import { usePlatformContext } from "context";
 
 import { dictionary, dictionaryLookup } from "assets/translation";
 
-function EventPSDs({dataToRender, channelName, height, config, figureTitle}) {
+function EventPSDs({dataToRender, height, config, figureTitle}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
 
@@ -89,22 +89,15 @@ function EventPSDs({dataToRender, channelName, height, config, figureTitle}) {
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
     if (dataToRender) {
-      let ChannelNames = [];
-      for (let i in dataToRender.Data.Timeseries) {
-        for (let j in dataToRender.Data.Timeseries[i].ChannelNames) {
-          if (!ChannelNames.includes(dataToRender.Data.Timeseries[i].ChannelNames[j])) {
-            ChannelNames.push(dataToRender.Data.Timeseries[i].ChannelNames[j]);
-          }
-        }
-      }
+      let ChannelNames = Object.keys(dataToRender);
+      ChannelNames = ChannelNames.filter((a) => a != "ResultType");
       setEventPSDSelector({...eventPSDSelector, options: ChannelNames, value: ChannelNames[0]});
     }
-
   }, [dataToRender, language]);
 
   React.useEffect(() => {
     if (eventPSDSelector.value) {
-      handleGraphing(dataToRender.Data.EventPSDs[eventPSDSelector.value], eventPSDSelector.value);
+      handleGraphing(dataToRender[eventPSDSelector.value], eventPSDSelector.value);
     }
   }, [eventPSDSelector]);
 
@@ -120,7 +113,16 @@ function EventPSDs({dataToRender, channelName, height, config, figureTitle}) {
   });
 
   const exportCurrentStream = () => {
-    var csvData = JSON.stringify(dataToRender.Data.EventPSDs);
+    var csvData = JSON.stringify(dataToRender);
+
+    /*
+    var csvData = "Channel,Event,Theta,Alpha,LowBeta,HighBeta,\n"
+    for (var i = 0; i < chronicData[n]["Power"].length; i++) {
+      for (var j = 0; j < chronicData[n]["Power"][i][j]; j++) {
+        csvData += chronicData[n]["Timestamp"][i][j] + "," + chronicData[n]["Power"][i][j] + "," + chronicData[n]["Therapy"][i]["TherapyOverview"] + "\n"
+      }
+    }
+    */
 
     var downloader = document.createElement('a');
     downloader.href = 'data:text/json;charset=utf-8,' + encodeURI(csvData);
