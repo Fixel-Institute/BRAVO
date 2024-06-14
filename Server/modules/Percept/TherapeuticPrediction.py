@@ -172,8 +172,8 @@ def extractFullPredictionFeatures(BrainSenseData, HemisphereInfo):
             uniqueAmplitude = sorted(np.unique(StimulationAmplitude))
             
             FullFeatures = np.zeros((len(BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"])+1, len(uniqueAmplitude)))
-            for i in range(len(BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"])):
-                freq = BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"]
+            for j in range(len(BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"])):
+                freq = BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"][j]
                 FrequencyOfInterest = rangeSelection(BrainSenseData["TimeDomain"]["Spectrogram"][i]["Frequency"], [freq - 3, freq + 3])
                 BrainPower = np.mean(BrainSenseData["TimeDomain"]["Spectrogram"][i]["Power"][:,constantStimulation][FrequencyOfInterest], axis=0)
 
@@ -181,7 +181,7 @@ def extractFullPredictionFeatures(BrainSenseData, HemisphereInfo):
                 for k in range(len(uniqueAmplitude)):
                     simplifiedYData.append(np.median(BrainPower[StimulationAmplitude==uniqueAmplitude[k]]))
                 
-                FullFeatures[i,:] = np.array(simplifiedYData)
+                FullFeatures[j,:] = np.array(simplifiedYData)
             FullFeatures[-1,:] = np.array(uniqueAmplitude)
             return FullFeatures
 
