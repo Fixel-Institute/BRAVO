@@ -827,8 +827,13 @@ def processAnalysis(user, analysisId):
                 analysis.save()
 
     Results = []
-    for step in Configuration["AnalysisSteps"]:
+    for i in range(len(Configuration["AnalysisSteps"])):
+        step = Configuration["AnalysisSteps"][i]
         try:
+            PreviousOutput = None
+            if i > 0:
+                PreviousOutput = Results[-1]
+                
             if step["type"]["value"] == "filter":
                 Result = handleFilterProcessing(step, RecordingIds, Configuration, analysis)
                 Results.append(Result)

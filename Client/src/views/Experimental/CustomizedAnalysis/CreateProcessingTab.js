@@ -46,164 +46,24 @@ import { v4 as uuidv4 } from 'uuid';
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
 import { dictionary } from "assets/translation.js";
-import AnalysisBuilder from "./AnalysisBuilder";
-import PreciseTimeAlignmentTab from "./PreciseTimeAlignmentTab";
+import ExportEditor from "./AnalysisSteps/ExportEditor";
+
+import ExportEditor from "./AnalysisSteps/ExportEditor";
+import FilterEditor from "./AnalysisSteps/FilterEditor";
+import ViewEditor from "./AnalysisSteps/ViewEditor";
+
+const availableProcessings = [{
+  value: "filter",
+  label: "Apply Filter"
+}, {
+  value: "export",
+  label: "Export Data"
+}, {
+  value: "view",
+  label: "View Data"
+}];
 
 const filter = createFilterOptions();
-
-const FilterEditor = ({currentState, newProcess, availableRecordings, updateConfiguration}) => {
-  const [filterOptions, setFilterOptions] = useState(newProcess ? {
-    targetRecording: "",
-    highpass: "",
-    lowpass: "",
-    output: ""
-  } : currentState);
-
-  const checkInputComplete = () => {
-    return filterOptions.targetRecording !== "" && filterOptions.output !== "";
-  }
-
-  return (
-    <MDBox style={{marginTop: 20, paddingTop: 5, paddingBottom: 15}}>
-      <Autocomplete 
-        selectOnFocus 
-        clearOnBlur
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            variant="standard"
-            placeholder={"Select Target Recording Type"}
-          />
-        )}
-        filterOptions={(options, params) => {
-          const filtered = filter(options, params);
-          const { inputValue } = params;
-          return filtered;
-        }}
-        isOptionEqualToValue={(option, value) => {
-          return option === value;
-        }}
-        renderOption={(props, option) => <li {...props}>{option}</li>}
-        value={filterOptions.targetRecording}
-        options={availableRecordings}
-        onChange={(event, newValue) => setFilterOptions({...filterOptions, targetRecording: newValue})}
-      />
-      <MDTypography fontSize={15} style={{paddingTop: 30}}>
-        {"Filter Range: "}
-      </MDTypography>
-      <MDBox style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
-        <TextField
-          variant="standard"
-          margin="dense"
-          value={filterOptions.highpass}
-          placeholder={"Disable"}
-          onChange={(event) => setFilterOptions({...filterOptions, highpass: event.target.value})}
-          label={"Highpass Filter (Default Disable)"} type={"number"}
-          autoComplete={"off"}
-          fullWidth
-        />
-        <TextField
-          variant="standard"
-          margin="dense"
-          value={filterOptions.lowpass}
-          placeholder={"Disable"}
-          onChange={(event) => setFilterOptions({...filterOptions, lowpass: event.target.value})}
-          label={"Lowpass Filter (Default Disable)"} type={"number"}
-          autoComplete={"off"}
-          fullWidth
-        />
-      </MDBox>
-      <TextField
-        variant="standard"
-        margin="dense"
-        value={filterOptions.output}
-        placeholder={"Disable"}
-        onChange={(event) => setFilterOptions({...filterOptions, output: event.target.value})}
-        label={"Output Result Label"} type={"text"}
-        autoComplete={"off"}
-        fullWidth
-      />
-      <MDBox style={{display: "flex", paddingLeft: 15, paddingRight: 15, paddingTop: 15, justifyContent: "flex-end"}}>
-        <MDButton color={"secondary"} 
-          onClick={() => updateConfiguration(false)}
-        >
-          {"Cancel"}
-        </MDButton>
-        <MDButton color={"info"} 
-          onClick={() => {
-            if (checkInputComplete()) updateConfiguration(filterOptions);
-          }} style={{marginLeft: 10}}
-        >
-          {newProcess ? "Add" : "Update"}
-        </MDButton>
-      </MDBox>
-    </MDBox>
-  );
-};
-
-const ExportEditor = ({currentState, newProcess, updateConfiguration}) => {
-  const [outputOptions, setOutputOptions] = useState(newProcess ? {
-    output: ""
-  } : currentState);
-
-  return (
-    <MDBox style={{marginTop: 20, paddingTop: 5, paddingBottom: 15}}>
-      <TextField
-        variant="standard"
-        margin="dense"
-        value={outputOptions.output}
-        placeholder={"Disable"}
-        onChange={(event) => setOutputOptions({...outputOptions, output: event.target.value})}
-        label={"Output Result Label"} type={"text"}
-        autoComplete={"off"}
-        fullWidth
-      />
-      <MDBox style={{display: "flex", paddingLeft: 15, paddingRight: 15, paddingTop: 15, justifyContent: "flex-end"}}>
-        <MDButton color={"secondary"} 
-          onClick={() => updateConfiguration(false)}
-        >
-          {"Cancel"}
-        </MDButton>
-        <MDButton color={"info"} 
-          onClick={() => {
-            updateConfiguration({
-              output: outputOptions.output
-            });
-          }} style={{marginLeft: 10}}
-        >
-          {newProcess ? "Add" : "Update"}
-        </MDButton>
-      </MDBox>
-    </MDBox>
-  );
-};
-
-const ViewEditor = ({currentState, newProcess, updateConfiguration}) => {
-  const [outputOptions, setOutputOptions] = useState(newProcess ? {
-    output: "View Data"
-  } : currentState);
-  
-  return (
-    <MDBox style={{marginTop: 20, paddingTop: 5, paddingBottom: 15}}>
-      <MDBox style={{display: "flex", paddingLeft: 15, paddingRight: 15, paddingTop: 15, justifyContent: "flex-end"}}>
-        <MDButton color={"secondary"} 
-          onClick={() => updateConfiguration(false)}
-        >
-          {"Cancel"}
-        </MDButton>
-        <MDButton color={"info"} 
-          onClick={() => {
-            updateConfiguration({
-              output: outputOptions.output
-            });
-          }} style={{marginLeft: 10}}
-        >
-          {newProcess ? "Add" : "Update"}
-        </MDButton>
-      </MDBox>
-    </MDBox>
-  );
-};
 
 function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, updateProcessingResult}) {
   const navigate = useNavigate();
@@ -363,17 +223,6 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
     });
     updateProcessingResult([]);
   };
-
-  const availableProcessings = [{
-    value: "filter",
-    label: "Apply Filter"
-  }, {
-    value: "export",
-    label: "Export Data"
-  }, {
-    value: "view",
-    label: "View Data"
-  }]
 
   return (
     <MDBox pt={3}>
