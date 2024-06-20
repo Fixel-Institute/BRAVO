@@ -23,4 +23,4 @@ from django.http import HttpResponse
 class Homepage(RestViews.APIView):
     parser_classes = [RestParsers.JSONParser]
     def get(self, request):
-        return render(request, "blank.html")
+        return render(request, "index.html")
