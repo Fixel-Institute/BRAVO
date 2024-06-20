@@ -1,0 +1,5 @@
+podman pod create --name bravo --publish 20302:3999
+podman run --name bravo-redis --pod bravo -d docker.io/library/redis:5 
+podman run --name bravo-client --pod bravo -d docker.io/jcagle95/bravo-client:latest
+podman run --name bravo-server -v ${PWD}/BRAVOStorage:/usr/src/BRAVO/BRAVOStorage --env-file ./bravo-server-env.list --pod bravo -d docker.io/jcagle95/bravo-server:latest bash -c "env >> /etc/environment && python3 manage.py migrate && cron && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
+podman run --name bravo-proxy -v ${PWD}/bravo.nginx.conf:/etc/nginx/nginx.conf:ro --pod bravo -d docker.io/library/nginx:latest
