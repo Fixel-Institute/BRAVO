@@ -51,8 +51,13 @@ def processAnalysis():
             print(f"Start Processing {queue.descriptor['analysisId']}")
 
             user = models.PlatformUser.objects.filter(unique_user_id=queue.owner).first()
-            Results = AnalysisBuilder.processAnalysis(user, queue.descriptor["analysisId"])
-
+            try:
+                Results = AnalysisBuilder.processAnalysis(user, queue.descriptor["analysisId"])
+            except Exception as e:
+                print(e.__cause__)
+                queue.state="Error"
+                queue.save()
+                
             print(f"End Processing {queue.descriptor['analysisId']}")
 
             queue.state="Complete"

@@ -7,12 +7,10 @@ import { Autocomplete, TextField } from "@mui/material";
 import { createFilterOptions } from "@mui/material/Autocomplete";
 const filter = createFilterOptions();
 
-const NormalizeEditor = ({currentState, newProcess, availableRecordings, updateConfiguration}) => {
+const NormalizeEditor = ({currentState, newProcess, availableRecordings, defaultConfigs, updateConfiguration}) => {
   const [filterOptions, setFilterOptions] = useState(newProcess ? {
+    ...defaultConfigs,
     targetRecording: "",
-    normalizeMethod: "FOOOF",
-    highEdge: "",
-    lowEdge: "",
     output: "",
     new: true
   } : {...currentState, new: false});

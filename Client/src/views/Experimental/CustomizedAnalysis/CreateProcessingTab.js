@@ -39,41 +39,17 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import LoadingProgress from "components/LoadingProgress";
 
+import { availableProcessings, AnalysisSteps } from "./AnalysisSteps";
+import { availableTemplates, ProcessingTemplates } from "./ProcessingTemplates";
+
 import { v4 as uuidv4 } from 'uuid';
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
 import { dictionary } from "assets/translation.js";
 
-import ExportEditor from "./AnalysisSteps/ExportEditor";
-import FilterEditor from "./AnalysisSteps/FilterEditor";
-import ViewEditor from "./AnalysisSteps/ViewEditor";
-import NormalizeEditor from "./AnalysisSteps/NormalizeEditor";
-import ExtractAnnotationsEditor from "./AnalysisSteps/ExtractAnnotationsEditor";
-
 import { createFilterOptions } from "@mui/material/Autocomplete";
-import CalculateSpectralFeaturesEditor from "./AnalysisSteps/CalculateSpectralFeaturesEditor";
 const filter = createFilterOptions();
-
-const availableProcessings = [{
-  value: "filter",
-  label: "Apply Filter to TimeDomain Data",
-}, {
-  value: "extractAnnotations",
-  label: "Extract PSDs from Annotations"
-}, {
-  value: "normalize",
-  label: "Normalize PSD Data"
-}, {
-  value: "calculateSpectralFeatures",
-  label: "Calculate Spectral Features from PSD Data"
-}, {
-  value: "export",
-  label: "Export Data"
-}, {
-  value: "view",
-  label: "View Data"
-}];
 
 function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, updateProcessingResult}) {
   const navigate = useNavigate();
@@ -83,6 +59,7 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
   const [alert, setAlert] = useState(null);
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingTemplate, setProcessingTemplate] = useState({show: false, value: "None", label: "None", options: availableTemplates});
   const [processingSteps, setProcessingSteps] = useState(analysisData.Configuration.AnalysisSteps || []);
   const [editProcessingStep, setEditProcessingStep] = useState({
     show: false,
@@ -254,6 +231,23 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
     setChangeOrder({...changeOrder, show: false});
   };
 
+  const handleSetTemplate = (options) => {
+    if (!options) setProcessingTemplate({show: false, value: "None", label: "None", options: availableTemplates});
+
+    setProcessingSteps(options.map((option) => ({id: uuidv4(), type: option.type, config: option})));
+    setAvailableRecordings(() => {
+      let availableRecordings = [];
+      let recordingIds = Object.keys(analysisData.Configuration.Descriptor);
+      for (let i in recordingIds) {
+        if (!availableRecordings.includes(analysisData.Configuration.Descriptor[recordingIds[i]].Type)) {
+          availableRecordings.push(analysisData.Configuration.Descriptor[recordingIds[i]].Type);
+        }
+      }
+      return [...availableRecordings, ...options.map((option) => option.output)]
+    });
+    setProcessingTemplate({...processingTemplate, show: false});
+  };
+
   useEffect(() => {
     if (processingSteps === analysisData.Configuration.AnalysisSteps) return;
     
@@ -283,6 +277,33 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
     <MDBox pt={3}>
       {alert}
       <MDBox>
+        <MDBox style={{marginBottom: 25}}>
+          <Autocomplete selectOnFocus clearOnBlur
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="standard"
+                label={"Use Template: "}
+                placeholder={"Use Template"}
+              />
+            )}
+            filterOptions={(options, params) => {
+              const filtered = filter(options, params);
+              const { inputValue } = params;
+              return filtered;
+            }}
+            isOptionEqualToValue={(option, value) => option.value === value.value}
+            renderOption={(props, option) => <li {...props}>{option.label}</li>}
+            value={processingTemplate.label}
+            options={processingTemplate.options}
+            onChange={(event, newValue) => {
+              if (newValue) {
+                setProcessingTemplate({...processingTemplate, ...newValue, show: true});
+              } else {
+                setEditProcessingStep({...editProcessingStep, ...{value: "None", label: "None"}});
+              }
+            }}/>
+        </MDBox>
         <MDBox style={{marginBottom: 25}}>
           <MDButton fullWidth color={"success"} style={{fontSize: 25}} onClick={requestProcessing} disabled={analysisData.Analysis.ProcessingQueued}>
             {analysisData.Analysis.ProcessingQueued ? "Currently Processing" : "Start Processing"}
@@ -363,44 +384,18 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
               }}
               renderOption={(props, option) => <li {...props}>{option.label}</li>}
               value={editProcessingStep.type}
-              options={availableProcessings}
+              options={availableProcessings.map((a) => a.type)}
               onChange={(event, newValue) => {
                 if (newValue) {
                   setEditProcessingStep({...editProcessingStep, type: newValue});
                 } else {
                   setEditProcessingStep({...editProcessingStep, type: {value: "", label: ""}});
                 }
-              }}/>
-            {editProcessingStep.type.value === "filter" ? (
-              <FilterEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
+              }}
+            />
+            <AnalysisSteps type={editProcessingStep.type.value} currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
               updateConfiguration={updateConfiguration}
-              />
-            ) : null}
-            {editProcessingStep.type.value === "extractAnnotations" ? (
-              <ExtractAnnotationsEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
-              updateConfiguration={updateConfiguration}
-              />
-            ) : null}
-            {editProcessingStep.type.value === "normalize" ? (
-              <NormalizeEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
-              updateConfiguration={updateConfiguration}
-              />
-            ) : null}
-            {editProcessingStep.type.value === "calculateSpectralFeatures" ? (
-              <CalculateSpectralFeaturesEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
-              updateConfiguration={updateConfiguration}
-              />
-            ) : null}
-            {editProcessingStep.type.value === "export" ? (
-              <ExportEditor newProcess={editProcessingStep.new} 
-              updateConfiguration={updateConfiguration}
-              />
-            ) : null}
-            {editProcessingStep.type.value === "view" ? (
-              <ViewEditor currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
-              updateConfiguration={updateConfiguration}
-              />
-            ) : null}
+            />
 
             {editProcessingStep.type.value === "" ? (
               <MDButton color={"secondary"}  style={{marginTop: 15}}
@@ -410,6 +405,25 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
               </MDButton>
             ) : null}
 
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={processingTemplate.show} onClose={() => setProcessingTemplate({...processingTemplate, show: false})}>
+          <MDBox px={2} pt={2}>
+            <MDTypography variant="h5">
+              {processingTemplate.label}
+            </MDTypography>
+          </MDBox>
+          <DialogContent sx={{minWidth: 500}} >
+            <ProcessingTemplates type={processingTemplate.value} availableRecordings={availableRecordings} setConfiguration={handleSetTemplate}/>
+
+            {processingTemplate.value === "None" ? (
+              <MDButton color={"secondary"}  style={{marginTop: 15}}
+                onClick={() => setProcessingTemplate({...processingTemplate, show: false})}
+              >
+                {"Cancel"}
+              </MDButton>
+            ) : null}
           </DialogContent>
         </Dialog>
 

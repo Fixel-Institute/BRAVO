@@ -7,11 +7,10 @@ import { Autocomplete, TextField } from "@mui/material";
 import { createFilterOptions } from "@mui/material/Autocomplete";
 const filter = createFilterOptions();
 
-const FilterEditor = ({currentState, newProcess, availableRecordings, updateConfiguration}) => {
+const FilterEditor = ({currentState, newProcess, availableRecordings, defaultConfigs, updateConfiguration}) => {
   const [filterOptions, setFilterOptions] = useState(newProcess ? {
+    ...defaultConfigs,
     targetRecording: "",
-    highpass: "",
-    lowpass: "",
     output: "",
     new: true
   } : {...currentState, new: false});

@@ -707,7 +707,7 @@ def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, anal
     psdMethod = step["config"]["psdMethod"]
 
     def processRawData(RawData):
-        RawData["ResultType"] = "PSDs"
+        RawData["ResultType"] = "RawPSDs"
         for i in range(len(RawData["ChannelNames"])):
             if RawData["ChannelNames"][i] in Configuration["Descriptor"][recordingId]["Channels"].keys():
                 RawData["ChannelNames"][i] = Configuration["Descriptor"][recordingId]["Channels"][RawData["ChannelNames"][i]]["name"]
@@ -751,7 +751,7 @@ def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, anal
                 RawData[i] = processRawData(RawData=RawData[i])
                 ProcessedData.append(RawData[i])
 
-    ResultData = {"ResultType": "PSDs"}
+    ResultData = {"ResultType": "RawPSDs"}
     for i in range(len(ProcessedData)):
         if type(ProcessedData[i]["ChannelNames"]) == str:
             ProcessedData[i]["ChannelNames"] = [ProcessedData[i]["ChannelNames"]]
@@ -778,7 +778,12 @@ def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, anal
                     
                     TimeSelection = PythonUtility.rangeSelection(ProcessedData[i]["Spectrogram"][j]["Time"], [EventStartTime, EventStartTime+annotation["Duration"]])
                     PSDs = ProcessedData[i]["Spectrogram"][j]["Power"][:, TimeSelection]
-                    ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["PSDs"].append(np.mean(PSDs, axis=1))
+
+                    if step["config"]["averaged"]:
+                        ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["PSDs"].append(np.mean(PSDs, axis=1))
+                    else:
+                        for k in range(PSDs.shape[1]):
+                            ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["PSDs"].append(PSDs[:,k])
                     ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["Frequency"] = ProcessedData[i]["Spectrogram"][j]["Frequency"]
 
     recording = createResultDataFile(ResultData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
@@ -789,7 +794,7 @@ def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, anal
         "ResultLabel": step["config"]["output"],
         "Id": step["id"],
         "ProcessedData": str(recording.recording_id),
-        "Type": "PSDs"
+        "Type": "RawPSDs"
     }
 
 def handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analysis):
@@ -815,12 +820,23 @@ def handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analys
                 if channelName == "ResultType":
                     continue
                 for event in RawData[channelName].keys():
-                    fm = SpectralModel(peak_width_limits=[1,24])
-                    FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [2,80])
-                    for i in range(len(RawData[channelName][event]["PSDs"])):
-                        fm.fit(np.array(RawData[channelName][event]["Frequency"])[FrequencyWindow], np.power(10,RawData[channelName][event]["PSDs"][i])[FrequencyWindow], [0, 100])
-                        RawData[channelName][event]["PSDs"][i] = np.array(RawData[channelName][event]["PSDs"][i])[FrequencyWindow] - fm.get_model("aperiodic")
-                    RawData[channelName][event]["Frequency"] = np.array(RawData[channelName][event]["Frequency"])[FrequencyWindow]
+                    meanPSDs = np.mean(np.array(RawData[channelName][event]["PSDs"]), axis=0)
+
+                    if normalizeMethod == "FOOOF":
+                        FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [2,80])
+
+                        fm = SpectralModel(peak_width_limits=[1,24])
+                        fm.fit(np.array(RawData[channelName][event]["Frequency"])[FrequencyWindow], np.power(10,meanPSDs)[FrequencyWindow], [0, 100])
+                        oof = fm.get_model("aperiodic", "log")
+                        for i in range(len(RawData[channelName][event]["PSDs"])):
+                            RawData[channelName][event]["PSDs"][i] = np.array(RawData[channelName][event]["PSDs"][i])[FrequencyWindow] - oof
+                        RawData[channelName][event]["Frequency"] = np.array(RawData[channelName][event]["Frequency"])[FrequencyWindow]
+                    elif normalizeMethod == "Band Normalize":
+                        FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [lowEdge,highEdge])
+
+                        MeanRefPower = np.mean(meanPSDs[FrequencyWindow])
+                        for i in range(len(RawData[channelName][event]["PSDs"])):
+                            RawData[channelName][event]["PSDs"][i] = np.array(RawData[channelName][event]["PSDs"][i]) - MeanRefPower
             ProcessedData = RawData
 
     recording = createResultDataFile(ProcessedData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
@@ -831,7 +847,7 @@ def handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analys
         "ResultLabel": step["config"]["output"],
         "Id": step["id"],
         "ProcessedData": str(recording.recording_id),
-        "Type": "PSDs"
+        "Type": "RawPSDs"
     }
 
 def handleCalculateSpectralFeatures(step, RecordingIds, Results, Configuration, analysis):
@@ -920,13 +936,14 @@ def handleViewRecordings(step, RecordingIds, Results, Configuration, analysis):
         if result["ResultLabel"] == targetSignal:
             recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
             RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-            if result["Type"] == "PSDs":
+            if result["Type"] == "RawPSDs":
                 for channelName in RawData.keys():
                     if channelName == "ResultType":
                         continue
                     for event in RawData[channelName].keys():
                         RawData[channelName][event]["MeanPower"] = np.mean(np.array(RawData[channelName][event]["PSDs"]), axis=0)
                         RawData[channelName][event]["StdPower"] = SPU.stderr(np.array(RawData[channelName][event]["PSDs"]), axis=0)
+                RawData["ResultType"] = "PSDs"
             ProcessedData.append(RawData)
             
     recording = createResultDataFile(ProcessedData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)

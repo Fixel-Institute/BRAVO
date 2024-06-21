@@ -7,12 +7,11 @@ import { Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material
 import { createFilterOptions } from "@mui/material/Autocomplete";
 const filter = createFilterOptions();
 
-const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings, updateConfiguration}) => {
+const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings, defaultConfigs, updateConfiguration}) => {
   const [filterOptions, setFilterOptions] = useState(newProcess ? {
+    ...defaultConfigs,
     targetRecording: "",
     output: "",
-    psdMethod: "",
-    averaged: true,
     new: true
   } : {...currentState, new: false});
 

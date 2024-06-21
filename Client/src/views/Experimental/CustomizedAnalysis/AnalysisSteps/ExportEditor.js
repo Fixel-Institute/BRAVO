@@ -3,8 +3,9 @@ import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import { TextField } from "@mui/material";
 
-const ExportEditor = ({currentState, newProcess, updateConfiguration}) => {
+const ExportEditor = ({currentState, newProcess, defaultConfigs, updateConfiguration}) => {
   const [outputOptions, setOutputOptions] = useState(newProcess ? {
+    ...defaultConfigs,
     output: ""
   } : currentState);
 

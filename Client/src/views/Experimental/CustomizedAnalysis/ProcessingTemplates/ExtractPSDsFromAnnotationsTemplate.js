@@ -2,21 +2,22 @@ import { useState } from "react";
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import MDTypography from "components/MDTypography";
-import { Autocomplete, TextField } from "@mui/material";
+import { Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material";
 
 import { createFilterOptions } from "@mui/material/Autocomplete";
 const filter = createFilterOptions();
 
-const CalculateSpectralFeaturesEditor = ({currentState, newProcess, availableRecordings, defaultConfigs, updateConfiguration}) => {
-  const [filterOptions, setFilterOptions] = useState(newProcess ? {
-    ...defaultConfigs,
+const ExtractPSDsFromAnnotationsTemplate = ({availableRecordings, setConfiguration}) => {
+  const [options, setOptions] = useState({
     targetRecording: "",
-    output: "",
-    new: true
-  } : {...currentState, new: false});
-  
+    filtered: false,
+    normalized: true,
+    averageFeatures: true,
+    output: "Spectral Features Output"
+  });
+
   const checkInputComplete = () => {
-    return filterOptions.targetRecording !== "" && filterOptions.output !== "";
+    return options.targetRecording !== "" && options.output !== "";
   }
 
   return (
@@ -40,37 +41,55 @@ const CalculateSpectralFeaturesEditor = ({currentState, newProcess, availableRec
           return option === value;
         }}
         renderOption={(props, option) => <li {...props}>{option}</li>}
-        value={filterOptions.targetRecording}
+        value={options.targetRecording}
         options={availableRecordings}
-        onChange={(event, newValue) => setFilterOptions({...filterOptions, targetRecording: newValue})}
+        onChange={(event, newValue) => setOptions({...options, targetRecording: newValue})}
       />
+
+      <FormControlLabel 
+        control={<Switch checked={options.filtered} 
+        onChange={() => setOptions({...options, filtered: !options.filtered})} />} 
+        label="Filtered between 1-100Hz? " />
+
+      <FormControlLabel 
+        control={<Switch checked={options.normalized} 
+        onChange={() => setOptions({...options, normalized: !options.normalized})} />} 
+        label="Normalize PSDs?" />
+
+      <FormControlLabel 
+        control={<Switch checked={options.averageFeatures} 
+        onChange={() => setOptions({...options, averageFeatures: !options.averageFeatures})} />} 
+        label="Average PSDs within Each Events? " />
 
       <TextField
         variant="standard"
         margin="dense"
-        value={filterOptions.output}
+        value={options.output}
         placeholder={"Disable"}
-        onChange={(event) => setFilterOptions({...filterOptions, output: event.target.value})}
+        onChange={(event) => setOptions({...options, output: event.target.value})}
         label={"Output Result Label"} type={"text"}
         autoComplete={"off"}
         fullWidth
       />
       <MDBox style={{display: "flex", paddingLeft: 15, paddingRight: 15, paddingTop: 15, justifyContent: "flex-end"}}>
         <MDButton color={"secondary"} 
-          onClick={() => updateConfiguration(false)}
+          onClick={() => setConfiguration(false)}
         >
           {"Cancel"}
         </MDButton>
         <MDButton color={"info"} 
           onClick={() => {
-            if (checkInputComplete()) updateConfiguration({...filterOptions});
+            if (checkInputComplete()) {
+              setConfiguration(options);
+            }
           }} style={{marginLeft: 10}}
         >
-          {newProcess ? "Add" : "Update"}
+          {"Update"}
         </MDButton>
       </MDBox>
     </MDBox>
   );
 };
 
-export default CalculateSpectralFeaturesEditor;
+
+export default ExtractPSDsFromAnnotationsTemplate;

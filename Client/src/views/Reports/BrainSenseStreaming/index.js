@@ -462,6 +462,8 @@ function BrainSenseStreaming() {
   }, [dataToRender]);
 
   const handleAddEvent = async (eventInfo) => {
+    if (eventInfo.name === "") return;
+    
     try {
       const response = await SessionController.query("/api/queryCustomAnnotations", {
         id: patientID,
