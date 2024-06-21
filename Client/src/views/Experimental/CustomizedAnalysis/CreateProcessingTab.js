@@ -60,7 +60,7 @@ const availableProcessings = [{
   label: "Apply Filter to TimeDomain Data",
 }, {
   value: "extractAnnotations",
-  label: "Extract Average PSDs from Annotations"
+  label: "Extract PSDs from Annotations"
 }, {
   value: "normalize",
   label: "Normalize PSD Data"

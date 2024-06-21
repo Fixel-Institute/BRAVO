@@ -2,7 +2,7 @@ import { useState } from "react";
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import MDTypography from "components/MDTypography";
-import { Autocomplete, TextField } from "@mui/material";
+import { Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material";
 
 import { createFilterOptions } from "@mui/material/Autocomplete";
 const filter = createFilterOptions();
@@ -12,6 +12,7 @@ const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings
     targetRecording: "",
     output: "",
     psdMethod: "",
+    averaged: true,
     new: true
   } : {...currentState, new: false});
 
@@ -71,6 +72,11 @@ const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings
         onChange={(event, newValue) => setFilterOptions({...filterOptions, psdMethod: newValue})}
         style={{paddingTop: 30}}
       />
+
+      <FormControlLabel 
+        control={<Switch checked={filterOptions.averaged} 
+        onChange={() => setFilterOptions({...filterOptions, averaged: !filterOptions.averaged})} />} 
+        label="Averaged Spectrum" />
 
       <TextField
         variant="standard"
