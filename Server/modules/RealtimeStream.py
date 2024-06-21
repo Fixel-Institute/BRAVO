@@ -170,6 +170,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                     continue
 
                 data["AnalysisID"] = str(analysis.deidentified_id)
+                data["AnalysisLabel"] = analysis.analysis_label
                 data["RecordingIDs"] = analysis.recording_list
 
                 DeviceName = device.device_name
@@ -229,6 +230,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                     continue
 
                 data["AnalysisID"] = str(analysis.deidentified_id)
+                data["AnalysisLabel"] = analysis.analysis_label
                 data["RecordingIDs"] = analysis.recording_list
 
                 DeviceName = device.device_name

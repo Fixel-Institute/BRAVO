@@ -94,6 +94,8 @@ function AnalysisBuilder({analysisId, analysisData, updateAnalysisData}) {
         let descriptor = new Date(recording.Time*1000).toLocaleString();
         if (recording.RecordingType == "ChronicLFPs") {
           descriptor = "";
+        } else if (recording.RecordingName != "") {
+          descriptor = "(" + descriptor + ") [" + recording.RecordingName + "] ";
         } else {
           descriptor = "(" + descriptor + " / " + recording.Duration.toFixed(0) + " seconds) "
         }

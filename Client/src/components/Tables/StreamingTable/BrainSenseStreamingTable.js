@@ -17,6 +17,10 @@ import { useHistory } from "react-router-dom";
 import {
   Autocomplete,
   Box,
+  Dialog,
+  TextField,
+  DialogContent,
+
   FormControl,
   Table,
   TableHead,
@@ -44,7 +48,13 @@ import MDTypography from "components/MDTypography";
 
 function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, children}) {
   const [controller, dispatch] = usePlatformContext();
-  const { language } = controller;
+  const { patientID, language } = controller;
+
+  const [editRecordingName, setEditRecordingName] = React.useState({
+    show: false,
+    name: "",
+    recordingId: "",
+  });
 
   const [toggleMerge, setToggleMerge] = React.useState({show: false, merge: []});
   const [selectedDate, setSelectedDate] = React.useState([]);
@@ -147,6 +157,27 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
     getRecordingData(recordingList);
   };
 
+  const handleEditRecordingName = (editRecordingName) => {
+    SessionController.query("/api/updateBrainSenseStream", {
+      id: patientID,
+      updateRecordingName: editRecordingName.recordingId,
+      recordingName: editRecordingName.name,
+    }).then((response) => {
+      setDisplayData((displayData) => {
+        for (let i in displayData) {
+          if (displayData[i].AnalysisID == editRecordingName.recordingId) {
+            displayData[i].AnalysisLabel = editRecordingName.name;
+            return [...displayData];
+          }
+        }
+        return displayData;
+      });
+      setEditRecordingName({recordingId: "", name: "", show: false});
+    }).catch((error) => {
+      console.log(error);
+    });
+  }
+
   return (
     <>
       <MDBox p={2}>
@@ -183,6 +214,35 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
         }}>
           {"Merge Recordings"}
         </MDButton>
+        
+        <Dialog open={editRecordingName.show} onClose={() => setEditRecordingName({...editRecordingName, show: false})}>
+          <MDBox px={2} pt={2}>
+            <MDTypography variant="h5">
+              {"Edit Recording Name"}
+            </MDTypography>
+          </MDBox>
+          <DialogContent>
+            <TextField
+              variant="standard"
+              margin="dense" id="name"
+              value={editRecordingName.name}
+              onChange={(event) => setEditRecordingName({...editRecordingName, name: event.target.value})}
+              fullWidth
+            />
+          </DialogContent>
+          <MDBox style={{paddingLeft: 15, paddingRight: 15, paddingBottom: 15}}>
+            <MDButton color={"secondary"} 
+              onClick={() => setEditRecordingName({...editRecordingName, show: false})}
+            >
+              Cancel
+            </MDButton>
+            <MDButton color={"info"} 
+              onClick={() => handleEditRecordingName(editRecordingName)} style={{marginLeft: 10}}
+            >
+              Update
+            </MDButton>
+          </MDBox>
+        </Dialog>
         <Table size="large" style={{marginTop: 20}}>
           <TableHead sx={{display: "table-header-group"}}>
             <TableRow>
@@ -228,12 +288,22 @@ function BrainSenseStreamingTable({data, getRecordingData, handleMerge, toggle, 
 
               return <TableRow key={recording.AnalysisID}>
                 <TableCell style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
-                  <MDTypography variant="h5" fontSize={15} style={{marginBottom: 0}}>
+                  {recording.AnalysisLabel ? (
+                    <MDTypography variant="h5" fontSize={18} style={{marginBottom: 0}}>
+                      {recording.AnalysisLabel}
+                    </MDTypography>
+                  ) : null}
+                  <MDTypography variant="h5" fontSize={recording.AnalysisLabel ? 12 : 15} style={{marginBottom: 0}}>
                     {new Date(recording.Timestamp*1000).toLocaleString(language)}
                   </MDTypography>
                   <MDTypography variant="h6" style={{marginBottom: 0}} fontSize={12} fontWeight={"bold"}>
                     {recording.DeviceName}
                   </MDTypography>
+                  <MDButton color={"info"} 
+                    onClick={() => setEditRecordingName({show: true, recordingId: recording.AnalysisID, name: recording.AnalysisLabel})}
+                  >
+                    Edit Label
+                  </MDButton>
                   {toggleMerge.show ? (
                     <Checkbox label={"Merge"} style={{padding: 0}} onClick={() => {
                       if (!toggleMerge.merge.includes(recording.RecordingID)) {

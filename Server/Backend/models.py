@@ -366,6 +366,7 @@ class CombinedRecordingAnalysis(models.Model):
     recording_list = models.JSONField(default=list, null=False)
     recording_type = models.JSONField(default=list, null=False)
     analysis_name = models.CharField(default="Default", max_length=255)
+    analysis_label = models.CharField(default="", max_length=255)
     analysis_date = models.DateTimeField(default=timezone.now)
 
 class ExternalSensorPairing(models.Model):

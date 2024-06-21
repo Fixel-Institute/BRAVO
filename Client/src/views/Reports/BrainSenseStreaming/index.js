@@ -119,7 +119,6 @@ function BrainSenseStreaming() {
   });
 
   const [referenceType, setReferenceType] = React.useState([]);
-  
   const [alert, setAlert] = React.useState(null);
 
   React.useEffect(() => {

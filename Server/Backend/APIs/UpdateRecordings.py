@@ -248,6 +248,27 @@ class BrainSenseStreamUpdate(RestViews.APIView):
             recording.save()
             return Response(status=200)
         
+        elif "updateRecordingName" in request.data:
+            AuthorityLevel = Database.verifyAccess(request.user, request.data["id"])
+            if AuthorityLevel > 2:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            availableDevices = Database.getPerceptDevices(request.user, request.data["id"], {"Level": AuthorityLevel})
+            analysis = models.CombinedRecordingAnalysis.objects.filter(deidentified_id=request.data["updateRecordingName"]).first()
+            if not analysis:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            if not str(analysis.device_deidentified_id) in [str(device.deidentified_id) for device in availableDevices]:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            analysis.analysis_label = request.data["recordingName"]
+            recordings = models.NeuralActivityRecording.objects.filter(recording_id__in=analysis.recording_list).all()
+            for recording in recordings:
+                recording.recording_info["RecordingName"] = request.data["recordingName"]
+                recording.save()
+            analysis.save()
+            return Response(status=200)
+        
         elif "adjustAlignment" in request.data:
             AuthorityLevel = Database.verifyAccess(request.user, request.data["id"])
             if AuthorityLevel != 1:

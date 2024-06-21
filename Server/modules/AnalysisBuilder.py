@@ -122,6 +122,7 @@ def queryAvailableRecordings(user, patientId, authority):
             
             AvailableRecordings.append({
                 "RecordingId": recording.recording_id,
+                "RecordingName": recording.recording_info["RecordingName"] if "RecordingName" in recording.recording_info else "",
                 "RecordingType": recording.recording_type,
                 "RecordingChannels": recording.recording_info["Hemisphere"].replace("HemisphereLocationDef.","") if (recording.recording_type == "ChronicLFPs" or recording.recording_type == "SummitChronicLogs") else recording.recording_info["Channel"],
                 "Time": recording.recording_date.timestamp(),
