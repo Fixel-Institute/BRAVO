@@ -63,7 +63,7 @@ def getExistingAnalysis(user, patientId, authority):
 def addNewAnalysis(user, patientId, authority):
     if not authority["Permission"]:
         return None
-    
+
     analysis = models.CombinedRecordingAnalysis(analysis_name="DefaultAnalysis", device_deidentified_id=patientId)
     if not "AnalysisConfiguration" in analysis.recording_type:
         Data = dict()
@@ -99,7 +99,6 @@ def queryAvailableRecordings(user, patientId, authority):
     
     availableDevices = Database.getPerceptDevices(user, patientId, authority)
     for device in availableDevices:
-
         if device.device_name == "":
             if not (user.is_admin or user.is_clinician):
                 deviceName = str(device.deidentified_id)
@@ -110,16 +109,12 @@ def queryAvailableRecordings(user, patientId, authority):
 
         recordings = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id).all()
         for recording in recordings:
-            if not recording.recording_id in authority["Permission"] and authority["Level"] == 2:
-                continue
-            
             # Currently does not support BrainSense Survey unless new analysis is designed around it
             if recording.recording_type == "BrainSenseSurvey":
                 continue
             
             if not "Channel" in recording.recording_info.keys() and not (recording.recording_type == "ChronicLFPs" or recording.recording_type == "SummitChronicLogs"):
                 RecordingData = Database.loadSourceDataPointer(recording.recording_datapointer)
-                print(recording.recording_type)
                 recording.recording_info = {
                     "Channel": RecordingData["ChannelNames"]
                 }
@@ -183,7 +178,6 @@ def queryAnalysis(user, patientId, analysisId, authority):
     analysis = models.CombinedRecordingAnalysis.objects.filter(deidentified_id=analysisId, device_deidentified_id=patientId).first()
     if not analysis:
         return None
-    
     ProcessingQueued = models.ProcessingQueue.objects.filter(type="ProcessAnalysis", state="InProgress", descriptor__analysisId=str(analysis.deidentified_id)).exists()
 
     Data = {"Configuration": {}, "Recordings": [], "Analysis": {
@@ -193,7 +187,11 @@ def queryAnalysis(user, patientId, analysisId, authority):
         "ProcessingQueued": ProcessingQueued
     }}
     
-    AvailableRecordings = queryAvailableRecordings(user, patientId, authority)
+    if "DeidentifiedID" in authority.keys():
+        AvailableRecordings = queryAvailableRecordings(user, authority["DeidentifiedID"], authority)
+    else:
+        AvailableRecordings = queryAvailableRecordings(user, patientId, authority)
+
     Data["AvailableRecordings"] = AvailableRecordings
     for i in range(len(analysis.recording_type)):
         if analysis.recording_type[i] == "AnalysisConfiguration": 
@@ -335,7 +333,11 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, recordingTy
         }
     
     else:
-        availableDevices = Database.getPerceptDevices(user, patientId, authority)
+        if "DeidentifiedID" in authority.keys():
+            availableDevices = Database.getPerceptDevices(user, authority["DeidentifiedID"], authority)
+        else:
+            availableDevices = Database.getPerceptDevices(user, patientId, authority)
+
         for device in availableDevices:
             if recording.device_deidentified_id == device.deidentified_id:
                 if device.device_name == "":
@@ -616,7 +618,7 @@ def queryResultData(user, patientId, analysisId, resultId, download, authority):
     if not analysis:
         return None
     
-    recording = models.ExternalRecording.objects.filter(patient_deidentified_id=patientId,  recording_type="AnalysisOutput",  recording_id=resultId).first()
+    recording = models.ExternalRecording.objects.filter(patient_deidentified_id=patientId, recording_type="AnalysisOutput", recording_id=resultId).first()
     if not recording:
         return None
     
@@ -719,10 +721,16 @@ def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, anal
             RawData["Spectrogram"][i]["Type"] = "Spectrogram"
             RawData["Spectrogram"][i]["Time"] += 0 # TODO Check later
 
-        annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=analysis.device_deidentified_id, 
-                                                            event_time__gte=datetime.fromtimestamp(RawData["Time"][0], tz=pytz.utc), 
-                                                            event_time__lte=datetime.fromtimestamp(RawData["Time"][-1], tz=pytz.utc))
-        
+        if models.DeidentifiedPatientID.objects.filter(deidentified_id=analysis.device_deidentified_id).exists():
+            deidentifiedId = models.DeidentifiedPatientID.objects.filter(deidentified_id=analysis.device_deidentified_id).first()
+            annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=deidentifiedId.authorized_patient_id, 
+                                                                event_time__gte=datetime.fromtimestamp(RawData["Time"][0], tz=pytz.utc), 
+                                                                event_time__lte=datetime.fromtimestamp(RawData["Time"][-1], tz=pytz.utc))
+        else:
+            annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=analysis.device_deidentified_id, 
+                                                                event_time__gte=datetime.fromtimestamp(RawData["Time"][0], tz=pytz.utc), 
+                                                                event_time__lte=datetime.fromtimestamp(RawData["Time"][-1], tz=pytz.utc))
+            
         RawData["Annotations"] = [{
             "Name": item.event_name,
             "Time": item.event_time.timestamp(),

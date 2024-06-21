@@ -833,10 +833,40 @@ class QueryPredictionModel(RestViews.APIView):
             data = list()
             for stimulationSide in BrainSenseData["PowerDomain"]["Stimulation"]:
                 if len(np.unique(stimulationSide["Amplitude"])) > 3:
-                    #Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
-                    Features = TherapeuticPrediction.extractFullPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
+                    Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
+                    #Features = TherapeuticPrediction.extractFullPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
                     #PredictionModel = models.PredictionModel(recording_id=request.data["recordingId"], recording_channel=stimulationSide["Name"], model_details=Features)
                     #PredictionModel.save()
+                    data.append(Features)
+                else:
+                    data.append({"NoPrediction": True})
+                
+            return Response(status=200, data=data)
+
+        elif "queryRawFeatures" in request.data:
+            Authority = {}
+            Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
+            if Authority["Level"] == 0:
+                return Response(status=403)
+
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                deidentification = Database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id, deidentifiedId=request.data["id"])
+                DeviceIDs = [str(deidentification["Devices"][i]["ID"]) for i in range(len(deidentification["Devices"]))]
+                Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
+            else:
+                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
+
+            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+            if BrainSenseData == None:
+                return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
+            BrainSenseData["PowerDomain"]["Stimulation"] = RealtimeStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
+
+            data = list()
+            for stimulationSide in BrainSenseData["PowerDomain"]["Stimulation"]:
+                if len(np.unique(stimulationSide["Amplitude"])) > 3:
+                    #Features = TherapeuticPrediction.extractPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
+                    Features = TherapeuticPrediction.extractFullPredictionFeatures(BrainSenseData, stimulationSide["Hemisphere"])
                     data.append({"Features": Features})
                 else:
                     data.append({"NoPrediction": True})
@@ -1008,111 +1038,139 @@ class QueryCustomizedAnalysis(RestViews.APIView):
         if "requestOverview" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data = AnalysisBuilder.getExistingAnalysis(request.user, request.data["id"], Authority)
-                return Response(status=200, data=data)
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            data = AnalysisBuilder.getExistingAnalysis(request.user, request.data["id"], Authority)
+            return Response(status=200, data=data)
 
         elif "requestNewAnalysis" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                if request.data["requestNewAnalysis"]:
-                    data = AnalysisBuilder.addNewAnalysis(request.user, request.data["id"], Authority)
-                else:
-                    data = AnalysisBuilder.deleteAnalysis(request.user, request.data["id"], request.data["analysisId"], Authority)
-                return Response(status=200, data=data)
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            if request.data["requestNewAnalysis"]:
+                data = AnalysisBuilder.addNewAnalysis(request.user, request.data["id"], Authority)
+            else:
+                data = AnalysisBuilder.deleteAnalysis(request.user, request.data["id"], request.data["analysisId"], Authority)
+            return Response(status=200, data=data)
 
         elif "editAnalysis" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                analysis = models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=request.data["id"], deidentified_id=request.data["analysisId"]).first()
-                if not analysis:
-                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["DeidentifiedID"] = PatientInfo.authorized_patient_id
 
-                analysis.analysis_name = request.data["name"]
-                analysis.save()
-                return Response(status=200)
+            analysis = models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=request.data["id"], deidentified_id=request.data["analysisId"]).first()
+            if not analysis:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+            analysis.analysis_name = request.data["name"]
+            analysis.save()
+            return Response(status=200)
 
         elif "requestAnalysis" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data = AnalysisBuilder.queryAnalysis(request.user, request.data["id"], request.data["requestAnalysis"], Authority)
-                if not data:
-                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-                return Response(status=200, data=data)
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["DeidentifiedID"] = PatientInfo.authorized_patient_id
+            data = AnalysisBuilder.queryAnalysis(request.user, request.data["id"], request.data["requestAnalysis"], Authority)
+
+            if not data:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            return Response(status=200, data=data)
 
         elif "requestResult" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data, options = AnalysisBuilder.queryResultData(request.user, request.data["id"], request.data["requestResult"], request.data["resultId"], request.data["download"], Authority)
-                if not data:
-                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["DeidentifiedID"] = PatientInfo.authorized_patient_id
                 
-                if request.data["download"]:
-                    return HttpResponse(bytes(data), status=200, headers={
-                        "Content-Type": "application/octet-stream"
-                    })
-                else:
-                    return Response(status=200, data={"Data": data, "Options": options})
+            data, options = AnalysisBuilder.queryResultData(request.user, request.data["id"], request.data["requestResult"], request.data["resultId"], request.data["download"], Authority)
+            if not data:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            if request.data["download"]:
+                return HttpResponse(bytes(data), status=200, headers={
+                    "Content-Type": "application/octet-stream"
+                })
+            else:
+                return Response(status=200, data={"Data": data, "Options": options})
 
         elif "updateAnalysisSteps" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                AnalysisBuilder.updateAnalysis(request.user, request.data["id"], request.data["analysisId"], request.data["processingSteps"], Authority)
-                return Response(status=200)
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["DeidentifiedID"] = PatientInfo.authorized_patient_id
+
+            AnalysisBuilder.updateAnalysis(request.user, request.data["id"], request.data["analysisId"], request.data["processingSteps"], Authority)
+            return Response(status=200)
 
         elif "startAnalysis" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data = AnalysisBuilder.startAnalysis(request.user, request.data["id"], request.data["analysisId"], Authority)
-                if not data == "Success":
-                    return Response(status=400, data={"message": data})
-                return Response(status=200)
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["DeidentifiedID"] = PatientInfo.authorized_patient_id
+
+            data = AnalysisBuilder.startAnalysis(request.user, request.data["id"], request.data["analysisId"], Authority)
+            if not data == "Success":
+                return Response(status=400, data={"message": data})
+            return Response(status=200)
 
         elif "addRecording" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data = AnalysisBuilder.addRecordingToAnalysis(request.user, request.data["id"], request.data["analysisId"], request.data["addRecording"], request.data["recordingType"], Authority)
-                if not data:
-                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-                
-                return Response(status=200, data=data)
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["DeidentifiedID"] = PatientInfo.authorized_patient_id
+            data = AnalysisBuilder.addRecordingToAnalysis(request.user, request.data["id"], request.data["analysisId"], request.data["addRecording"], request.data["recordingType"], Authority)
+
+            if not data:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            return Response(status=200, data=data)
 
         elif "removeRecording" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data = AnalysisBuilder.removeRecordingFromAnalysis(request.user, request.data["id"], request.data["analysisId"], request.data["removeRecording"], Authority)
-                if not data:
-                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-                
-                return Response(status=200, data=data)
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["DeidentifiedID"] = PatientInfo.authorized_patient_id
+            data = AnalysisBuilder.removeRecordingFromAnalysis(request.user, request.data["id"], request.data["analysisId"], request.data["removeRecording"], Authority)
+            if not data:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            return Response(status=200, data=data)
 
         elif "updateRecording" in request.data:
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
-            if Authority["Level"] == 1:
-                Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                data = AnalysisBuilder.setRecordingConfiguration(request.user, request.data["id"], request.data["analysisId"], request.data["updateRecording"], request.data["configuration"], Authority)
-                if not data:
-                    return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            Authority["Permission"] = None if Authority["Level"] == 3 else [0,0]
+            
+            if Authority["Level"] == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["DeidentifiedID"] = PatientInfo.authorized_patient_id
                 
-                return Response(status=200, data=data)
+            data = AnalysisBuilder.setRecordingConfiguration(request.user, request.data["id"], request.data["analysisId"], request.data["updateRecording"], request.data["configuration"], Authority)
+            if not data:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            return Response(status=200, data=data)
 
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
