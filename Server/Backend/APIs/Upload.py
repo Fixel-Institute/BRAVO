@@ -41,7 +41,7 @@ import hashlib, random, string
 from uuid import UUID
 processingQueue = queue.Queue()
 
-from Backend import models
+from Backend import models, tasks
 from modules import Database, AnalysisBuilder
 from modules.Percept import Sessions
 from modules.Summit import Sessions as SummitSessions
@@ -230,6 +230,7 @@ class SessionUpload(RestViews.APIView):
                         Sessions.saveCacheJSON(request.data[key].name, rawBytes)
                         queueItem.save()
 
+        tasks.ProcessUploadQueue.apply_async(countdown=3)
         return Response(status=200)
 
 class RequestProcessingQueue(RestViews.APIView):
@@ -237,6 +238,7 @@ class RequestProcessingQueue(RestViews.APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, state="WaitToStart", descriptor__batchSessionId=request.data["batchSessionId"]).update(state="InProgress")
+        tasks.ProcessUploadQueue.apply_async(countdown=0)
         return Response(status=200)
 
 class SessionRemove(RestViews.APIView):

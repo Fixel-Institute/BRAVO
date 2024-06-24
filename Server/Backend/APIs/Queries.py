@@ -24,7 +24,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.http import HttpResponse
 
-from Backend import models
+from Backend import models, tasks
 
 from modules import Database, ImageDatabase, AnalysisBuilder, WearableRecordingsDatabase, Therapy, RealtimeStream
 from modules.Percept import Sessions, BrainSenseSurvey, BrainSenseEvent, BrainSenseStream, IndefiniteStream, ChronicBrainSense, TherapeuticPrediction, AdaptiveStimulation
@@ -1126,6 +1126,8 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             data = AnalysisBuilder.startAnalysis(request.user, request.data["id"], request.data["analysisId"], Authority)
             if not data == "Success":
                 return Response(status=400, data={"message": data})
+
+            tasks.ProcessAnalysisQueue.apply_async(countdown=1)
             return Response(status=200)
 
         elif "addRecording" in request.data:
