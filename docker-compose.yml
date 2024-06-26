@@ -1,0 +1,60 @@
+version: "3.9"
+services:
+  neo4j:
+    image: neo4j:5.19
+    restart: always
+    environment:
+      NEO4J_server_default__listen__address: "0.0.0.0"
+      NEO4J_AUTH: "neo4j/Florida1"
+    ports:
+      - '7473:7473'
+      - '7474:7474'
+      - '7687:7687'
+    volumes:
+      - Neo4jDatabase:/data
+      - Neo4jLogs:/logs
+    networks:
+      - backend
+  
+  bravo-server:
+    image: bravo-server:3.0.0-alpha
+    restart: always
+    environment:
+      REDIS_HOST: "redis"
+      ENCRYPTION_KEY: "4LLHi6IJ0PRdneDJo48kCcBf3tHTLRXQ_tyKfttDIm0="
+      SECRET_KEY: "django-insecure-v#a8t(pk6biv%9pzcl!zttd%&8wdb@z4&)+jm*b((!ea+"
+      NEO4J_BOLT: "bolt://neo4j:Florida1@bravo-neo4j-1:7687"
+      SERVER_ADDRESS: "localhost"
+      CLIENT_ADDRESS: "https://localhost"
+      MODE: "DEBUG"
+    stdin_open: true
+    tty: true
+    depends_on:
+      - neo4j
+      - redis
+    networks:
+      - backend
+    ports:
+      - '443:443'
+    command: >
+      bash -c "service nginx start && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
+  
+  redis:
+    image: redis:5
+    restart: always
+    ports:
+      - '6379:6379'
+    networks:
+      - backend
+
+networks:
+  backend:
+
+volumes:
+  Neo4jDatabase:
+    name: neo4jdata
+    external: true
+  Neo4jLogs:
+    name: neo4jlogs
+    external: true
+  BRAVOStorage: 
