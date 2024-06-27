@@ -26,7 +26,7 @@ const createWindow = () => {
     return { action: 'deny' };
   });
 
-  win.loadURL('http://localhost:3000/updater');
+  win.loadURL('https://uf-bravo.jcagle.solutions/updater');
 }
 
 app.whenReady().then(() => {
