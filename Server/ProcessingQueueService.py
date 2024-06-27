@@ -87,6 +87,9 @@ def processJSONUploads():
                 job.status = "complete"
             job.save()
 
+    if len(models.ProcessingQueue.nodes.filter(job_type="MedtronicJSON", status="created")) > 0:
+        processJSONUploads()
+
 if __name__ == '__main__':
     processJSONUploads()
     #processSummitZIPUpload()

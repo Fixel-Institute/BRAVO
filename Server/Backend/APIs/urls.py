@@ -15,7 +15,7 @@
 from django.urls import path
 from django.conf import settings
 
-from . import Auth, Session, ParticipantManager, DataHandler, Queries, Test
+from . import Auth, Session, ParticipantManager, DataHandler, Queries
 
 urlpatterns = [
 	path('handshake', Auth.Handshake.as_view()),
@@ -49,6 +49,3 @@ urlpatterns = [
 	path('queryTimeSeriesAnalysis', Queries.QueryTimeSeriesAnalysis.as_view()),
 	path('queryTimeSeriesRecording', Queries.QueryTimeSeriesRecording.as_view())
 ]
-
-if settings.DEBUG:
-  urlpatterns.append(path('test', Test.TestAPIEndPoint.as_view()),)

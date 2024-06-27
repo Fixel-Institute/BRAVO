@@ -46,6 +46,7 @@ export const SessionController = (function () {
       return;
     };
 
+    /* eslint no-undef: */
     decryptionPassword = new fernet.Secret(password);
     decryptionShift = shift;
   };
@@ -53,6 +54,7 @@ export const SessionController = (function () {
   const decodeMessage = (text) => {
     if (!decryptionPassword) return text;
 
+    /* eslint no-undef: */
     var token = new fernet.Token({
       secret: decryptionPassword,
       token: text,
@@ -78,7 +80,10 @@ export const SessionController = (function () {
   };
 
   const query = (url, form, config, timeout, responseType) => {
-    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    let csrftoken = ""
+    if (document.querySelector('[name=csrfmiddlewaretoken]')) {
+      csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
     
     return axios.post(server + url, form, {
       timeout: timeout,

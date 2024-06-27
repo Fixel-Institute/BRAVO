@@ -84,30 +84,16 @@ const ParticipantTable = ({data}) => {
     switch (sortType.key) {
       case "ParticipantTableName": 
         if (sortType.direction == 1) {
-          setSortedData([...data.sort((a,b) => (a.LastName + ", " + a.FirstName).localeCompare(b.LastName + ", " + b.FirstName))]);
+          setSortedData([...data.sort((a,b) => (a.name).localeCompare(b.name))]);
         } else {
-          setSortedData([...data.sort((a,b) => (b.LastName + ", " + b.FirstName).localeCompare(a.LastName + ", " + a.FirstName))]);
+          setSortedData([...data.sort((a,b) => (b.name).localeCompare(a.name))]);
         }
         break;
       case "ParticipantTableDiagnosis": 
         if (sortType.direction == 1) {
-          setSortedData([...data.sort((a,b) => (a.Diagnosis).localeCompare(b.Diagnosis))]);
+          setSortedData([...data.sort((a,b) => (a.diagnosis).localeCompare(b.diagnosis))]);
         } else {
-          setSortedData([...data.sort((a,b) => (b.Diagnosis).localeCompare(a.Diagnosis))]);
-        }
-        break;
-      case "ParticipantTableLastVisit": 
-        if (sortType.direction == 1) {
-          setSortedData([...data.sort((a,b) => (a.LastSeen) - (b.LastSeen))]);
-        } else {
-          setSortedData([...data.sort((a,b) => (b.LastSeen) - (a.LastSeen))]);
-        }
-        break;
-      case "ParticipantTableLastModified": 
-        if (sortType.direction == 1) {
-          setSortedData([...data.sort((a,b) => (a.LastChange) - (b.LastChange))]);
-        } else {
-          setSortedData([...data.sort((a,b) => (b.LastChange) - (a.LastChange))]);
+          setSortedData([...data.sort((a,b) => (b.diagnosis).localeCompare(a.diagnosis))]);
         }
         break;
       default:

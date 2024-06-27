@@ -41,10 +41,10 @@ function EditDeviceInfoView({show, deviceInfo, onUpdate, onCancel}) {
   const [controller, dispatch] = usePlatformContext();
   const { language, participant_uid } = controller;
 
-  if (!deviceInfo) return;
-
   const [editDeviceInfo, setEditDeviceInfo] = useState({...deviceInfo});
   
+  if (!deviceInfo) return;
+
   return (
     <Dialog open={show} onClose={() => {
       onCancel();

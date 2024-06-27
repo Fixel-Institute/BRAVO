@@ -44,7 +44,6 @@ import TimeSeriesAnalysis from "views/Reports/TimeSeriesAnalysis";
 
 // BRAVO Platform Layouts
 const DashboardOverview = lazy(() => import('views/Dashboard/Overview'));
-const PatientLookupTable = lazy(() => import('views/Dashboard/PatientLookupTable'));
 const UploadDataView = lazy(() => import('views/Dashboard/UploadDataView'));
 const ResearchAccessView = lazy(() => import('views/Dashboard/ShareResearchAccess'));
 const ParticipantOverview = lazy(() => import('views/Dashboard/ParticipantOverview'));
