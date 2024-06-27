@@ -166,6 +166,7 @@ class QueryProcessingQueue(RestViews.APIView):
                         "descriptor": queues[i].descriptor,
                     })
 
+            tasks.ProcessUploadQueue.apply_async(countdown=0)
             return Response(status=200, data=data)
 
 class QueryTherapyHistory(RestViews.APIView):
@@ -1127,7 +1128,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             if not data == "Success":
                 return Response(status=400, data={"message": data})
 
-            tasks.ProcessAnalysisQueue.apply_async(countdown=1)
+            tasks.ProcessAnalysisQueue.apply_async(countdown=3)
             return Response(status=200)
 
         elif "addRecording" in request.data:

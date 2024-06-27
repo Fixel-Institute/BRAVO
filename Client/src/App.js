@@ -35,6 +35,7 @@ import Register from "views/Authentication/Register";
 import SurveyEditor from "views/Survey/Editor";
 import SurveyViewer from "views/Survey/Viewer";
 import InertiaSensorViewer from "views/InertiaSensorViewer";
+import LocalUpdaterView from "views/LocalUpdater";
 
 import { usePlatformContext, setContextState } from "context.js";
 import { SessionController } from "database/session-control";
@@ -150,6 +151,7 @@ export default function App() {
           <Route path="/index" element={<HomePage />} />
           <Route path="/login" element={<SignIn />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/updater" element={<LocalUpdaterView />} />
           {getRoutes(routes)}
           <Route path="/inertiaSensorViewer" element={<InertiaSensorViewer />} />
           <Route path="/reports/*" element={<Navigate to="/patient-overview" />} />

@@ -18,6 +18,8 @@ services:
   redis:
     image: redis:5
     restart: always
+    volumes:
+      - RedisDatabase:/data
     ports:
       - '6379:6379'
     networks:
@@ -72,5 +74,6 @@ networks:
   backend:
 
 volumes:
+  RedisDatabase:
   SQLDatabase:
   BRAVOStorage: 
