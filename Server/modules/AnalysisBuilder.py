@@ -789,7 +789,7 @@ def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, anal
                     PSDs = ProcessedData[i]["Spectrogram"][j]["Power"][:, TimeSelection]
 
                     if step["config"]["averaged"]:
-                        ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["PSDs"].append(np.mean(PSDs, axis=1))
+                        ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["PSDs"].append(np.nanmean(PSDs, axis=1))
                     else:
                         for k in range(PSDs.shape[1]):
                             ResultData[ProcessedData[i]["ChannelNames"][j]][annotation["Name"]]["PSDs"].append(PSDs[:,k])
@@ -829,7 +829,7 @@ def handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analys
                 if channelName == "ResultType":
                     continue
                 for event in RawData[channelName].keys():
-                    meanPSDs = np.mean(np.array(RawData[channelName][event]["PSDs"]), axis=0)
+                    meanPSDs = np.nanmean(np.array(RawData[channelName][event]["PSDs"]), axis=0)
 
                     if normalizeMethod == "FOOOF":
                         FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [2,80])
@@ -843,7 +843,7 @@ def handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analys
                     elif normalizeMethod == "Band Normalize":
                         FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [lowEdge,highEdge])
 
-                        MeanRefPower = np.mean(meanPSDs[FrequencyWindow])
+                        MeanRefPower = np.nanmean(meanPSDs[FrequencyWindow])
                         for i in range(len(RawData[channelName][event]["PSDs"])):
                             RawData[channelName][event]["PSDs"][i] = np.array(RawData[channelName][event]["PSDs"][i]) - MeanRefPower
             ProcessedData = RawData
@@ -893,9 +893,9 @@ def handleCalculateSpectralFeatures(step, RecordingIds, Results, Configuration, 
 
                             Freq = np.array(RawData[channelName][event]["Frequency"])[FrequencySelection]
                             Power = np.array(RawData[channelName][event]["PSDs"][i])[FrequencySelection]
-                            Features[bandName + "_Mean"] = np.mean(Power)
-                            Features[bandName + "_Peak"] = np.max(Power)
-                            Features[bandName + "_PeakFreq"] = Freq[np.argmax(Power)]
+                            Features[bandName + "_Mean"] = np.nanmean(Power)
+                            Features[bandName + "_Peak"] = np.nanmax(Power)
+                            Features[bandName + "_PeakFreq"] = Freq[np.nanargmax(Power)]
                         SpectralFeatures.append(Features)
             ProcessedData = {"ResultType": "SpectralFeatures", "Features": SpectralFeatures}
 
@@ -950,7 +950,7 @@ def handleViewRecordings(step, RecordingIds, Results, Configuration, analysis):
                     if channelName == "ResultType":
                         continue
                     for event in RawData[channelName].keys():
-                        RawData[channelName][event]["MeanPower"] = np.mean(np.array(RawData[channelName][event]["PSDs"]), axis=0)
+                        RawData[channelName][event]["MeanPower"] = np.nanmean(np.array(RawData[channelName][event]["PSDs"]), axis=0)
                         RawData[channelName][event]["StdPower"] = SPU.stderr(np.array(RawData[channelName][event]["PSDs"]), axis=0)
                 RawData["ResultType"] = "PSDs"
             ProcessedData.append(RawData)
