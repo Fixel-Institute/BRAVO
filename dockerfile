@@ -5,7 +5,7 @@ ENV PYTHONPATH=/usr/src/BRAVO/modules/python-scripts
 
 WORKDIR /usr/src/BRAVO
 COPY ./Client/build /usr/share/nginx/html
-COPY ./Server/bravo_nginx.conf /etc/nginx/sites-enabled/default.conf
+COPY ./Server/bravo_nginx.conf /etc/nginx/sites-enabled/default
 
 COPY ./Server .
 

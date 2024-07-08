@@ -115,7 +115,7 @@ class DataUpload(RestViews.APIView):
                         except:
                             pass
 
-                tasks.ProcessUploadQueue.apply_async(countdown=3)
+                #tasks.ProcessUploadQueue.apply_async(countdown=3)
                 return Response(status=200, data={"queue_created": queueCreated})
         
         return Response(status=200)
@@ -244,7 +244,7 @@ class QueryProcessingQueue(RestViews.APIView):
                     "descriptor": queue.result,
                 } for queue in queues]
         data = sorted(data, key=lambda queue: queue["since"])
-        tasks.ProcessUploadQueue.delay()
+        #tasks.ProcessUploadQueue.delay()
 
         return Response(status=200, data=data)
 
