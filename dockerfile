@@ -14,6 +14,11 @@ RUN mkdir -p BRAVOStorage && \
     apt-get install cron python3 python3-pip libjpeg-dev libjpeg8-dev libpng-dev libmysqlclient-dev -y && \
     pip3 install -r requirements.txt
 
+COPY ./Server/cron-job /etc/cron.d/cron-job
+
+RUN chmod 0644 /etc/cron.d/cron-job && \
+    crontab /etc/cron.d/cron-job
+
 EXPOSE 443
 EXPOSE 3001
 

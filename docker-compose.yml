@@ -17,7 +17,7 @@ services:
       - backend
   
   bravo-server:
-    image: bravo-server:3.0.0-alpha
+    image: jcagle95/bravo-server:3.0.0-alpha
     restart: always
     environment:
       REDIS_HOST: "redis"
@@ -34,6 +34,8 @@ services:
       - redis
     networks:
       - backend
+    volumes:
+      - BRAVOStorage:/usr/src/BRAVO/BRAVOStorage
     ports:
       - '80:80'
       - '443:443'
@@ -54,8 +56,6 @@ networks:
 volumes:
   Neo4jDatabase:
     name: neo4jdata
-    external: true
   Neo4jLogs:
     name: neo4jlogs
-    external: true
   BRAVOStorage: 

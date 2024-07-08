@@ -11,7 +11,7 @@ trap "rm -f ${LOCKFILE}; exit" INT TERM EXIT
 echo $$ > ${LOCKFILE}
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-$SCRIPT_DIR/venv/bin/python3 $SCRIPT_DIR/ProcessingQueueService.py
-#python3 $SCRIPT_DIR/ProcessingQueueService.py
+#$SCRIPT_DIR/venv/bin/python3 $SCRIPT_DIR/ProcessingQueueService.py
+python3 $SCRIPT_DIR/ProcessingQueueService.py
 
 rm -f ${LOCKFILE}
