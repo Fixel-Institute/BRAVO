@@ -19,6 +19,14 @@ class SourceFile(StructuredNode):
     therapies = Relationship(".Therapy.Therapy", "SOURCE_OF_THERAPY")
     events = Relationship(".Event.BaseEvent", "SOURCE_OF_EVENT")
 
+    def getInfo(self):
+        return {
+            "uid": self.uid,
+            "name": self.name,
+            "metadata": self.metadata,
+            "date": self.date
+        }
+
     def getAllSessionFilesForParticipant(participant):
         uid = f"'{participant.uid}'"
         results, _ = db.cypher_query(f"MATCH (a:SourceFile)-[:UPLOADED_FOR]->(:Participant {{uid: {uid}}}) RETURN a", resolve_objects=True)

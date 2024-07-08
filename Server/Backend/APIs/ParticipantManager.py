@@ -20,7 +20,7 @@ Study Participant Manager
 
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
 from django.utils.decorators import method_decorator
@@ -117,6 +117,51 @@ class CreateStudyParticipant(RestViews.APIView):
         participant.save()
         study.save()
         return Response(status=200, data={"uid": participant.uid, "study": study.uid})
+
+class CreateParticipantEvent(RestViews.APIView):
+    """ Create Event in Participant
+
+    **POST**: ``/api/createParticipantEvent``
+
+    Returns:
+      Response Code 200 if success or 400 if error.
+    """
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [RestParsers.JSONParser]
+
+    @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
+    def post(self, request):
+        accepted_keys = ["participant_uid", "study", "event_name", "event_type", "date"]
+        required_keys = ["participant_uid", "study", "event_name", "event_type"]
+        if not checkAPIInput(request.data, required_keys, accepted_keys):
+            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+        
+        try:
+            UUID(request.data["study"]) # Will throw if it is not UUID
+            study = models.Study.nodes.get_or_none(uid=request.data["study"])
+        except:
+            # If UID provided does not match existing study. This is malicious attempt at the database. 
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        # User has no permission to this study. This is malicious attempt at the database. 
+        if not study.checkPermission(request.user.user_id):
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+        participant = study.participants.get_or_none(uid=request.data["participant_uid"])
+        if not participant:
+            return Response(status=400, data={"message": "Participant not found"})
+        
+        existingEvent = participant.events.get_or_none(name=request.data["event_name"])
+        if existingEvent:
+            return Response(status=400, data={"message": "Event name existed"})
+        
+        if "date" in request.data.keys():
+            event = models.BaseEvent(name=request.data["event_name"], type=request.data["event_type"], date=request.data["date"]).save()
+        else:
+            event = models.BaseEvent(name=request.data["event_name"], type=request.data["event_type"], date=models.current_time()).save()
+        participant.events.connect(event)
+        return Response(status=200, data={"event_uid": event.uid})
 
 class UpdateStudyParticipant(RestViews.APIView):
     """ Update Study Participant in BRAVO Database
@@ -352,6 +397,7 @@ class QueryParticipantInformation(RestViews.APIView):
 
         info["devices"] = list()
         info["tags"] = [tag.name for tag in participant.tags]
+        info["events"] = [event.getInfo() for event in participant.events]
 
         for device in participant.devices:
             deviceInfo = dict()

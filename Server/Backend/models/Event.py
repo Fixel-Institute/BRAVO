@@ -33,6 +33,19 @@ class BaseEvent(StructuredNode):
     data = Relationship(".Recording.Recording", "WITH_DATA") # Recording Event
     therapy = Relationship(".Therapy.Therapy", "WITH_THERAPY") # Change Therapy Event
 
+    def getInfo(self):
+        return {
+            "uid": self.uid,
+            "name": self.name,
+            "type": self.type,
+            "date": self.date
+        }
+    
+    def retrieveSourceFiles(self):
+        uid = f"'{self.uid}'"
+        results, _ = db.cypher_query(f"MATCH (a:SourceFile)-[:SOURCE_OF_EVENT]->(:BaseEvent {{uid: {uid}}}) RETURN a", resolve_objects=True)
+        return [row[0] for row in results]
+
     def purge(self):
         for scale in self.scales:
             scale.purge()

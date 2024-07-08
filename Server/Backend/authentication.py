@@ -25,10 +25,10 @@ class BRAVOJWTAuthentication(BaseAuthentication):
                 return None
             
             for user in key.associated_user:
+                request.csrf_processing_done = True
                 user.is_authenticated = True
-                user.api_access = True 
+                user.api_access = True
                 return (user, None)
-            
             return None
 
         try:

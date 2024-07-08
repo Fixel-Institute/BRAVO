@@ -21,15 +21,7 @@ class Homepage(RestViews.APIView):
     def get(self, request):
         context = {}
         
-        """
-        # If Production
-        bundleJSs = os.listdir(RESOURCES + "/../Frontend/build/static/js")
-        for file in bundleJSs:
-            if file.startswith("main") and file.endswith(".js"):
-                context["bundleURL"] = file
-        """
-        
         # If Development:
-        context["ReactBundleURL"] = "http://localhost:3000/static/js/bundle.js"
+        #context["ReactBundleURL"] = "http://localhost:3000/static/js/bundle.js"
         
         return render(request, "index.html", context=context)

@@ -221,24 +221,16 @@ def decodeMedtronicJSON(cache_file):
     device.source_files.connect(cache_file)
     return None
 
-def saveCacheFile(rawBytes, filename, data_type, metadata):
+def saveCacheFile(rawBytes, filename, data_type, metadata, event=None):
     sourceFile = models.SourceFile(name=filename, metadata=metadata)
-    if data_type == "MedtronicJSON":
-        secureEncoder = Fernet(key)
-        sourceFile.file_pointer = DATABASE_PATH + "cache" + os.path.sep + sourceFile.uid + ".json"
-        with open(sourceFile.file_pointer, "wb+") as file:
-            file.write(secureEncoder.encrypt(rawBytes))
-    elif data_type == "MRImages":
-        extension = filename.replace(filename.split(".")[0],"")
-        sourceFile.file_pointer = DATABASE_PATH + "cache" + os.path.sep + sourceFile.uid + extension
-        with open(sourceFile.file_pointer, "wb+") as file:
-            file.write(rawBytes)
-    else:
-        sourceFile.file_pointer = DATABASE_PATH + "cache" + os.path.sep + sourceFile.uid
-        with open(sourceFile.file_pointer, "wb+") as file:
-            file.write(rawBytes)
+    extension = filename.replace(filename.split(".")[0],"")
+    sourceFile.file_pointer = DATABASE_PATH + "cache" + os.path.sep + sourceFile.uid + extension
+    with open(sourceFile.file_pointer, "wb+") as file:
+        file.write(rawBytes)
 
     sourceFile.save()
     queue = models.ProcessingQueue(status="created", job_type=data_type).save()
     queue.cache_file.connect(sourceFile)
+    if event:
+        sourceFile.events.connect(event)
     return sourceFile, queue

@@ -90,7 +90,37 @@ def processJSONUploads():
     if len(models.ProcessingQueue.nodes.filter(job_type="MedtronicJSON", status="created")) > 0:
         processJSONUploads()
 
+def processUniversalData():
+    queue = models.ProcessingQueue.nodes.filter(job_type="RawData", status="created").all()
+    if len(queue) > 0:
+        for job in queue:
+            cache_file = job.cache_file[0]
+            job.status = "in_progress"
+            
+            result = None
+            try:
+                participant = cache_file.participant[0]
+                os.makedirs(DATABASE_PATH + "raws" + os.path.sep + participant.uid, exist_ok=True)
+                newFilePointer = cache_file.file_pointer.replace(DATABASE_PATH + "cache", DATABASE_PATH + "raws" + os.path.sep + participant.uid)
+                os.rename(cache_file.file_pointer, newFilePointer) 
+                cache_file.file_pointer = newFilePointer
+                cache_file.save()
+            except Exception as e:
+                result = {"error": str(e)}
+
+            if result:
+                job.status = "error"
+                job.result = result["error"]
+                print(result)
+            else:
+                job.status = "complete"
+            job.save()
+
+    if len(models.ProcessingQueue.nodes.filter(job_type="RawData", status="created")) > 0:
+        processUniversalData()
+
 if __name__ == '__main__':
     processJSONUploads()
+    processUniversalData()
     #processSummitZIPUpload()
     #processExternalRecordingUpload()

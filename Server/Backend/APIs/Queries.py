@@ -238,7 +238,7 @@ class QueryTimeSeriesAnalysis(RestViews.APIView):
                 return Response(status=200, data=data)
             
         return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
-    
+
 class QueryTimeSeriesRecording(RestViews.APIView):
     """ Query time-series recordings (list).
 

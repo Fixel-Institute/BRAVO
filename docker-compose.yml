@@ -35,6 +35,7 @@ services:
     networks:
       - backend
     ports:
+      - '80:80'
       - '443:443'
     command: >
       bash -c "service nginx start && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"

@@ -22,6 +22,7 @@ import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from django.http import HttpResponse
 
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
@@ -74,7 +75,7 @@ class DataUpload(RestViews.APIView):
     
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
-        accepted_keys = ["file*", "data_type", "participant", "study", "metadata"]
+        accepted_keys = ["file*", "data_type", "participant", "event", "study", "metadata"]
         required_keys = ["data_type", "participant", "study", "metadata"]
         if not checkAPIInput(request.data, required_keys, accepted_keys):
             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
@@ -86,7 +87,6 @@ class DataUpload(RestViews.APIView):
             # uid is not a UUID
             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
         
-        
         # If UID provided does not match existing study. This is malicious attempt at the database. 
         if not study:
             return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
@@ -96,15 +96,18 @@ class DataUpload(RestViews.APIView):
             return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
         
         metadata = json.loads(request.data["metadata"])
-
         for participant in study.participants:
             if participant.uid == request.data["participant"]:
+                event = None
+                if "event" in request.data.keys():
+                    event = participant.events.get_or_none(uid=request.data["event"])
+
                 queueCreated = []
                 for key in request.data.keys():
                     if key.startswith("file"):
                         try:
                           rawBytes = request.data[key].read()
-                          sourceFile, queue = DataDecoder.saveCacheFile(rawBytes, request.data[key].name, request.data["data_type"], metadata)
+                          sourceFile, queue = DataDecoder.saveCacheFile(rawBytes, request.data[key].name, request.data["data_type"], metadata, event=event)
                           queueCreated.append(queue.uid)
                           sourceFile.uploader.connect(request.user)
                           sourceFile.participant.connect(participant)
@@ -116,6 +119,105 @@ class DataUpload(RestViews.APIView):
                 return Response(status=200, data={"queue_created": queueCreated})
         
         return Response(status=200)
+
+class QueryAvailableRecordings(RestViews.APIView):
+    """ Query current processing queue list
+
+    **POST**: ``/api/retrieveDataList``
+
+    Returns:
+      Response Code 200.
+    """
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [RestParsers.JSONParser]
+
+    @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
+    def post(self, request):
+        accepted_keys = ["participant", "study", "event"]
+        required_keys = ["participant", "study", "event"]
+        if not checkAPIInput(request.data, required_keys, accepted_keys):
+            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+        
+        try:
+            UUID(request.data["study"]) # Will throw if it is not UUID
+            study = models.Study.nodes.get_or_none(uid=request.data["study"])
+        except:
+            # uid is not a UUID
+            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+        
+        # If UID provided does not match existing study. This is malicious attempt at the database. 
+        if not study:
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        # User has no permission to this study. This is malicious attempt at the database. 
+        if not study.checkPermission(request.user.user_id):
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        participant = study.participants.get_or_none(uid=request.data["participant"])
+        if not participant:
+            return Response(status=400, data={"message": "Participant not found"})
+
+        event = participant.events.get_or_none(uid=request.data["event"])
+        if not event:
+            return Response(status=400, data={"message": "Event not found"})
+        
+        source_files = event.retrieveSourceFiles()
+        return Response(status=200, data=[file.getInfo() for file in source_files])
+
+class DataRetrieve(RestViews.APIView):
+    """ Upload Data with accompanying metadata
+
+    .. note::
+
+        This is the only route in the server that uses MultiPart/Form Parser instead of JSON object. 
+
+    This is the primary route that allow users to upload any accepted data file to BRAVO Database. 
+
+    **POST**: ``/api/retrieveData``
+
+    Returns:
+      Response Code 200 if success or 400 if error. 
+    """
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [RestParsers.MultiPartParser, RestParsers.FormParser]
+    
+    @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
+    def post(self, request):
+        accepted_keys = ["participant", "study", "recording_uid"]
+        required_keys = ["participant", "study", "recording_uid"]
+        if not checkAPIInput(request.data, required_keys, accepted_keys):
+            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+        
+        try:
+            UUID(request.data["study"]) # Will throw if it is not UUID
+            study = models.Study.nodes.get_or_none(uid=request.data["study"])
+        except:
+            # uid is not a UUID
+            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+        
+        # If UID provided does not match existing study. This is malicious attempt at the database. 
+        if not study:
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        # User has no permission to this study. This is malicious attempt at the database. 
+        if not study.checkPermission(request.user.user_id):
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        participant = study.participants.get_or_none(uid=request.data["participant"])
+        if not participant:
+            return Response(status=400, data={"message": "Participant not found"})
+        
+        try:
+            sourceFile = participant.retrieveRecording(request.data["recording_uid"])[0]
+            with open(sourceFile.file_pointer, "rb") as file:
+                rawBytes = file.read()
+            return HttpResponse(bytes(rawBytes), status=200, headers={
+                "Content-Type": "application/octet-stream"
+            })
+        except:
+            return Response(status=400, data={"message": "File not found"})
 
 class QueryProcessingQueue(RestViews.APIView):
     """ Query current processing queue list

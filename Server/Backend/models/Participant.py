@@ -21,7 +21,7 @@ Participant Model
 from uuid import uuid4
 import datetime, pytz
 
-from neomodel import StructuredNode, StringProperty, FloatProperty, Relationship
+from neomodel import StructuredNode, StringProperty, FloatProperty, Relationship, db
 from .HelperFunctions import encryptMessage, decryptMessage
 
 class Participant(StructuredNode):
@@ -51,6 +51,11 @@ class Participant(StructuredNode):
     def getDateOfBirth(self):
         return datetime.datetime.fromtimestamp(self.date_of_birth, tz=pytz.utc)
     
+    def retrieveRecording(self, recording_uid):
+        uid = f"'{self.uid}'"
+        results, _ = db.cypher_query(f"MATCH (a:SourceFile {{uid: '{recording_uid}'}})-[:UPLOADED_FOR]->(:Participant {{uid: {uid}}}) RETURN a", resolve_objects=True)
+        return [row[0] for row in results]
+
     def purge(self):
         for therapy in self.therapies:
             therapy.purge()

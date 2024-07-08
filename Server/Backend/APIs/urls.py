@@ -30,6 +30,7 @@ urlpatterns = [
 	path('querySessions', Session.QuerySessionConfigs.as_view()),
   
 	path('createStudyParticipant', ParticipantManager.CreateStudyParticipant.as_view()),
+	path('createParticipantEvent', ParticipantManager.CreateParticipantEvent.as_view()),
 	path('updateStudyParticipant', ParticipantManager.UpdateStudyParticipant.as_view()),
 	path('updateDeviceInformation', ParticipantManager.UpdateDeviceInformation.as_view()),
 	path('deleteStudyParticipant', ParticipantManager.DeleteStudyParticipant.as_view()),
@@ -38,6 +39,8 @@ urlpatterns = [
 	path('CheckAccessPermission', ParticipantManager.CheckAccessPermission.as_view()),
   
 	path('uploadData', DataHandler.DataUpload.as_view()),
+  path('retrieveDataList', DataHandler.QueryAvailableRecordings.as_view()),
+	path('retrieveData', DataHandler.DataRetrieve.as_view()),
   path('queryProcessingQueue', DataHandler.QueryProcessingQueue.as_view()),
   path('clearProcessingQueue', DataHandler.ClearProcessingQueue.as_view()),
   path('getFernetKey', DataHandler.GetSecretKeyFromPassword.as_view()),
