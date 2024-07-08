@@ -32,7 +32,6 @@ import Logo from "assets/img/logo.png";
 
 import routes from "routes";
 import Profile from "views/Dashboard/Profile";
-import LocalUpdaterView from "views/LocalUpdater";
 
 export default function App() {
   const [controller, dispatch] = usePlatformContext();
@@ -103,7 +102,6 @@ export default function App() {
         <Route path="/login" element={<SignIn />} />
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/updater" element={<LocalUpdaterView />} />
         {getRoutes(routes)}
         <Route path="/inertiaSensorViewer" element={<InertiaSensorViewer />} />
         <Route path="/reports/*" element={<Navigate to="/patient-overview" />} />

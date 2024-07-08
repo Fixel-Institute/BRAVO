@@ -89,47 +89,6 @@ function DefaultNavbar({ transparent, light, action }) {
     handleCloseMenu();
   };
 
-  const setServer = (server) => {
-    handleCloseMenu();
-
-    if (server == "Localhost") {
-      SessionController.setServer("http://localhost:3001");
-      window.location.reload();
-
-    } else if (server == "DemoServer") {
-      SessionController.setServer("https://bravo-server.jcagle.solutions");
-      window.location.reload();
-
-    } else {
-      if (customServer.show) {
-        SessionController.setServer(customServer.address);
-        window.location.reload();
-
-      } else {
-        setCustomServer({address: "", show: true});
-      }
-
-    }
-  };
-
-  const setBRAVOVersion = (server) => {
-    handleCloseMenu();
-
-    if (server == "Latest (v2.2.2)") {
-      window.location.href = 'https://uf-bravo.jcagle.solutions/index';
-    } else if (server == "V2.2.1") {
-      window.location.href = 'https://9e07c89c.uf-bravo.pages.dev/index';
-    } else if (server == "V2.2.0") {
-      window.location.href = 'https://970d2c92.uf-bravo.pages.dev/index';
-    } else if (server == "V2.1.1") {
-      window.location.href = 'https://8b84b888.uf-bravo.pages.dev/index';
-    } else {
-      window.location.href = 'http://localhost:80';
-    }
-    return null;
-  };
-  
-
   useEffect(() => {
     // A function that sets the display state for the DefaultNavbarMobile.
     function displayMobileNavbar() {
@@ -173,58 +132,6 @@ function DefaultNavbar({ transparent, light, action }) {
           <Icon sx={{ mr: 1 }}><ChangeCircleIcon/></Icon>
           <MDTypography variant="button" fontWeight="regular" color="text">
             {lang}
-          </MDTypography>
-        </MenuItem>
-      ))}
-    </Menu>
-  );
-
-  // Render the notifications menu
-  const renderServerSelectionMenu = () => (
-    <Menu
-      anchorEl={openMenu}
-      anchorReference={null}
-      anchorOrigin={{
-        vertical: "bottom",
-        horizontal: "left",
-      }}
-      open={whichMenu === "ServerMenu"}
-      onClose={handleCloseMenu}
-      sx={{ mt: 2 }}
-    >
-      {["Localhost","DemoServer","CustomizedServer"].map((server) => (
-        <MenuItem key={server} onClick={() => setServer(server)}>
-          <Icon sx={{ mr: 1 }}>{
-            <StorageIcon/>
-          }</Icon>
-          <MDTypography variant="button" fontWeight="regular" color="text">
-            {dictionary.SimplifiedNavbar[server][language]}
-          </MDTypography>
-        </MenuItem>
-      ))}
-    </Menu>
-  );
-
-  // Render the notifications menu
-  const renderBRAVOSelectMenu = () => (
-    <Menu
-      anchorEl={openMenu}
-      anchorReference={null}
-      anchorOrigin={{
-        vertical: "bottom",
-        horizontal: "left",
-      }}
-      open={whichMenu === "BRAVOVersion"}
-      onClose={handleCloseMenu}
-      sx={{ mt: 2 }}
-    >
-      {["Latest (v2.2.2)","v2.2.1","V2.2.0","V2.1.1"].map((server) => (
-        <MenuItem key={server} onClick={() => setBRAVOVersion(server)}>
-          <Icon sx={{ mr: 1 }}>{
-            <StorageIcon/>
-          }</Icon>
-          <MDTypography variant="button" fontWeight="regular" color="text">
-            {server}
           </MDTypography>
         </MenuItem>
       ))}

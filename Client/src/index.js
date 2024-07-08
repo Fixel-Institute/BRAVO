@@ -42,7 +42,7 @@ function Main() {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    let server = localStorage.getItem("serverAddress") || (window.location.protocol + "//" + window.location.hostname);
+    let server = window.location.protocol + "//" + window.location.hostname;
     SessionController.verifyServerAddress(server).then(async (connectionState) => {
       let sessionStates = {};
       if (connectionState) {

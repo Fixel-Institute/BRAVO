@@ -62,7 +62,7 @@
   },
   "scripts": {
     "start": "GENERATE_SOURCEMAP=false npx react-scripts start",
-    "build": "GENERATE_SOURCEMAP=false npx react-scripts build",
+    "build": "GENERATE_SOURCEMAP=false npx react-scripts build && sudo cp -r build/* /usr/share/nginx/html/",
     "test": "npx react-scripts test",
     "eject": "npx react-scripts eject",
     "install:clean": "rm -rf node_modules/ && rm -rf package-lock.json && npm install && npm start"

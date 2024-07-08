@@ -82,7 +82,6 @@ function TherapyHistory() {
         report_type: report, 
         participant_uid: participant_uid
       }).then((response) => {
-        console.log(response.data);
         setTherapyHistory(response.data)
         setAlert(null);
       }).catch((error) => {

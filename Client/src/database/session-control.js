@@ -20,7 +20,7 @@ import MuiAlertDialog from "components/MuiAlertDialog"
 //import { Manager } from "socket.io-client"
 
 export const SessionController = (function () {
-  let server = "https://localhost";
+  let server = window.location.protocol + "//localhost";
   let connectionStatus = false;
 
   let synced = false;
@@ -104,6 +104,7 @@ export const SessionController = (function () {
       );
       return;
     }
+
     if (setAlert && error.response) {
       var errorMessage = dictionary.ErrorMessage.UNKNOWN_ERROR[session.language];
       if (error.response.status === 500) {
@@ -119,8 +120,9 @@ export const SessionController = (function () {
             break;
           }
         }
-        if (errorMessage == dictionary.ErrorMessage.UNKNOWN_ERROR[session.language]) {
-          console.log(ERRORCODE);
+        if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (errorMessage == dictionary.ErrorMessage.UNKNOWN_ERROR[session.language]) {
           console.log(error.response.data);
         }
       } else if (error.response.status == 401) {

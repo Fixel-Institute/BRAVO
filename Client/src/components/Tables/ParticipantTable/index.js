@@ -55,7 +55,6 @@ const ParticipantTable = ({data}) => {
   });
 
   useEffect(() => {
-    console.log(data)
     setSortedData(data);
     setSortType({
       key: "ParticipantTableName",
@@ -105,7 +104,6 @@ const ParticipantTable = ({data}) => {
   const viewParticipantData = (id) => {
     SessionController.setParticipantUID(id).then((result) => {
       if (result) {
-        console.log("setSuccess")
         setContextState(dispatch, "participant_uid", id);
         navigate("/participant-overview", {replace: false});
       }

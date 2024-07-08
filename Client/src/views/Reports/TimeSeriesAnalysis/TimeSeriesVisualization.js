@@ -96,7 +96,6 @@ function TimeSeriesVisualization({dataToRender, channelInfos, handleAddEvent, ha
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    console.log(dataToRender);
     if (dataToRender) {
       handleGraphing(dataToRender);
     } else {
@@ -119,7 +118,6 @@ function TimeSeriesVisualization({dataToRender, channelInfos, handleAddEvent, ha
   React.useEffect(() => {
     if (ref.current.on) {
       ref.current.on("plotly_click", (data) => {
-        console.log(data)
         setEventInfo((eventInfo) => {
           eventInfo.time = new Date(data.points[0].x).getTime();
           eventInfo.recording_uid = data.points[0].fullData.meta;

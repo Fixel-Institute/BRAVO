@@ -71,7 +71,6 @@ function SpectrogramVisualization({dataToRender, channelInfos, handleAddEvent, h
             clim: [-20,20],
           }),
         }, ax[i]);
-        console.log(timeArray)
       }
     }
     
@@ -86,7 +85,6 @@ function SpectrogramVisualization({dataToRender, channelInfos, handleAddEvent, h
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    console.log(dataToRender);
     if (dataToRender) {
       handleGraphing(dataToRender);
     } else {
@@ -109,7 +107,6 @@ function SpectrogramVisualization({dataToRender, channelInfos, handleAddEvent, h
   React.useEffect(() => {
     if (ref.current.on) {
       ref.current.on("plotly_click", (data) => {
-        console.log(data)
         setEventInfo((eventInfo) => {
           eventInfo.time = new Date(data.points[0].x).getTime();
           eventInfo.recording_uid = data.points[0].fullData.meta;
