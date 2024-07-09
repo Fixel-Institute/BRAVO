@@ -110,8 +110,8 @@ def queryAvailableRecordings(user, patientId, authority):
         recordings = models.NeuralActivityRecording.objects.filter(device_deidentified_id=device.deidentified_id).all()
         for recording in recordings:
             # Currently does not support BrainSense Survey unless new analysis is designed around it
-            if recording.recording_type == "BrainSenseSurvey":
-                continue
+            #if recording.recording_type == "BrainSenseSurvey":
+            #    continue
             
             if not "Channel" in recording.recording_info.keys() and not (recording.recording_type == "ChronicLFPs" or recording.recording_type == "SummitChronicLogs"):
                 RecordingData = Database.loadSourceDataPointer(recording.recording_datapointer)
@@ -412,6 +412,21 @@ def saveCacheFile(filename, rawBytes):
     with open(DATABASE_PATH + "cache" + os.path.sep + filename, "wb+") as file:
         file.write(secureEncoder.encrypt(rawBytes))
 
+def processAnnotations(filename, patientId):
+    secureEncoder = Fernet(key)
+    with open(filename, "rb") as file:
+        csvFile = secureEncoder.decrypt(file.read())
+    
+    df = pd.read_csv(BytesIO(csvFile))
+    for i in df.index:
+        annotation = models.CustomAnnotations(patient_deidentified_id=patientId, 
+                                    event_name=df["Annotation"][i], 
+                                    event_time=datetime.fromisoformat(df["Time"][i]),
+                                    event_type="Streaming",
+                                    event_duration=df["Duration"][i])
+        annotation.save()
+    return True
+
 def processExternalRecordings(filename):
     secureEncoder = Fernet(key)
     with open(filename, "rb") as file:
@@ -689,7 +704,7 @@ def handleFilterProcessing(step, RecordingIds, Results, Configuration, analysis)
         if result["ResultLabel"] == targetSignal:
             recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
             RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
-
+            
             for i in range(len(RawData)):
                 RawData[i] = processRawData(RawData=RawData[i])
                 ProcessedData.append(RawData[i])

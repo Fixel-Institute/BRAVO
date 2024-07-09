@@ -89,10 +89,14 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
       formData.append("patientId", patientID);
       formData.append("batchSessionId", batchSessionId);
       if (deviceId === "ExternalRecordings") {
+        formData.append("DataType", "ExternalRecordings");
         formData.append("Format", externalDataInfo.format);
         formData.append("SamplingRate", externalDataInfo.samplingRate);
         formData.append("StartTime", new Date(externalDataInfo.startDate + " " + externalDataInfo.startTime).getTime());
         formData.append("RecordingLabel", externalDataInfo.label);
+      } else if (deviceId === "Annotations") {
+        formData.append("DataType", "Annotations");
+        formData.append("Format", "CSV");
       }
     });
     myDropzone.on("success", function(file, response) {
@@ -124,13 +128,14 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
   };
 
   const getDeviceType = (selectedDeviceConfig, externalDataInfoConfig) => {
-    console.log(selectedDeviceConfig)
     if (selectedDeviceConfig.value === "ExternalRecordings") {
       if (externalDataInfoConfig.format === "CSV") {
         return ".csv";
       } else if (externalDataInfoConfig.format === "MDAT") {
         return ".mdat";
       }
+    } else if (selectedDeviceConfig.value === "Annotations") {
+      return ".csv";
     } else {
       return ".json,.zip";
     }
@@ -149,7 +154,10 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
         <Grid item xs={12}>
           <Autocomplete
             value={selectedDevice}
-            options={[...availableDevices, {label: "New Device", value: "NewDevice"}, {label: "External Recording", value: "ExternalRecordings"}]}
+            options={[...availableDevices, 
+              {label: "New Device", value: "NewDevice"}, 
+              {label: "External Recording", value: "ExternalRecordings"}, 
+              {label: "Annotations", value: "Annotations"}]}
             onChange={(event, value) => setSelectedDevice(value)}
             isOptionEqualToValue={(option, value) => {
               return option.value == value.value;
@@ -234,7 +242,7 @@ export default function UploadDialog({show, availableDevices, onCancel}) {
         
       <MDBox pt={2}>
         <DropzoneUploader options={{
-          url: SessionController.getServer() + (selectedDevice.value === "ExternalRecordings" ? "/api/uploadExternalFiles" : "/api/uploadSessionFiles"),
+          url: SessionController.getServer() + (["ExternalRecordings", "Annotations"].includes(selectedDevice.value) ? "/api/uploadExternalFiles" : "/api/uploadSessionFiles"),
           paramName: "file",
           addRemoveLinks: true,
           acceptedFiles: getDeviceType(selectedDevice, externalDataInfo),

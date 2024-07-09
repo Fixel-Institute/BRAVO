@@ -160,6 +160,79 @@ def processJSONUploads():
                 
                 PerceptSessions.saveCacheJSON(queue.descriptor["filename"], json.dumps(JSON).encode('utf-8'))
 
+def processAnnotations():
+    ws = websocket.WebSocket()
+    if models.ProcessingQueue.objects.filter(type="annotations", state="Error").exists():
+        print(datetime.datetime.now())
+        BatchQueues = models.ProcessingQueue.objects.filter(type="annotations", state="Error").order_by("datetime").all()
+        for queue in BatchQueues:
+            if not models.ProcessingQueue.objects.filter(state="Error", queue_id=queue.queue_id).exists():
+                continue
+            queue.state = "Processing"
+            queue.save()
+            ErrorMessage = ""
+            try:
+                ws.connect("ws://localhost:3001/socket/notification")
+                ws.send(json.dumps({
+                    "NotificationType": "TaskProcessing",
+                    "TaskUser": str(queue.owner),
+                    "TaskID": str(queue.queue_id),
+                    "Authorization": os.environ["ENCRYPTION_KEY"],
+                    "State": "Processing",
+                    "Message": "",
+                }))
+                ws.close()
+            except Exception as e:
+                print(e)
+
+            print(f"Start Processing {queue.descriptor['filename']}")
+            try:
+                AnalysisBuilder.processAnnotations(DATABASE_PATH + "cache" + os.path.sep + queue.descriptor["filename"], queue.descriptor['patientId'])
+            except Exception as e:
+                queue.state = "Error"
+                queue.descriptor["Message"] = str(e)
+                print(queue.descriptor["Message"])
+                queue.save()
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
+                continue
+
+            print(f"End Processing {queue.descriptor['filename']}")
+            if ErrorMessage == "":
+                queue.state = "Complete"
+                queue.save()
+            else:
+                print(ErrorMessage)
+                queue.state = "Error"
+                queue.descriptor["Message"] = ErrorMessage
+                queue.save()
+                
+                try:
+                    ws.connect("ws://localhost:3001/socket/notification")
+                    ws.send(json.dumps({
+                        "NotificationType": "TaskComplete",
+                        "TaskUser": str(queue.owner),
+                        "TaskID": str(queue.queue_id),
+                        "Authorization": os.environ["ENCRYPTION_KEY"],
+                        "State": "Error",
+                        "Message": queue.descriptor["Message"],
+                    }))
+                    ws.close()
+                except Exception as e:
+                    print(e)
+
 def processExternalRecordingUpload():
     ws = websocket.WebSocket()
     if models.ProcessingQueue.objects.filter(type="externalCSVs", state="InProgress").exists():
@@ -434,3 +507,4 @@ if __name__ == '__main__':
     processJSONUploads()
     processSummitZIPUpload()
     processExternalRecordingUpload()
+    processAnnotations()

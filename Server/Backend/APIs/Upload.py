@@ -377,7 +377,7 @@ class ExternalRecordingUpload(RestViews.APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         for key in request.data.keys():
-            if not (key.startswith("file") or key == "deviceId" or key == "patientId" or key == "decryptionKey" or key == "batchSessionId" or key == "Format" or key == "SamplingRate" or key == "RecordingLabel" or key == "StartTime"):
+            if not (key.startswith("file") or key == "DataType" or key == "deviceId" or key == "patientId" or key == "decryptionKey" or key == "batchSessionId" or key == "Format" or key == "SamplingRate" or key == "RecordingLabel" or key == "StartTime"):
                 return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
             
             if key.startswith("file"):
@@ -391,27 +391,40 @@ class ExternalRecordingUpload(RestViews.APIView):
         for key in request.data.keys():
             if key.startswith("file"):
                 rawBytes = request.data[key].read()
-                if request.data["Format"] == "CSV":
-                    queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="externalCSVs", state="WaitToStart", descriptor={
-                        "filename": request.data[key].name,
-                        "patientId": request.data["patientId"],
-                        "batchSessionId": request.data["batchSessionId"],
-                        "descriptor": {
-                            "SamplingRate": request.data["SamplingRate"],
-                            "Label": request.data["RecordingLabel"],
-                            "StartTime": request.data["StartTime"]
-                        }
-                    })
-                elif request.data["Format"] == "MDAT":
-                    queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="externalMDATs", state="WaitToStart", descriptor={
-                        "filename": request.data[key].name,
-                        "patientId": request.data["patientId"],
-                        "batchSessionId": request.data["batchSessionId"],
-                        "descriptor": {
-                            "Format": "MDAT"
-                        }
-                    })
-                AnalysisBuilder.saveCacheFile(request.data[key].name, rawBytes)
-                queueItem.save()
-            
+                if request.data["DataType"] == "ExternalRecordings":
+                    if request.data["Format"] == "CSV":
+                        queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="externalCSVs", state="WaitToStart", descriptor={
+                            "filename": request.data[key].name,
+                            "patientId": request.data["patientId"],
+                            "batchSessionId": request.data["batchSessionId"],
+                            "descriptor": {
+                                "SamplingRate": request.data["SamplingRate"],
+                                "Label": request.data["RecordingLabel"],
+                                "StartTime": request.data["StartTime"]
+                            }
+                        })
+                    elif request.data["Format"] == "MDAT":
+                        queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="externalMDATs", state="WaitToStart", descriptor={
+                            "filename": request.data[key].name,
+                            "patientId": request.data["patientId"],
+                            "batchSessionId": request.data["batchSessionId"],
+                            "descriptor": {
+                                "Format": "MDAT"
+                            }
+                        })
+                    AnalysisBuilder.saveCacheFile(request.data[key].name, rawBytes)
+                    queueItem.save()
+                elif request.data["DataType"] == "Annotations":
+                    if request.data["Format"] == "CSV":
+                        queueItem = models.ProcessingQueue(owner=request.user.unique_user_id, type="annotations", state="WaitToStart", descriptor={
+                            "filename": request.data[key].name,
+                            "patientId": request.data["patientId"],
+                            "batchSessionId": request.data["batchSessionId"],
+                            "descriptor": {
+                                
+                            }
+                        })
+                        AnalysisBuilder.saveCacheFile(request.data[key].name, rawBytes)
+                        queueItem.save()
+
         return Response(status=200)

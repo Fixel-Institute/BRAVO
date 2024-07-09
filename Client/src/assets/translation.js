@@ -744,8 +744,8 @@ export const dictionary = {
     },
     Table: {
       Checked: {
-        en: "",
-        zh: ""
+        en: "Check All",
+        zh: "Check All"
       },
       EventName: {
         en: "Event Name",
