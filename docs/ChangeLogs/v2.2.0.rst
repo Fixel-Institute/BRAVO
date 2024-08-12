@@ -4,11 +4,11 @@ Version 2.2.0
 Overview
 ---------------------------------------------
 UF Brain Recording and Analysis Visualization Online (BRAVO) Platform Version 2.2.0 is a major update to the BRAVO that contains multiple breaking changes. 
-The change is primarily associated with data formating and organization. In addition, the Percept format decoder is being updated to better handle missing 
+The change is primarily associated with data formating and organization. In addition, the third party medical device format decoder is being updated to better handle missing 
 data during recordings and corrupted format downloaded from Medtronic Tablet. 
 
 Secondly, a major update in this version is to establish the preliminary Online-Analysis-Interface that allow user to design their own analysis flow using
-either external annotations, markers, or recordings in combination with Percept. This is still a preliminary design and updates are expected in the 2.2.x. 
+either external annotations, markers, or recordings in combination with third party medical device. This is still a preliminary design and updates are expected in the 2.2.x. 
 
 Thirdly, relatively minor update is to lay foundation for mobile companion app for collecting wearable sensor data. 
 
@@ -17,7 +17,7 @@ Major Changes
 
 .. topic:: 1. Percept Decoder Update
 
-  Medtronic Percept JSON structures are not always consistent. Errors often occur when there are mismatching TimeDomain/PowerDomain channels. Previously,
+  Third party medical device JSON structures are not always consistent. Errors often occur when there are mismatching TimeDomain/PowerDomain channels. Previously,
   such inconsistent would lead to removal of one or the other channel as the data structure "require" the presence of both TimeDomain recordings 
   and PowerDomain/Stimulation parameters. In new format, we split the TimeDomain recordings from PowerDomain/Stimulation recordings to make them more independent. 
   Therefore, data will be stored, though specific analysis will still not be availble (such as effect of stimulation) if one or the other data is not in the JSON file. 

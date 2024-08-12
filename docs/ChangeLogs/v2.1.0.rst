@@ -25,20 +25,13 @@ Major Changes
 
 .. topic:: 3. Therapy History object Updated with adaptive DBS
 
-  With new aDBS feature available on the Medtronic Percept Device, data processing pipeline is updated with new code to extract 
+  With new aDBS feature available on the certain third party medical device, data processing pipeline is updated with new code to extract 
   important parameters from aDBS setups, including Threshold, Ramping, and Bypass parameters. 
-  This information will be displayed in Therapy History page, and the aDBS performance will be displayed in Chronic BrainSense page.
+  This information will be displayed in Therapy History page, and the aDBS performance will be displayed in Chronic Neural Activity page.
 
   Due to the change in object, user will need to refresh TherapyHistory object using ``DatabaseManager.py`` script. 
 
-.. topic:: 4. Therapy History object Updated with adaptive DBS
-
-  With new aDBS feature available on the Medtronic Percept Device, data processing pipeline is updated with new code to extract 
-  important parameters from aDBS setups, including Threshold, Ramping, and Bypass parameters. 
-
-  This information will be displayed in Therapy History page, and the aDBS performance will be displayed in Chronic BrainSense page.
-
-.. topic:: 5. Experimental Analysis Page are now Dynamically Populated
+.. topic:: 4. Experimental Analysis Page are now Dynamically Populated
 
   To further help modular development of customized analysis scripts, we implemented procedure that add Experimental analysis page to 
   the Patient Overview Page by creating a ``route.js`` descriptor in each Experimental page. 
@@ -46,7 +39,7 @@ Major Changes
   The client frontend now actively search for folders inside "Experimental" folder and populate design and route information using the ``route.js`` descriptor.
   Now user can share customized analysis to each other by simply adding new view folders to the Experimental folder without interfereing with main developmen pipeline.
 
-.. topic:: 6. Data Sharing Pipeline
+.. topic:: 5. Data Sharing Pipeline
 
   Previously in 1.0 BRAVO_SSR, the admin can choose patients/recordings to share with others. Here, we re-implemented the process with modification 
   to the one-time access code. Any user can manually select patients to be shared in deidentified condition. The receiver can view all data available at the time of sharing 
@@ -62,7 +55,7 @@ Minor Changes
 
 .. topic:: 2. Custom Name can be added to electrodes. 
 
-  Some patients may have bilateral DBS device, and Medtronic Percept device force users to utilize the "Left/Right" nomenclature, leading to sometime the Hemisphere definition does not 
+  Some patients may have bilateral DBS device, and a certain third party medical device force users to utilize the "Left/Right" nomenclature, leading to sometime the Hemisphere definition does not 
   match the real hemisphere definition anatomically. We allow custom name editing to ensure that the display name is accurate if the user define the electrode location manually. 
 
 

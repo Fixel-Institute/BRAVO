@@ -9,7 +9,7 @@ supported by `Django Channels <https://channels.readthedocs.io/en/stable/>`_ and
 The documentation will walk through installation of both components; 
 however, users may choose to use only one components without the other based on their need and customization.
 A common example would be to use *Python Server ONLY* to process and organize session files but without a web interface. 
-The users then can perform custom analysis pipeline using Python, MATLAB, or R on the structured Percept object. 
+The users then can perform custom analysis pipeline using Python, MATLAB, or R on the structured JSON object. 
 
 To obtain the source code, please use the `GitHub Repository <https://github.com/Fixel-Institute/BRAVO>`_.
 
@@ -624,7 +624,7 @@ You can access MySQL Database (the default database used for the installation sc
   # Create a user that can access the database called "BRAVOAdmin" with an admin password called "AdminPassword"
   # Change these values to what you see fit.
   mysql> CREATE USER 'BRAVOAdmin'@'localhost' IDENTIFIED WITH mysql_native_password BY 'AdminPassword';
-  mysql> GRANT ALL PRIVILEGES ON PerceptServer.* TO 'BRAVOAdmin'@'localhost';
+  mysql> GRANT ALL PRIVILEGES ON BRAVOServer.* TO 'BRAVOAdmin'@'localhost';
   mysql> FLUSH PRIVILEGES;
 
   # exit MySQL Interface 

@@ -2,7 +2,7 @@ Usage Documentation
 =============================================
 
 The Usage Documentation will provide basic overview on functionality supported by UF BRAVO Platform frontend. 
-UF BRAVO Platform is a Python-based Web Application designed to process and analyze Medtronic Percept Neurostimulator data. 
+UF BRAVO Platform is a Python-based Web Application designed to process and analyze third party medical device data. 
 This documentation is intended to provide detail explainations on all functions currently available to the users.
 
 The website you are viewing is a demo version designed for reviewers. 
@@ -146,7 +146,7 @@ Upload Identified Patient (Clinician Account)
 In the clinician account view, the patient table will be shown with identifiers. 
 Within clinician view, we eliminate the process to manually create patient from the table. 
 In contrast, all information are automatically populated when user uploads identified JSON files 
-exported from Percept Neurostimulator.
+exported from third party medical device.
 
 The primary health information extracted are based on 1) Patient First and Last Name, 
 and 2) Device Serial Number. Data aggregation is based primarily on Device Serial Number, 
@@ -179,7 +179,7 @@ The lookup table must follow a standard CSV formatting, with the following requi
 
 1. patient_deidentifier, which will be used as Patient ID (FirstName) for deidentification 
 2. study_deidentifier, which will be used as Study ID (LastName) for deidentification
-3. identifier, which is the PHI composed of patient {First Name} {Last Name} {MRN} as recorded in the Percept Tablet. 
+3. identifier, which is the PHI composed of patient {First Name} {Last Name} {MRN} as recorded in the device. 
 4. tags, which will be used to insert initial tags for the patient generated (Unavailable at the moment). 
 
 Each patient_deidentifier and study_deidentifier combo may have multiple different identifier if the patient's name changed or that
@@ -222,7 +222,7 @@ It also serves as the primary navigation to different analysis provided by the p
 
 In the device information table, all previous devices associated with the patient will be shown in a table. 
 Implant date and estimated battery life may not be accurate in Research Account view if removed as PHI. 
-Electrode name and targets are information stored in Percept Device, which will be downloaded along with the JSON file. 
+Electrode name and targets are information stored in Device, which will be downloaded along with the JSON file. 
 These information will be automatically populated as long as they are not removed from JSON file.
 
 .. image:: images/PatientOverview.png
@@ -278,7 +278,7 @@ without any associated device. The user may manually add a device via "New Devic
 The user then can upload one or more files associate with that device. It is recommended to change device name after it is done by using the 
 "Pen" icon on the right side of Device Table. 
 
-If a patient is using bilateral Percept Device, the user should create a second "New Device" and upload files separately. 
+If a patient is using bilateral neurostimulator, the user should create a second "New Device" and upload files separately. 
 
 Primary Analysis Navigations 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -447,7 +447,7 @@ The table provide essential information regarding the recording, such as recordi
 .. note:: 
 
   The only information require manual update is Stimulation Mode (Ring Stimulation vs Segmented A, B, C) 
-  because Percept Session file does not store those information in the recording data. 
+  because Session file does not store those information in the recording data. 
 
 Neural Recording Summary
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

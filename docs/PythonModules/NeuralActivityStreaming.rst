@@ -1,12 +1,12 @@
-Indefinite Streaming Pipeline
+Neural Activity Streaming
 =============================================
 
 Overview
 ---------------------------------------------
-The Indefinite Streaming Pipeline is a Python module specific for handling Indefinite Streaming data format from Percept. 
+The Neural Activity Streaming Pipeline is a Python module specific for handling Streaming data format from third party medical device. 
 This section will go over all functions implemented and provide sufficient details on pipeline implementation.
 
 Methods
 ---------------------------------------------
-.. automodule:: Percept.IndefiniteStream
+.. automodule:: Percept.BrainSenseStream
     :members: 

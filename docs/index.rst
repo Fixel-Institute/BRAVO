@@ -8,7 +8,12 @@ Welcome to UF BRAVO Platform's documentation!
 
 University of Florida Brain Recording Analysis and Visualization Online (BRAVO) Platform
 is a Python-based data analysis tool for processing and analyzing session data collected with 
-sensing-enabled neurostimulators such as Medtronic Percept neurostimulator.
+sensing-enabled neurostimulators.
+
+The University of Florida is solely responsible for the Bravo Platform. 
+The Bravo Platform is for research use only. 
+The Bravo Platform was created and is maintained without any involvement, evaluation, or endorsement by any third-party medical device company.
+The BRAVO Platform may contain device name or electrode name trademarked by third party medical device company but only for the purpose of differentiating different devices.  
 
 Please refer to `GitHub Repository <https://github.com/Fixel-Institute/BRAVO>`_ to submit feature requests.
 
@@ -42,10 +47,10 @@ Developer Documentation
    PythonModules/BackendAPIs.rst
 
    PythonModules/Therapy.rst
-   PythonModules/BrainSenseSurvey.rst
-   PythonModules/BrainSenseStream.rst
-   PythonModules/IndefiniteStream.rst
-   PythonModules/ChronicBrainSense.rst
+   PythonModules/AverageNeuralActivity.rst
+   PythonModules/NeuralActivityStreaming.rst
+   PythonModules/MultiChannelActivity.rst
+   PythonModules/ChronicNeuralActivity.rst
 
    PythonModules/ImageDatabase.rst
 

@@ -1,9 +1,9 @@
-BrainSense Survey Pipeline
+Average Neural Activity Pipeline
 =============================================
 
 Overview
 ---------------------------------------------
-The BrainSense Survey Pipeline is a Python module specific for handling BrainSense Survey data format from Percept. 
+The Average Neural Activity Pipeline is a Python module specific for handling average neural activity data format from third party medical device. 
 This section will go over all functions implemented and provide sufficient details on pipeline implementation.
 
 Methods

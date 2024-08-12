@@ -15,8 +15,8 @@ Main Modifications
 - New Database Table: MobileUser
 - New Database Field: ExternalRecording.recording_info
 
-- Data Format Changes for all BrainSense Streaming, BrainSense Survey, IndefiniteStreaming. 
-- Allow External Recordings to be combined with Percept recordings for analysis.
+- Data Format Changes for certain third party medical device recordings. 
+- Allow External Recordings to be combined with third party medical device recordings for analysis.
 
 Procedure
 -------------------------------------------

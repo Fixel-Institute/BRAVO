@@ -13,7 +13,7 @@ and description can be found at README.md in the repository.
 Data Structure
 -------------------------------------------
 
-The Imaging database for UF BRAVO Platform follows the same trend as time-domain recordings from Percept. However,
+The Imaging database for UF BRAVO Platform follows the same trend as time-domain recordings. However,
 instead of dividing the data by neurostimulator deidentifier, the imaging folder is divided by patient deidentifier. 
 All data should be stored in ``$DATASERVER_PATH/imaging`` directory, where $DATASERVER_PATH is the environment variable that 
 define the storage path for UF BRAVO Platform in Django Server. 

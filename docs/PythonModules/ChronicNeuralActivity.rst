@@ -1,9 +1,9 @@
-Chronic BrainSense Recording Pipeline
+Chronic Neural Activity Pipeline
 =============================================
 
 Overview
 ---------------------------------------------
-The Chronic BrainSense Recording Pipeline is a Python module specific for handling both Chronic Brain Power and Event Power Spectrum data format from Percept. 
+The Chronic Neural Activity Pipeline is a Python module specific for handling chronic recording data format from third party medical device. 
 This section will go over all functions implemented and provide sufficient details on pipeline implementation.
 
 Methods

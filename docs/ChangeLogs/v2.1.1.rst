@@ -22,17 +22,16 @@ Minor Changes
   Therapy History will now extract aDBS parameters alongside with normal therapy configurations. 
   aDBS configuration will contain information about threshold, onset/offset duration, and signal bypassing. 
 
-.. topic:: 2. Adaptive DBS Parameter for Chronic BrainSense
+.. topic:: 2. Adaptive DBS Parameter for Chronic Neural Activity
 
-  Chronic BrainSense page will now omit data collected during aDBS Bypass condition (noted as `GangedToHemisphere` in Medtronic JSON file). 
-  Stimulation amplitude is shown alongside of Chronic BrainSense data. Multi-device will be a selectable input toggle. 
+  Chronic Neural Activity page will now omit data collected during aDBS Bypass condition (noted as `GangedToHemisphere` in Medtronic JSON file). 
+  Stimulation amplitude is shown alongside of Chronic Neural Activity data. Multi-device will be a selectable input toggle. 
 
 .. topic:: 3. User can give electrode and target customized name
 
-  User can configure name for electrode, because Medtronic Percept is only capable of doing Left/Right hemisphere, 
-  sometime device may have name different from standard Left/Right annotation.
+  User can configure name for electrode because sometime device may have name different from standard Left/Right annotation.
 
-.. topic:: 4. BrainSense Streaming now includes toggle to use contralateral hemisphere stimulation label for PSD computation.
+.. topic:: 4. Neural Activity Streaming now includes toggle to use contralateral hemisphere stimulation label for PSD computation.
 
-  An old feature from v1.0 is making its way back. We can now toggle the display to show PSD in BrainSense Streaming page in different parsing condition, 
+  An old feature from v1.0 is making its way back. We can now toggle the display to show PSD in Neural Activity Streaming page in different parsing condition, 
   such as using contralateral stimulation label. 
