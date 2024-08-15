@@ -7,5 +7,7 @@ The Therapy Configuration pipeline will handle processing therapy dictionary int
 
 Methods
 ---------------------------------------------
-.. automodule:: Percept.Therapy
-    :members: 
+
+.. warning:: 
+
+  Hidden - Under Revision

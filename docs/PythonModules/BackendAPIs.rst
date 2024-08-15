@@ -46,17 +46,20 @@ Currently only 3 tier of access control is added:
 SQL Database Update Module
 ---------------------------------------------
 
-.. automodule:: APIs.UpdateRecordings
-    :members: 
+.. warning:: 
+
+  Hidden - Under Revision
 
 Upload Module
 ---------------------------------------------
 
-.. automodule:: APIs.Upload
-    :members: 
+.. warning:: 
+
+  Hidden - Under Revision
 
 Survey Module
 ---------------------------------------------
 
-.. automodule:: APIs.Surveys
-    :members: 
+.. warning:: 
+
+  Hidden - Under Revision

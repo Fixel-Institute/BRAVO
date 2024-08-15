@@ -8,7 +8,6 @@ exported JSON File Format.
 
 This decoder is not provided by a specific third party company nor endorsed by third party medical device company. 
 
-Methods
----------------------------------------------
-.. automodule:: decoder.Percept
-    :members: 
+.. warning:: 
+
+  Hidden - Under Revision

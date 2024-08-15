@@ -8,5 +8,7 @@ This section will go over all functions implemented and provide sufficient detai
 
 Methods
 ---------------------------------------------
-.. automodule:: Percept.IndefiniteStream
-    :members: 
+
+.. warning:: 
+
+  Hidden - Under Revision
