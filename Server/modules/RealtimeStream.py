@@ -506,6 +506,7 @@ def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies
     for counter in range(len(data["Channels"])):
         data["Stream"].append(dict())
         data["Stream"][counter]["RawData"] = stream["TimeDomain"]["Data"][:,counter]
+        data["Stream"][counter]["Filtered"] = stream["TimeDomain"]["Filtered"][counter]
         data["Stream"][counter]["Time"] = np.arange(len(data["Stream"][counter]["RawData"]))/stream["TimeDomain"]["SamplingRate"]
 
         if options["SpectrogramMethod"]["value"] == "Spectrogram":

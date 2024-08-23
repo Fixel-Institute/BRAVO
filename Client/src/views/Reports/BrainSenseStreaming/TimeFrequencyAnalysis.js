@@ -80,11 +80,11 @@ function TimeFrequencyAnalysis({dataToRender, channelInfos, handleAddEvent, hand
     
     let ax = fig.getAxes();
     for (let i in data.Channels) {
-      const ylim = Math.quantileSeq(Math.abs(Math.matrix(data.Stream[i].RawData)), 0.99);
+      const ylim = Math.quantileSeq(Math.abs(Math.matrix(data.Stream[i].Filtered)), 0.99);
       fig.setYlim([-ylim*1.1, ylim*1.1], ax[i*2 + 0]);
       
-      var timeArray = Array(data.Stream[i].RawData.length).fill(0).map((value, index) => new Date(data.Timestamp*1000 + 4*index));
-      fig.plot(timeArray, data.Stream[i].RawData, {
+      var timeArray = Array(data.Stream[i].Filtered.length).fill(0).map((value, index) => new Date(data.Timestamp*1000 + 4*index));
+      fig.plot(timeArray, data.Stream[i].Filtered, {
         linewidth: 0.5,
         hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "mV", language)}<extra></extra>`,
       }, ax[i*2 + 0]);
