@@ -360,7 +360,8 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
 
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, 
+                                                                                refresh=False, cardiacFilter=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["CardiacFilter"]["value"] == "true")
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
                 
@@ -381,7 +382,8 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
 
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
-                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, 
+                                                                                refresh=False, cardiacFilter=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["CardiacFilter"]["value"] == "true")
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
                 
@@ -399,6 +401,8 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
                 return Response(status=200, data=data)
 
         elif "updateStimulationPSD" in request.data:
+            print(request.user.configuration["ProcessingSettings"]["RealtimeStream"])
+
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 0:
@@ -406,7 +410,8 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
 
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, 
+                                                                                refresh=False, cardiacFilter=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["CardiacFilter"]["value"] == "true")
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
                 
@@ -430,7 +435,8 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
                 PatientInfo = Database.extractAccess(request.user, request.data["id"])
 
                 Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
-                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, 
+                                                                                refresh=False, cardiacFilter=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["CardiacFilter"]["value"] == "true")
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
                 BrainSenseData["PowerDomain"]["Stimulation"] = RealtimeStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
@@ -445,7 +451,11 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
             elif Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
 
-            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=True, cardiacFilter=request.data["updateCardiacFilter"])
+            request.user.configuration["ProcessingSettings"]["RealtimeStream"]["CardiacFilter"]["value"] = "true" if request.data["updateCardiacFilter"] else "false"
+            request.user.save()
+
+            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, 
+                                                                            refresh=True, cardiacFilter=request.data["updateCardiacFilter"])
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
             
@@ -472,7 +482,8 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
             elif Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
 
-            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority)
+            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority,
+                                                                            cardiacFilter=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["CardiacFilter"]["value"] == "true")
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
             
@@ -809,7 +820,8 @@ class QueryPredictionModel(RestViews.APIView):
             else:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
 
-            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, 
+                                                                            refresh=False, cardiacFilter=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["CardiacFilter"]["value"] == "true")
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
             BrainSenseData["PowerDomain"]["Stimulation"] = RealtimeStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
@@ -841,7 +853,8 @@ class QueryPredictionModel(RestViews.APIView):
             else:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
 
-            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+            BrainSenseData, _ = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, 
+                                                                            refresh=False, cardiacFilter=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["CardiacFilter"]["value"] == "true")
             if BrainSenseData == None:
                 return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
             BrainSenseData["PowerDomain"]["Stimulation"] = RealtimeStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])
@@ -865,7 +878,8 @@ class QueryPredictionModel(RestViews.APIView):
 
             if Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
-                BrainSenseData, RecordingID = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, refresh=False)
+                BrainSenseData, RecordingID = RealtimeStream.queryRealtimeStreamRecording(request.user, request.data["recordingId"], Authority, 
+                                                                                          refresh=False, cardiacFilter=request.user.configuration["ProcessingSettings"]["RealtimeStream"]["CardiacFilter"]["value"] == "true")
                 if BrainSenseData == None:
                     return Response(status=400, data={"code": ERROR_CODE["DATA_NOT_FOUND"]})
                 BrainSenseData["PowerDomain"]["Stimulation"] = RealtimeStream.processRealtimeStreamStimulationAmplitude(BrainSenseData["PowerDomain"])

@@ -250,10 +250,15 @@ class BrainSenseStreamUpdate(RestViews.APIView):
         
         elif "updateRecordingName" in request.data:
             AuthorityLevel = Database.verifyAccess(request.user, request.data["id"])
-            if AuthorityLevel > 2:
-                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-            
-            availableDevices = Database.getPerceptDevices(request.user, request.data["id"], {"Level": AuthorityLevel})
+            if AuthorityLevel == 0:
+                return Response(status=404)
+            elif AuthorityLevel == 1:
+                PatientID = request.data["id"]
+            elif AuthorityLevel == 2:
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                PatientID = PatientInfo.authorized_patient_id
+
+            availableDevices = Database.getPerceptDevices(request.user, PatientID, {"Level": AuthorityLevel})
             analysis = models.CombinedRecordingAnalysis.objects.filter(deidentified_id=request.data["updateRecordingName"]).first()
             if not analysis:
                 return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})

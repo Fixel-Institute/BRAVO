@@ -308,7 +308,7 @@ function BrainSenseStreaming() {
   const handlePSDUpdate = (reference, side) => {
     if (!reference) return;
     if (channelInfos.length == 1) return;
-    
+
     SessionController.query("/api/queryNeuralActivityStreaming", {
       updateStimulationPSD: true,
       id: patientID,
@@ -337,6 +337,7 @@ function BrainSenseStreaming() {
       });
       setAlert(null);
     }).catch((error) => {
+      console.log(error)
       SessionController.displayError(error, setAlert);
     });
   }

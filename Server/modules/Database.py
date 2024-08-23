@@ -57,6 +57,12 @@ def retrieveProcessingSettings(config=dict()):
                 "options": ["true", "false"],
                 "value": "false"
             },
+            "CardiacFilter": {
+                "name": "Use Cardiac Filter",
+                "description": "",
+                "options": ["true", "false"],
+                "value": "false"
+            },
         },
         "IndefiniteStream": {
             "SpectrogramMethod": {
