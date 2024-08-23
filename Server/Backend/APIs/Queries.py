@@ -166,7 +166,7 @@ class QueryProcessingQueue(RestViews.APIView):
                         "descriptor": queues[i].descriptor,
                     })
 
-            tasks.ProcessUploadQueue.apply_async(countdown=0)
+            #tasks.ProcessUploadQueue.apply_async(countdown=0)
             return Response(status=200, data=data)
 
 class QueryTherapyHistory(RestViews.APIView):
@@ -176,7 +176,7 @@ class QueryTherapyHistory(RestViews.APIView):
 
     The therapy histories do not include how patient adjust their stimulation amplitude within range 
     because this information is not saved.
-    If BrainSense is enabled, user may query the stimulation amplitude changes through Chronic BrainSense.
+    If recording is enabled, user may query the stimulation amplitude changes.
 
     **POST**: ``/api/queryTherapyHistory``
 
@@ -217,7 +217,7 @@ class QueryAverageNeuralActivity(RestViews.APIView):
     """ Query all Average Neural Activity data.
 
     The Average Neural Activity query will return processed power spectral density calculated from time-domain data. 
-    This is not the same as the on-board FFT result shown on Medtronic Tablet. 
+    This is not the same as the on-board FFT result shown on Tablet. 
 
     Raw time-domain data will not be returned from this route.
 
@@ -288,7 +288,7 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
 
     **Request update on power spectrum data for rendering**
 
-    ``channel`` is the Medtronic convention of channel identification, which is usually CONTACT_CONTACT_HEMISPHERE (i.e.: ZERO_TWO_LEFT)
+    ``channel`` is the convention of channel identification, which is usually CONTACT_CONTACT_HEMISPHERE (i.e.: ZERO_TWO_LEFT)
 
     This is a faster operation than request Neural Activity Streaming Recording using ``requestFrequency`` because
     this operation does not transmit raw data.
@@ -637,7 +637,7 @@ class QueryMultiChannelStreaming(RestViews.APIView):
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class QueryChronicNeuralActivity(RestViews.APIView):
-    """ Query all Chronic BrainSense Data.
+    """ Query all Chronic Neural Activity Data.
 
     The Chronic Neural Activity data includes single power-band recorded using sensing-enabled settings,
     patient-reported events and event power spectrums. 
@@ -700,23 +700,6 @@ class QueryChronicNeuralActivity(RestViews.APIView):
         return Response(status=400, data={"code": ERROR_CODE["MALFORMATED_REQUEST"]})
 
 class QueryAdaptiveStimulation(RestViews.APIView):
-    """ Query all Chronic BrainSense Data.
-
-    The Chronic BrainSense data includes single power-band recorded using BrainSense-enabled group,
-    patient-reported events and event power spectrums. 
-
-    **POST**: ``/api/queryAdaptiveStimulation``
-
-    Args:
-      id (uuid): Patient Unique Identifier as provided from ``QueryPatientList`` route.
-      requestData (boolean): Always true to request data.
-      timezoneOffset (int): seconds offset compare to Universal Time Coordinate. 
-        You can request this value from your browser through ``new Date().getTimezoneOffset()*60``.
-
-    Returns:
-      Response Code 200 if success or 400 if error. 
-      Response Body contains Chronic BrainSense and Event PSDs. 
-    """
 
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
@@ -1128,7 +1111,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             if not data == "Success":
                 return Response(status=400, data={"message": data})
 
-            tasks.ProcessAnalysisQueue.apply_async(countdown=3)
+            #tasks.ProcessAnalysisQueue.apply_async(countdown=3)
             return Response(status=200)
 
         elif "addRecording" in request.data:

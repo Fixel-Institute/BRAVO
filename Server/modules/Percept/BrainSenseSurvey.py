@@ -13,7 +13,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 """
 """
-Python Module for BrainSense Surveys
+Python Module for Baseline Surveys
 ===================================================
 @author: Jackson Cagle, University of Florida
 @email: jackson.cagle@neurology.ufl.edu
@@ -37,11 +37,11 @@ from utility import SignalProcessingUtility as SPU
 key = os.environ.get('ENCRYPTION_KEY')
 
 def saveBrainSenseSurvey(deviceID, streamList, sourceFile):
-    """ Save BrainSense Survey Data in Database Storage
+    """ Save Survey Data in Database Storage
 
     Args:
       deviceID: UUID4 deidentified id for each unique Percept device.
-      surveyList: Array of BrainSense Survey structures extracted from Medtronic JSON file.
+      surveyList: Array of Survey structures extracted from JSON file.
       sourceFile: filename of the raw JSON file that the original data extracted from.
 
     Returns:
@@ -103,18 +103,18 @@ def saveBrainSenseSurvey(deviceID, streamList, sourceFile):
     return NewRecordingFound
 
 def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
-    """ Extract all BrainSense Survey recordings and process for power spectrum.
+    """ Extract all Baseline Survey recordings and process for power spectrum.
 
-    This pipeline will process all BrainSense Survey recordings recorded from one patient and output the average power spectrum. 
+    This pipeline will process all Baseline Survey recordings recorded from one patient and output the average power spectrum. 
 
     Args:
       user: BRAVO Platform User object. 
       patientUniqueID: Deidentified patient ID as referenced in SQL Database. 
-      options: BrainSenseSurvey Configuration dictionary
+      options: BaselineSurvey Configuration dictionary
       authority: User permission structure indicating the type of access the user has.
 
     Returns:
-      List of processed BrainSense Surveys without raw time-domain data. 
+      List of processed Baseline Surveys without raw time-domain data. 
     """
 
     BrainSenseData = list()
@@ -237,17 +237,17 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
     return BrainSenseData
 
 def processBrainSenseSurvey(survey, method="spectrogram"):
-    """ Calculate BrainSense Survey Power Spectrum.
+    """ Calculate Baseline Survey Power Spectrum.
 
-    The pipeline will filter the raw BrainSense Survey with a zero-phase 5th-order Butterworth filter between 1-100Hz.
+    The pipeline will filter the raw Baseline Survey with a zero-phase 5th-order Butterworth filter between 1-100Hz.
     Then power spectrum is calculated using short-time Fourier Transform with 0.5Hz frequency resolution using 1.0 second window and 500ms overlap. 
     Zero-padding when neccessary to increase frequency resolution.
 
     Args:
-      survey: BrainSense Survey raw object. 
+      survey: Baseline Survey raw object. 
 
     Returns:
-      List of processed BrainSense Surveys without raw time-domain data. 
+      List of processed Baseline Surveys without raw time-domain data. 
     """
 
     [b,a] = signal.butter(5, np.array([1,100])*2/250, 'bp', output='ba')

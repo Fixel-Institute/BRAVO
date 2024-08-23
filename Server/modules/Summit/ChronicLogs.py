@@ -49,7 +49,7 @@ def saveChronicLogs(deviceID, ChronicLogs, sourceFile):
 
     Args:
       deviceID: UUID4 deidentified id for each unique Percept device.
-      ChronicLFPs: Chronic BrainSense (Power-band) structures extracted from Medtronic JSON file.
+      ChronicLFPs: Chronic BrainSense (Power-band) structures extracted from JSON file.
       sourceFile: filename of the raw JSON file that the original data extracted from.
 
     Returns:

@@ -31,7 +31,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from modules import Database
-from Backend import models
+from Backend import models, tasks
 
 import pathlib, json
 RESOURCES = str(pathlib.Path(__file__).parent.resolve())
@@ -143,6 +143,7 @@ class UserAuth(RestViews.APIView):
                     if request.data["Persistent"]:
                         refresh.set_exp(lifetime=datetime.timedelta(weeks= 520))
 
+                #tasks.ClearJWTBlacklists.apply_async(countdown=0)
                 return Response(status=200, data={
                     "access": str(access),
                     "refresh": str(refresh),

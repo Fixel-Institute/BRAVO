@@ -50,7 +50,7 @@ def saveRealtimeStreams(deviceID, Data, sourceFile):
 
     Args:
       deviceID: UUID4 deidentified id for each unique Percept device.
-      Data: Summit Parsed structure extracted from Medtronic JSON file.
+      Data: Summit Parsed structure extracted from JSON file.
       sourceFile: filename of the raw JSON file that the original data extracted from.
 
     Returns:
@@ -193,7 +193,7 @@ def savePowerStreams(deviceID, StreamingSession, sourceFile):
 
     Args:
       deviceID: UUID4 deidentified id for each unique Percept device.
-      StreamingSession: Summit Power Channel structure extracted from Medtronic JSON file.
+      StreamingSession: Summit Power Channel structure extracted from JSON file.
       sourceFile: filename of the raw JSON file that the original data extracted from.
 
     Returns:
@@ -239,7 +239,7 @@ def processRealtimeStreams(stream, cardiacFilter=False):
     (TODO: details algorithm for later).
 
     Args:
-      stream: BrainSense TimeDomain structure extracted from Medtronic JSON file
+      stream: BrainSense TimeDomain structure extracted from JSON file
       cardiacFilter: Boolean indicating if you want to .
 
     Returns:

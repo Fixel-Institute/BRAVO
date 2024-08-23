@@ -39,7 +39,7 @@ def saveTherapySettings(deviceID, therapyList, sessionDate, type, sourceFile):
 
     Args:
       deviceID: UUID4 deidentified id for each unique Percept device.
-      therapyList: Array of Therapy Configuration structures extracted from Medtronic JSON file.
+      therapyList: Array of Therapy Configuration structures extracted from JSON file.
       sessionDate: DateTime object indicating when the therapy configuration is saved.
       type: One of three data types: ["Past Therapy","Pre-visit Therapy","Post-visit Therapy"].
       sourceFile: filename of the raw JSON file that the original data extracted from.

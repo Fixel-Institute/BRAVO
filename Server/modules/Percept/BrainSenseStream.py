@@ -13,7 +13,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 """
 """
-Python Module for BrainSense Streaming
+Python Module for Realtime Streaming
 ===================================================
 @author: Jackson Cagle, University of Florida
 @email: jackson.cagle@neurology.ufl.edu
@@ -46,12 +46,12 @@ DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 key = os.environ.get('ENCRYPTION_KEY')
 
 def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
-    """ Save BrainSense Streaming Data in Database Storage
+    """ Save Realtime Streaming Data in Database Storage
 
     Args:
       deviceID: UUID4 deidentified id for each unique Percept device.
-      StreamingTD: BrainSense TimeDomain structure extracted from Medtronic JSON file.
-      StreamingPower: BrainSense Power Channel structure extracted from Medtronic JSON file.
+      StreamingTD: BrainSense TimeDomain structure extracted from JSON file.
+      StreamingPower: BrainSense Power Channel structure extracted from JSON file.
       sourceFile: filename of the raw JSON file that the original data extracted from.
 
     Returns:
@@ -289,9 +289,9 @@ def saveRealtimeStreams(deviceID, StreamingTD, StreamingPower, sourceFile):
     return NewRecordingFound
 
 def processRealtimeStreams(stream, cardiacFilter=False):
-    """ Process BrainSense Streaming Data 
+    """ Process Streaming Data 
 
-    This is the primary processing function for all BrainSense Streaming data. 
+    This is the primary processing function for all Streaming data. 
     The server will attempt to calculate Short-time Fourier Transform (STFT) with 1.0 second window and 0.5 second overlap. 
     In addition to the STFT, the server will also calculate Wavelet Transform with a 500ms moving average window. 
 
@@ -300,11 +300,11 @@ def processRealtimeStreams(stream, cardiacFilter=False):
     (TODO: details algorithm for later).
 
     Args:
-      stream: BrainSense TimeDomain structure extracted from Medtronic JSON file
+      stream: TimeDomain structure extracted from JSON file
       cardiacFilter: Boolean indicating if you want to .
 
     Returns:
-      Processed BrainSense TimeDomain structure
+      Processed TimeDomain structure
     """
 
     stream["TimeDomain"]["Wavelet"] = list()
@@ -374,9 +374,9 @@ def processRealtimeStreams(stream, cardiacFilter=False):
     return stream
 
 def queryRealtimeStreamRecording(analysis, cardiacFilter=False, refresh=False):
-    """ Query BrainSense Streaming Data
+    """ Query Streaming Data
 
-    This function will query BrainSense recording data based on provided Recording ID.
+    This function will query recording data based on provided Recording ID.
 
     Args:
       user: BRAVO Platform User object. 
@@ -386,7 +386,7 @@ def queryRealtimeStreamRecording(analysis, cardiacFilter=False, refresh=False):
       refresh: Boolean indicator if the user want to use cache data or reprocess the data.
 
     Returns:
-      Returns a tuple (BrainSenseData, RecordingID) where BrainSenseData is the BrainSense streaming data structure in Database and RecordingID is the 
+      Returns a tuple (Data, RecordingID) where Data is the streaming data structure in Database and RecordingID is the 
       deidentified id of the available data.
     """
 
@@ -560,16 +560,16 @@ def mergeRealtimeStreamData(recordings):
     return True
 
 def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies=[0,0], stimulationReference="Ipsilateral"):
-    """ Process BrainSense Streaming Data to be used for Plotly rendering.
+    """ Process Realtime Streaming Data to be used for Plotly rendering.
 
-    This function takes the processRealtimeStreams BrainSense Stream object and further process it for frontend rendering system.
+    This function takes the processRealtimeStreams Stream object and further process it for frontend rendering system.
     This is to reduce some computational requirement for the frontend, and because Python signal processing is more efficient than 
     Javascript frontend. 
 
     This function wrap around ``processRealtimeStreamStimulationPSD`` function to generate stimulation related PSD at different stimulation state.
 
     Args:
-      stream: processed BrainSense TimeDomain structure (see processRealtimeStreams function)
+      stream: processed TimeDomain structure (see processRealtimeStreams function)
       options: Signal processing module configurations. 
       centerFrequencies: The center frequencies (Left and Right hemisphere) used to obtain Power-band box plot.
 
@@ -619,10 +619,10 @@ def processRealtimeStreamRenderingData(stream, options=dict(), centerFrequencies
     return data
 
 def processRealtimeStreamStimulationAmplitude(stream):
-    """ Process BrainSense Streaming Data to extract data segment at different stimulation amplitude.
+    """ Process Realtime Streaming Data to extract data segment at different stimulation amplitude.
 
     Args:
-      stream: processed BrainSense PowerDomain structure (see processRealtimeStreams function)
+      stream: processed PowerDomain structure (see processRealtimeStreams function)
 
     Returns:
       Returns list of stimulation series.
@@ -652,7 +652,7 @@ def processRealtimeStreamPowerBand(stream):
     Additional filtering is done by performing zscore normalization. Outliers are removed. 
 
     Args:
-      stream: processed BrainSense PowerDomain structure (see processRealtimeStreams function)
+      stream: processed PowerDomain structure (see processRealtimeStreams function)
 
     Returns:
       Returns list of stimulation series.
@@ -670,7 +670,7 @@ def processRealtimeStreamPowerBand(stream):
     return PowerSensing
 
 def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", stim_label="Ipsilateral", centerFrequency=0):
-    """ Process BrainSense Stream Stimulation-specific Power Spectrum
+    """ Process Stream Stimulation-specific Power Spectrum
 
     The process will take in stimulation epochs and compute Power Spectral Density using methods specified in parameters.
     Stimulation epochs with less than 7 seconds of recording are skipped.
@@ -679,8 +679,8 @@ def processRealtimeStreamStimulationPSD(stream, channel, method="Spectrogram", s
     Standard method uses 1 second Window and 0.5 seconds overlap. Standard Spectral Feature bandwidth is +/- 2Hz. 
 
     Args:
-      stream: processed BrainSense TimeDomain structure (see processRealtimeStreams function)
-      channel: BrainSense TimeDomain data channel name.
+      stream: processed TimeDomain structure (see processRealtimeStreams function)
+      channel: TimeDomain data channel name.
       method (string): Processing method. Default to "Spectrogram" method, can be one of (Welch, Spectrogram, or Wavelet).
       stim_label (string): Using "Ipsilateral" stimulation label or "Contralateral" stimulation label. 
       centerFrequency (int): The center frequency at which the spectral features are extracted from PSD. 

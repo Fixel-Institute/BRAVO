@@ -216,7 +216,7 @@ class PatientInformationUpdate(RestViews.APIView):
         return Response(status=400)
 
 class BrainSenseStreamUpdate(RestViews.APIView):
-    """ Update BrainSense Stream recording information.
+    """ Update Stream recording information.
 
     Currently only recording contact change is implemented because this is the only information not stored in Percept JSON. 
     
@@ -224,7 +224,7 @@ class BrainSenseStreamUpdate(RestViews.APIView):
 
     Args:
       requestData (uuid): Device Unique Identifier.
-      updateRecordingContactType (uuid): BrainSense Recording Unique Identifier.
+      updateRecordingContactType (uuid): Recording Unique Identifier.
       contactIndex (int): Indicate for Left/Right hemisphere.
       contactType (string): Contact Type (Segment, Ring, A/B/C)
 
@@ -322,7 +322,7 @@ class UpdatePatientAccess(RestViews.APIView):
 
     Args:
       requestData (uuid): Device Unique Identifier.
-      updateRecordingContactType (uuid): BrainSense Recording Unique Identifier.
+      updateRecordingContactType (uuid): Recording Unique Identifier.
       contactIndex (int): Indicate for Left/Right hemisphere.
       contactType (string): Contact Type (Segment, Ring, A/B/C)
 

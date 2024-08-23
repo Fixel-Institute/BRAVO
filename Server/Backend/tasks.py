@@ -14,3 +14,8 @@ def ProcessAnalysisQueue():
     print("Check Analysis")
     subprocess.call(["bash", os.path.join(BASE_DIR, 'AnalysisProcessingJob.sh')])
   
+@shared_task
+def ClearJWTBlacklists():
+    print("Clear Blacklisted JWT")
+    subprocess.call(["bash", os.path.join(BASE_DIR, 'JWTTokenBlacklistCleanup.sh')])
+  

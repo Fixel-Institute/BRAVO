@@ -142,7 +142,7 @@ class SessionUpload(RestViews.APIView):
 
         This is the only route in the server that uses MultiPart/Form Parser instead of JSON object. 
 
-    This is the primary route that allow users to upload Medtronic JSON Session file. 
+    This is the primary route that allow users to upload third party medical device JSON Session file. 
     Due to read/write conflict, this route currently implemented a simple queue system. 
     Only one file is being processed at a time, meaning that you can batch upload multiple files, 
     but they will still be processed individually to avoid read/write conflict if files belong to the same patient which 
@@ -230,7 +230,7 @@ class SessionUpload(RestViews.APIView):
                         Sessions.saveCacheJSON(request.data[key].name, rawBytes)
                         queueItem.save()
 
-        tasks.ProcessUploadQueue.apply_async(countdown=3)
+        #tasks.ProcessUploadQueue.apply_async(countdown=3)
         return Response(status=200)
 
 class RequestProcessingQueue(RestViews.APIView):
@@ -238,7 +238,7 @@ class RequestProcessingQueue(RestViews.APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         models.ProcessingQueue.objects.filter(owner=request.user.unique_user_id, state="WaitToStart", descriptor__batchSessionId=request.data["batchSessionId"]).update(state="InProgress")
-        tasks.ProcessUploadQueue.apply_async(countdown=0)
+        #tasks.ProcessUploadQueue.apply_async(countdown=0)
         return Response(status=200)
 
 class SessionRemove(RestViews.APIView):
@@ -357,7 +357,7 @@ class ExternalRecordingUpload(RestViews.APIView):
 
         This is the only route in the server that uses MultiPart/Form Parser instead of JSON object. 
 
-    This is the primary route that allow users to upload files that are not Medtronic JSON Session file. 
+    This is the primary route that allow users to upload files that are not JSON Session file. 
     External recording should be pre-parsed into CSV file before upload. 
 
     **POST**: ``/api/uploadSessionFiles``

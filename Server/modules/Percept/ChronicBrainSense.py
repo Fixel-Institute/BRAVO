@@ -12,7 +12,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 """
 """
-Chronic BrainSense Processing Module
+Chronic Neural Recording Processing Module
 ===================================================
 @author: Jackson Cagle, University of Florida
 @email: jackson.cagle@neurology.ufl.edu
@@ -45,11 +45,11 @@ from modules import Database
 key = os.environ.get('ENCRYPTION_KEY')
 
 def saveChronicLFP(deviceID, ChronicLFPs, sourceFile):
-    """ Save Chronic BrainSense Data in Database Storage
+    """ Save Chronic Data in Database Storage
 
     Args:
       deviceID: UUID4 deidentified id for each unique Percept device.
-      ChronicLFPs: Chronic BrainSense (Power-band) structures extracted from Medtronic JSON file.
+      ChronicLFPs: Chronic (Power-band) structures extracted from JSON file.
       sourceFile: filename of the raw JSON file that the original data extracted from.
 
     Returns:
@@ -196,8 +196,8 @@ def normalizeChronicLFPs(xdata, tdata, method="zscore"):
 def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
     """ Query Chronic LFPs based on Therapy History.
 
-    This function will query Chronic BrainSense Power Band data and Event PSDs based on therapy change logs.
-    This design is made because a change in therapy group may lead to different therapy effect or BrainSense configurations.
+    This function will query Chronic Power Band data and Event PSDs based on therapy change logs.
+    This design is made because a change in therapy group may lead to different therapy effect or configurations.
 
     Args:
       user: BRAVO Platform User object. 
@@ -206,7 +206,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
       authority: User permission structure indicating the type of access the user has.
 
     Returns:
-      Returns a list of LFPTrends, where each LFPTrends are continuous BrainSense Power with the same therapy configurations. 
+      Returns a list of LFPTrends, where each LFPTrends are continuous Power with the same therapy configurations. 
     """
 
     LFPTrends = list()
@@ -338,30 +338,30 @@ def normalizeCircadianPower(Power, Timestamp):
 def processChronicLFPs(LFPTrends, timezoneOffset=0, normalizeCircadian=False):
     """ Process Chronic LFPs based on Therapy History.
 
-    This pipeline will take the Chronic BrainSense data extracted from ``queryChronicLFPs`` and further processed 
+    This pipeline will take the Chronic data extracted from ``queryChronicLFPs`` and further processed 
     to calculate Event-Locked Power, Therapy Amplitudes, and Circadian Rhythms. 
 
     **Event-Locked Power**:
 
-    Take all BrainSense power within the same therapy configurations and calculate power trend 3 hours before and after an event marking
+    Take all power within the same therapy configurations and calculate power trend 3 hours before and after an event marking
     to identify changes in brain power related to pathology or events. 
 
     **Therapy Amplitudes**:
 
-    When BrainSense is enabled, the therapy amplitude is logged. User can simply correlate brain power at different therapy amplitude
+    When recording is enabled, the therapy amplitude is logged. User can simply correlate brain power at different therapy amplitude
     to track pathological brain signals with adjustable therapy amplitude.
     
     **Circadian Rhythms**:
 
     Brain signal changes with sleep, and circadian rhythm analysis takes the timezoneOffset that the patient has 
-    and overlay all Chronic BrainSense on a 24-hour scale in a 30 minutes window. 
+    and overlay all Chronic recording on a 24-hour scale in a 30 minutes window. 
     
     Args:
-      LFPTrends: List of Chronic BrainSense Power data extracted from ``queryChronicLFPs``. 
+      LFPTrends: List of Chronic recording Power data extracted from ``queryChronicLFPs``. 
       timezoneOffset: user timezone offset from UTC, used to perform 24-hours circadian rhythm analysis.
 
     Returns:
-      Returns a list of LFPTrends, where each LFPTrends are continuous BrainSense Power with the same therapy configurations. 
+      Returns a list of LFPTrends, where each LFPTrends are continuous Power with the same therapy configurations. 
     """
 
     for i in range(len(LFPTrends)):

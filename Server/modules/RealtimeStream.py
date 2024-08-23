@@ -59,7 +59,7 @@ def processRealtimeStreams(stream, cardiacFilter=False):
     (TODO: details algorithm for later).
 
     Args:
-      stream: BrainSense TimeDomain structure extracted from Medtronic JSON file
+      stream: BrainSense TimeDomain structure extracted from JSON file
       cardiacFilter: Boolean indicating if you want to .
 
     Returns:

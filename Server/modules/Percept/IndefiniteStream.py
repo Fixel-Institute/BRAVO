@@ -42,7 +42,7 @@ def saveMontageStreams(deviceID, streamList, sourceFile):
 
     Args:
       deviceID: UUID4 deidentified id for each unique Percept device.
-      streamList: Array of Indefinite Streaming structures extracted from Medtronic JSON file.
+      streamList: Array of Indefinite Streaming structures extracted from JSON file.
       sourceFile: filename of the raw JSON file that the original data extracted from.
 
     Returns:
@@ -104,7 +104,7 @@ def saveMontageStreams(deviceID, streamList, sourceFile):
     return NewRecordingFound
 
 def processMontageStreams(stream, method="spectrogram"):
-    """ Calculate BrainSense Survey Power Spectrum.
+    """ Calculate Montage Power Spectrum.
 
     The pipeline will filter all channels in the raw Indefinite Streaming with a zero-phase 5th-order Butterworth filter between 1-100Hz.
     Then time-frequency analysis is calculated using short-time Fourier Transform with 0.5Hz frequency resolution using 1.0 second 

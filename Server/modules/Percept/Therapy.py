@@ -38,7 +38,7 @@ def saveTherapySettings(deviceID, therapyList, sessionDate, type, sourceFile):
 
     Args:
       deviceID: UUID4 deidentified id for each unique Percept device.
-      therapyList: Array of Therapy Configuration structures extracted from Medtronic JSON file.
+      therapyList: Array of Therapy Configuration structures extracted from JSON file.
       sessionDate: DateTime object indicating when the therapy configuration is saved.
       type: One of three data types: ["Past Therapy","Pre-visit Therapy","Post-visit Therapy"].
       sourceFile: filename of the raw JSON file that the original data extracted from.
@@ -209,7 +209,7 @@ def getTherapyDetails(TherapyHistory, timestamp, groupID, typeID):
     Args:
       TherapyHistory: List of therapy configurations ordered by time extracted from ``queryTherapyConfigurations``. 
       timestamp: A timestamp at which therapy configurations is wanted. 
-      groupID: Medtronic Group ID (Group_A to Group_D).
+      groupID: Group ID (Group_A to Group_D).
       typeID (string): The type of therapy that you want (Past Therapy, Pre-visit Therapy, and Post-visit Therapy).
 
     Returns:
