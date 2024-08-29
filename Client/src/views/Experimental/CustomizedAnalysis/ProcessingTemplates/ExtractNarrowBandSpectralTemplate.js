@@ -7,14 +7,16 @@ import { Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material
 import { createFilterOptions } from "@mui/material/Autocomplete";
 const filter = createFilterOptions();
 
-const ExtractPSDsFromAnnotationsTemplate = ({availableRecordings, setConfiguration}) => {
+const ExtractNarrowBandSpectralTemplate = ({availableRecordings, setConfiguration}) => {
   const [options, setOptions] = useState({
     targetRecording: "",
+    labelRecording: "",
     cardiacRemoved: false,
     filtered: false,
-    normalized: true,
-    averageFeatures: true,
-    output: "Spectral Features Output"
+    normalized: false,
+    averageDuration: 10,
+    threshold: 5,
+    output: "Gamma Features Output"
   });
 
   const checkInputComplete = () => {
@@ -33,6 +35,7 @@ const ExtractPSDsFromAnnotationsTemplate = ({availableRecordings, setConfigurati
             placeholder={"Select Target Recording Type"}
           />
         )}
+        sx={{marginBottom: 2}}
         filterOptions={(options, params) => {
           const filtered = filter(options, params);
           const { inputValue } = params;
@@ -46,6 +49,30 @@ const ExtractPSDsFromAnnotationsTemplate = ({availableRecordings, setConfigurati
         options={availableRecordings}
         onChange={(event, newValue) => setOptions({...options, targetRecording: newValue})}
       />
+      
+      <Autocomplete 
+        selectOnFocus 
+        clearOnBlur
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            variant="standard"
+            placeholder={"Select Label Recording Type (Default None)"}
+          />
+        )}
+        filterOptions={(options, params) => {
+          const filtered = filter(options, params);
+          const { inputValue } = params;
+          return filtered;
+        }}
+        isOptionEqualToValue={(option, value) => {
+          return option === value;
+        }}
+        renderOption={(props, option) => <li {...props}>{option}</li>}
+        value={options.labelRecording}
+        options={availableRecordings}
+        onChange={(event, newValue) => setOptions({...options, labelRecording: newValue})}
+      />
 
       <FormControlLabel 
         control={<Switch checked={options.cardiacRemoved} 
@@ -57,15 +84,27 @@ const ExtractPSDsFromAnnotationsTemplate = ({availableRecordings, setConfigurati
         onChange={() => setOptions({...options, filtered: !options.filtered})} />} 
         label="Filtered between 1-100Hz? " />
 
-      <FormControlLabel 
-        control={<Switch checked={options.normalized} 
-        onChange={() => setOptions({...options, normalized: !options.normalized})} />} 
-        label="Normalize PSDs?" />
+      <TextField
+        variant="standard"
+        margin="dense"
+        value={options.averageDuration}
+        placeholder={"Disable"}
+        onChange={(event) => setOptions({...options, averageDuration: event.target.value})}
+        label={"Spectral Window Size (seconds)"} type={"number"}
+        autoComplete={"off"}
+        fullWidth
+      />
 
-      <FormControlLabel 
-        control={<Switch checked={options.averageFeatures} 
-        onChange={() => setOptions({...options, averageFeatures: !options.averageFeatures})} />} 
-        label="Average PSDs within Each Events? " />
+      <TextField
+        variant="standard"
+        margin="dense"
+        value={options.threshold}
+        placeholder={"Disable"}
+        onChange={(event) => setOptions({...options, threshold: event.target.value})}
+        label={"Peak Detection Threshold (a.u.)"} type={"number"}
+        autoComplete={"off"}
+        fullWidth
+      />
 
       <TextField
         variant="standard"
@@ -97,5 +136,4 @@ const ExtractPSDsFromAnnotationsTemplate = ({availableRecordings, setConfigurati
   );
 };
 
-
-export default ExtractPSDsFromAnnotationsTemplate;
+export default ExtractNarrowBandSpectralTemplate;

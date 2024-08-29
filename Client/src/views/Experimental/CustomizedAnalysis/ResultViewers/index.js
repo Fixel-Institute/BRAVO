@@ -14,14 +14,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { SessionController } from "database/session-control";
-import { usePlatformContext, setContextState } from "context.js";
-import TimeDomainFigure from "./TimeDomainFigure";
-import EventPSDs from "./EventPSDs";
-
 import MDBox from "components/MDBox";
 import { Grid } from "@mui/material";
+
+import { SessionController } from "database/session-control";
+import { usePlatformContext, setContextState } from "context.js";
+
+import TimeDomainFigure from "./TimeDomainFigure";
+import EventPSDs from "./EventPSDs";
 import SpectralFeatures from "./SpectralFeatures";
+import NarrowBandFeatures from "./NarrowBandFeatures";
 
 function ResultViewer({data, result}) {
   const navigate = useNavigate();
@@ -43,7 +45,12 @@ function ResultViewer({data, result}) {
         <SpectralFeatures dataToRender={data.Data[0].Features} height={600} figureTitle={result.title} />
       </Grid>
     </Grid>
-    return null;
+  } else if (type == "NarrowBandFeatures") {
+    return <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <NarrowBandFeatures dataToRender={data.Data[0]} height={600} figureTitle={result.title} />
+      </Grid>
+    </Grid>
   } else {
     return null
   }
