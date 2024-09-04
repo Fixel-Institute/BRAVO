@@ -25,7 +25,7 @@ import EventPSDs from "./EventPSDs";
 import SpectralFeatures from "./SpectralFeatures";
 import NarrowBandFeatures from "./NarrowBandFeatures";
 
-function ResultViewer({data, result}) {
+function ResultViewer({data, result, config}) {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
   const { patientID, language } = controller;
@@ -48,7 +48,7 @@ function ResultViewer({data, result}) {
   } else if (type == "NarrowBandFeatures") {
     return <Grid container spacing={2}>
       <Grid item xs={12}>
-        <NarrowBandFeatures dataToRender={data.Data[0]} height={600} figureTitle={result.title} />
+        <NarrowBandFeatures dataToRender={data.Data[0]} height={600} figureTitle={result.title} config={config[0].config}/>
       </Grid>
     </Grid>
   } else {

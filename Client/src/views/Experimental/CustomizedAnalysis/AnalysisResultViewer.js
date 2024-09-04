@@ -66,6 +66,7 @@ function AnalysisResultViewer({analysisId, analysisData}) {
         return {
           type: result.Type,
           key: result.ProcessedData,
+          config: analysisData.Configuration.AnalysisSteps.filter((a) => a.id == result.Id),
           title: "[" + result.Type + "] " + result.ResultLabel,
           value: result.ProcessedData
         }
@@ -76,7 +77,7 @@ function AnalysisResultViewer({analysisId, analysisData}) {
   useEffect(() => {
     if (selectedRecording) {
       if (selectedRecording.type === "AlignedData") return;
-      
+
       setAlert(<LoadingProgress/>);
       SessionController.query("/api/queryCustomizedAnalysis", {
         id: patientID, 
@@ -84,6 +85,7 @@ function AnalysisResultViewer({analysisId, analysisData}) {
         resultId: selectedRecording.value,
         download: false
       }).then((response) => {
+        console.log(response)
         setAlert(null);
         setDataToRender(response.data)
       }).catch((error) => {
@@ -178,7 +180,7 @@ function AnalysisResultViewer({analysisId, analysisData}) {
                   {"Download"}
                 </MDButton>
               ) : null}
-              <ResultViewer data={dataToRender} result={selectedRecording} type={selectedRecording.type} />
+              <ResultViewer data={dataToRender} result={selectedRecording} type={selectedRecording.type} config={selectedRecording.config} />
             </Grid>
             ) : null}
         </Grid>

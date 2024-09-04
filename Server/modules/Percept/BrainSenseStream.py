@@ -325,7 +325,7 @@ def processRealtimeStreams(stream, cardiacFilter=False):
 
             [b,a] = signal.butter(3, np.array([0.5, 2])*2/250, "bandpass")
             ExpectedKurtosis = signal.filtfilt(b,a,ExpectedKurtosis)
-            Peaks, _ = signal.find_peaks(ExpectedKurtosis, distance=180)
+            Peaks, _ = signal.find_peaks(ExpectedKurtosis, distance=125)
             Peaks += int(Window/2)
 
             CardiacEpochs = []
@@ -333,7 +333,10 @@ def processRealtimeStreams(stream, cardiacFilter=False):
             for j in range(len(Peaks)):
                 if ExpectedKurtosis[Peaks[j]-int(Window/2)] < 1.2:
                     continue
-                
+
+                ShiftPeak = 0
+                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
+                    continue 
                 findPeak = np.argmax(stream["TimeDomain"]["Filtered"][i][Peaks[j]-SearchWindow:Peaks[j]+SearchWindow])
                 ShiftPeak = SearchWindow-findPeak
                 if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
@@ -348,9 +351,12 @@ def processRealtimeStreams(stream, cardiacFilter=False):
 
             CardiacFiltered = copy.deepcopy(stream["TimeDomain"]["Filtered"][i])
             for j in range(len(Peaks)):
+                ShiftPeak = 0
+                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
+                    continue 
+
                 findPeak = np.argmax(stream["TimeDomain"]["Filtered"][i][Peaks[j]-SearchWindow:Peaks[j]+SearchWindow])
                 ShiftPeak = SearchWindow-findPeak
-                
                 if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
                     continue
                 

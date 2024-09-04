@@ -630,6 +630,25 @@ def removeResultDataFile(recordingId):
             pass
         recording.delete()
 
+def JSONEncode(item):
+    if type(item) == dict:
+        for i in item.keys():
+            item[i] = JSONEncode(item[i])
+        return item
+    elif type(item) == list:
+        for i in range(len(item)):
+            item[i] = JSONEncode(item[i])
+        return item
+    elif type(item) == float:
+        if np.isnan(item):
+            return None
+        elif np.isinf(item):
+            return None
+        else:
+            return item
+    else:
+        return item
+
 def queryResultData(user, patientId, analysisId, resultId, download, authority):
     analysis = models.CombinedRecordingAnalysis.objects.filter(device_deidentified_id=patientId, deidentified_id=analysisId).first()
     if not analysis:
@@ -662,7 +681,7 @@ def queryResultData(user, patientId, analysisId, resultId, download, authority):
 
                 GraphOptions["RecommendedYLimit"][index] = [np.min([GraphOptions["RecommendedYLimit"][index][0], -np.std(ProcessedData[i]["Data"][:,j])*10]), np.max([GraphOptions["RecommendedYLimit"][index][1], np.std(ProcessedData[i]["Data"][:,j])*10])]
     
-    return ProcessedData, GraphOptions
+    return JSONEncode(ProcessedData), GraphOptions
 
 def handleFilterProcessing(step, RecordingIds, Results, Configuration, analysis):
     targetSignal = step["config"]["targetRecording"]
@@ -734,7 +753,7 @@ def handleCardiacFilterProcessing(step, RecordingIds, Results, Configuration, an
 
         [b,a] = signal.butter(3, np.array([0.5, 2])*2/250, "bandpass")
         ExpectedKurtosis = signal.filtfilt(b,a,ExpectedKurtosis)
-        Peaks, _ = signal.find_peaks(ExpectedKurtosis, distance=180)
+        Peaks, _ = signal.find_peaks(ExpectedKurtosis, distance=125)
         Peaks += int(Window/2)
 
         CardiacEpochs = []
@@ -937,16 +956,15 @@ def handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analys
 
                     if normalizeMethod == "FOOOF":
                         FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [2,80])
-
                         fm = SpectralModel(peak_width_limits=[1,24])
                         fm.fit(np.array(RawData[channelName][event]["Frequency"])[FrequencyWindow], np.power(10,meanPSDs)[FrequencyWindow], [0, 100])
                         oof = fm.get_model("aperiodic", "log")
                         for i in range(len(RawData[channelName][event]["PSDs"])):
                             RawData[channelName][event]["PSDs"][i] = np.array(RawData[channelName][event]["PSDs"][i])[FrequencyWindow] - oof
                         RawData[channelName][event]["Frequency"] = np.array(RawData[channelName][event]["Frequency"])[FrequencyWindow]
+
                     elif normalizeMethod == "Band Normalize":
                         FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [lowEdge,highEdge])
-
                         MeanRefPower = np.nanmean(meanPSDs[FrequencyWindow])
                         for i in range(len(RawData[channelName][event]["PSDs"])):
                             RawData[channelName][event]["PSDs"][i] = np.array(RawData[channelName][event]["PSDs"][i]) - MeanRefPower
@@ -1018,6 +1036,10 @@ def handleExtractNarrowBandFeature(step, RecordingIds, Results, Configuration, a
     targetSignal = step["config"]["targetRecording"]
     labelSignal = step["config"]["labelRecording"]
 
+    step["config"]["frequencyRangeStart"] = float(step["config"]["frequencyRangeStart"])
+    step["config"]["frequencyRangeEnd"] = float(step["config"]["frequencyRangeEnd"])
+    step["config"]["averageDuration"] = float(step["config"]["averageDuration"])
+    
     def processRawData(RawData):
         RawData["ResultType"] = "RawPSDs"
         for i in range(len(RawData["ChannelNames"])):
@@ -1078,14 +1100,16 @@ def handleExtractNarrowBandFeature(step, RecordingIds, Results, Configuration, a
                 if NarrowBand[1] > step["config"]["frequencyRangeEnd"]:
                     NarrowBand[1] = step["config"]["frequencyRangeEnd"]
                 NarrowBandSelection = PythonUtility.rangeSelection(Frequency, NarrowBand)
-                coe = np.polyfit(Frequency[NarrowBandSelection], Spectrogram[NarrowBandSelection, t], 1)
-                fit = np.poly1d(coe)
-                GammaSelection = Spectrogram[NarrowBandSelection, t] - fit(Frequency[NarrowBandSelection])
+                #coe = np.polyfit(Frequency[NarrowBandSelection], Spectrogram[NarrowBandSelection, t], 1)
+                #fit = np.poly1d(coe)
+                #GammaSelection = Spectrogram[NarrowBandSelection, t] - fit(Frequency[NarrowBandSelection])
+
+                GammaSelection = Spectrogram[NarrowBandSelection, t]
                 index = np.argmax(GammaSelection)
                 PeakWindow = PythonUtility.rangeSelection(np.arange(len(GammaSelection)), [index-2,index+2])
-                PeakHeight = np.mean(GammaSelection[PeakWindow]) - np.mean(GammaSelection[~PeakWindow])
+                PeakHeight = np.mean(np.log10(GammaSelection[PeakWindow])) - np.mean(np.log10(GammaSelection[~PeakWindow]))
                 
-                PeakPower[t] = PeakHeight
+                PeakPower[t] = PeakHeight 
                 PeakFrequency[t] = PeakFreq
                 
             ProcessedData[i]["Spectrogram"][j]["Power"] = 10*np.log10(ProcessedData[i]["Spectrogram"][j]["Power"])

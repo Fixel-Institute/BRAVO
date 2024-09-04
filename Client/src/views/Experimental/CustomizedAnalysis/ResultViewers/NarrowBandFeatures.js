@@ -41,7 +41,7 @@ function NarrowBandFeatures({dataToRender, height, config, figureTitle}) {
       var ax = fig.subplots(1, 1, {sharex: true, sharey: true});
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15});
       fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Frequency", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)})`, {fontSize: 15});
-      fig.setYlim([50, 100]);
+      fig.setYlim([config.frequencyRangeStart, config.frequencyRangeEnd]);
 
       fig.setLegend({
         tracegroupgap: 5,
@@ -56,10 +56,12 @@ function NarrowBandFeatures({dataToRender, height, config, figureTitle}) {
 
     for (let i in data.Channel) {
       fig.scatter(data.Time[i].map((a) => new Date(a*1000)), data.NarrowBandFrequency[i], {
-        size: data.NarrowBandPower[i].map((a) => a/2 > 5 ? 5 : a/2),
+        size: data.NarrowBandPower[i].map((a) => a*5),
+        customdata: data.NarrowBandPower[i].map((a) => a*5),
         color: "r",
         name: data.Channel[i],
         showlegend: true,
+        hovertemplate: "  %{y}Hz <br>  %{customdata:.1f} <extra></extra>"
       });
     }
 
