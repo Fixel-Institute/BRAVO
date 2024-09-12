@@ -291,14 +291,14 @@ Primary Analysis Navigations
     - Analysis Description
   * - `Therapy History`_
     - Stimulation configurations in all past sessions, and detailed therapy group change trend. 
-  * - `BrainSense Survey`_
-    - Aggregated BrainSense Survey conducted during each session. 
-  * - `BrainSense Streaming`_
+  * - `Average_Neural_Activity`_
+    - Aggregated Average Neural Activities recorded during each session. 
+  * - `Neural Activity Streaming`_
     - Realtime Streaming performed during each session. 
-  * - `Indefinite Streaming`_
+  * - `MultiChannel Activity`_
     - Another form of Realtime Streaming, based on simultaneous multi-channel streaming without stimulation. 
-  * - `Chronic Brainsense`_
-    - Aggregated BrainSense Power recording recorded chronically when patient is using BrainSense-enabled therapy group.  
+  * - `Chronic Neural Activity`_
+    - Aggregated Power recording recorded chronically when patient is using recording-enabled therapy group.  
   * - `Session Overview`_
     - All Session JSON files uploaded to this patient. Also where EMR document can be generated. 
       
@@ -316,7 +316,7 @@ These information are primarily extracted from ``GroupHistory`` and ``Groups`` J
 Therapy Change Log
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Therapy Change Log is a trend generated from Medtronic Session file's ``DiagnosticData.EventLogs`` JSON Field. 
+Therapy Change Log is a trend generated from third party medical device Session file's ``DiagnosticData.EventLogs`` JSON Field. 
 A typical Therapy Change Log looks somewhat like the following code snipet: 
 
 .. code-block:: json
@@ -343,7 +343,7 @@ The therapy information is displayed in 5 columns:
   1. Group Name (and Usage percent since last available session)
   2. Therapy active contacts 
   3. Therapy configurations 
-  4. BrainSense Configurations
+  4. Recording Configurations
   5. Cycling Stimulation configurations
 
 When cursor hover over Therapy Active Contacts for a sensight lead, the individual contact amplitude for segmented electrode will 
@@ -351,8 +351,8 @@ be display as a tooltip. However, the individual segment amplitude is informatio
 
 .. warning::
 
-  BrainSense may show 0.0Hz as sensing frequency in **Past Therapy** tab
-  because GroupHistory doesn't always maintain good storage of the BrainSense Frequency. 
+  Recording may show 0.0Hz as sensing frequency in **Past Therapy** tab
+  because GroupHistory doesn't always maintain good storage of the Frequency. 
   It is typically accurate in Pre-visit Therapy and Post-visit Therapy tab. 
 
 Electrode Impedance Heatmap
@@ -366,19 +366,19 @@ Clicking on the heatmap corresponding to the contact-pair of interest will bring
 .. image:: images/ImpedanceTable.png
   :target: _images/ImpedanceTable.png
 
-.. _BrainSense Survey:
+.. _Average_Neural_Activity:
 
-BrainSense Survey View 
+Average Neural Activity View 
 ---------------------------------------------
 
-BrainSense Survey are a form of neural signal recording performed by Medtronic's Percept neurostimulator. 
+Average Neural Activity are a form of neural signal recording performed by third party medical device. 
 It is stored in the Session JSON file as ``LfpMontageTimeDomain`` JSON Field. 
 Each recording contains about 20 seconds time-domain recording recorded at 250Hz sampling rate. 
 
-.. image:: images/BrainSenseSurvey.png
-  :target: _images/BrainSenseSurvey.png
+.. image:: images/AverageNeuralActivity.png
+  :target: _images/AverageNeuralActivity.png
 
-BrainSense Surveys are snapshots of neural activity at the time of recording. 
+Average Neural Activity are snapshots of neural activity at the time of recording. 
 We aggregated the Surveys collected over the span of patient's visit at the institute to inform 
 changes of brain signal at the target brain region as desease progress (or as therapy delivered).
 
@@ -397,7 +397,7 @@ Different channels are colored differently.
 Power Spectrum across Time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-BrainSense Survey across time is an analysis perform across time, displayed at the bottom of the webpage.
+Average neural activity across time is an analysis perform across time, displayed at the bottom of the webpage.
 It present all surveys recorded on the same channel organized by order of acquisition, colored by gradient of colormap. 
 A dropdown menu is presented at top-right of the figure block. User may choose which channel to view.
 
@@ -408,36 +408,36 @@ For example, in figure below we can see that an changes in recorded signal betwe
   :target: _images/PSDAcrossTime.png
   :width: 400
 
-.. _BrainSense Streaming:
+.. _Neural Activity Streaming:
 
-BrainSense Streaming View 
+Neural Activity Streaming View 
 ---------------------------------------------
 
-BrainSense Streaming is one of the most detailed analysis provided by the platform. 
-BrainSense Streaming describe the neural recording collected during the real-time streaming of neural signal 
-during therapy setup. BrainSense Streaming allow simultaneous bilateral recording if both hemisphere are configured, 
+Neural Activity Streaming is one of the most detailed analysis provided by the platform. 
+Neural Activity Streaming describe the neural recording collected during the real-time streaming of neural signal 
+during therapy setup. Neural Activity Streaming allow simultaneous bilateral recording if both hemisphere are configured, 
 but only one channel at a time. In addition, only Sensing-friendly configuration (E00-E02, E01-E03, E00-E03) are allowed 
-to minimize effect of stimulation artifacts. Often time, users may start BrainSense Streaming and adjust stimulation 
+to minimize effect of stimulation artifacts. Often time, users may start Neural Activity Streaming and adjust stimulation 
 parameters to see effect of stimulation on the brain signal.
 
-For multi-channel recordings without stimulation, user may refer to `Indefinite Streaming`_ section.
+For multi-channel recordings without stimulation, user may refer to `MultiChannel Activity`_ section.
 
-.. image:: images/BrainSenseStreaming1.png
-  :target: _images/BrainSenseStreaming1.png
+.. image:: images/NeuralActivityStreaming1.png
+  :target: _images/NeuralActivityStreaming1.png
   :width: 800
 
-.. image:: images/BrainSenseStreaming2.png
-  :target: _images/BrainSenseStreaming2.png
+.. image:: images/NeuralActivityStreaming2.png
+  :target: _images/NeuralActivityStreaming2.png
   :width: 800
 
-.. image:: images/BrainSenseStreaming3.png
-  :target: _images/BrainSenseStreaming3.png
+.. image:: images/NeuralActivityStreaming3.png
+  :target: _images/NeuralActivityStreaming3.png
   :width: 800
 
 Select Recording to View
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Similar to BrainSense Survey, BrainSense Streaming data are aggregated for all patients. 
+Similar to average neural activity page, Neural Activity Streaming data are aggregated for all patients. 
 Recordings are organized by date of collection. The platform will also attempt to merge simultaneous 
 Left/Right hemisphere recordings into one recording if detected. An example of the selection table is shown in above figures.
 
@@ -457,8 +457,8 @@ to the web application for display. The display for a typical bilateral recordin
 All figures provided in the graph are interactive with x-axis alignment fixed. 
 All time are presented based on user's local timezone. Screenshot taken from Version 1.0 but overall capability has not changed in 2.0.
 
-.. image:: images/BrainSenseStreamingSummary1.png
-  :target: _images/BrainSenseStreamingSummary1.png
+.. image:: images/NeuralActivityStreamingSummary1.png
+  :target: _images/NeuralActivityStreamingSummary1.png
   :width: 800
 
 Time alignemnt with bilataral recording can be easily identified via Red Box 3 in below figure. 
@@ -466,8 +466,8 @@ The presence of pathological beta activity is supressed unilaterally when unilat
 turned on for Left and Right separately. The alignment shows that the stimulation artifact align with changes 
 in stimulation parameters. 
 
-.. image:: images/BrainSenseStreamingSummary2.png
-  :target: _images/BrainSenseStreamingSummary2.png
+.. image:: images/NeuralActivityStreamingSummary2.png
+  :target: _images/NeuralActivityStreamingSummary2.png
   :width: 800
 
 User may choose to export the raw data. 
@@ -476,8 +476,8 @@ The data are aligned if left and right hemisphere both present in the recording.
 Timestamp are provided as UTC timestamp in seconds. 
 Aligned stimulation values are provided for identification of stimulation period. 
 
-.. image:: images/BrainSenseStreamingSummary3.png
-  :target: _images/BrainSenseStreamingSummary3.png
+.. image:: images/NeuralActivityStreamingSummary3.png
+  :target: _images/NeuralActivityStreamingSummary3.png
   :width: 800
 
 The basic summary uses default short-time Fourier Transform (Spectrogram) method to generate Time-Frequency Analysis. 
@@ -506,25 +506,25 @@ increasing Stimulation.
 
 User may toggle the Stimulation Reference to self or others, to use stimulation label from another electrode as the reference for segmenting. 
 
-.. image:: images/BrainSenseStreaming4.png
-  :target: _images/BrainSenseStreaming4.png
+.. image:: images/NeuralActivityStreaming4.png
+  :target: _images/NeuralActivityStreaming4.png
   :width: 800
 
-.. image:: images/BrainSenseStreaming5.png
-  :target: _images/BrainSenseStreaming5.png
+.. image:: images/NeuralActivityStreaming5.png
+  :target: _images/NeuralActivityStreaming5.png
   :width: 800
 
-.. _Indefinite Streaming:
+.. _MultiChannel Activity:
 
-Indefinite Streaming View 
+Multi-Channel Activity View 
 ---------------------------------------------
 
-Indefinite Streaming is similar to BrainSense Streaming, but it doesn't come with stimulation parameters nor other labels. 
+Multi-Channel Activity is similar to Neural Activity Streaming, but it doesn't come with stimulation parameters nor other labels. 
 In exchange for that, the device allows simultaneous recording up to 6 channels at the same time (Bilateral E00-E02, E01-E03, 
 and E00-E03). We align all recordings collected at the same time and perform quick time-frequency analysis display to the user.
 
-.. image:: images/IndefiniteStreaming1.png
-  :target: _images/IndefiniteStreaming1.png
+.. image:: images/MultiChannelActivity1.png
+  :target: _images/MultiChannelActivity1.png
   :width: 800
 
 The recording selection is performed through toggle buttons. 
@@ -535,33 +535,32 @@ visualization of Indefinite Streaming data.
 The toggle selection actually allow multiple selection. User can select multiple recording from the same day 
 and visualize them on the same time-axis. Segment without data will be leave as blank.
 
-.. image:: images/IndefiniteStreaming2.png
-  :target: _images/IndefiniteStreaming2.png
+.. image:: images/MultiChannelActivity2.png
+  :target: _images/MultiChannelActivity2.png
   :width: 800
 
-.. image:: images/IndefiniteStreaming3.png
-  :target: _images/IndefiniteStreaming3.png
+.. image:: images/MultiChannelActivity3.png
+  :target: _images/MultiChannelActivity3.png
   :width: 800
 
-.. image:: images/IndefiniteStreaming4.png
-  :target: _images/IndefiniteStreaming4.png
+.. image:: images/MultiChannelActivity4.png
+  :target: _images/MultiChannelActivity4.png
   :width: 800
 
-.. image:: images/IndefiniteStreaming5.png
-  :target: _images/IndefiniteStreaming5.png
+.. image:: images/MultiChannelActivity5.png
+  :target: _images/MultiChannelActivity5.png
   :width: 800
 
 Since there are no extra label provided by neurostimulator. User may use external label such as biosensors or 
-questionaires to indicate events. Data can be exported similar to BrainSense Streaming. 
+questionaires to indicate events. Data can be exported similar to Neural Activity Streaming. 
 
+.. _Chronic Neural Activity:
 
-.. _Chronic BrainSense:
-
-Chronic Brainsense View
+Chronic Neural Activity View
 ---------------------------------------------
 
 Chronic LFP records specific spectral power every 10 minutes when the patient is using a therapy group with 
-BrainSense capability enabled. LFPs are collected in a manner similar to the example structure below in ``DiagnosticData.LFPTrendLogs`` 
+recording capability enabled. LFPs are collected in a manner similar to the example structure below in ``DiagnosticData.LFPTrendLogs`` 
 field. The LFP Trend Log divides recording into Left/Right hemisphere, and groups arrays of samples by date. 
 Each sample contains a timestamp, a LFP measurment (integer, arbituary unit), and instananeous stimulation amplitude measurement. 
 

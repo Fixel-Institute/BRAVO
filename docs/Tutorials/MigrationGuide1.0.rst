@@ -16,7 +16,7 @@ Main Modifications
 - Platform User may contain "is_mobile" identifier for mobile app authentication. 
 
 - Percept Session file will now have "session_date" column.
-- BrainSense Recording utilize folder that organize recordings.
+- Neural Activity Recording utilize folder that organize recordings.
 - Therapy History object will extract more data by providing Adaptive DBS Support.
 
 Database name is also being edited from ``PerceptDashboard`` to ``Backend``. 

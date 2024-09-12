@@ -31,7 +31,7 @@ copyright = '2022, Jackson Cagle'
 author = 'Jackson Cagle'
 
 # The full version, including alpha/beta/rc tags
-version = '2.2.0'
+version = '2.2.3'
 
 # -- General configuration ---------------------------------------------------
 

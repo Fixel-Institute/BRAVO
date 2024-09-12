@@ -5,7 +5,7 @@ Overview
 ---------------------------------------------
 UF Brain Recording and Analysis Visualization Online (BRAVO) Platform Version 2.2.0 is a major update to the BRAVO that contains multiple breaking changes. 
 The change is primarily associated with data formating and organization. In addition, the third party medical device format decoder is being updated to better handle missing 
-data during recordings and corrupted format downloaded from Medtronic Tablet. 
+data during recordings and corrupted format downloaded from third party medical company's Tablet. 
 
 Secondly, a major update in this version is to establish the preliminary Online-Analysis-Interface that allow user to design their own analysis flow using
 either external annotations, markers, or recordings in combination with third party medical device. This is still a preliminary design and updates are expected in the 2.2.x. 
@@ -15,7 +15,7 @@ Thirdly, relatively minor update is to lay foundation for mobile companion app f
 Major Changes 
 ---------------------------------------------
 
-.. topic:: 1. Percept Decoder Update
+.. topic:: 1. IPG Decoder Update
 
   Third party medical device JSON structures are not always consistent. Errors often occur when there are mismatching TimeDomain/PowerDomain channels. Previously,
   such inconsistent would lead to removal of one or the other channel as the data structure "require" the presence of both TimeDomain recordings 

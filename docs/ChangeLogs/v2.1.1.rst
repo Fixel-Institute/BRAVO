@@ -24,7 +24,7 @@ Minor Changes
 
 .. topic:: 2. Adaptive DBS Parameter for Chronic Neural Activity
 
-  Chronic Neural Activity page will now omit data collected during aDBS Bypass condition (noted as `GangedToHemisphere` in Medtronic JSON file). 
+  Chronic Neural Activity page will now omit data collected during aDBS Bypass condition (noted as `GangedToHemisphere` in third party medical device's JSON file). 
   Stimulation amplitude is shown alongside of Chronic Neural Activity data. Multi-device will be a selectable input toggle. 
 
 .. topic:: 3. User can give electrode and target customized name
