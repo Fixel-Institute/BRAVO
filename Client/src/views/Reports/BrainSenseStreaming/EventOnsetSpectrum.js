@@ -76,9 +76,6 @@ function EventOnsetSpectrogram({dataToRender, selector, height, config, normaliz
       });
       
     }
-
-    console.log(data[selector.value].Spectrum)
-    
     
     if (data.length == 0) {
       fig.purge();

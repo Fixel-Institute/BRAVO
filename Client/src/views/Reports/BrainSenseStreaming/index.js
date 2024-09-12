@@ -103,6 +103,7 @@ function BrainSenseStreaming() {
   const [drawerOpen, setDrawerOpen] = React.useState({open: false, config: {}});
   const [dataToRender, setDataToRender] = React.useState(false);
   const [channelInfos, setChannelInfos] = React.useState([]);
+  const [recordingName, setRecordingName] = React.useState("");
 
   const [channelPSDs, setChannelPSDs] = React.useState([]);
   
@@ -145,6 +146,7 @@ function BrainSenseStreaming() {
     for (var i in data) {
       if (data[i].AnalysisID == timestamp) {
         ChannelInfos = data[i].Channels;
+        setRecordingName(data[i].AnalysisLabel)
       }
     }
     setRecordingId(timestamp);
@@ -609,6 +611,15 @@ function BrainSenseStreaming() {
                           </MDBox>
                         </MDBox>
                       </Grid>
+                      {recordingName === "" ? null : (
+                      <Grid item xs={12}>
+                        <MDBox display={"flex"} justifyContent={"center"} p={0}>
+                          <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
+                            {recordingName}
+                          </MDTypography>
+                        </MDBox>
+                      </Grid>
+                      )}
                       <Grid item xs={12}>
                         <TimeFrequencyAnalysis dataToRender={dataToRender} channelInfos={channelInfos} 
                           handleAddEvent={handleAddEvent} handleDeleteEvent={handleDeleteEvent} handleAdjustAlignment={handleAdjustAlignment} annotations={annotations}

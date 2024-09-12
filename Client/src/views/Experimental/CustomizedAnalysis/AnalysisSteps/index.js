@@ -66,7 +66,6 @@ const availableProcessings = [{
 const AnalysisSteps = ({type, ...rest}) => {
   const defaultConfigs = availableProcessings.filter((a) => a.type.value == type);
   if (defaultConfigs.length > 0) {
-    console.log(defaultConfigs)
     if (type === "cardiacFilter") {
       return <CardiacFilterEditor currentState={rest.currentState} availableRecordings={rest.availableRecordings} newProcess={rest.newProcess} defaultConfigs={defaultConfigs[0]}
         updateConfiguration={rest.updateConfiguration}

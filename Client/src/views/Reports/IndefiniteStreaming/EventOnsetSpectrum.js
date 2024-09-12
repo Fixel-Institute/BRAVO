@@ -48,13 +48,10 @@ function EventOnsetSpectrogram({dataToRender, selector, height, config, figureTi
       });
     }
     
-    console.log(data[selector.value])
-    
     fig.surf(data[selector.value].Time, data[selector.value].Frequency, data[selector.value].Spectrum, {
       zlim: [-20, 20],
       coloraxis: "coloraxis",
     });
-    
     
     if (data.length == 0) {
       fig.purge();

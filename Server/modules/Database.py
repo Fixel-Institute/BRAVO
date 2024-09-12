@@ -489,6 +489,7 @@ def extractPatientAccessTable(user):
         researcherIds = {}
         patients = models.Patient.objects.filter(institute=user.institute).all()
     else:
+        researcherIds = {}
         patients = models.Patient.objects.filter(institute=user.email).all()
 
     for patient in patients:

@@ -339,7 +339,6 @@ function BrainSenseSurvey() {
             <MDBox p={3}>
               <MDButton variant={"gradient"} color={"success"} onClick={() => {
                 setAlert(<LoadingProgress/>);
-                console.log(drawerOpen.config)
                 SessionController.query("/api/updateSession", {
                   "BrainSenseSurvey": drawerOpen.config
                 }).then(() => {

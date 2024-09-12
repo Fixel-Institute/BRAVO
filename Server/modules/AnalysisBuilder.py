@@ -684,6 +684,7 @@ def queryResultData(user, patientId, analysisId, resultId, download, authority):
     return JSONEncode(ProcessedData), GraphOptions
 
 def handleFilterProcessing(step, RecordingIds, Results, Configuration, analysis):
+    print("Start Filter")
     targetSignal = step["config"]["targetRecording"]
     filterType = "Butterworth"
 
@@ -741,6 +742,7 @@ def handleFilterProcessing(step, RecordingIds, Results, Configuration, analysis)
     }
 
 def handleCardiacFilterProcessing(step, RecordingIds, Results, Configuration, analysis):
+    print("Start Cardiac Filter")
     targetSignal = step["config"]["targetRecording"]
 
     def processRawData(RawData):
@@ -769,6 +771,9 @@ def handleCardiacFilterProcessing(step, RecordingIds, Results, Configuration, an
             if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(RawData):
                 continue 
             CardiacEpochs.append(RawData[Peaks[j]-SearchWindow-ShiftPeak:Peaks[j]+SearchWindow-ShiftPeak])
+
+        if len(CardiacEpochs) == 0:
+            return RawData
 
         EKGTemplate = np.mean(np.array(CardiacEpochs), axis=0)
         EKGTemplate = EKGTemplate / (np.max(EKGTemplate)-np.min(EKGTemplate))
@@ -829,6 +834,7 @@ def handleCardiacFilterProcessing(step, RecordingIds, Results, Configuration, an
     }
 
 def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, analysis):
+    print("Start Extract Annotation")
     targetSignal = step["config"]["targetRecording"]
     psdMethod = step["config"]["psdMethod"]
 
@@ -930,6 +936,7 @@ def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, anal
     }
 
 def handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analysis):
+    print("Start Normalization")
     targetSignal = step["config"]["targetRecording"]
     normalizeMethod = step["config"]["normalizeMethod"]
 
@@ -953,9 +960,11 @@ def handleNormalizeProcessing(step, RecordingIds, Results, Configuration, analys
                     continue
                 for event in RawData[channelName].keys():
                     meanPSDs = np.nanmean(np.array(RawData[channelName][event]["PSDs"]), axis=0)
-
+                    if len(meanPSDs) == 0:
+                        continue 
+                    
                     if normalizeMethod == "FOOOF":
-                        FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [2,80])
+                        FrequencyWindow = PythonUtility.rangeSelection(RawData[channelName][event]["Frequency"], [2,100])
                         fm = SpectralModel(peak_width_limits=[1,24])
                         fm.fit(np.array(RawData[channelName][event]["Frequency"])[FrequencyWindow], np.power(10,meanPSDs)[FrequencyWindow], [0, 100])
                         oof = fm.get_model("aperiodic", "log")

@@ -81,11 +81,9 @@ const PatientEventsTable = ({data, deleteRecords}) => {
                         }
                         if (notChecked.length == 0) {
                           toggleMerge.merge = toggleMerge.merge.filter((id) => notChecked.includes(id));
-                          console.log(toggleMerge.merge)
                         } else {
                           toggleMerge.merge.push(...notChecked);
                         }
-                        console.log(notChecked)
                         return {...toggleMerge};
                       })
                     }

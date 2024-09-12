@@ -58,7 +58,6 @@ export default function LocalUpdaterView({match}) {
 
   useEffect(() => {
     window.electronAPI.onDockerUpdated((message) => {
-      console.log(message);
       setAlert(null);
     });
   }, []);

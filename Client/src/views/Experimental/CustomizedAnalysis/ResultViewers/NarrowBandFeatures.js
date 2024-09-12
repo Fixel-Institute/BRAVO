@@ -93,8 +93,6 @@ function NarrowBandFeatures({dataToRender, height, config, figureTitle}) {
   });
 
   const exportCurrentStream = () => {
-    console.log(dataToRender)
-
     var csvData = "Time,Channel,PeakFrequency,PeakPower\n";
     for (let i in dataToRender["Channel"]) {
       for (let j in dataToRender["Time"][i]) {

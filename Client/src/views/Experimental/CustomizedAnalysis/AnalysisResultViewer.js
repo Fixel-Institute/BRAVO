@@ -85,7 +85,6 @@ function AnalysisResultViewer({analysisId, analysisData}) {
         resultId: selectedRecording.value,
         download: false
       }).then((response) => {
-        console.log(response)
         setAlert(null);
         setDataToRender(response.data)
       }).catch((error) => {
