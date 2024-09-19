@@ -44,6 +44,59 @@ const CalculateSpectralFeaturesEditor = ({currentState, newProcess, availableRec
         options={availableRecordings}
         onChange={(event, newValue) => setFilterOptions({...filterOptions, targetRecording: newValue})}
       />
+      
+      {filterOptions.bands.map((band, index) => {
+        return <MDBox key={"Band_" + index} style={{display: "flex", paddingLeft: 5, paddingRight: 5, justifyContent: "space-between"}}>
+          <TextField
+            variant="standard"
+            margin="dense"
+            value={filterOptions.bands[index][0]}
+            placeholder={"Disable"}
+            onChange={(event) => setFilterOptions((filterOptions) => {
+              filterOptions.bands[index][0] = event.target.value;
+              return {...filterOptions};
+            })}
+            label={"Band Label"} type={"text"}
+            autoComplete={"off"}
+          />
+
+          <TextField
+            variant="standard"
+            margin="dense"
+            value={filterOptions.bands[index][1]}
+            placeholder={"Disable"}
+            onChange={(event) => setFilterOptions((filterOptions) => {
+              filterOptions.bands[index][1] = event.target.value;
+              return {...filterOptions};
+            })}
+            label={"Lower Frequency (Hz)"} type={"number"}
+            autoComplete={"off"}
+          />
+
+          <TextField
+            variant="standard"
+            margin="dense"
+            value={filterOptions.bands[index][2]}
+            placeholder={"Disable"}
+            onChange={(event) => setFilterOptions((filterOptions) => {
+              filterOptions.bands[index][2] = event.target.value;
+              return {...filterOptions};
+            })}
+            label={"Upper Frequency (Hz)"} type={"number"}
+            autoComplete={"off"}
+          />
+        </MDBox>
+      })}
+      
+      <MDBox style={{display: "flex", paddingLeft: 15, paddingRight: 15, paddingTop: 15, justifyContent: "flex-end"}}>
+        <MDButton color={"info"} 
+          onClick={() => {
+            setFilterOptions({...filterOptions, bands: [...filterOptions.bands, ["New Band", 0, 0]]})
+          }} style={{marginLeft: 10}}
+        >
+          {"Add Band"}
+        </MDButton>
+      </MDBox>
 
       <TextField
         variant="standard"
@@ -55,6 +108,7 @@ const CalculateSpectralFeaturesEditor = ({currentState, newProcess, availableRec
         autoComplete={"off"}
         fullWidth
       />
+      
       <MDBox style={{display: "flex", paddingLeft: 15, paddingRight: 15, paddingTop: 15, justifyContent: "flex-end"}}>
         <MDButton color={"secondary"} 
           onClick={() => updateConfiguration(false)}

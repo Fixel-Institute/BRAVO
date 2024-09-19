@@ -13,6 +13,7 @@
 
 import React, {useCallback} from "react";
 import {useResizeDetector} from "react-resize-detector";
+import * as math from "mathjs";
 
 import colormap from "colormap";
 
@@ -65,7 +66,9 @@ function EventPSDs({dataToRender, height, config, figureTitle}) {
     const eventNames = Object.keys(data);
     const steps = Math.floor(24/eventNames.length);
     for (var j in eventNames) {
-      fig.shadedErrorBar(data[eventNames[j]]["Frequency"], data[eventNames[j]]["MeanPower"], data[eventNames[j]]["StdPower"], {
+      const MeanPower = data[eventNames[j]].Frequency.map((f,i) => math.mean(data[eventNames[j]].PSDs.map((n) => n[i])));
+      const StdPower = data[eventNames[j]].Frequency.map((f,i) => math.std(data[eventNames[j]].PSDs.map((n) => n[i])));
+      fig.shadedErrorBar(data[eventNames[j]]["Frequency"], MeanPower, StdPower, {
         name: eventNames[j],
         color: colors[j*steps],
         linewidth: 2,

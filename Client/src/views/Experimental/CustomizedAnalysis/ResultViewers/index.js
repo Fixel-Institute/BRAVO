@@ -24,6 +24,7 @@ import TimeDomainFigure from "./TimeDomainFigure";
 import EventPSDs from "./EventPSDs";
 import SpectralFeatures from "./SpectralFeatures";
 import NarrowBandFeatures from "./NarrowBandFeatures";
+import SpectrogramView from "./SpectrogramView";
 
 function ResultViewer({data, result, config}) {
   const navigate = useNavigate();
@@ -33,10 +34,16 @@ function ResultViewer({data, result, config}) {
   if (Object.keys(data).length == 0) return null;
   const type = data.Data[0].ResultType;
 
-  if (type == "PSDs") {
+  if (type == "RawEventPSDs") {
     return <Grid container spacing={2}>
       <Grid item xs={12}>
         <EventPSDs dataToRender={data.Data[0]} height={600} figureTitle={"EventPSDs"} />
+      </Grid>
+    </Grid>
+  } else if (type == "RawSpectrogram") {
+    return <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <SpectrogramView dataToRender={data} height={800} figureTitle={result.title} />
       </Grid>
     </Grid>
   } else if (type == "SpectralFeatures") {

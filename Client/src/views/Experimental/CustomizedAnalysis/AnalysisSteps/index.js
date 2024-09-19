@@ -1,5 +1,6 @@
 import CalculateSpectralFeaturesEditor from "./CalculateSpectralFeaturesEditor"
 import ExportEditor from "./ExportEditor"
+import ExtractTimeFrequencyAnalysisEditor from "./ExtractTimeFrequencyAnalysisEditor"
 import ExtractAnnotationsEditor from "./ExtractAnnotationsEditor"
 import ExtractNarrowBandSpectralEditor from "./ExtractNarrowBandSpectral"
 import CardiacFilterEditor from "./CardiacFilterEditor"
@@ -23,10 +24,21 @@ const availableProcessings = [{
   lowpass: "",
 }, {
   type: {
+    value: "extractTimeFrequencyAnalysis",
+    label: "Extract Time-Frequency Analysis from Time-series",
+  },
+  dropMissing: true,
+  psdMethod: "Welch's Periodogram",
+  window: 1000,
+  overlap: 500,
+  frequencyResolution: 0.5,
+  modelOrder: 30
+}, {
+  type: {
     value: "extractAnnotations",
     label: "Extract PSDs from Annotations",
   },
-  psdMethod: "Short-time Fourier Transform",
+  label: "annotation",
   averaged: true,
 }, {
   type: {
@@ -44,23 +56,14 @@ const availableProcessings = [{
     label: "Normalize PSD Data",
   },
   normalizeMethod: "FOOOF",
-  highEdge: "",
-  lowEdge: "",
+  highEdge: "90",
+  lowEdge: "70",
 }, {
   type: {
     value: "calculateSpectralFeatures",
     label: "Calculate Spectral Features from PSD Data"
   },
-}, {
-  type: {
-    value: "export",
-    label: "Export Data"
-  },
-}, {
-  type: {
-    value: "view",
-    label: "View Data"
-  },
+  bands: []
 }];
 
 const AnalysisSteps = ({type, ...rest}) => {
@@ -72,6 +75,10 @@ const AnalysisSteps = ({type, ...rest}) => {
       />
     } else if (type === "filter") {
       return <FilterEditor currentState={rest.currentState} availableRecordings={rest.availableRecordings} newProcess={rest.newProcess} defaultConfigs={defaultConfigs[0]}
+        updateConfiguration={rest.updateConfiguration}
+      />
+    } else if (type === "extractTimeFrequencyAnalysis") {
+      return <ExtractTimeFrequencyAnalysisEditor currentState={rest.currentState} availableRecordings={rest.availableRecordings} newProcess={rest.newProcess} defaultConfigs={defaultConfigs[0]}
         updateConfiguration={rest.updateConfiguration}
       />
     } else if (type === "extractAnnotations") {

@@ -16,6 +16,7 @@ const ExtractNarrowBandSpectralTemplate = ({availableRecordings, setConfiguratio
     normalized: false,
     averageDuration: 10,
     threshold: 5,
+    psdMethod: "Welch's Periodogram",
     output: "Gamma Features Output"
   });
 
@@ -83,6 +84,37 @@ const ExtractNarrowBandSpectralTemplate = ({availableRecordings, setConfiguratio
         control={<Switch checked={options.filtered} 
         onChange={() => setOptions({...options, filtered: !options.filtered})} />} 
         label="Filtered between 1-100Hz? " />
+
+      <FormControlLabel 
+        control={<Switch checked={options.normalized} 
+        onChange={() => setOptions({...options, normalized: !options.normalized})} />} 
+        label="Normalize PSDs?" />
+
+      <Autocomplete 
+        selectOnFocus 
+        clearOnBlur
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            variant="standard"
+            label={"Select PSD Method: "}
+            placeholder={"Select PSD Method"}
+          />
+        )}
+        filterOptions={(options, params) => {
+          const filtered = filter(options, params);
+          const { inputValue } = params;
+          return filtered;
+        }}
+        isOptionEqualToValue={(option, value) => {
+          return option === value;
+        }}
+        renderOption={(props, option) => <li {...props}>{option}</li>}
+        value={options.psdMethod}
+        options={["Short-time Fourier Transform", "Welch's Periodogram", "Autoregressive (AR) Model"]}
+        onChange={(event, newValue) => setOptions({...options, psdMethod: newValue})}
+        style={{paddingTop: 30}}
+        />
 
       <TextField
         variant="standard"

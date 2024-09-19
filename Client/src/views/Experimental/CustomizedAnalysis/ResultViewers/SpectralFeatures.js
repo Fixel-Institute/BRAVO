@@ -38,7 +38,30 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
     fig.clearData();
 
     if (fig.fresh) {
+      fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)})`, {fontSize: 15})
+      fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)}`, {fontSize: 15})
+      fig.setYlim([0, 5]);
+    }
+
+    for (let i in data) {
+      const AllFeatures = Object.keys(data[i]).filter((a) => a.endsWith("_Mean")).map((a) => a.replaceAll("_Mean",""));
       
+      const colors = colormap({
+        colormap: 'rainbow',
+        nshades: data.length * AllFeatures.length > 9 ? data.length * AllFeatures.length : 9,
+        format: 'hex',
+        alpha: 1,
+      });
+
+      for (let k in AllFeatures) {
+        fig.plot(data[i].Time.map((a) => new Date(a*1000)), data[i][AllFeatures[k] + "_Mean"], {
+          linewidth: 2,
+          name: data[i].Channel + "_" + AllFeatures[k] + "_Mean",
+          showlegend: true,
+          color: colors[k+i*AllFeatures.length],
+          hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)}<extra></extra>`,
+        })
+      }
     }
 
     if (data.length == 0) {
@@ -53,7 +76,7 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
     if (dataToRender) {
-      
+      handleGraphing(dataToRender)
     }
   }, [dataToRender, language]);
 
@@ -69,11 +92,25 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
   });
 
   const exportCurrentStream = () => {
-    const allKeys = Object.keys(dataToRender[0]);
+    const allKeys = [];
+    let maxLength = 0;
+    for (let i in dataToRender) {
+      const AllFeatures = Object.keys(dataToRender[i]).filter((a) => !a.endsWith("Channel"));
+      if (dataToRender[i].Time.length > maxLength) maxLength = dataToRender[i].Time.length;
+      for (let k in AllFeatures) {
+        allKeys.push(dataToRender[i].Channel + "_" + AllFeatures[k])
+      }
+    }
     var csvData = allKeys.join(",") + "\n";
-    for (let j in dataToRender) {
-      for (let i in allKeys) {
-        csvData += dataToRender[j][allKeys[i]] + ",";
+
+    for (let j = 0; j < maxLength; j++) {
+      for (let i in dataToRender) {
+        const AllFeatures = Object.keys(dataToRender[i]).filter((a) => !a.endsWith("Channel"));
+        for (let k in AllFeatures) {
+          if (dataToRender[i].Time.length > j) {
+            csvData += dataToRender[i][AllFeatures[k]][j] + ",";
+          }
+        }
       }
       csvData += "\n";
     }

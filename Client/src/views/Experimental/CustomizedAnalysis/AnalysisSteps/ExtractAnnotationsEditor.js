@@ -19,8 +19,6 @@ const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings
     return filterOptions.targetRecording !== "" && filterOptions.output !== "";
   }
 
-  const availableMethods = ["Short-time Fourier Transform"];
-
   return (
     <MDBox style={{marginTop: 20, paddingTop: 5, paddingBottom: 15}}>
       <Autocomplete 
@@ -45,31 +43,6 @@ const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings
         value={filterOptions.targetRecording}
         options={availableRecordings}
         onChange={(event, newValue) => setFilterOptions({...filterOptions, targetRecording: newValue})}
-      />
-
-      <Autocomplete 
-        selectOnFocus 
-        clearOnBlur
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            variant="standard"
-            placeholder={"Select PSD Method"}
-          />
-        )}
-        filterOptions={(options, params) => {
-          const filtered = filter(options, params);
-          const { inputValue } = params;
-          return filtered;
-        }}
-        isOptionEqualToValue={(option, value) => {
-          return option === value;
-        }}
-        renderOption={(props, option) => <li {...props}>{option}</li>}
-        value={filterOptions.psdMethod}
-        options={availableMethods}
-        onChange={(event, newValue) => setFilterOptions({...filterOptions, psdMethod: newValue})}
-        style={{paddingTop: 30}}
       />
 
       <FormControlLabel 
