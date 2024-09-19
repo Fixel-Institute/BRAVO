@@ -118,11 +118,13 @@ function SpectrogramView({dataToRender, height, config, figureTitle}) {
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    let channelNames = [];
-    for (let i in dataToRender.Data) {
-      channelNames.push(...dataToRender.Data[i].ChannelNames.filter((a) => !channelNames.includes(a)));
-    }
-    setSelector({options: channelNames, value: channelNames[0]})
+    if (selector.value == "") {let channelNames = [];
+      for (let i in dataToRender.Data) {
+        channelNames.push(...dataToRender.Data[i].ChannelNames.filter((a) => !channelNames.includes(a)));
+      }
+      setSelector({options: channelNames, value: channelNames[0]})
+    }    
+    
     if (dataToRender && selector.value) {
       handleGraphing(dataToRender.Data)
     }

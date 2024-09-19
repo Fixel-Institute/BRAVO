@@ -32,6 +32,7 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
   const { language } = controller;
 
   const [show, setShow] = React.useState(true);
+  const [selector, setSelector] = React.useState({value: "", options: []});
   const fig = new PlotlyRenderManager(figureTitle, language);
 
   const handleGraphing = (data) => {
@@ -41,6 +42,12 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
       fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)})`, {fontSize: 15})
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)}`, {fontSize: 15})
       fig.setYlim([0, 5]);
+      
+      fig.setLegend({
+        tracegroupgap: 5,
+        xanchor: "left",
+        yanchor: "top"
+      });
     }
 
     for (let i in data) {
@@ -48,7 +55,7 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
       
       const colors = colormap({
         colormap: 'rainbow',
-        nshades: data.length * AllFeatures.length > 9 ? data.length * AllFeatures.length : 9,
+        nshades: AllFeatures.length > 9 ? AllFeatures.length : 9,
         format: 'hex',
         alpha: 1,
       });
@@ -56,9 +63,10 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
       for (let k in AllFeatures) {
         fig.plot(data[i].Time.map((a) => new Date(a*1000)), data[i][AllFeatures[k] + "_Mean"], {
           linewidth: 2,
-          name: data[i].Channel + "_" + AllFeatures[k] + "_Mean",
+          name: AllFeatures[k] + "_Mean",
+          legendgroup: AllFeatures[k],
           showlegend: true,
-          color: colors[k+i*AllFeatures.length],
+          color: colors[k],
           hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)}<extra></extra>`,
         })
       }
@@ -75,10 +83,19 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
 
   // Refresh Left Figure if Data Changed
   React.useEffect(() => {
-    if (dataToRender) {
-      handleGraphing(dataToRender)
+    if (selector.value == "") {
+      let channelNames = [];
+      for (let i in dataToRender) {
+        if (!channelNames.includes(dataToRender[i].Channel)) {
+          channelNames.push(dataToRender[i].Channel);
+        }
+      }
+      setSelector({options: channelNames, value: channelNames[0]})
     }
-  }, [dataToRender, language]);
+    if (dataToRender && selector.value) {
+      handleGraphing(dataToRender.filter((a) => a.Channel == selector.value))
+    }
+  }, [dataToRender, selector.value, language]);
 
   const onResize = useCallback(() => {
     fig.refresh();
@@ -124,6 +141,22 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
 
   return (
     <MDBox lineHeight={1} p={2}>
+      <Autocomplete
+        value={selector.value}
+        options={selector.options}
+        onChange={(event, value) => setSelector({...selector, value: value})}
+        getOptionLabel={(option) => {
+          return option;
+        }}
+        renderInput={(params) => (
+          <FormField
+            {...params}
+            label={"Channel Selector"}
+            InputLabelProps={{ shrink: true }}
+          />
+        )}
+        disableClearable
+      />
       <MDButton size="large" variant="contained" color="primary" style={{marginBottom: 3, marginTop: 3, width: "100%"}} onClick={() => exportCurrentStream()}>
         {dictionaryLookup(dictionary.FigureStandardText, "Export", language)}
       </MDButton>
