@@ -2,18 +2,20 @@ import { useState } from "react";
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import MDTypography from "components/MDTypography";
-import { Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material";
+import { Autocomplete, TextField } from "@mui/material";
 
 import { createFilterOptions } from "@mui/material/Autocomplete";
 const filter = createFilterOptions();
 
-const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings, defaultConfigs, updateConfiguration}) => {
+const WienerFilterrEditor = ({currentState, newProcess, availableRecordings, defaultConfigs, updateConfiguration}) => {
   const [filterOptions, setFilterOptions] = useState(newProcess ? {
     ...defaultConfigs,
     targetRecording: "",
     output: "",
     new: true
   } : {...currentState, new: false});
+
+  const availableMethods = ["Kurtosis-peak Detection Template Matching"];
 
   const checkInputComplete = () => {
     return filterOptions.targetRecording !== "" && filterOptions.output !== "";
@@ -44,15 +46,10 @@ const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings
         options={availableRecordings}
         onChange={(event, newValue) => setFilterOptions((filterOptions) => {
           filterOptions.targetRecording = newValue;
-          filterOptions.output = newValue + "_AnnotationPSDs";
+          filterOptions.output = newValue + "_WienerFiltered";
           return {...filterOptions};
         })}
       />
-
-      <FormControlLabel 
-        control={<Switch checked={filterOptions.averaged} 
-        onChange={() => setFilterOptions({...filterOptions, averaged: !filterOptions.averaged})} />} 
-        label="Averaged Spectrum" />
 
       <TextField
         variant="standard"
@@ -82,4 +79,5 @@ const ExtractAnnotationsEditor = ({currentState, newProcess, availableRecordings
   );
 };
 
-export default ExtractAnnotationsEditor;
+
+export default WienerFilterrEditor;

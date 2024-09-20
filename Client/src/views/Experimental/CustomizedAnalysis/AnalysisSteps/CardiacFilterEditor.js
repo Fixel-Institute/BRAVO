@@ -15,7 +15,7 @@ const CardiacFilterEditor = ({currentState, newProcess, availableRecordings, def
     new: true
   } : {...currentState, new: false});
 
-  const availableMethods = ["Kurtosis-peak Detection Template Matching"];
+  const availableMethods = ["LMS Decoupler", "Fixed Height Peak Detection Template Matching", "Kurtosis-peak Detection Template Matching"];
 
   const checkInputComplete = () => {
     return filterOptions.targetRecording !== "" && filterOptions.output !== "";
@@ -44,7 +44,11 @@ const CardiacFilterEditor = ({currentState, newProcess, availableRecordings, def
         renderOption={(props, option) => <li {...props}>{option}</li>}
         value={filterOptions.targetRecording}
         options={availableRecordings}
-        onChange={(event, newValue) => setFilterOptions({...filterOptions, targetRecording: newValue})}
+        onChange={(event, newValue) => setFilterOptions((filterOptions) => {
+          filterOptions.targetRecording = newValue;
+          filterOptions.output = newValue + "_CardiacFiltered";
+          return {...filterOptions};
+        })}
       />
 
       <Autocomplete 

@@ -43,31 +43,23 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
       var ax = fig.subplots(channelInfos.length, 1, {sharex: true, sharey: true});
       setHeight(channelInfos.length * height)
 
-      fig.setXlabel("Time (local time)", {fontSize: 15}, ax[ax.length-1]);
       for (var i in ax) {
-        fig.setYlim([0,100],ax[i]);
-        fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Frequency", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)})`, {fontSize: 15}, ax[i]);
-
+        fig.setYlim([-50,50],ax[i]);
+        fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Amplitude", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "uV", language)})`, {fontSize: 15}, ax[i]);
         fig.setSubtitle(channelInfos[i],ax[i]);
       }
       fig.setXlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Time", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "Local", language)})`, {fontSize: 15}, ax[ax.length-1]);
-
-      fig.createColorAxis({
-        colorscale: "Jet",
-        colorbar: {y: 0.5, len: (1/2)},
-        clim: [-20, 20],
-      });
     }
 
     for (let i in data) {
-      for (let j in data[i].Spectrogram) {
+      for (let j in data[i].ChannelNames) {
         let axIndex = channelInfos.indexOf(data[i].ChannelNames[j]);
-        var timeArray = Array(data[i].Spectrogram[j].Time.length).fill(0).map((value, index) => new Date(data[i].StartTime*1000 + data[i].Spectrogram[j].Time[index]*1000));
+        var timeArray = Array(data[i].Data.length).fill(0).map((value, index) => new Date(data[i].StartTime*1000 + index*1000/data[i].SamplingRate));
         
-        fig.surf(timeArray, data[i].Spectrogram[j].Frequency, data[i].Spectrogram[j].Power, {
-          zlim: [-20, 20],
-          coloraxis: "coloraxis",
-          hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "Hertz", language)}<br>  %{x} <br>  %{z:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "dB", language)} <extra></extra>`,
+        fig.plot(timeArray, data[i].Data.map((a) => a[j]), {
+          color: "#000000",
+          linewidth: 1,
+          hovertemplate: `  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "uV", language)}<br>  %{x} <br><extra></extra>`,
         }, ax[axIndex]);
       }
     }
@@ -85,14 +77,14 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
   React.useEffect(() => {
     if (dataToRender) {
       let ChannelNames = [];
-      for (let i in dataToRender.Data.Timeseries) {
-        for (let j in dataToRender.Data.Timeseries[i].ChannelNames) {
-          if (!ChannelNames.includes(dataToRender.Data.Timeseries[i].ChannelNames[j])) {
-            ChannelNames.push(dataToRender.Data.Timeseries[i].ChannelNames[j]);
+      for (let i in dataToRender) {
+        for (let j in dataToRender[i].ChannelNames) {
+          if (!ChannelNames.includes(dataToRender[i].ChannelNames[j])) {
+            ChannelNames.push(dataToRender[i].ChannelNames[j]);
           }
         }
       }
-      handleGraphing(dataToRender.Data.Timeseries, ChannelNames);
+      handleGraphing(dataToRender, ChannelNames);
     }
   }, [dataToRender, language]);
 
@@ -108,7 +100,9 @@ function TimeDomainFigure({dataToRender, height, figureTitle}) {
   });
 
   return (
-    <MDBox ref={ref} id={figureTitle} style={{marginTop: 5, marginBottom: 10, height: realheight, width: "100%", display: show ? "" : "none"}}/>
+    <MDBox lineHeight={1} p={2}>
+      <MDBox ref={ref} id={figureTitle} style={{marginTop: 5, marginBottom: 10, height: realheight, width: "100%", display: show ? "" : "none"}}/>
+    </MDBox>
   );
 }
 

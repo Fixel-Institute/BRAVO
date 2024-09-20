@@ -742,60 +742,177 @@ def handleFilterProcessing(step, RecordingIds, Results, Configuration, analysis)
         "Type": "TimeDomain"
     }
 
-def handleCardiacFilterProcessing(step, RecordingIds, Results, Configuration, analysis):
-    print("Start Cardiac Filter")
+def handleWienerFilterProcessing(step, RecordingIds, Results, Configuration, analysis):
+    print("Start Wiener Filter")
     targetSignal = step["config"]["targetRecording"]
 
     def processRawData(RawData):
-        Window = 125
-        KurtosisIndex = range(0, len(RawData)-Window)
+        Errors = signal.wiener(RawData["Data"], mysize=int(RawData["SamplingRate"]/2))
+        RawData["Data"] = RawData["Data"] - Errors
+        RawData["ResultType"] = "TimeDomain"
+        return RawData
+
+    ProcessedData = []
+    for recordingId in RecordingIds:
+        if Configuration["Descriptor"][recordingId]["Type"] == targetSignal:
+            if models.ExternalRecording.objects.filter(recording_id=recordingId).exists():
+                recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
+                RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+            elif models.NeuralActivityRecording.objects.filter(recording_id=recordingId).exists():
+                recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
+                RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+            RawData = processRawData(RawData=RawData)
+            ProcessedData.append(RawData)
+    
+    for result in Results:
+        if result["ResultLabel"] == targetSignal:
+            recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
+            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+            
+            for i in range(len(RawData)):
+                RawData[i] = processRawData(RawData=RawData[i])
+                ProcessedData.append(RawData[i])
+
+    recording = createResultDataFile(ProcessedData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
+    analysis.recording_type.append(recording.recording_type)
+    analysis.recording_list.append(str(recording.recording_id))
+
+    return {
+        "ResultLabel": step["config"]["output"],
+        "Id": step["id"],
+        "ProcessedData": str(recording.recording_id),
+        "Type": "TimeDomain"
+    }
+
+def handleCardiacFilterProcessing(step, RecordingIds, Results, Configuration, analysis):
+    print("Start Cardiac Filter")
+    targetSignal = step["config"]["targetRecording"]
+    filterMethod = step["config"]["cardiacFilterMethod"]
+
+    def FixedPeakFilter(RawData):
+        Signal = RawData["Data"]
+        SamplingRate = RawData["SamplingRate"]
+
+        for i in range(Signal.shape[1]):
+            posPeaks,_ = signal.find_peaks(Signal[:,i], prominence=[10,200], distance=SamplingRate*0.5)
+            PosCardiacVariability = np.std(np.diff(posPeaks))
+            negPeaks,_ = signal.find_peaks(-Signal[:,i], prominence=[10,200], distance=SamplingRate*0.5)
+            NegCardiacVariability = np.std(np.diff(negPeaks))
+
+            if PosCardiacVariability < NegCardiacVariability:
+                peaks = posPeaks
+            else:
+                peaks = negPeaks
+            CardiacRate = int(np.mean(np.diff(peaks)))
+
+            PrePeak = int(CardiacRate*0.25)
+            PostPeak = int(CardiacRate*0.65)
+            EKGMatrix = np.zeros((len(peaks)-2,PrePeak+PostPeak))
+            for j in range(1,len(peaks)-1):
+                if peaks[j]+PostPeak < len(Signal[:,i]) and peaks[j]-PrePeak > 0:
+                    EKGMatrix[j-1,:] = Signal[peaks[j]-PrePeak:peaks[j]+PostPeak,i]
+
+            EKGTemplate = np.mean(EKGMatrix,axis=0)
+            EKGTemplate = EKGTemplate / (np.max(EKGTemplate)-np.min(EKGTemplate))
+
+            def EKGTemplateFunc(xdata, amplitude, offset):
+                return EKGTemplate * amplitude + offset
+
+            for j in range(len(peaks)):
+                if peaks[j]-PrePeak < 0:
+                    pass
+                elif peaks[j]+PostPeak >= len(Signal[:,i]) :
+                    pass
+                else:
+                    sliceSelection = np.arange(peaks[j]-PrePeak,peaks[j]+PostPeak)
+                    params, covmat = optimize.curve_fit(EKGTemplateFunc, sliceSelection, Signal[sliceSelection,i])
+                    Signal[sliceSelection,i] = Signal[sliceSelection,i] - EKGTemplateFunc(sliceSelection, *params)
+
+        RawData["Data"] = Signal
+        return RawData
+
+    def KurtosisFilterr(RawData):
+        Signal = RawData["Data"]
+        SamplingRate = RawData["SamplingRate"]
+
+        Window = int(SamplingRate/2)
+        KurtosisIndex = range(0, len(Signal)-Window)
         ExpectedKurtosis = np.zeros((len(KurtosisIndex)))
         for j in range(len(KurtosisIndex)):
-            zScore = stats.zscore(RawData[KurtosisIndex[j]:KurtosisIndex[j]+Window])
+            zScore = stats.zscore(Signal[KurtosisIndex[j]:KurtosisIndex[j]+Window])
             ExpectedKurtosis[j] = np.mean(np.power(zScore, 4))
 
-        [b,a] = signal.butter(3, np.array([0.5, 2])*2/250, "bandpass")
+        [b,a] = signal.butter(3, np.array([0.5, 2])*2/SamplingRate, "bandpass")
         ExpectedKurtosis = signal.filtfilt(b,a,ExpectedKurtosis)
-        Peaks, _ = signal.find_peaks(ExpectedKurtosis, distance=125)
+        Peaks, _ = signal.find_peaks(ExpectedKurtosis, distance=Window)
         Peaks += int(Window/2)
 
-        CardiacEpochs = []
-        SearchWindow = 100
-        for j in range(len(Peaks)):
-            if ExpectedKurtosis[Peaks[j]-int(Window/2)] < 1.2:
-                continue
-            ShiftPeak = 0
-            if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(RawData):
-                continue 
-            findPeak = np.argmax(RawData[Peaks[j]-SearchWindow:Peaks[j]+SearchWindow])
-            ShiftPeak = SearchWindow-findPeak
-            if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(RawData):
-                continue 
-            CardiacEpochs.append(RawData[Peaks[j]-SearchWindow-ShiftPeak:Peaks[j]+SearchWindow-ShiftPeak])
+        CardiacFiltered = copy.deepcopy(RawData["Data"])
+        for i in range(Signal.shape[1]):
+            CardiacEpochs = []
+            SearchWindow = 100
+            for j in range(len(Peaks)):
+                if ExpectedKurtosis[Peaks[j]-int(Window/2)] < 1.2:
+                    continue
+                ShiftPeak = 0
+                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(Signal[:,i]):
+                    continue 
+                findPeak = np.argmax(Signal[Peaks[j]-SearchWindow:Peaks[j]+SearchWindow, i])
+                ShiftPeak = SearchWindow-findPeak
+                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(Signal[:,i]):
+                    continue 
+                CardiacEpochs.append(Signal[Peaks[j]-SearchWindow-ShiftPeak:Peaks[j]+SearchWindow-ShiftPeak, i])
 
-        if len(CardiacEpochs) == 0:
+            if len(CardiacEpochs) == 0:
+                continue
+            
+            EKGTemplate = np.mean(np.array(CardiacEpochs), axis=0)
+            EKGTemplate = EKGTemplate / (np.max(EKGTemplate)-np.min(EKGTemplate))
+
+            def EKGTemplateFunc(xdata, amplitude, offset):
+                return EKGTemplate * amplitude + offset
+
+            for j in range(len(Peaks)):
+                ShiftPeak = 0
+                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(Signal[:,i]):
+                    continue
+                findPeak = np.argmax(Signal[Peaks[j]-SearchWindow:Peaks[j]+SearchWindow,i])
+                ShiftPeak = SearchWindow-findPeak
+                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(Signal[:,i]):
+                    continue
+                sliceSelection = np.arange(Peaks[j]-SearchWindow-ShiftPeak, Peaks[j]+SearchWindow-ShiftPeak)
+                Original = Signal[sliceSelection,i]
+                params, covmat = optimize.curve_fit(EKGTemplateFunc, sliceSelection, Original)
+                CardiacFiltered[sliceSelection,i] = Original - EKGTemplateFunc(sliceSelection, *params)
+        
+        RawData["Data"] = CardiacFiltered
+        return RawData
+
+    def LMSDecoupler(RawData):
+        Signal = RawData["Data"]
+        if not Signal.shape[1] == 2:
             return RawData
+        
+        SamplingRate = RawData["SamplingRate"]
 
-        EKGTemplate = np.mean(np.array(CardiacEpochs), axis=0)
-        EKGTemplate = EKGTemplate / (np.max(EKGTemplate)-np.min(EKGTemplate))
+        Window = int(SamplingRate/2)
+        PaddedSignal = np.concatenate((Signal, Signal), axis=0)
 
-        def EKGTemplateFunc(xdata, amplitude, offset):
-            return EKGTemplate * amplitude + offset
+        _, DecoupledSignal1, _ = SPU.filtLMS(PaddedSignal[:,0], PaddedSignal[:,1], order=Window, step_size=0.5)
+        _, DecoupledSignal2, _ = SPU.filtLMS(PaddedSignal[:,1], PaddedSignal[:,0], order=Window, step_size=0.5)
+        RawData["Data"][:,0] = DecoupledSignal2[len(Signal):]
+        RawData["Data"][:,1] = DecoupledSignal1[len(Signal):]
+        return RawData
 
-        CardiacFiltered = copy.deepcopy(RawData)
-        for j in range(len(Peaks)):
-            ShiftPeak = 0
-            if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(RawData):
-                continue
-            findPeak = np.argmax(RawData[Peaks[j]-SearchWindow:Peaks[j]+SearchWindow])
-            ShiftPeak = SearchWindow-findPeak
-            if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(RawData):
-                continue
-            sliceSelection = np.arange(Peaks[j]-SearchWindow-ShiftPeak, Peaks[j]+SearchWindow-ShiftPeak)
-            Original = RawData[sliceSelection]
-            params, covmat = optimize.curve_fit(EKGTemplateFunc, sliceSelection, Original)
-            CardiacFiltered[sliceSelection] = Original - EKGTemplateFunc(sliceSelection, *params)
-        return CardiacFiltered
+    def processRawData(RawData):
+        if filterMethod == "Kurtosis-peak Detection Template Matching":
+            return KurtosisFilterr(RawData)
+        elif filterMethod == "Fixed Height Peak Detection Template Matching":
+            return FixedPeakFilter(RawData)
+        elif filterMethod == "LMS Decoupler":
+            return LMSDecoupler(RawData)
+        return RawData
 
     ProcessedData = []
     for recordingId in RecordingIds:
@@ -807,8 +924,7 @@ def handleCardiacFilterProcessing(step, RecordingIds, Results, Configuration, an
                 recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
                 RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
             
-            for i in range(RawData["Data"].shape[1]):
-                RawData["Data"][:,i] = processRawData(RawData["Data"][:,i])
+            RawData = processRawData(RawData)
             RawData["ResultType"] = "TimeDomain"
             ProcessedData.append(RawData)
     
@@ -818,8 +934,7 @@ def handleCardiacFilterProcessing(step, RecordingIds, Results, Configuration, an
             RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
             
             for i in range(len(RawData)):
-                for j in range(RawData[i]["Data"].shape[1]):
-                    RawData[i]["Data"][:,j] = processRawData(RawData[i]["Data"][:,j])
+                RawData[i] = processRawData(RawData[i])
                 RawData[i]["ResultType"] = "TimeDomain"
                 ProcessedData.append(RawData[i])
 
@@ -1363,6 +1478,9 @@ def processAnalysis(user, analysisId):
                 Results.append(Result)
             elif step["type"]["value"] == "cardiacFilter":
                 Result = handleCardiacFilterProcessing(step, RecordingIds, Results, Configuration, analysis)
+                Results.append(Result)
+            elif step["type"]["value"] == "wienerFilter":
+                Result = handleWienerFilterProcessing(step, RecordingIds, Results, Configuration, analysis)
                 Results.append(Result)
             elif step["type"]["value"] == "export":
                 Result = handleExportStructure(step, RecordingIds, Results, Configuration, analysis)

@@ -33,8 +33,15 @@ function ResultViewer({data, result, config}) {
 
   if (Object.keys(data).length == 0) return null;
   const type = data.Data[0].ResultType;
+  console.log(type)
 
-  if (type == "RawEventPSDs") {
+  if (type == "TimeDomain") {
+    return <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <TimeDomainFigure dataToRender={data.Data} height={500} figureTitle={result.title} />
+      </Grid>
+    </Grid>
+  } else if (type == "RawEventPSDs") {
     return <Grid container spacing={2}>
       <Grid item xs={12}>
         <EventPSDs dataToRender={data.Data[0]} height={600} figureTitle={"EventPSDs"} />

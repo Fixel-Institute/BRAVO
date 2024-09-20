@@ -42,7 +42,11 @@ const FilterEditor = ({currentState, newProcess, availableRecordings, defaultCon
         renderOption={(props, option) => <li {...props}>{option}</li>}
         value={filterOptions.targetRecording}
         options={availableRecordings}
-        onChange={(event, newValue) => setFilterOptions({...filterOptions, targetRecording: newValue})}
+        onChange={(event, newValue) => setFilterOptions((filterOptions) => {
+          filterOptions.targetRecording = newValue;
+          filterOptions.output = newValue + "_Filtered";
+          return {...filterOptions};
+        })}
       />
       <MDTypography fontSize={15} style={{paddingTop: 30}}>
         {"Filter Range: "}

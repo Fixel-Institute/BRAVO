@@ -42,7 +42,11 @@ const CalculateSpectralFeaturesEditor = ({currentState, newProcess, availableRec
         renderOption={(props, option) => <li {...props}>{option}</li>}
         value={filterOptions.targetRecording}
         options={availableRecordings}
-        onChange={(event, newValue) => setFilterOptions({...filterOptions, targetRecording: newValue})}
+        onChange={(event, newValue) => setFilterOptions((filterOptions) => {
+          filterOptions.targetRecording = newValue;
+          filterOptions.output = newValue + "_SpectralFeatures";
+          return {...filterOptions};
+        })}
       />
       
       {filterOptions.bands.map((band, index) => {

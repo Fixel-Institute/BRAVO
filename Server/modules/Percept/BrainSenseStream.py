@@ -316,55 +316,96 @@ def processRealtimeStreams(stream, cardiacFilter=False):
         stream["TimeDomain"]["Filtered"].append(signal.filtfilt(b, a, stream["TimeDomain"]["Data"][:,i]))
 
         if cardiacFilter:
-            Window = 125
-            KurtosisIndex = range(0, len(stream["TimeDomain"]["Filtered"][i])-Window)
-            ExpectedKurtosis = np.zeros((len(KurtosisIndex)))
-            for j in range(len(KurtosisIndex)):
-                zScore = stats.zscore(stream["TimeDomain"]["Filtered"][i][KurtosisIndex[j]:KurtosisIndex[j]+Window])
-                ExpectedKurtosis[j] = np.mean(np.power(zScore, 4))
+            filterMethod = "Kurtosis"
+            PredictedSignal = signal.wiener(stream["TimeDomain"]["Filtered"][i], mysize=125)
+            stream["TimeDomain"]["Filtered"][i] -= PredictedSignal
 
-            [b,a] = signal.butter(3, np.array([0.5, 2])*2/250, "bandpass")
-            ExpectedKurtosis = signal.filtfilt(b,a,ExpectedKurtosis)
-            Peaks, _ = signal.find_peaks(ExpectedKurtosis, distance=125)
-            Peaks += int(Window/2)
+            if filterMethod == "Fixed Peak Find":
+                # Cardiac Filter
+                posPeaks,_ = signal.find_peaks(stream["TimeDomain"]["Filtered"][i], prominence=[10,200], distance=stream["TimeDomain"]["SamplingRate"]*0.5)
+                PosCardiacVariability = np.std(np.diff(posPeaks))
+                negPeaks,_ = signal.find_peaks(-stream["TimeDomain"]["Filtered"][i], prominence=[10,200], distance=stream["TimeDomain"]["SamplingRate"]*0.5)
+                NegCardiacVariability = np.std(np.diff(negPeaks))
 
-            CardiacEpochs = []
-            SearchWindow = 100
-            for j in range(len(Peaks)):
-                if ExpectedKurtosis[Peaks[j]-int(Window/2)] < 1.2:
-                    continue
+                if PosCardiacVariability < NegCardiacVariability:
+                    peaks = posPeaks
+                else:
+                    peaks = negPeaks
+                CardiacRate = int(np.mean(np.diff(peaks)))
 
-                ShiftPeak = 0
-                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
-                    continue 
-                findPeak = np.argmax(stream["TimeDomain"]["Filtered"][i][Peaks[j]-SearchWindow:Peaks[j]+SearchWindow])
-                ShiftPeak = SearchWindow-findPeak
-                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
-                    continue 
-                CardiacEpochs.append(stream["TimeDomain"]["Filtered"][i][Peaks[j]-SearchWindow-ShiftPeak:Peaks[j]+SearchWindow-ShiftPeak])
+                PrePeak = int(CardiacRate*0.25)
+                PostPeak = int(CardiacRate*0.65)
+                EKGMatrix = np.zeros((len(peaks)-2,PrePeak+PostPeak))
+                for j in range(1,len(peaks)-1):
+                    if peaks[j]+PostPeak < len(stream["TimeDomain"]["Filtered"][i]) and peaks[j]-PrePeak > 0:
+                        EKGMatrix[j-1,:] = stream["TimeDomain"]["Filtered"][i][peaks[j]-PrePeak:peaks[j]+PostPeak]
 
-            EKGTemplate = np.mean(np.array(CardiacEpochs), axis=0)
-            EKGTemplate = EKGTemplate / (np.max(EKGTemplate)-np.min(EKGTemplate))
+                EKGTemplate = np.mean(EKGMatrix,axis=0)
+                EKGTemplate = EKGTemplate / (np.max(EKGTemplate)-np.min(EKGTemplate))
 
-            def EKGTemplateFunc(xdata, amplitude, offset):
-                return EKGTemplate * amplitude + offset
+                def EKGTemplateFunc(xdata, amplitude, offset):
+                    return EKGTemplate * amplitude + offset
 
-            CardiacFiltered = copy.deepcopy(stream["TimeDomain"]["Filtered"][i])
-            for j in range(len(Peaks)):
-                ShiftPeak = 0
-                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
-                    continue 
+                for j in range(len(peaks)):
+                    if peaks[j]-PrePeak < 0:
+                        pass
+                    elif peaks[j]+PostPeak >= len(stream["TimeDomain"]["Filtered"][i]) :
+                        pass
+                    else:
+                        sliceSelection = np.arange(peaks[j]-PrePeak,peaks[j]+PostPeak)
+                        params, covmat = optimize.curve_fit(EKGTemplateFunc, sliceSelection, stream["TimeDomain"]["Filtered"][i][sliceSelection])
+                        stream["TimeDomain"]["Filtered"][i][sliceSelection] = stream["TimeDomain"]["Filtered"][i][sliceSelection] - EKGTemplateFunc(sliceSelection, *params)
 
-                findPeak = np.argmax(stream["TimeDomain"]["Filtered"][i][Peaks[j]-SearchWindow:Peaks[j]+SearchWindow])
-                ShiftPeak = SearchWindow-findPeak
-                if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
-                    continue
-                
-                sliceSelection = np.arange(Peaks[j]-SearchWindow-ShiftPeak, Peaks[j]+SearchWindow-ShiftPeak)
-                Original = stream["TimeDomain"]["Filtered"][i][sliceSelection]
-                params, covmat = optimize.curve_fit(EKGTemplateFunc, sliceSelection, Original)
-                CardiacFiltered[sliceSelection] = Original - EKGTemplateFunc(sliceSelection, *params)
-            stream["TimeDomain"]["Filtered"][i] = CardiacFiltered
+            else:
+                Window = 125
+                KurtosisIndex = range(0, len(stream["TimeDomain"]["Filtered"][i])-Window)
+                ExpectedKurtosis = np.zeros((len(KurtosisIndex)))
+                for j in range(len(KurtosisIndex)):
+                    zScore = stats.zscore(stream["TimeDomain"]["Filtered"][i][KurtosisIndex[j]:KurtosisIndex[j]+Window])
+                    ExpectedKurtosis[j] = np.mean(np.power(zScore, 4))
+
+                [b,a] = signal.butter(3, np.array([0.5, 2])*2/250, "bandpass")
+                ExpectedKurtosis = signal.filtfilt(b,a,ExpectedKurtosis)
+                Peaks, _ = signal.find_peaks(ExpectedKurtosis, distance=125)
+                Peaks += int(Window/2)
+
+                CardiacEpochs = []
+                SearchWindow = 100
+                for j in range(len(Peaks)):
+                    if ExpectedKurtosis[Peaks[j]-int(Window/2)] < 1.2:
+                        continue
+
+                    ShiftPeak = 0
+                    if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
+                        continue 
+                    findPeak = np.argmax(stream["TimeDomain"]["Filtered"][i][Peaks[j]-SearchWindow:Peaks[j]+SearchWindow])
+                    ShiftPeak = SearchWindow-findPeak
+                    if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
+                        continue 
+                    CardiacEpochs.append(stream["TimeDomain"]["Filtered"][i][Peaks[j]-SearchWindow-ShiftPeak:Peaks[j]+SearchWindow-ShiftPeak])
+
+                EKGTemplate = np.mean(np.array(CardiacEpochs), axis=0)
+                EKGTemplate = EKGTemplate / (np.max(EKGTemplate)-np.min(EKGTemplate))
+
+                def EKGTemplateFunc(xdata, amplitude, offset):
+                    return EKGTemplate * amplitude + offset
+
+                CardiacFiltered = copy.deepcopy(stream["TimeDomain"]["Filtered"][i])
+                for j in range(len(Peaks)):
+                    ShiftPeak = 0
+                    if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
+                        continue 
+
+                    findPeak = np.argmax(stream["TimeDomain"]["Filtered"][i][Peaks[j]-SearchWindow:Peaks[j]+SearchWindow])
+                    ShiftPeak = SearchWindow-findPeak
+                    if Peaks[j]-SearchWindow-ShiftPeak < 0 or Peaks[j]+SearchWindow-ShiftPeak >= len(stream["TimeDomain"]["Filtered"][i]):
+                        continue
+                    
+                    sliceSelection = np.arange(Peaks[j]-SearchWindow-ShiftPeak, Peaks[j]+SearchWindow-ShiftPeak)
+                    Original = stream["TimeDomain"]["Filtered"][i][sliceSelection]
+                    params, covmat = optimize.curve_fit(EKGTemplateFunc, sliceSelection, Original)
+                    CardiacFiltered[sliceSelection] = Original - EKGTemplateFunc(sliceSelection, *params)
+                stream["TimeDomain"]["Filtered"][i] = CardiacFiltered
 
         # Wavelet Computation
         stream["TimeDomain"]["Wavelet"].append(SPU.waveletTimeFrequency(stream["TimeDomain"]["Filtered"][i], freq=np.arange(0.5,100.5,0.5), ma=int(stream["TimeDomain"]["SamplingRate"]/2), fs=stream["TimeDomain"]["SamplingRate"]))

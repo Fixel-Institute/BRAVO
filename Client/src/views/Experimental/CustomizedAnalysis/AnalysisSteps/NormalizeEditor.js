@@ -44,7 +44,11 @@ const NormalizeEditor = ({currentState, newProcess, availableRecordings, default
         renderOption={(props, option) => <li {...props}>{option}</li>}
         value={filterOptions.targetRecording}
         options={availableRecordings}
-        onChange={(event, newValue) => setFilterOptions({...filterOptions, targetRecording: newValue})}
+        onChange={(event, newValue) => setFilterOptions((filterOptions) => {
+          filterOptions.targetRecording = newValue;
+          filterOptions.output = newValue + "_Normalized";
+          return {...filterOptions};
+        })}
       />
 
       <Autocomplete 

@@ -7,6 +7,7 @@ import CardiacFilterEditor from "./CardiacFilterEditor"
 import FilterEditor from "./FilterEditor"
 import NormalizeEditor from "./NormalizeEditor"
 import ViewEditor from "./ViewEditor"
+import WienerFilterrEditor from "./WienerFilterrEditor"
 
 
 const availableProcessings = [{
@@ -15,6 +16,11 @@ const availableProcessings = [{
     label: "Apply Cardiac Filter to TimeDomain Data",
   },
   cardiacFilterMethod: "Kurtosis-peak Detection Template Matching",
+}, {
+  type: {
+    value: "wienerFilter",
+    label: "Apply Wiener Filter to TimeDomain Data (Exploratory Artifact Removal Method)",
+  },
 }, {
   type: {
     value: "filter",
@@ -69,12 +75,16 @@ const availableProcessings = [{
 const AnalysisSteps = ({type, ...rest}) => {
   const defaultConfigs = availableProcessings.filter((a) => a.type.value == type);
   if (defaultConfigs.length > 0) {
-    if (type === "cardiacFilter") {
+    if (type === "filter") {
+      return <FilterEditor currentState={rest.currentState} availableRecordings={rest.availableRecordings} newProcess={rest.newProcess} defaultConfigs={defaultConfigs[0]}
+        updateConfiguration={rest.updateConfiguration}
+      />
+    } else if (type === "cardiacFilter") {
       return <CardiacFilterEditor currentState={rest.currentState} availableRecordings={rest.availableRecordings} newProcess={rest.newProcess} defaultConfigs={defaultConfigs[0]}
         updateConfiguration={rest.updateConfiguration}
       />
-    } else if (type === "filter") {
-      return <FilterEditor currentState={rest.currentState} availableRecordings={rest.availableRecordings} newProcess={rest.newProcess} defaultConfigs={defaultConfigs[0]}
+    } else if (type === "wienerFilter") {
+      return <WienerFilterrEditor currentState={rest.currentState} availableRecordings={rest.availableRecordings} newProcess={rest.newProcess} defaultConfigs={defaultConfigs[0]}
         updateConfiguration={rest.updateConfiguration}
       />
     } else if (type === "extractTimeFrequencyAnalysis") {

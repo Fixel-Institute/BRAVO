@@ -12,6 +12,7 @@ const ExtractPSDsFromAnnotationsTemplate = ({availableRecordings, setConfigurati
     targetRecording: "",
     cardiacRemoved: false,
     filtered: false,
+    wiener: false,
     normalized: true,
     averageFeatures: true,
     output: "Spectral Features Output"
@@ -51,6 +52,11 @@ const ExtractPSDsFromAnnotationsTemplate = ({availableRecordings, setConfigurati
         control={<Switch checked={options.cardiacRemoved} 
         onChange={() => setOptions({...options, cardiacRemoved: !options.cardiacRemoved})} />} 
         label="Apply Cardiac Filter? " />
+
+      <FormControlLabel 
+        control={<Switch checked={options.wiener} 
+        onChange={() => setOptions({...options, wiener: !options.wiener})} />} 
+        label="Apply Wiener Filter? (Exploratory Option for Artifacts) " />
 
       <FormControlLabel 
         control={<Switch checked={options.filtered} 
