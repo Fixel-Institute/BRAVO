@@ -317,6 +317,9 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, recordingTy
             "Version": 1,
             "Channels": {}
         }
+        for i in range(len(recording.recording_info["Channel"])):
+            Data["Descriptor"][recordingId]["Channels"][recording.recording_info["Channel"][i]] = {"id": i, "show": True, "name": recording.recording_info["Channel"][i]}
+
         saveAnalysisConfiguration(Data, user, patientId, analysisId)
 
         analysis.recording_type.append(recording.recording_type)
@@ -366,6 +369,9 @@ def addRecordingToAnalysis(user, patientId, analysisId, recordingId, recordingTy
                     "Version": 1,
                     "Channels": {}
                 }
+                for i in range(len(recording.recording_info["Channel"])):
+                    Data["Descriptor"][recordingId]["Channels"][recording.recording_info["Channel"][i]] = {"id": i, "show": True, "name": recording.recording_info["Channel"][i]}
+
                 saveAnalysisConfiguration(Data, user, patientId, analysisId)
 
                 analysis.recording_type.append(recording.recording_type)
@@ -978,7 +984,7 @@ def handleExtractTimeFrequencyAnalysis(step, RecordingIds, Results, Configuratio
             RawData["Spectrogram"].append(Spectrum)
             RawData["Spectrogram"][i]["Missing"] = SPU.calculateMissingLabel(RawData["Missing"][:,i], window=window, overlap=overlap, fs=RawData["SamplingRate"])
             RawData["Spectrogram"][i]["Type"] = "Spectrogram"
-            RawData["Spectrogram"][i]["Time"] += RawData["StartTime"] # TODO Check later
+            RawData["Spectrogram"][i]["Time"] += RawData["StartTime"] + (Configuration["Descriptor"][recordingId]["TimeShift"]/1000)# TODO Check later
 
             if dropMissing:
                 TimeSelection = RawData["Spectrogram"][i]["Missing"] == 0
@@ -1021,6 +1027,113 @@ def handleExtractTimeFrequencyAnalysis(step, RecordingIds, Results, Configuratio
         "Id": step["id"],
         "ProcessedData": str(recording.recording_id),
         "Type": "RawSpectrogram"
+    }
+
+def handleCrossCorrelationAnalysis(step, RecordingIds, Results, Configuration, analysis):
+    print("Start Cross Correlation Analysis")
+    targetRecording = step["config"]["targetRecording"]
+    targetChannel = step["config"]["targetChannel"]
+    secondTargetRecording = step["config"]["secondTargetRecording"]
+    secondTargetChannel = step["config"]["secondTargetChannel"]
+
+    ProcessedData = []
+    """
+    for recordingId in RecordingIds:
+        if Configuration["Descriptor"][recordingId]["Type"] == targetSignal:
+            if models.ExternalRecording.objects.filter(recording_id=recordingId).exists():
+                recording = models.ExternalRecording.objects.filter(recording_id=recordingId).first()
+                RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+            elif models.NeuralActivityRecording.objects.filter(recording_id=recordingId).exists():
+                recording = models.NeuralActivityRecording.objects.filter(recording_id=recordingId).first()
+                RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+
+            RawData = processRawData(RawData=RawData)
+            ProcessedData.append(RawData)
+    """
+    PrimaryInput = None
+    SecondaryInput = None
+    for result in Results:
+        if result["ResultLabel"] == targetRecording:
+            recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
+            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+            
+            PrimaryInput = {
+                "Type": result["Type"],
+                "Data": { }
+            }
+            for i in range(len(RawData)):
+                for channel in range(len(RawData[i]["ChannelNames"])):
+                    if RawData[i]["ChannelNames"][channel] == targetChannel:
+                        if not "Time" in PrimaryInput["Data"].keys():
+                            PrimaryInput["Data"]["Time"] = RawData[i]["Spectrogram"][channel]["Time"].flatten()
+                            PrimaryInput["Data"]["Feature"] = RawData[i]["Spectrogram"][channel]["logPower"]
+                            PrimaryInput["Data"]["Name"] = [f"{i:.2f}" for i in RawData[i]["Spectrogram"][channel]["Frequency"]]
+                        else:
+                            PrimaryInput["Data"]["Time"] = np.concatenate((PrimaryInput["Data"]["Time"], RawData[i]["Spectrogram"][channel]["Time"].flatten()))
+                            PrimaryInput["Data"]["Feature"] = np.concatenate((PrimaryInput["Data"]["Feature"], RawData[i]["Spectrogram"][channel]["logPower"]), axis=1)
+
+        if result["ResultLabel"] == secondTargetRecording:
+            recording = models.ExternalRecording.objects.filter(recording_id=result["ProcessedData"]).first()
+            RawData = Database.loadSourceDataPointer(recording.recording_datapointer)
+            
+            SecondaryInput = {
+                "Type": result["Type"],
+                "Data": { }
+            }
+            for i in range(len(RawData)):
+                for channel in range(len(RawData[i]["ChannelNames"])):
+                    if RawData[i]["ChannelNames"][channel] == secondTargetChannel:
+                        if not "Time" in SecondaryInput["Data"].keys():
+                            SecondaryInput["Data"]["Time"] = RawData[i]["Spectrogram"][channel]["Time"].flatten()
+                            SecondaryInput["Data"]["Feature"] = RawData[i]["Spectrogram"][channel]["logPower"]
+                            SecondaryInput["Data"]["Name"] = [f"{i:.2f}" for i in RawData[i]["Spectrogram"][channel]["Frequency"]]
+                        else:
+                            SecondaryInput["Data"]["Time"] = np.concatenate((SecondaryInput["Data"]["Time"], RawData[i]["Spectrogram"][channel]["Time"].flatten()))
+                            SecondaryInput["Data"]["Feature"] = np.concatenate((SecondaryInput["Data"]["Feature"], RawData[i]["Spectrogram"][channel]["logPower"]), axis=1)
+
+                #RawData[i] = processRawData(RawData=RawData[i])
+                #ProcessedData.append(RawData[i])
+
+    if PrimaryInput and SecondaryInput:
+        sortedIndex = np.argsort(PrimaryInput["Data"]["Time"])
+        PrimaryInput["Data"]["Time"] = PrimaryInput["Data"]["Time"][sortedIndex]
+        PrimaryInput["Data"]["Feature"] = PrimaryInput["Data"]["Feature"][:, sortedIndex]
+        sortedIndex = np.argsort(SecondaryInput["Data"]["Time"])
+        SecondaryInput["Data"]["Time"] = SecondaryInput["Data"]["Time"][sortedIndex]
+        SecondaryInput["Data"]["Feature"] = SecondaryInput["Data"]["Feature"][:, sortedIndex]
+
+        TimeStep = np.median(np.diff(PrimaryInput["Data"]["Time"]))
+
+        PrimarySelection = np.ones(PrimaryInput["Data"]["Time"].shape, dtype=bool)
+        SecondarySelection = np.zeros(SecondaryInput["Data"]["Time"].shape, dtype=bool)
+        for i in range(len(PrimaryInput["Data"]["Time"])):
+            DiffTime = np.abs(SecondaryInput["Data"]["Time"] - PrimaryInput["Data"]["Time"][i])
+            matchIndex = np.argmin(DiffTime)
+            if DiffTime[matchIndex] < TimeStep:
+                if SecondarySelection[matchIndex]:
+                    PrimarySelection[i] = False
+                SecondarySelection[matchIndex] = True
+            else:
+                PrimarySelection[i] = False
+        
+        ResultData = {"ResultType": "CrossCorrelationMatrix", "PrimaryChannel": targetRecording + " - " + targetChannel, "SecondaryChannel": secondTargetRecording + " - " + secondTargetChannel}
+        ResultData["PrimaryFeatures"] = PrimaryInput["Data"]["Name"]
+        ResultData["SecondaryFeatures"] = SecondaryInput["Data"]["Name"]
+        ResultData["Matrix"] = np.zeros((PrimaryInput["Data"]["Feature"].shape[0], SecondaryInput["Data"]["Feature"].shape[0]))
+        for i in range(PrimaryInput["Data"]["Feature"].shape[0]):
+            for j in range(SecondaryInput["Data"]["Feature"].shape[0]):
+                r, p = stats.pearsonr(PrimaryInput["Data"]["Feature"][i,PrimarySelection], SecondaryInput["Data"]["Feature"][j,SecondarySelection])
+                ResultData["Matrix"][i,j] = r
+
+    recording = createResultDataFile(ResultData, str(analysis.device_deidentified_id), "AnalysisOutput", 0)
+    analysis.recording_type.append(recording.recording_type)
+    analysis.recording_list.append(str(recording.recording_id))
+
+    return {
+        "ResultLabel": step["config"]["output"],
+        "Id": step["id"],
+        "ProcessedData": str(recording.recording_id),
+        "Type": "CrossCorrelationMatrix"
     }
 
 def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, analysis):
@@ -1487,6 +1600,9 @@ def processAnalysis(user, analysisId):
                 Results.append(Result)
             elif step["type"]["value"] == "extractTimeFrequencyAnalysis":
                 Result = handleExtractTimeFrequencyAnalysis(step, RecordingIds, Results, Configuration, analysis)
+                Results.append(Result)
+            elif step["type"]["value"] == "crossCorrelationAnalysis":
+                Result = handleCrossCorrelationAnalysis(step, RecordingIds, Results, Configuration, analysis)
                 Results.append(Result)
             elif step["type"]["value"] == "extractAnnotations":
                 Result = handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, analysis)

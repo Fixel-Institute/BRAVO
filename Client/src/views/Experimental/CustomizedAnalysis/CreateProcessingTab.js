@@ -90,7 +90,7 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
       }
       setAvailableRecordings(availableRecordings);
     }
-  }, [analysisId]);
+  }, [analysisId, analysisData]);
 
   const handleAddStep = (processingConfig) => {
     if (analysisData.Analysis.ProcessingQueued) {
@@ -393,7 +393,7 @@ function CreateProcessingTab({analysisId, analysisData, updateProcessingSteps, u
                 }
               }}
             />
-            <AnalysisSteps type={editProcessingStep.type.value} currentState={editProcessingStep.config} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
+            <AnalysisSteps type={editProcessingStep.type.value} currentState={editProcessingStep.config} availableRecordingChannels={analysisData.Configuration.Descriptor} availableRecordings={availableRecordings} newProcess={editProcessingStep.new} 
               updateConfiguration={updateConfiguration}
             />
 

@@ -29,7 +29,8 @@ export const SessionController = (function () {
   let user = {};
   let authToken = "";
   let refreshToken = "";
-  let serverVersion = "";
+  let serverVersion = 0;
+  let newestVersion = 0;
 
   const setAuthToken = (token) => {
     authToken = token;
@@ -60,6 +61,7 @@ export const SessionController = (function () {
   const getConnectionStatus = () => {
     return {
       version: serverVersion,
+      update: newestVersion,
       status: connectionStatus
     };
   };
@@ -121,11 +123,8 @@ export const SessionController = (function () {
     try {
       const response = await query("/api/handshake", {}, {}, 2000);
       if (response.status == 200) {
-        if (response.data.Version) {
-          serverVersion = response.data.Version;
-        } else {
-          serverVersion = "";
-        }
+        serverVersion = response.data.CurrentVersion;
+        newestVersion = response.data.DockerVersionLatest;
         connectionStatus = true;
       }
     } catch (error) {

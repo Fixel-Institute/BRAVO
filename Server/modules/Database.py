@@ -88,7 +88,7 @@ def retrieveProcessingSettings(config=dict()):
             "PSDMethod": {
                 "name": "Power Spectrum Estimation Algorithm",
                 "description": "",
-                "options": ["Estimated Medtronic PSD","Short-time Fourier Transform"],
+                "options": ["Estimated Medtronic PSD","Short-time Fourier Transform","Welch's Periodogram","Autoregressive Model"],
                 "value": "Short-time Fourier Transform"
             },
             "MonopolarEstimation": {

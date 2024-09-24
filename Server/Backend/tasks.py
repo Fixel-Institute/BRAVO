@@ -8,6 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 def ProcessUploadQueue():
     print("Check Upload")
     subprocess.call(["bash", os.path.join(BASE_DIR, 'ProcessingQueueJob.sh')])
+    subprocess.call(["bash", os.path.join(BASE_DIR, 'AnalysisProcessingJob.sh')])
 
 @shared_task
 def ProcessAnalysisQueue():

@@ -86,7 +86,6 @@ class UpdateSessionConfig(RestViews.APIView):
                     request.user.configuration[key] = request.data[key]
 
                 if key in ["BrainSenseSurvey", "RealtimeStream"]:
-                    print(request.user.configuration["ProcessingSettings"][key])
                     for subkey in request.data[key]:
                         if request.data[key][subkey]["value"] in request.user.configuration["ProcessingSettings"][key][subkey]["options"]:
                             request.user.configuration["ProcessingSettings"][key][subkey]["value"] = request.data[key][subkey]["value"]

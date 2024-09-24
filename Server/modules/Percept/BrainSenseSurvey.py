@@ -132,23 +132,18 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
                 continue
 
             survey = Database.loadSourceDataPointer(recording.recording_datapointer)
-            if not "Spectrum" in survey.keys():
-                survey = processBrainSenseSurvey(survey, options)
+            if not "Descriptor" in survey.keys():
+                survey["Descriptor"] = {}
+                
+            if not "PSDMethod" in survey["Descriptor"].keys():
+                survey = processBrainSenseSurvey(survey, options["PSDMethod"]["value"])
                 Database.saveSourceFiles(survey, "BrainSenseSurvey", "Combined", recording.recording_id, recording.device_deidentified_id)
             
-            if not "MedtronicPSD" in survey.keys():
-                survey = processBrainSenseSurvey(survey, options)
+            if not options["PSDMethod"]["value"] == survey["Descriptor"]["PSDMethod"]:
+                survey = processBrainSenseSurvey(survey, options["PSDMethod"]["value"])
                 Database.saveSourceFiles(survey, "BrainSenseSurvey", "Combined", recording.recording_id, recording.device_deidentified_id)
-            
+
             # Monopolar Estimation
-            if not options["MonopolarEstimation"]["value"] == "No Estimation":
-                if not "Monopolar" in survey.keys():
-                    survey = processBrainSenseSurvey(survey, options) 
-                elif not survey["Monopolar"] == options["MonopolarEstimation"]["value"]:
-                    survey = processBrainSenseSurvey(survey, options) 
-            else:
-                if "Monopolar" in survey.keys():
-                    survey = processBrainSenseSurvey(survey, options)
 
             MonopolarEstimation = []
             for i in range(len(survey["ChannelNames"])):
@@ -162,17 +157,25 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
                 for lead in leads:
                     if lead["TargetLocation"].startswith(data["Hemisphere"]):
                         data["Hemisphere"] = lead["TargetLocation"]
-                        data["CustomName"] = lead["CustomName"]
+                        data["CustomName"] = lead["CustomName"] if lead["CustomName"] else lead["TargetLocation"]
                         break
-
+                
                 if requestRaw:
                     data["Raw"] = survey["Data"][:,i].tolist()
                 else:
                     if options["PSDMethod"]["value"] == "Estimated Medtronic PSD":
-                        data["Frequency"] = survey["MedtronicPSD"][i]["Frequency"]
-                        data["MeanPower"] = survey["MedtronicPSD"][i]["Power"].tolist()
-                        data["StdPower"] = survey["MedtronicPSD"][i]["StdErr"].tolist()
+                        data["Frequency"] = survey["Spectrum"][i]["Frequency"]
+                        data["MeanPower"] = survey["Spectrum"][i]["Power"].tolist()
+                        data["StdPower"] = survey["Spectrum"][i]["StdErr"].tolist()
                     elif options["PSDMethod"]["value"] == "Short-time Fourier Transform":
+                        data["Frequency"] = survey["Spectrum"][i]["Frequency"]
+                        data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                        data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                    elif options["PSDMethod"]["value"] == "Autoregressive Model":
+                        data["Frequency"] = survey["Spectrum"][i]["Frequency"]
+                        data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                        data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
+                    elif options["PSDMethod"]["value"] == "Welch's Periodogram":
                         data["Frequency"] = survey["Spectrum"][i]["Frequency"]
                         data["MeanPower"] = np.mean(survey["Spectrum"][i]["Power"],axis=1).tolist()
                         data["StdPower"] = SPU.stderr(survey["Spectrum"][i]["Power"],axis=1).tolist()
@@ -185,11 +188,12 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
 
             if options["MonopolarEstimation"]["value"] == "DETEC Algorithm (Strelow et. al., 2022)":
                 for hemisphere in ["Left", "Right"]:
-                    HemisphereCount = len(["Match" for i in range(len(MonopolarEstimation)) if MonopolarEstimation[i]["Hemisphere"].startswith(hemisphere)])
+                    HemisphereCount = [MonopolarEstimation[i]["Hemisphere"] for i in range(len(MonopolarEstimation)) if MonopolarEstimation[i]["Hemisphere"].startswith(hemisphere)]
                     
-                    if HemisphereCount < 6:
-                        continue
                     for channel in [0,1,2,3]:
+                        if len([i for i in HemisphereCount if not "." in HemisphereCount]) <= 3:
+                            continue
+
                         data = dict()
                         data["Channel"] = [channel]
                         data["MeanPower"] = []
@@ -200,6 +204,7 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
                                     data["DeviceName"] = MonopolarEstimation[i]["DeviceName"]
                                     data["Timestamp"] = MonopolarEstimation[i]["Timestamp"]
                                     data["Hemisphere"] = MonopolarEstimation[i]["Hemisphere"]
+                                    data["CustomName"] = MonopolarEstimation[i]["CustomName"]
                                     data["Frequency"] = MonopolarEstimation[i]["Frequency"]
                                     data["MeanPower"] = np.array(MonopolarEstimation[i]["MeanPower"]) / np.diff(MonopolarEstimation[i]["Channel"])
                                     data["StdPower"] = np.zeros(len(MonopolarEstimation[i]["Frequency"]))
@@ -212,6 +217,9 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
                             BrainSenseData.append(data)
   
                     for channel in [1.1,1.2,1.3,2.1,2.2,2.3]:
+                        if len([i for i in HemisphereCount if "." in HemisphereCount]) <= 3:
+                            continue
+
                         data = dict()
                         data["Channel"] = [channel]
                         data["MeanPower"] = []
@@ -222,6 +230,7 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
                                     data["DeviceName"] = MonopolarEstimation[i]["DeviceName"]
                                     data["Timestamp"] = MonopolarEstimation[i]["Timestamp"]
                                     data["Hemisphere"] = MonopolarEstimation[i]["Hemisphere"]
+                                    data["CustomName"] = MonopolarEstimation[i]["CustomName"]
                                     data["Frequency"] = MonopolarEstimation[i]["Frequency"]
                                     data["MeanPower"] = np.array(MonopolarEstimation[i]["MeanPower"]) / np.diff(MonopolarEstimation[i]["Channel"])
                                     data["StdPower"] = np.zeros(len(MonopolarEstimation[i]["Frequency"]))
@@ -236,7 +245,7 @@ def querySurveyResults(user, patientUniqueID, options, requestRaw, authority):
                 BrainSenseData.extend(MonopolarEstimation)
     return BrainSenseData
 
-def processBrainSenseSurvey(survey, method="spectrogram"):
+def processBrainSenseSurvey(survey, method="Short-time Fourier Transform"):
     """ Calculate Baseline Survey Power Spectrum.
 
     The pipeline will filter the raw Baseline Survey with a zero-phase 5th-order Butterworth filter between 1-100Hz.
@@ -251,10 +260,36 @@ def processBrainSenseSurvey(survey, method="spectrogram"):
     """
 
     [b,a] = signal.butter(5, np.array([1,100])*2/250, 'bp', output='ba')
-    survey["Spectrum"] = []
-    survey["MedtronicPSD"] = []
-    for i in range(len(survey["ChannelNames"])):
-        filtered = signal.filtfilt(b, a, survey["Data"][:,i])
-        survey["MedtronicPSD"].append(SPU.MedtronicPSD(filtered))
-        survey["Spectrum"].append(SPU.defaultSpectrogram(filtered, window=1.0, overlap=0.5, frequency_resolution=0.5, fs=survey["SamplingRate"]))
-    return survey
+
+    if method == "Short-time Fourier Transform":
+        survey["Spectrum"] = []
+        survey["Descriptor"]["PSDMethod"] = method
+        for i in range(len(survey["ChannelNames"])):
+            filtered = signal.filtfilt(b, a, survey["Data"][:,i])
+            survey["Spectrum"].append(SPU.defaultSpectrogram(filtered, window=1.0, overlap=0.5, frequency_resolution=0.5, fs=survey["SamplingRate"]))
+        return survey
+    
+    elif method == "Welch's Periodogram":
+        survey["Spectrum"] = []
+        survey["Descriptor"]["PSDMethod"] = method
+        for i in range(len(survey["ChannelNames"])):
+            filtered = signal.filtfilt(b, a, survey["Data"][:,i])
+            survey["Spectrum"].append(SPU.welchSpectrogram(filtered, window=10.0, overlap=7.5, frequency_resolution=0.5, fs=survey["SamplingRate"]))
+        return survey
+
+    elif method == "Autoregressive Model":
+        survey["Spectrum"] = []
+        survey["Descriptor"]["PSDMethod"] = method
+        for i in range(len(survey["ChannelNames"])):
+            filtered = signal.filtfilt(b, a, survey["Data"][:,i])
+            survey["Spectrum"].append(SPU.autoregressiveSpectrogram(filtered, window=5.0, overlap=2.5, frequency_resolution=0.5, fs=survey["SamplingRate"], order=30))
+        return survey
+
+    elif method == "Estimated Medtronic PSD":
+        survey["Spectrum"] = []
+        survey["Descriptor"]["PSDMethod"] = method
+        for i in range(len(survey["ChannelNames"])):
+            filtered = signal.filtfilt(b, a, survey["Data"][:,i])
+            survey["Spectrum"].append(SPU.MedtronicPSD(filtered))
+        return survey
+    

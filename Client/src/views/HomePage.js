@@ -41,34 +41,16 @@ export default function HomePage() {
   useEffect(() => {
     if (SessionController.getServer() == "https://bravo-server.jcagle.solutions") {
       setAlert(<MuiAlertDialog title={"Demo Server Disabled"} message={<>
-        {"As requested by Medtronic (Medtronic plc, MN), the demo server is effectively disabled and will not be accessible by public in the future. "}
+        {"The demo version is currently disabled per request from third-party medical device company. "}
         {"If you would like to try out the system, please refers to "}
         <Link target="_blank" href="https://bravo-documentation.jcagle.solutions/installation" underline="always" sx={{color: "blue"}} > <i>the installation guide</i> </Link>
-        {"to obtain a local version for testing. "}
+        {"to obtain a local offline version. "}
         <br></br>
-        <br></br>
-        {"The BRAVO Platform is expected to undergo significant adjustment to remove all references to copyright/trademark terminologies in accordance with the request from Medtronic."}
       </>}
         handleClose={() => setAlert()} 
         handleConfirm={() => setAlert()}/>)
     } else if (connectionStatus.status) {
-      if (connectionStatus.version !== "2.2.3") {
-        setAlert(<MuiAlertDialog title={"Server Version Imcompatible"} message={<>
-          {"Current frontend page support Version 2.2.3. Please upgrade your server by following instructions at"}
-          <Link target="_blank" href="https://bravo-documentation.jcagle.solutions/Tutorials/MigrationGuide2.1" underline="always" sx={{color: "blue"}} > <i>GitHub Page</i> </Link>
-          <br></br>
-          <br></br>
-          {"If you would like to stay with older build, please use"}
-          <Link target="_blank" href="https://bravo-documentation.jcagle.solutions/previous_builds" underline="always" sx={{color: "blue"}} > <i>this link</i> </Link>
-          {"to access previous build links"}
-          <br></br>
-          <br></br>
-          {"Additionally, you can run your local version using NPM with instructions at "}
-          <Link target="_blank" href="https://bravo-documentation.jcagle.solutions/installation#react-frontend-installation-guide" underline="always" sx={{color: "blue"}} > <i>documentation page</i> </Link>
-        </>}
-          handleClose={() => setAlert()} 
-          handleConfirm={() => setAlert()}/>)
-      }
+      
     }
   }, []);
 

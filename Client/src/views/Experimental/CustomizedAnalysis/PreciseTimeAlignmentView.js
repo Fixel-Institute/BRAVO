@@ -62,7 +62,7 @@ function PreciseTimeAlignmentView({dataToRender, configuration, onStreamClicked,
         fig.plot(timeArray.filter((value, index) => index % downScaleFactor == 0), data[i].data.Data[j].filter((value, index) => index % downScaleFactor == 0), {
           linewidth: 0.5,
           hovertemplate: `  %{y:.2f} ${" (unit) "}<extra></extra>`,
-          name: configuration[data[i].RecordingId]["Channels"][data[i].data.ChannelNames[j]].name,
+          //name: configuration[data[i].RecordingId]["Channels"][data[i].data.ChannelNames[j]].name,
           showlegend: true,
         }, ax[i]);
       }

@@ -25,6 +25,7 @@ import EventPSDs from "./EventPSDs";
 import SpectralFeatures from "./SpectralFeatures";
 import NarrowBandFeatures from "./NarrowBandFeatures";
 import SpectrogramView from "./SpectrogramView";
+import CrossCorrelationMatrix from "./CrossCorrelationMatrix";
 
 function ResultViewer({data, result, config}) {
   const navigate = useNavigate();
@@ -63,6 +64,12 @@ function ResultViewer({data, result, config}) {
     return <Grid container spacing={2}>
       <Grid item xs={12}>
         <NarrowBandFeatures dataToRender={data.Data[0]} height={600} figureTitle={result.title} config={config[0].config}/>
+      </Grid>
+    </Grid>
+  } else if (type == "CrossCorrelationMatrix") {
+    return <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <CrossCorrelationMatrix dataToRender={data.Data[0]} height={600} figureTitle={result.title} config={config[0].config}/>
       </Grid>
     </Grid>
   } else {

@@ -401,8 +401,6 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
                 return Response(status=200, data=data)
 
         elif "updateStimulationPSD" in request.data:
-            print(request.user.configuration["ProcessingSettings"]["RealtimeStream"])
-
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 0:
@@ -447,7 +445,9 @@ class QueryNeuralActivityStreaming(RestViews.APIView):
             Authority = {}
             Authority["Level"] = Database.verifyAccess(request.user, request.data["id"])
             if Authority["Level"] == 0 or Authority["Level"] == 2:
-                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+                PatientInfo = Database.extractAccess(request.user, request.data["id"])
+                Authority["Permission"] = Database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
+                
             elif Authority["Level"] == 1:
                 Authority["Permission"] = Database.verifyPermission(request.user, request.data["id"], Authority, "BrainSenseStream")
 
@@ -788,6 +788,7 @@ class QueryPredictionModel(RestViews.APIView):
         # Force Error
         if not (request.user.is_admin or request.user.is_clinician):
             return Response(status=400, data={"code": ERROR_CODE["NOT_AVAILABLE_TO_DEMO"]})
+            #pass
 
         if "requestOverview" in request.data:
             Authority = {}

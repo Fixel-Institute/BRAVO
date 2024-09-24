@@ -8,14 +8,16 @@ import FilterEditor from "./FilterEditor"
 import NormalizeEditor from "./NormalizeEditor"
 import ViewEditor from "./ViewEditor"
 import WienerFilterrEditor from "./WienerFilterrEditor"
+import CrossCorrrelationAnalysisEditor from "./CrossCorrrelationAnalysisEditor"
 
 
 const availableProcessings = [{
   type: {
-    value: "cardiacFilter",
-    label: "Apply Cardiac Filter to TimeDomain Data",
+    value: "filter",
+    label: "Apply Filter to TimeDomain Data",
   },
-  cardiacFilterMethod: "Kurtosis-peak Detection Template Matching",
+  highpass: "",
+  lowpass: "",
 }, {
   type: {
     value: "wienerFilter",
@@ -23,11 +25,10 @@ const availableProcessings = [{
   },
 }, {
   type: {
-    value: "filter",
-    label: "Apply Filter to TimeDomain Data",
+    value: "cardiacFilter",
+    label: "Apply Cardiac Filter to TimeDomain Data",
   },
-  highpass: "",
-  lowpass: "",
+  cardiacFilterMethod: "Kurtosis-peak Detection Template Matching",
 }, {
   type: {
     value: "extractTimeFrequencyAnalysis",
@@ -39,6 +40,11 @@ const availableProcessings = [{
   overlap: 500,
   frequencyResolution: 0.5,
   modelOrder: 30
+}, {
+  type: {
+    value: "crossCorrelationAnalysis",
+    label: "Perforrm Cross Correlation Between Signals",
+  },
 }, {
   type: {
     value: "extractAnnotations",
@@ -89,6 +95,10 @@ const AnalysisSteps = ({type, ...rest}) => {
       />
     } else if (type === "extractTimeFrequencyAnalysis") {
       return <ExtractTimeFrequencyAnalysisEditor currentState={rest.currentState} availableRecordings={rest.availableRecordings} newProcess={rest.newProcess} defaultConfigs={defaultConfigs[0]}
+        updateConfiguration={rest.updateConfiguration}
+      />
+    } else if (type === "crossCorrelationAnalysis") {
+      return <CrossCorrrelationAnalysisEditor currentState={rest.currentState} availableRecordings={rest.availableRecordings} availableChannels={rest.availableRecordingChannels} newProcess={rest.newProcess} defaultConfigs={defaultConfigs[0]}
         updateConfiguration={rest.updateConfiguration}
       />
     } else if (type === "extractAnnotations") {
