@@ -100,11 +100,16 @@ export default function HomePage() {
             <br></br>
             {"Host: " + (server || (window.location.protocol + "//" + window.location.hostname))}
           </MDTypography>
-          <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
-            {"Current Frontend Version: 2.2.3"}
-            <br></br>
-            {"Connected Backend Version: "} {connectionStatus.version === "" ? "Unknown" : connectionStatus.version}
-          </MDTypography>
+          {connectionStatus.status && connectionStatus.version? (
+            <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
+              {"Current Docker Version: " + new Date(connectionStatus.version*1000).toLocaleString()}
+            </MDTypography>
+          ) : null}
+          {connectionStatus.status && connectionStatus.version? (
+            <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
+              {"Latest Docker Version: " + new Date(connectionStatus.update*1000).toLocaleString()}
+            </MDTypography>
+          ) : null}
         </CardContent>
       </Card>
 
