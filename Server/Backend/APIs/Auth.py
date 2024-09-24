@@ -30,6 +30,7 @@ from rest_framework.exceptions import AuthenticationFailed
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
+import requests, subprocess
 from modules import Database
 from Backend import models, tasks
 
@@ -216,6 +217,21 @@ class Handshake(RestViews.APIView):
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
+        response = requests.get("https://registry.hub.docker.com/v2/repositories/jcagle95/bravo-server/tags")
+        TagsPages = response.json()
+        LatestUpdate = 0
+        for tag in TagsPages["results"]:
+            if tag["name"] == "latest":
+                LatestUpdate = datetime.datetime.fromisoformat(tag["last_updated"]).timestamp()
+        
+        try:
+            Output = subprocess.check_output(['docker','inspect','jcagle95/bravo-server:latest'])
+            ImageInfo = json.loads(Output)
+            CurrentVersion = datetime.datetime.fromisoformat(ImageInfo[0]["Created"]).timestamp()
+        except:
+            CurrentVersion = 0
+
         return Response(status=200, data={
-            "Version": "2.2.3"
+            "DockerVersionLatest": LatestUpdate,
+            "CurrentVersion": CurrentVersion
         })
