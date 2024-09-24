@@ -222,14 +222,9 @@ class Handshake(RestViews.APIView):
         LatestUpdate = 0
         for tag in TagsPages["results"]:
             if tag["name"] == "latest":
-                LatestUpdate = datetime.datetime.fromisoformat(tag["last_updated"]).timestamp()
+                LatestUpdate = datetime.datetime.fromisoformat(tag["last_updated"].split(".")[0]+"+00:00").timestamp()
         
-        try:
-            Output = subprocess.check_output(['docker','inspect','jcagle95/bravo-server:latest'])
-            ImageInfo = json.loads(Output)
-            CurrentVersion = datetime.datetime.fromisoformat(ImageInfo[0]["Created"]).timestamp()
-        except:
-            CurrentVersion = 0
+        CurrentVersion = 0
 
         return Response(status=200, data={
             "DockerVersionLatest": LatestUpdate,

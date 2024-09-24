@@ -87,7 +87,7 @@ export default function HomePage() {
               {"Current Docker Version: " + new Date(connectionStatus.version*1000).toLocaleString()}
             </MDTypography>
           ) : null}
-          {connectionStatus.status && connectionStatus.version? (
+          {connectionStatus.status && connectionStatus.version && (connectionStatus.update > connectionStatus.version+600) ? (
             <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24} pt={2}>
               {"Latest Docker Version: " + new Date(connectionStatus.update*1000).toLocaleString()}
             </MDTypography>
