@@ -109,25 +109,38 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
   });
 
   const exportCurrentStream = () => {
-    const allKeys = [];
-    let maxLength = 0;
+    let featureTable = {};
     for (let i in dataToRender) {
-      const AllFeatures = Object.keys(dataToRender[i]).filter((a) => !a.endsWith("Channel"));
-      if (dataToRender[i].Time.length > maxLength) maxLength = dataToRender[i].Time.length;
-      for (let k in AllFeatures) {
-        allKeys.push(dataToRender[i].Channel + "_" + AllFeatures[k])
+      for (let key in dataToRender[i]) {
+        if (key == "Channel") {
+          featureTable["Annotations"] = [];
+          featureTable["Channel"] = [];
+        } else {
+          featureTable[key] = [];
+        }
       }
     }
-    var csvData = allKeys.join(",") + "\n";
+    
+    for (let i in dataToRender) {
+      const FeatureNames = dataToRender[i].Channel.split(" | ");
 
-    for (let j = 0; j < maxLength; j++) {
-      for (let i in dataToRender) {
-        const AllFeatures = Object.keys(dataToRender[i]).filter((a) => !a.endsWith("Channel"));
-        for (let k in AllFeatures) {
-          if (dataToRender[i].Time.length > j) {
-            csvData += dataToRender[i][AllFeatures[k]][j] + ",";
-          }
+      for (let j in dataToRender[i].Time) {
+        featureTable["Annotations"].push(FeatureNames[0]);
+        featureTable["Channel"].push(FeatureNames[1]);
+        featureTable["Time"].push(dataToRender[i].Time[j]);
+
+        for (let key in dataToRender[i]) {
+          if (key == "Channel" || key == "Time") continue;
+          featureTable[key].push(dataToRender[i][key][j]);
         }
+      }
+    }
+    
+    const allKeys = Object.keys(featureTable);
+    var csvData = Object.keys(featureTable).join(",") + "\n";
+    for (let j in featureTable.Time) {
+      for (let key of allKeys) {
+        csvData += featureTable[key][j] + ",";
       }
       csvData += "\n";
     }

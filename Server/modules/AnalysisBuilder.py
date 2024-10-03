@@ -1157,22 +1157,22 @@ def handleExtractAnnotationPSDs(step, RecordingIds, Results, Configuration, anal
             if models.DeidentifiedPatientID.objects.filter(deidentified_id=analysis.device_deidentified_id).exists():
                 deidentifiedId = models.DeidentifiedPatientID.objects.filter(deidentified_id=analysis.device_deidentified_id).first()
                 annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=deidentifiedId.authorized_patient_id, 
-                                                                    event_time__gte=datetime.fromtimestamp(RawData["Time"][0], tz=pytz.utc), 
-                                                                    event_time__lte=datetime.fromtimestamp(RawData["Time"][-1], tz=pytz.utc))
+                                                                    event_time__gte=datetime.fromtimestamp(RawData["Time"][0]-5, tz=pytz.utc), 
+                                                                    event_time__lte=datetime.fromtimestamp(RawData["Time"][-1]+5, tz=pytz.utc))
             else:
                 annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=analysis.device_deidentified_id, 
-                                                                    event_time__gte=datetime.fromtimestamp(RawData["Time"][0], tz=pytz.utc), 
-                                                                    event_time__lte=datetime.fromtimestamp(RawData["Time"][-1], tz=pytz.utc))
+                                                                    event_time__gte=datetime.fromtimestamp(RawData["Time"][0]-5, tz=pytz.utc), 
+                                                                    event_time__lte=datetime.fromtimestamp(RawData["Time"][-1]+5, tz=pytz.utc))
             
         if models.DeidentifiedPatientID.objects.filter(deidentified_id=analysis.device_deidentified_id).exists():
             deidentifiedId = models.DeidentifiedPatientID.objects.filter(deidentified_id=analysis.device_deidentified_id).first()
             annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=deidentifiedId.authorized_patient_id, 
-                                                                event_time__gte=datetime.fromtimestamp(RawData["Spectrogram"][0]["Time"][0], tz=pytz.utc), 
-                                                                event_time__lte=datetime.fromtimestamp(RawData["Spectrogram"][0]["Time"][-1], tz=pytz.utc))
+                                                                event_time__gte=datetime.fromtimestamp(RawData["Spectrogram"][0]["Time"][0]-5, tz=pytz.utc), 
+                                                                event_time__lte=datetime.fromtimestamp(RawData["Spectrogram"][0]["Time"][-1]+5, tz=pytz.utc))
         else:
             annotations = models.CustomAnnotations.objects.filter(patient_deidentified_id=analysis.device_deidentified_id, 
-                                                                event_time__gte=datetime.fromtimestamp(RawData["Spectrogram"][0]["Time"][0], tz=pytz.utc), 
-                                                                event_time__lte=datetime.fromtimestamp(RawData["Spectrogram"][0]["Time"][-1], tz=pytz.utc))
+                                                                event_time__gte=datetime.fromtimestamp(RawData["Spectrogram"][0]["Time"][0]-5, tz=pytz.utc), 
+                                                                event_time__lte=datetime.fromtimestamp(RawData["Spectrogram"][0]["Time"][-1]+5, tz=pytz.utc))
         
         RawData["Annotations"] = [{
             "Name": item.event_name,
