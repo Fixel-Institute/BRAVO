@@ -13,10 +13,11 @@
 
 import React, {useCallback} from "react";
 import {useResizeDetector} from "react-resize-detector";
+import * as math from "mathjs"
 
 import colormap from "colormap";
 
-import { Autocomplete } from "@mui/material";
+import { Autocomplete, Slider } from "@mui/material";
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import FormField from "components/MDInput/FormField";
@@ -33,6 +34,7 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
 
   const [show, setShow] = React.useState(true);
   const [selector, setSelector] = React.useState({value: "", options: []});
+  const [smoothFactor, setSmoothFactor] = React.useState(1);
   const fig = new PlotlyRenderManager(figureTitle, language);
 
   const handleGraphing = (data) => {
@@ -49,7 +51,9 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
         yanchor: "top"
       });
     }
-
+    
+    const smoothingIndex = Math.floor(smoothFactor / 2);
+    
     for (let i in data) {
       const AllFeatures = Object.keys(data[i]).filter((a) => a.endsWith("_Mean")).map((a) => a.replaceAll("_Mean",""));
       
@@ -61,7 +65,15 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
       });
 
       for (let k in AllFeatures) {
-        fig.plot(data[i].Time.map((a) => new Date(a*1000)), data[i][AllFeatures[k] + "_Mean"], {
+        fig.plot(data[i].Time.map((a) => new Date(a*1000)), smoothFactor > 1 ? data[i][AllFeatures[k] + "_Mean"].map((a, index) => {
+          if (index < smoothingIndex) {
+            return math.mean(data[i][AllFeatures[k] + "_Mean"].slice(0, index+smoothingIndex))
+          } else if (index > data[i][AllFeatures[k] + "_Mean"].length-smoothingIndex) {
+            return math.mean(data[i][AllFeatures[k] + "_Mean"].slice(index-smoothingIndex, data[i][AllFeatures[k] + "_Mean"].length-1))
+          } else {
+            return math.mean(data[i][AllFeatures[k] + "_Mean"].slice(index-smoothingIndex, index+smoothingIndex))
+          }
+        }) : data[i][AllFeatures[k] + "_Mean"], {
           linewidth: 2,
           name: AllFeatures[k] + "_Mean",
           legendgroup: AllFeatures[k],
@@ -95,7 +107,7 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
     if (dataToRender && selector.value) {
       handleGraphing(dataToRender.filter((a) => a.Channel == selector.value))
     }
-  }, [dataToRender, selector.value, language]);
+  }, [dataToRender, selector.value, smoothFactor, language]);
 
   const onResize = useCallback(() => {
     fig.refresh();
@@ -174,6 +186,7 @@ function SpectralFeatures({dataToRender, height, config, figureTitle}) {
         {dictionaryLookup(dictionary.FigureStandardText, "Export", language)}
       </MDButton>
       <MDBox ref={ref} id={figureTitle} style={{marginTop: 0, marginBottom: 10, height: height, width: "100%", display: show ? "" : "none"}}/>
+      <Slider defaultValue={1} step={1} value={smoothFactor} onChange={(event, newValue) => setSmoothFactor(newValue)} valueLabelDisplay="auto" />
     </MDBox>
   );
 }

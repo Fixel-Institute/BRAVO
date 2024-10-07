@@ -11,6 +11,7 @@ const ExtractBetaGammaAnalysisTemplate = ({availableRecordings, setConfiguration
   const [options, setOptions] = useState({
     targetRecording: "",
     cardiacRemoved: false,
+    wiener: false,
     filtered: false,
     normalized: false,
     averageDuration: 10,
@@ -53,6 +54,11 @@ const ExtractBetaGammaAnalysisTemplate = ({availableRecordings, setConfiguration
         control={<Switch checked={options.cardiacRemoved} 
         onChange={() => setOptions({...options, cardiacRemoved: !options.cardiacRemoved})} />} 
         label="Apply Cardiac Filter? " />
+
+      <FormControlLabel 
+        control={<Switch checked={options.wiener} 
+        onChange={() => setOptions({...options, wiener: !options.wiener})} />} 
+        label="Apply Wiener Filter? (Exploratory Option for Artifacts) " />
 
       <FormControlLabel 
         control={<Switch checked={options.filtered} 

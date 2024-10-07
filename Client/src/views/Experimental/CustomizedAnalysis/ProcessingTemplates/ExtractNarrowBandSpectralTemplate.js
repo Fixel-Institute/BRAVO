@@ -12,6 +12,7 @@ const ExtractNarrowBandSpectralTemplate = ({availableRecordings, setConfiguratio
     targetRecording: "",
     labelRecording: "",
     cardiacRemoved: false,
+    wiener: false,
     filtered: false,
     normalized: false,
     averageDuration: 10,
@@ -79,6 +80,11 @@ const ExtractNarrowBandSpectralTemplate = ({availableRecordings, setConfiguratio
         control={<Switch checked={options.cardiacRemoved} 
         onChange={() => setOptions({...options, cardiacRemoved: !options.cardiacRemoved})} />} 
         label="Apply Cardiac Filter? " />
+
+      <FormControlLabel 
+        control={<Switch checked={options.wiener} 
+        onChange={() => setOptions({...options, wiener: !options.wiener})} />} 
+        label="Apply Wiener Filter? (Exploratory Option for Artifacts) " />
 
       <FormControlLabel 
         control={<Switch checked={options.filtered} 

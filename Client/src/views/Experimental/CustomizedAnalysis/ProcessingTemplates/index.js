@@ -76,6 +76,11 @@ const ProcessingTemplates = ({type, ...rest}) => {
         steps.push({ ...stepConfig, targetRecording: startSignal, output: startSignal + "_CardiacFiltered" });
         startSignal += "_CardiacFiltered"; 
       }
+      if (options.wiener) {
+        stepConfig = availableProcessings.filter((a) => a.type.value == "wienerFilter")[0];
+        steps.push({ ...stepConfig, targetRecording: startSignal, output: startSignal + "_WienerFiltered" });
+        startSignal += "_WienerFiltered"; 
+      }
       if (options.filtered) {
         stepConfig = availableProcessings.filter((a) => a.type.value == "filter")[0];
         steps.push({ ...stepConfig, targetRecording: startSignal, highpass: "1", lowpass: "100", output: startSignal + "_Filtered" });
@@ -109,6 +114,11 @@ const ProcessingTemplates = ({type, ...rest}) => {
         stepConfig = availableProcessings.filter((a) => a.type.value == "cardiacFilter")[0];
         steps.push({ ...stepConfig, targetRecording: startSignal, output: startSignal + "_CardiacFiltered" });
         startSignal += "_CardiacFiltered"; 
+      }
+      if (options.wiener) {
+        stepConfig = availableProcessings.filter((a) => a.type.value == "wienerFilter")[0];
+        steps.push({ ...stepConfig, targetRecording: startSignal, output: startSignal + "_WienerFiltered" });
+        startSignal += "_WienerFiltered"; 
       }
       if (options.filtered) {
         stepConfig = availableProcessings.filter((a) => a.type.value == "filter")[0];

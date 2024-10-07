@@ -16,7 +16,7 @@ import {useResizeDetector} from "react-resize-detector";
 
 import colormap from "colormap";
 
-import { Autocomplete } from "@mui/material";
+import { Slider } from "@mui/material";
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import FormField from "components/MDInput/FormField";
@@ -30,6 +30,8 @@ import { dictionary, dictionaryLookup } from "assets/translation";
 function NarrowBandFeatures({dataToRender, height, config, figureTitle}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
+
+  const [dotSize, setDotSize] = React.useState(5)
 
   const [show, setShow] = React.useState(true);
   const fig = new PlotlyRenderManager(figureTitle, language);
@@ -56,12 +58,12 @@ function NarrowBandFeatures({dataToRender, height, config, figureTitle}) {
 
     for (let i in data.Channel) {
       fig.scatter(data.Time[i].map((a) => new Date(a*1000)), data.NarrowBandFrequency[i], {
-        size: data.NarrowBandPower[i].map((a) => a*5),
-        customdata: data.NarrowBandPower[i].map((a) => a*5),
+        size: data.NarrowBandPower[i].map((a) => a*dotSize),
+        customdata: data.NarrowBandPower[i].map((a) => a*dotSize),
         color: "r",
         name: data.Channel[i],
         showlegend: true,
-        hovertemplate: "  %{y}Hz <br>  %{customdata:.1f} <extra></extra>"
+        hovertemplate: "  %{y}Hz <br>  Size: %{customdata:.1f} <extra></extra>"
       });
     }
 
@@ -79,7 +81,7 @@ function NarrowBandFeatures({dataToRender, height, config, figureTitle}) {
     if (dataToRender) {
       handleGraphing(dataToRender);
     }
-  }, [dataToRender, language]);
+  }, [dataToRender, dotSize, language]);
 
   const onResize = useCallback(() => {
     fig.refresh();
@@ -114,6 +116,7 @@ function NarrowBandFeatures({dataToRender, height, config, figureTitle}) {
         {dictionaryLookup(dictionary.FigureStandardText, "Export", language)}
       </MDButton>
       <MDBox ref={ref} id={figureTitle} style={{marginTop: 0, marginBottom: 10, height: height, width: "100%", display: show ? "" : "none"}}/>
+      <Slider defaultValue={5} step={0.1} value={dotSize} onChange={(event, newValue) => setDotSize(newValue)} valueLabelDisplay="auto"/>
     </MDBox>
   );
 }
