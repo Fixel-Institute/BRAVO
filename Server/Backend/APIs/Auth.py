@@ -217,12 +217,15 @@ class Handshake(RestViews.APIView):
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     def post(self, request):
-        response = requests.get("https://registry.hub.docker.com/v2/repositories/jcagle95/bravo-server/tags")
-        TagsPages = response.json()
-        LatestUpdate = 0
-        for tag in TagsPages["results"]:
-            if tag["name"] == "latest":
-                LatestUpdate = datetime.datetime.fromisoformat(tag["last_updated"].split(".")[0]+"+00:00").timestamp()
+        try:
+            response = requests.get("https://registry.hub.docker.com/v2/repositories/jcagle95/bravo-server/tags")
+            TagsPages = response.json()
+            LatestUpdate = 0
+            for tag in TagsPages["results"]:
+                if tag["name"] == "latest":
+                    LatestUpdate = datetime.datetime.fromisoformat(tag["last_updated"].split(".")[0]+"+00:00").timestamp()
+        except:
+            LatestUpdate = 0
         
         CurrentVersion = 0
 
