@@ -93,7 +93,7 @@ class UserRegister(RestViews.APIView):
                 response.set_cookie("refreshToken", str(refresh), 
                                     secure=settings.SESSION_COOKIE_SECURE, 
                                     httponly=settings.SESSION_COOKIE_HTTPONLY)
-                response.set_cookie("accessToken", str(access), 
+                response.set_cookie("accessToken", str(access),
                                     secure=settings.SESSION_COOKIE_SECURE, 
                                     httponly=settings.SESSION_COOKIE_HTTPONLY)
                 

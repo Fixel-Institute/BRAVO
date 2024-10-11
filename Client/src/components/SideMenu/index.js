@@ -106,11 +106,10 @@ const SideMenu = ({ color, brand, brandName, routes, ...rest }) => {
         {returnValue}
       </List>;
     });
-
   };
 
   // Render all the routes from the routes.js (All the visible items on the Sidenav)
-  const renderRoutes = routes.map(({ type, name, icon, title, collapse, noCollapse, key, href, route, report_type }) => {
+  const renderRoutes = routes.Main.children.map(({ type, name, icon, title, collapse, noCollapse, key, href, route, report_type }) => {
     let returnValue;
 
     var nameString = "";
@@ -222,6 +221,31 @@ const SideMenu = ({ color, brand, brandName, routes, ...rest }) => {
         }
       />
       <List>{renderRoutes}</List>
+      <Divider
+        light={
+          (!darkMode && !whiteSidenav && !transparentSidenav) ||
+          (darkMode && !transparentSidenav && whiteSidenav)
+        }
+      />
+      {routes[report] ? (
+        <List>{routes[report].children.map(({ key, name, icon, route }) => {
+          var nameString = "";
+          if (Object.keys(dictionary.Routes).includes(name)) {
+            nameString = dictionary.Routes[name][language];
+          } else {
+            nameString = name;
+          }
+          
+          return <NavLink to={route} key={key}>
+            <SidenavCollapse
+              name={nameString}
+              icon={icon}
+              active={key === itemName}
+            >
+            </SidenavCollapse>
+          </NavLink>;
+        })}</List>
+      ) : null}
     </SidenavRoot>
   );
 }

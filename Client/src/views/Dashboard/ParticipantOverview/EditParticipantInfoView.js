@@ -21,6 +21,9 @@ import {
   DialogContent,
   DialogTitle,
   TextField,
+  Icon,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 
 import { createFilterOptions } from "@mui/material/Autocomplete";
@@ -30,6 +33,8 @@ import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";
 import MDButton from "components/MDButton";
 import DropzoneUploader from "components/DropzoneUploader";
+
+import { FaCopy } from "react-icons/fa";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
@@ -49,13 +54,17 @@ function EditParticipantInfoView({show, participantInfo, onUpdate, onCancel, rem
       setEditParticipantInfo({...participantInfo});
     }}>
       
-      <MDBox px={2} pt={2}>
+      <MDBox px={2} pt={2} display={"flex"} flexDirection={"row"} justifyContent={"center"} alignItems={"center"}>
         <MDTypography variant="h5">
-          Edit Participant Information
+          {"Edit Participant Information"}
         </MDTypography>
-        <MDTypography variant="p">
-          {participant_uid}
-        </MDTypography>
+        <Tooltip title={"Click to Copy Participant Unique Identifier"}>
+          <IconButton onClick={() => {
+            navigator.clipboard.writeText(participant_uid);
+          }}>
+            <FaCopy />
+          </IconButton>
+        </Tooltip>
       </MDBox>
       <DialogContent>
         <Grid container spacing={2}>
@@ -80,13 +89,17 @@ function EditParticipantInfoView({show, participantInfo, onUpdate, onCancel, rem
             />
           </Grid>
           <Grid item xs={12} md={6}>
-            <TextField
-              variant="standard"
-              margin="dense" id="sex"
-              value={editParticipantInfo.sex ? editParticipantInfo.sex : "N/A"}
-              onChange={(event) => setEditParticipantInfo({...editParticipantInfo, sex: event.target.value})}
-              label={"Sex"} type="text"
-              fullWidth
+            <Autocomplete selectOnFocus clearOnBlur
+              renderInput={(params) => (
+                <TextField {...params} variant="standard" placeholder={"Select Sex/Gender (Optional)"} />
+              )}
+              isOptionEqualToValue={(option, value) => {
+                return option === value;
+              }}
+              renderOption={(props, option) => <li {...props}>{option}</li>}
+              value={editParticipantInfo.sex ? editParticipantInfo.sex : "Other"}
+              options={["Male", "Female", "Other"]}
+              onChange={(event, newValue) => setEditParticipantInfo({...editParticipantInfo, sex: newValue})}
             />
           </Grid>
           <Grid item xs={12}>

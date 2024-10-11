@@ -36,7 +36,7 @@ from utility import SignalProcessingUtility as SPU
 
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveBrainSenseSurvey(participant, device, streamList):
+def saveBrainSenseSurvey(participant, streamList, type):
     """ Save BrainSense Survey Data in Database Storage
 
     Args:
@@ -49,61 +49,27 @@ def saveBrainSenseSurvey(participant, device, streamList):
     """
 
     NewRecordings = []
-    StreamDates = list()
     for stream in streamList:
-        StreamDates.append(stream["FirstPacketDateTime"])
-    UniqueSessionDates = np.unique(StreamDates)
+        Recording = dict()
+        Recording["SamplingRate"] = stream["SamplingRate"]
+        Recording["ChannelNames"] = [stream["Channel"]]
+        Recording["Data"] = stream["Data"]
+        Recording["Missing"] = stream["Missing"]
+        Recording["StartTime"] = stream["FirstPacketDateTime"]
+        Recording["Descriptor"] = {}
+        if "PSD" in stream.keys():
+            Recording["Descriptor"]["MedtronicPSD"] = stream["PSD"]
+        Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
 
-    for date in UniqueSessionDates:
-        recording = device.recordings.get_or_none(type="BrainSenseSurvey", date=date)
-        if not recording:
-            Recording = dict()
-            Recording["SamplingRate"] = streamList[0]["SamplingRate"]
+        recording = models.TimeSeriesRecording(type=type, date=Recording["StartTime"], 
+                                                sampling_rate=Recording["SamplingRate"], duration=Recording["Duration"]).save()
+        filename, hashed = Database.saveSourceFiles(Recording, type, recording.uid, participant.uid)
+        recording.hashed = hashed
+        recording.data_pointer = filename
+        recording.channel_names = Recording["ChannelNames"]
+        recording.save()
+        NewRecordings.append(recording)
 
-            StreamGroupIndexes = [stream["FirstPacketDateTime"] == date for stream in streamList]
-            Recording["ChannelNames"] = [streamList[i]["Channel"] for i in range(len(streamList)) if StreamGroupIndexes[i]]
-            
-            RecordingSize = [len(streamList[i]["Data"]) for i in range(len(streamList)) if StreamGroupIndexes[i]]
-            if len(np.unique(RecordingSize)) > 1:
-                print("Inconsistent Recording Size for BrainSense Survey")
-                maxSize = np.max(RecordingSize)
-                Recording["Data"] = np.zeros((maxSize, len(RecordingSize)))
-                Recording["Missing"] = np.ones((maxSize, len(RecordingSize)))
-                n = 0
-                for i in range(len(streamList)): 
-                    if StreamGroupIndexes[i]:
-                        Recording["Data"][:RecordingSize[n], n] = streamList[i]["Data"]
-                        Recording["Missing"][:RecordingSize[n], n] = streamList[i]["Missing"]
-                        Recording["StartTime"] = date
-                        n += 1
-            else:
-                Recording["Data"] = np.zeros((RecordingSize[0], len(RecordingSize)))
-                Recording["Missing"] = np.ones((RecordingSize[0], len(RecordingSize)))
-                n = 0
-                for i in range(len(streamList)): 
-                    if StreamGroupIndexes[i]:
-                        Recording["Data"][:, n] = streamList[i]["Data"]
-                        Recording["Missing"][:, n] = streamList[i]["Missing"]
-                        Recording["StartTime"] = date
-                        n += 1
-            
-            if "PSD" in streamList[i].keys():
-                Recording["Descriptor"] = {
-                    "MedtronicPSD": streamList[i]["PSD"]
-                }
-                
-            Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
-
-            recording = models.TimeSeriesRecording(type="BrainSenseSurvey", date=date, 
-                                                    sampling_rate=Recording["SamplingRate"], duration=Recording["Duration"]).save()
-            filename = Database.saveSourceFiles(Recording, "BrainSenseSurvey", recording.uid, participant.uid)
-            recording.data_pointer = filename
-            recording.channel_names = Recording["ChannelNames"]
-            recording.save()
-            recording.devices.connect(device)
-            device.recordings.connect(recording)
-            NewRecordings.append(recording)
-            
     return NewRecordings
 
 def querySurveyResults(participant, options={}, requestRaw=False):

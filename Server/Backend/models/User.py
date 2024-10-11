@@ -20,61 +20,56 @@ Neo4j User Model (Customized for Django Auth)
 
 from uuid import uuid4
 import json
+import os
 
 from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth.hashers import check_password
-from neomodel import StructuredNode, StringProperty, FloatProperty, IntegerProperty, JSONProperty, Relationship
+from neomodel import StructuredNode, StringProperty, FloatProperty, IntegerProperty, JSONProperty, Relationship, RelationshipFrom, RelationshipTo
 from .HelperFunctions import current_time, AttrDict
 
+from modules import Database
+DATABASE_PATH = os.environ.get('DATASERVER_PATH')
+
 class AuthenticationTokens(StructuredNode):
-    token_id = StringProperty()
+    token_id = StringProperty(default="")
     token_type = StringProperty(default="refresh")
-    expiration = FloatProperty()
-    associated_user = Relationship('PlatformUser', 'AUTHTOKEN_FOR')
+    expiration = FloatProperty(default=0)
+    associated_user = RelationshipFrom('PlatformUser', 'HAS_AUTHTOKEN')
     blacklist = IntegerProperty(default=0)
 
-class SecureKey(StructuredNode):
+class APIKey(StructuredNode):
     token_id = StringProperty(default=uuid4)
-    expiration = FloatProperty()
-    associated_user = Relationship('PlatformUser', 'SECURE_KEY_FOR')
+    expiration = FloatProperty(default=0)
+    associated_user = RelationshipFrom('PlatformUser', 'HAS_APIKEY')
 
 class PlatformUser(StructuredNode):
-    user_id = StringProperty(unique_index=True, default=uuid4)
+    user_id = StringProperty(default=uuid4)
 
-    email = StringProperty(max_length=128)
-    user_name = StringProperty(max_length=128)
-    password = StringProperty()
+    email = StringProperty(max_length=128, required=True)
+    user_name = StringProperty(max_length=128, required=True)
+    password = StringProperty(required=True)
 
     register_date = FloatProperty(default=current_time)
     permission = StringProperty(default="BASIC", max_length=128)
-
-    secure_keys = Relationship('SecureKey', 'HAS_SECURE_KEY')
-    auth_tokens = Relationship('AuthenticationTokens', 'HAS_AUTHTOKEN')
-    studies = Relationship(".Participant.Study", "MEMBER_OF_STUDY")
     configuration = JSONProperty(default=dict)
+
+    cached_results = RelationshipTo('CachedResult', 'HAS_CACHE')
+
+    auth_tokens = RelationshipTo('AuthenticationTokens', 'HAS_AUTHTOKEN')
+    secure_keys = RelationshipTo('APIKey', 'HAS_APIKEY')
+
+    # Participant.py
+    studies = Relationship(".Participant.Study", "MEMBER_OF_STUDY")
+
+    # SourceFile.py
+    files = RelationshipTo(".SourceFile.SourceFile", "UPLOADED_FILE")
 
     is_authenticated = False
     api_access = False
 
-    files = Relationship(".SourceFile.SourceFile", "UPLOADED_FILE")
-
     def serialized(self):
         return AttrDict({"id": self.user_id, "email": self.email, "user_name": self.user_name, "register_date": self.register_date, "permission": self.permission})
     
-    def getConfiguration(self):
-        try:
-            return self.configuration
-        except:
-            return None
-
-    def setConfiguration(self, config):
-        try:
-            self.configuration = config
-            self.save()
-            return True
-        except:
-            return False
-
     def checkPermission(self, participant, permission):
         if permission == "view":
             for study in self.studies:
@@ -103,4 +98,30 @@ class PlatformUserAuthBackend(BaseBackend):
         user = PlatformUser.nodes.get_or_none(user_id=user_id)
         return user
         
+class CachedResult(StructuredNode):
+    uid = StringProperty(default=uuid4)
+    type = StringProperty(max_length=128)
+    date = FloatProperty()
+    data_pointer = StringProperty()
+    hashed = StringProperty()
 
+    metadata = JSONProperty()
+
+    def createCache(self, user, data):
+        self.date = current_time()
+        filename, hashed = Database.saveCacheFile(data, user.user_id, self.uid)
+        self.data_pointer = filename
+        self.hashed = hashed
+
+    def purge(self):
+        try: 
+            os.remove(DATABASE_PATH + "visualization" + os.path.sep + self.data_pointer)
+        except:
+            pass
+        
+        self.delete()
+
+    def clearCaches():
+        oldCaches = CachedResult.nodes.filter(date__lt=current_time()-3600).all()
+        for cache in oldCaches:
+            cache.purge()

@@ -75,8 +75,8 @@ class DataUpload(RestViews.APIView):
     
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
-        accepted_keys = ["file*", "data_type", "participant", "event", "study", "metadata"]
-        required_keys = ["data_type", "participant", "study", "metadata"]
+        accepted_keys = ["file*", "data_type", "participant", "event", "study", "experiment", "metadata"]
+        required_keys = ["data_type", "participant", "study", "experiment", "metadata"]
         if not checkAPIInput(request.data, required_keys, accepted_keys):
             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
         
@@ -95,29 +95,53 @@ class DataUpload(RestViews.APIView):
         if not study.checkPermission(request.user.user_id):
             return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
         
-        metadata = json.loads(request.data["metadata"])
-        for participant in study.participants:
-            if participant.uid == request.data["participant"]:
-                event = None
-                if "event" in request.data.keys():
-                    event = participant.events.get_or_none(uid=request.data["event"])
-
-                queueCreated = []
-                for key in request.data.keys():
-                    if key.startswith("file"):
-                        try:
-                          rawBytes = request.data[key].read()
-                          sourceFile, queue = DataDecoder.saveCacheFile(rawBytes, request.data[key].name, request.data["data_type"], metadata, event=event)
-                          queueCreated.append(queue.uid)
-                          sourceFile.uploader.connect(request.user)
-                          sourceFile.participant.connect(participant)
-                          request.user.files.connect(sourceFile)
-                        except:
-                            pass
-
-                #tasks.ProcessUploadQueue.apply_async(countdown=3)
-                return Response(status=200, data={"queue_created": queueCreated})
+        if request.data["participant"] == "batch-upload":
+            metadata = {
+                "device_location": "",
+                "infer_from_device": True,
+                "batch_upload":True,
+                "study": request.data["study"]
+            }
+            
+            queueCreated = []
+            for key in request.data.keys():
+                if key.startswith("file"):
+                    try:
+                        rawBytes = request.data[key].read()
+                        sourceFile, queue = DataDecoder.saveCacheFile(rawBytes, request.data[key].name, request.data["data_type"], metadata)
+                        queueCreated.append(queue.uid)
+                        sourceFile.uploader.connect(request.user)
+                    except Exception as e:
+                        print(e)
+                        pass
+            return Response(status=200, data={"queue_created": queueCreated})
         
+        else:
+            metadata = json.loads(request.data["metadata"])
+            for participant in study.participants:
+                if participant.uid == request.data["participant"]:
+                    
+                    experiment = participant.experiments.get_or_none(uid=request.data["experiment"])
+                    if not experiment:
+                        return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+
+                    queueCreated = []
+                    for key in request.data.keys():
+                        if key.startswith("file"):
+                            try:
+                                rawBytes = request.data[key].read()
+                                sourceFile, queue = DataDecoder.saveCacheFile(rawBytes, request.data[key].name, request.data["data_type"], metadata)
+                                queueCreated.append(queue.uid)
+                                sourceFile.uploader.connect(request.user)
+                                sourceFile.experiment.connect(experiment)
+                            
+                            except Exception as e:
+                                print(e)
+                                pass
+
+                    #tasks.ProcessUploadQueue.apply_async(countdown=3)
+                    return Response(status=200, data={"queue_created": queueCreated})
+            
         return Response(status=200)
 
 class QueryAvailableRecordings(RestViews.APIView):
@@ -164,6 +188,65 @@ class QueryAvailableRecordings(RestViews.APIView):
         
         source_files = event.retrieveSourceFiles()
         return Response(status=200, data=[file.getInfo() for file in source_files])
+        
+class UpdateRecordings(RestViews.APIView):
+    """ Query current processing queue list
+
+    **POST**: ``/api/updateRecordings``
+
+    Returns:
+      Response Code 200.
+    """
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [RestParsers.JSONParser]
+
+    @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
+    def post(self, request):
+        accepted_keys = []
+        required_keys = ["participant", "analysis_uid", "recording_uid", "request_type"]
+        if not checkAPIInput(request.data, required_keys, accepted_keys):
+            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+        
+        print(request.data)
+        try:
+            UUID(request.data["participant"]) # Will throw if it is not UUID
+            participant = models.Participant.nodes.get_or_none(uid=request.data["participant"])
+        except:
+            # uid is not a UUID
+            return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+        
+        # If UID provided does not match existing study. This is malicious attempt at the database. 
+        if not participant:
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        if not request.user.checkPermission(participant, "edit"):
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+        analysis = None
+        for experiment in participant.experiments:
+            analysis = experiment.analyses.get_or_none(uid=request.data["analysis_uid"])
+            if analysis:
+                 break 
+        if not analysis:
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+        recording = analysis.recordings.get_or_none(uid=request.data["recording_uid"])
+        if not recording:
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+        if request.data["request_type"] == "Alignment":
+            required_keys.extend(["alignment"])
+            if not checkAPIInput(request.data, required_keys, accepted_keys):
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+            
+            rel = analysis.recordings.relationship(recording)
+            if rel.data_type == "Therapy":
+                rel.time_shift = request.data["alignment"]
+                rel.save()
+                return Response(status=200)
+
+        return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
 class DataRetrieve(RestViews.APIView):
     """ Upload Data with accompanying metadata
@@ -234,15 +317,7 @@ class QueryProcessingQueue(RestViews.APIView):
 
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
-        queues = models.ProcessingQueue.uploadedBy(request.user.user_id)
-        data = [{   "uid": queue.uid,
-                    "filename": queue.cache_file[0].name,
-                    "job_id": queue.job_id,
-                    "job_type": queue.job_type,
-                    "since": queue.date,
-                    "state": queue.status,
-                    "descriptor": queue.result,
-                } for queue in queues]
+        data = [file.getQueueInfo() for file in request.user.files]
         data = sorted(data, key=lambda queue: queue["since"])
         #tasks.ProcessUploadQueue.delay()
 
@@ -266,7 +341,7 @@ class ClearProcessingQueue(RestViews.APIView):
 
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
-        queues = models.ProcessingQueue.uploadedBy(request.user.user_id)
+        queues = models.ProcessingQueue.uploadedBy(request.user)
         for queue in queues:
             if not queue.status == "complete":
               os.remove(queue.cache_file[0].file_pointer)
@@ -362,18 +437,39 @@ class DeleteData(RestViews.APIView):
 
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
-        accepted_keys = ["participant_uid", "device", "session"]
-        required_keys = ["participant_uid"]
+        accepted_keys = ["participant", "study", "recording_uid"]
+        required_keys = ["participant", "study", "recording_uid"]
         if not checkAPIInput(request.data, required_keys, accepted_keys):
             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
 
         try:
-            UUID(request.data["participant_uid"]) # Will throw if it is not UUID
-            participant = models.Participant.nodes.get(uid=request.data["participant_uid"])
+            UUID(request.data["study"]) # Will throw if it is not UUID
+            study = models.Study.nodes.get_or_none(uid=request.data["study"])
         except:
             # uid is not a UUID
             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
         
+        # If UID provided does not match existing study. This is malicious attempt at the database. 
+        if not study:
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        # User has no permission to this study. This is malicious attempt at the database. 
+        if not study.checkPermission(request.user.user_id):
+            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        
+        participant = study.participants.get_or_none(uid=request.data["participant"])
+        if not participant:
+            return Response(status=400, data={"message": "Participant not found"})
+        
+        if "recording_uid" in request.data.keys():
+            try:
+                sourceFile = participant.retrieveRecording(request.data["recording_uid"])[0]
+                os.remove(sourceFile.file_pointer)
+                sourceFile.delete()
+                return Response(status=200)
+            except:
+                return Response(status=400, data={"message": "File not found"})
+
         for study in participant.studies:
             if study.checkPermission(request.user.user_id):
                 if "device" in request.data:

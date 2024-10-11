@@ -11,7 +11,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { useState, useEffect, memo, Fragment } from "react"
+import { useState, useEffect, memo, Fragment, useMemo } from "react"
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -124,7 +124,7 @@ const ParticipantTable = ({data}) => {
     });
   };
 
-  return (
+  return useMemo(() => (
     <MDBox style={{overflowX: "auto"}}>
       <Table size="small">
         <TableHead sx={{display: "table-header-group"}}>
@@ -179,7 +179,7 @@ const ParticipantTable = ({data}) => {
       </Table>
       <ParticipantTablePagination totalCount={data.length} totalPages={paginationControl.totalPages} currentPage={paginationControl.currentPage} setPagination={setPagination} />
     </MDBox>
-  );
+  ), [data, displayData, paginationControl]);
 };
 
-export default memo(ParticipantTable);
+export default ParticipantTable;

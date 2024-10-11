@@ -127,7 +127,7 @@ function DefaultNavbar({ transparent, light, action }) {
       onClose={handleCloseMenu}
       sx={{ mt: 2 }}
     >
-      {["English","中文"].map((lang) => (
+      {["English"].map((lang) => (
         <MenuItem key={lang} onClick={() => setLanguage(lang)}>
           <Icon sx={{ mr: 1 }}><ChangeCircleIcon/></Icon>
           <MDTypography variant="button" fontWeight="regular" color="text">

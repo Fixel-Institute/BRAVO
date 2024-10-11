@@ -45,7 +45,7 @@ from neomodel import Q
 
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveChronicBrainSense(participant, device, ChronicLFPs, previousGroupSettings, sessionDate):
+def saveChronicBrainSense(participant, ChronicLFPs):
     """ Save Chronic BrainSense Data in Database Storage
 
     Args:
@@ -58,8 +58,6 @@ def saveChronicBrainSense(participant, device, ChronicLFPs, previousGroupSetting
     """
 
     NewRecordings = []
-    PreviousChangeGroups = sorted(models.filterNodesByType(participant.events, models.TherapyModification, Q(type="TherapyChangeGroup")), key=lambda item: item.date)
-    PreviousChangeGroups = [item.__properties__ for item in PreviousChangeGroups]
     for key in ChronicLFPs.keys():
         if key == "HemisphereLocationDef.Right": 
             hemisphere = "RightHemisphere"
@@ -70,59 +68,23 @@ def saveChronicBrainSense(participant, device, ChronicLFPs, previousGroupSetting
         Amplitude = ChronicLFPs[key]["Amplitude"]
         LFP = ChronicLFPs[key]["LFP"]
 
-        for i in range(len(PreviousChangeGroups)):
-            if i < len(PreviousChangeGroups)-1:
-                TimeSelection = (Time >= PreviousChangeGroups[i]["date"]) & (Time <= PreviousChangeGroups[i+1]["date"])
-            else:
-                TimeSelection = (Time >= PreviousChangeGroups[i]["date"])
+        Recording = dict()
+        Recording["SamplingRate"] = -1 # Variable Frequency
+        Recording["Time"] = Time
+        Recording["Data"] = np.zeros((len(Recording["Time"]),2))
+        Recording["Data"][:,0] = LFP
+        Recording["Data"][:,1] = Amplitude
+        Recording["ChannelNames"] = [hemisphere + " LFP", hemisphere + " Amplitude"]
+        Recording["StartTime"] = Recording["Time"][0]
+        Recording["Duration"] = Recording["Time"][-1] - Recording["Time"][0]
 
-            if np.any(TimeSelection):
-                Recording = dict()
-                Recording["SamplingRate"] = -1 # Variable Frequency
-                Recording["Time"] = Time[TimeSelection]
-                Recording["Data"] = np.zeros((len(Recording["Time"]),2))
-                Recording["Data"][:,0] = LFP[TimeSelection]
-                Recording["Data"][:,1] = Amplitude[TimeSelection]
-                Recording["ChannelNames"] = [hemisphere + " LFP", hemisphere + " Amplitude"]
-                Recording["StartTime"] = Recording["Time"][0]
-                Recording["Duration"] = Recording["Time"][-1] - Recording["Time"][0]
-
-                if PreviousChangeGroups[i+1]["old_group"] == PreviousChangeGroups[i]["new_group"]:
-                    TargetGroup = PreviousChangeGroups[i+1]["old_group"]
-                elif Recording["Time"][0] - PreviousChangeGroups[i]["date"] < PreviousChangeGroups[i+1]["date"] - Recording["Time"][-1]:
-                    TargetGroup = PreviousChangeGroups[i]["new_group"]
-                else:
-                    TargetGroup = PreviousChangeGroups[i+1]["old_group"]
-
-                for therapy in previousGroupSettings:
-                    if therapy["GroupId"] == TargetGroup:
-                        if therapy[hemisphere]["Mode"] == "BrainSense":
-                            Recording["SensingSetup"] = {
-                                "GroupId": therapy["GroupId"],
-                                "SessionDate": sessionDate,
-                                "Setup": therapy[hemisphere]["SensingSetup"]
-                            }
-                        break
-
-                recording = device.recordings.get_or_none(type=hemisphere + "ChronicBrainSense", date=Recording["Time"][0])
-                if not recording:
-                    recording = models.TimeSeriesRecording(type=hemisphere + "ChronicBrainSense", date=Recording["Time"][0], 
-                                                            sampling_rate=Recording["SamplingRate"], duration=Recording["Duration"]).save()
-                    filename = Database.saveSourceFiles(Recording, "ChronicBrainSense", recording.uid, participant.uid)
-                    recording.data_pointer = filename
-                    recording.channel_names = Recording["ChannelNames"]
-                    recording.save()
-                    recording.devices.connect(device)
-                    device.recordings.connect(recording)
-                    NewRecordings.append(recording)
-                elif recording.duration < Recording["Duration"]:
-                    filename = Database.saveSourceFiles(Recording, "ChronicBrainSense", recording.uid, participant.uid)
-                    recording.data_pointer = filename
-                    recording.channel_names = Recording["ChannelNames"]
-                    recording.save()
-                    recording.devices.connect(device)
-                    device.recordings.connect(recording)
-                    NewRecordings.append(recording)
+        recording = models.TimeSeriesRecording(type=hemisphere + "ChronicRecording", date=Recording["Time"][0], 
+                                                sampling_rate=Recording["SamplingRate"], duration=Recording["Duration"]).save()
+        filename = Database.saveSourceFiles(Recording, "ChronicRecording", recording.uid, participant.uid)
+        recording.data_pointer = filename
+        recording.channel_names = Recording["ChannelNames"]
+        recording.save()
+        NewRecordings.append(recording)
 
     return NewRecordings
 

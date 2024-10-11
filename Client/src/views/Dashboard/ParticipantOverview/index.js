@@ -46,6 +46,8 @@ import PhotoIcon from "@mui/icons-material/Photo";
 import WatchIcon from "@mui/icons-material/Watch";
 import ArticleIcon from '@mui/icons-material/Article';
 
+import { FaBrain } from "react-icons/fa6";
+
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";
@@ -65,16 +67,20 @@ import {
 import MuiAlertDialog from "components/MuiAlertDialog";
 import LoadingProgress from "components/LoadingProgress";
 
+import routes from "routes.js";
+import SetExperimentView from "./SetExperimentView";
+
 const filter = createFilterOptions();
 
 export default function ParticipantOverview() {
   const navigate = useNavigate();
   const [controller, dispatch] = usePlatformContext();
-  const { user, language, participant_uid, report } = controller;
+  const { user, language, participant_uid, experiment, report } = controller;
 
   const [participantInfo, setParticipantInfo] = useState(false);
   const [editParticipantInfo, setEditParticipantInfo] = useState(false);
   const [editDeviceInfo, setEditDeviceInfo] = useState({show: false});
+  const [activeExperiment, setActiveExperiment] = useState({show: false, options: [], active: experiment});
   const [uploadNewJson, setUploadNewJson] = useState({show: false});
   const [mergeRecords, setMergeRecords] = useState({show: false});
   const [addNewDevice, setAddNewDevice] = useState({show: false});
@@ -99,6 +105,15 @@ export default function ParticipantOverview() {
       }).catch((error) => {
         SessionController.displayError(error, setAlert);
       });
+
+      SessionController.query("/api/queryParticipantExperiments", {
+        request_type: "Query",
+        participant_uid: participant_uid
+      }).then((response) => {
+        setActiveExperiment({show: true, options: response.data, active: experiment});
+      }).catch((error) => {
+        SessionController.displayError(error, setAlert);
+      });
     }
   }, [participant_uid]);
 
@@ -117,7 +132,7 @@ export default function ParticipantOverview() {
           participant_uid: participant_uid,
           device: device_uid
         }).then(() => {
-          setParticipantInfo({...participantInfo, devices: participantInfo.devices.filter((device) => device.uid != device_uid)});
+          setParticipantInfo({...participantInfo, dbsDevices: participantInfo.dbsDevices.filter((device) => device.uid != device_uid)});
           setAlert(null);
         }).catch((error) => {
           SessionController.displayError(error, setAlert);
@@ -138,7 +153,7 @@ export default function ParticipantOverview() {
       handleConfirm={() => {
         setEditParticipantInfo(false);
         setAlert(<LoadingProgress />);
-        SessionController.query("/api/deleteData", {
+        SessionController.query("/api/deleteStudyParticipant", {
           participant_uid: participant_uid
         }).then(() => {
           setParticipantInfo(false);
@@ -177,7 +192,7 @@ export default function ParticipantOverview() {
       name: deviceInfo.name,
       leads: deviceInfo.leads,
     }).then(() => {
-      setParticipantInfo({...participantInfo, devices: participantInfo.devices.map((device) => {
+      setParticipantInfo({...participantInfo, dbsDevices: participantInfo.dbsDevices.map((device) => {
         if (device.uid != deviceInfo.uid) return device;
         return {
           ...device,
@@ -220,7 +235,9 @@ export default function ParticipantOverview() {
                           color="text"
                           textTransform="capitalize"
                         >
-                          {dictionary.ParticipantOverview.ParticipantInformation[participantInfo.diagnosis] ? dictionary.ParticipantOverview.ParticipantInformation[participantInfo.diagnosis][language] : participantInfo.diagnosis}
+                          {participantInfo.diagnosis ? (
+                            dictionary.ParticipantOverview.ParticipantInformation[participantInfo.diagnosis] ? dictionary.ParticipantOverview.ParticipantInformation[participantInfo.diagnosis][language] : participantInfo.diagnosis
+                          ) : "Diagnosis: N/A"}
                         </MDTypography>
                       </MDBox>
                       <MDBox mb={0.5} lineHeight={1}>
@@ -230,7 +247,7 @@ export default function ParticipantOverview() {
                           fontSize={13}
                           textTransform="capitalize"
                         >
-                          {dictionary.ParticipantOverview.ParticipantInformation.DOB[language]}: {new Date(participantInfo.dob*1000).toLocaleDateString(language, SessionController.getDateTimeOptions("DateLong"))}
+                          {dictionary.ParticipantOverview.ParticipantInformation.DOB[language]}: {new Date(SessionController.decodeTimestamp(participantInfo.dob*1000)).toLocaleDateString(language, SessionController.getDateTimeOptions("DateLong"))}
                         </MDTypography>
                       </MDBox>
                     </Grid>
@@ -246,15 +263,20 @@ export default function ParticipantOverview() {
                 </MDBox>
               </Card>
               <EditParticipantInfoView 
-                  show={editParticipantInfo} 
-                  participantInfo={participantInfo} 
-                  removeParticipant={removeParticipant}
-                  onCancel={() => setEditParticipantInfo(false)} 
-                  onUpdate={updateParticipantInformation} 
+                show={editParticipantInfo} 
+                participantInfo={participantInfo} 
+                removeParticipant={removeParticipant}
+                onCancel={() => setEditParticipantInfo(false)} 
+                onUpdate={updateParticipantInformation} 
               />
             </Grid>
             <Grid item xs={12} lg={8} display={"flex"} alignItems={"stretch"}>
               <Card sx={{width: "100%", overflowX: "auto"}}>
+                <Grid container spacing={2}>
+                  <Grid item xs={3}>
+                          
+                  </Grid>
+                </Grid>
                 <Table size="small">
                   <TableHead sx={{display: "table-header-group"}}>
                     <TableRow key={"header"}>
@@ -272,7 +294,8 @@ export default function ParticipantOverview() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {participantInfo.devices.map((device) => {
+                    {participantInfo.dbsDevices.map((device) => {
+                      const deviceName = SessionController.decodeMessage(device.name);
                       return <TableRow key={device.uid}>
                         <TableCell key={"devicetype"} style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                           <MDTypography align="center" style={{marginBottom: 0}} fontSize={12}>
@@ -281,7 +304,7 @@ export default function ParticipantOverview() {
                         </TableCell>
                         <TableCell key={"devicename"} style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                           <MDTypography align="center" style={{marginBottom: 0}} fontSize={12}>
-                            {SessionController.decodeMessage(device.name)}
+                            {deviceName.length > 32 ? deviceName.slice(0,32) : deviceName}
                           </MDTypography>
                         </TableCell>
                         <TableCell key={"leadname"} style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
@@ -298,7 +321,7 @@ export default function ParticipantOverview() {
                         </TableCell>
                         <TableCell key={"implantdate"} style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
                           <MDTypography align="center" style={{marginBottom: 0}} fontSize={12}>
-                            {new Date(device.implant_date*1000).toLocaleString(language, SessionController.getDateTimeOptions("DateNumeric"))}
+                            {new Date(SessionController.decodeTimestamp(device.implant_date*1000)).toLocaleString(language, SessionController.getDateTimeOptions("DateNumeric"))}
                           </MDTypography>
                         </TableCell>
                         <TableCell key={"viewedit"} style={{borderBottom: "1px solid rgba(224, 224, 224, 0.4)"}}>
@@ -322,10 +345,10 @@ export default function ParticipantOverview() {
               </Card>
 
               <EditDeviceInfoView 
-                  show={editDeviceInfo.show} 
-                  deviceInfo={editDeviceInfo.deviceInfo} 
-                  onCancel={() => setEditDeviceInfo({show: false})} 
-                  onUpdate={updateDeviceInformation} 
+                show={editDeviceInfo.show} 
+                deviceInfo={editDeviceInfo.deviceInfo} 
+                onCancel={() => setEditDeviceInfo({show: false})} 
+                onUpdate={updateDeviceInformation} 
               />
             </Grid>
           </Grid>
@@ -335,87 +358,122 @@ export default function ParticipantOverview() {
           <Grid container spacing={2}>
             <Grid item xs={12} display={"flex"} alignItems={"stretch"}>
               <MDTypography variant={"span"} fontSize={15} fontWeight={"bold"}>
+                {dictionary.Routes.Experiments[language]}
+              </MDTypography>
+            </Grid>
+            {activeExperiment.options.map((experiment) => {
+              return <Grid key={experiment.uid} item xs={12} display={"flex"} alignItems={"stretch"}>
+              <Card sx={{width: "100%", background: activeExperiment.active == experiment.uid ? "light" : "transparent", 
+                        border: activeExperiment.active == experiment.uid ? "solid" : "dashed", 
+                        borderWidth: activeExperiment.active == experiment.uid ? 2 : 1, cursor: "pointer"}}
+                onClick={() => {
+                  setActiveExperiment((activeExperiment) => {
+                    activeExperiment.active = experiment.uid;
+                    activeExperiment.show = false;
+                    setContextState(dispatch, "experiment", experiment.uid, false);
+                    return {...activeExperiment};
+                  })
+                }}
+              >
+                <MDBox p={2} mx={3} display="flex" justifyContent="space-between">
+                  <MDBox display="flex" justifyContent="start">
+                    <MDTypography variant={"span"} fontSize={20} fontWeight={"bold"}>
+                      {experiment.name}
+                    </MDTypography>
+                  </MDBox>
+                  <MDBox display="flex" flexDirection={"column"} justifyContent="end">
+                    <MDTypography variant={"span"} color={"secondary"} fontSize={12} fontWeight={"bold"}>
+                      {"# of Recordings: " + experiment.recordings}
+                    </MDTypography>
+                    <MDTypography variant={"span"} color={"secondary"} fontSize={12} fontWeight={"bold"}>
+                      {"# of Events: " + experiment.events}
+                    </MDTypography>
+                  </MDBox>
+                </MDBox>
+              </Card>
+            </Grid>
+            })}
+          </Grid>
+        </MDBox>
+        <MDBox mb={3}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} display={"flex"} alignItems={"stretch"}>
+              <MDTypography variant={"span"} fontSize={15} fontWeight={"bold"}>
                 {dictionary.Routes.Reports[language]}
               </MDTypography>
             </Grid>
-            <Grid item xs={6} md={4} lg={3} xl={2} display={"flex"} alignItems={"stretch"}>
-              <Card sx={{width: "100%"}}>
-                <MDBox p={2} mx={3} display="flex" justifyContent="center">
-                  <MDBox
-                    display="grid"
-                    justifyContent="center"
-                    alignItems="center"
-                    width="4rem"
-                    height="4rem"
-                    shadow="md"
-                    borderRadius="lg"
-                    variant="gradient"
-                  >
-                    <Icon fontSize="large">
-                      <AssessmentIcon />
-                    </Icon>
+            {Object.keys(routes).map((key) => {
+              if (key === "Main") return;
+              return <Grid key={key} item xs={6} md={4} lg={3} xl={2} display={"flex"} alignItems={"stretch"}>
+                <Card sx={{width: "100%"}}>
+                  <MDBox p={2} mx={3} display="flex" justifyContent="center">
+                    <MDBox
+                      display="grid" justifyContent="center" alignItems="center"
+                      width="4rem" height="4rem" shadow="md"
+                      borderRadius="lg" variant="gradient"
+                    >
+                      <Icon fontSize="large">
+                        {routes[key].icon}
+                      </Icon>
+                    </MDBox>
                   </MDBox>
-                </MDBox>
-                <MDBox pb={6} px={2} textAlign="center" lineHeight={1.25}>
-                  <MDTypography variant="h6" fontWeight="medium" textTransform="capitalize" pb={2}>
-                    {"General Reports"}
-                  </MDTypography>
-                </MDBox>
-                <MDBox pb={2} px={2} lineHeight={1.25} sx={{position: "absolute", bottom: 0, width: "100%"}}>
-                  <MDButton variant={"contained"} color={"info"} fullWidth onClick={() => {
-                    
-                    setContextState(dispatch, "report", "GeneralReport");
-                  }}>
-                    {dictionary.ParticipantOverview.ParticipantInformation.View[language]}
-                  </MDButton>
-                </MDBox>
-              </Card>
-            </Grid>
-            <Grid item xs={6} md={4} lg={3} xl={2} display={"flex"} alignItems={"stretch"}>
-              <Card sx={{width: "100%"}}>
-                <MDBox p={2} mx={3} display="flex" justifyContent="center">
-                  <MDBox
-                    display="grid"
-                    justifyContent="center"
-                    alignItems="center"
-                    width="4rem"
-                    height="4rem"
-                    shadow="md"
-                    borderRadius="lg"
-                    variant="gradient"
-                  >
-                    <Icon fontSize="large">
-                      <AssessmentIcon />
-                    </Icon>
+                  <MDBox pb={6} px={2} textAlign="center" lineHeight={1.25}>
+                    <MDTypography variant="h6" fontWeight="medium" textTransform="capitalize" pb={2}>
+                      {routes[key].name}
+                    </MDTypography>
                   </MDBox>
-                </MDBox>
-                <MDBox pb={6} px={2} textAlign="center" lineHeight={1.25}>
-                  <MDTypography variant="h6" fontWeight="medium" textTransform="capitalize" pb={2}>
-                    {"Medtronic Percept™ Reports"}
-                  </MDTypography>
-                </MDBox>
-                <MDBox pb={2} px={2} lineHeight={1.25} sx={{position: "absolute", bottom: 0, width: "100%"}}>
-                  <MDButton variant={"contained"} color={"info"} fullWidth onClick={() => {
-                    setAlert(<MuiAlertDialog title={"IMPORTANT NOTICE"} message={
-                      "Percept™ PC/RC and BrainSense™ Technologies are Trademarked by Medtronic PLC. Reports provided by our tool is not official Medtronic reports. \
-                      Visualization and Information presentation provided by this open-source application are solely provided for research purpose \
-                      and should not be used for clinical practices unless under research IRB/IDE approval."
-                    }
-                    handleClose={() => {
-                      setAlert();
-                    }} 
-                    handleConfirm={() => {
-                      setAlert();
-                      setContextState(dispatch, "report", "PerceptReport");
-                    }}/>)
-                  }}>
-                    {dictionary.ParticipantOverview.ParticipantInformation.View[language]}
-                  </MDButton>
-                </MDBox>
-              </Card>
-            </Grid>
+                  <MDBox pb={2} px={2} lineHeight={1.25} sx={{position: "absolute", bottom: 0, width: "100%"}}>
+                    <MDButton variant={"contained"} color={"info"} fullWidth onClick={() => {
+                      setContextState(dispatch, "report", key);
+                    }}>
+                      {dictionary.ParticipantOverview.ParticipantInformation.View[language]}
+                    </MDButton>
+                  </MDBox>
+                </Card>
+              </Grid>
+            })}
           </Grid>
         </MDBox>
+        {routes[report] ? (
+          <MDBox mb={3}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} display={"flex"} alignItems={"stretch"}>
+                <MDTypography variant={"span"} fontSize={15} fontWeight={"bold"}>
+                  {dictionary.Routes[report] ? dictionary.Routes[report][language] : report}
+                </MDTypography>
+              </Grid>
+              {routes[report].children.map((subreport) => {
+                return <Grid item xs={6} md={4} lg={3} xl={2} display={"flex"} alignItems={"stretch"}>
+                  <Card sx={{width: "100%"}}>
+                    <MDBox p={2} mx={3} display="flex" justifyContent="center">
+                      <MDBox
+                        display="grid" justifyContent="center" alignItems="center"
+                        width="4rem" height="4rem"
+                        shadow="md" borderRadius="lg" variant="gradient"
+                      >
+                        <Icon fontSize="large">
+                          {subreport.icon}
+                        </Icon>
+                      </MDBox>
+                    </MDBox>
+                    <MDBox pb={6} px={2} textAlign="center" lineHeight={1.25}>
+                      <MDTypography variant="h6" fontWeight="medium" textTransform="capitalize" pb={2}>
+                        {subreport.name}
+                      </MDTypography>
+                    </MDBox>
+                    <MDBox pb={2} px={2} lineHeight={1.25} sx={{position: "absolute", bottom: 0, width: "100%"}}>
+                      <MDButton variant={"contained"} color={"info"} fullWidth onClick={() => {
+                        navigate(subreport.route, {replace: false})
+                      }}>
+                        {dictionary.ParticipantOverview.ParticipantInformation.View[language]}
+                      </MDButton>
+                    </MDBox>
+                  </Card>
+                </Grid>
+              })}
+            </Grid>
+          </MDBox>
+        ) : null}
       </MDBox>
     </DatabaseLayout>
   );

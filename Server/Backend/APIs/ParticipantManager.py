@@ -83,10 +83,17 @@ class CreateStudyParticipant(RestViews.APIView):
             UUID(request.data["study"]) # Will throw if it is not UUID
             study = models.Study.nodes.get_or_none(uid=request.data["study"])
         except:
-            # uid is not a UUID, try to create new study
-            study = models.Study(name=request.data["study"]).save()
-            study.managers.connect(request.user)
-            request.user.studies.connect(study)
+            # uid is not a UUID, look for existing study with the same name to add, or try to create new study
+            study = None
+            for old_study in request.user.studies:
+                if old_study.name == request.data["study"]:
+                    study = old_study
+                    break
+            
+            if not study:
+                study = models.Study(name=request.data["study"]).save()
+                study.managers.connect(request.user)
+                request.user.studies.connect(study)
         
         # If UID provided does not match existing study. This is malicious attempt at the database. 
         if not study:
@@ -101,14 +108,14 @@ class CreateStudyParticipant(RestViews.APIView):
                 return Response(status=400, data={"message": "Duplicate Participant name"})
 
         if "diagnosis" in request.data:
-            participant = models.Patient(name=request.data["name"], diagnosis=request.data["diagnosis"]).save()
+            participant = models.Participant(name=request.data["name"], diagnosis=request.data["diagnosis"], type="Patient").save()
             if "disease_start_time" in request.data:
-                participant.setDiseaseStartTime(request.data["disease_start_time"])
+                participant.disease_start_time = request.data["disease_start_time"]
         else:
             participant = models.Participant(name=request.data["name"]).save()
         
         if "dob" in request.data:
-            participant.setDateOfBirth(request.data["dob"])
+            participant.date_of_birth = request.data["dob"]
         participant.sex = request.data["sex"] if "sex" in request.data else "Other"
 
         participant.studies.connect(study)
@@ -116,12 +123,19 @@ class CreateStudyParticipant(RestViews.APIView):
 
         participant.save()
         study.save()
-        return Response(status=200, data={"uid": participant.uid, "study": study.uid})
+        
+        ParticipantInfo = {"uid": participant.uid, "study": study.uid, "name": participant.name}
+        try:
+            ParticipantInfo["diagnosis"] = participant.diagnosis
+        except:
+            ParticipantInfo["diagnosis"] = "Control"
+        ParticipantInfo["tags"] = [tag.name for tag in participant.tags]
+        return Response(status=200, data=ParticipantInfo)
 
-class CreateParticipantEvent(RestViews.APIView):
-    """ Create Event in Participant
+class QueryParticipantExperiments(RestViews.APIView):
+    """ Create Experiment in Participant
 
-    **POST**: ``/api/createParticipantEvent``
+    **POST**: ``/api/queryParticipantExperiments``
 
     Returns:
       Response Code 200 if success or 400 if error.
@@ -132,37 +146,60 @@ class CreateParticipantEvent(RestViews.APIView):
 
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
-        accepted_keys = ["participant_uid", "study", "event_name", "event_type", "date"]
-        required_keys = ["participant_uid", "study", "event_name", "event_type"]
+        accepted_keys = []
+        required_keys = ["request_type", "participant_uid"]
         if not checkAPIInput(request.data, required_keys, accepted_keys):
             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
         
-        try:
-            UUID(request.data["study"]) # Will throw if it is not UUID
-            study = models.Study.nodes.get_or_none(uid=request.data["study"])
-        except:
-            # If UID provided does not match existing study. This is malicious attempt at the database. 
-            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-        
-        # User has no permission to this study. This is malicious attempt at the database. 
-        if not study.checkPermission(request.user.user_id):
-            return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-
-        participant = study.participants.get_or_none(uid=request.data["participant_uid"])
+        participant = models.Participant.nodes.get_or_none(uid=request.data["participant_uid"])
         if not participant:
             return Response(status=400, data={"message": "Participant not found"})
         
-        existingEvent = participant.events.get_or_none(name=request.data["event_name"])
-        if existingEvent:
-            return Response(status=400, data={"message": "Event name existed"})
-        
-        if "date" in request.data.keys():
-            event = models.BaseEvent(name=request.data["event_name"], type=request.data["event_type"], date=request.data["date"]).save()
+        if "study" in request.data.keys():
+            try:
+                UUID(request.data["study"]) # Will throw if it is not UUID
+                study = participant.studies.get_or_none(uid=request.data["study"])
+            except:
+                # If UID provided does not match existing study. This is malicious attempt at the database. 
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+            
+            # User has no permission to this study. This is malicious attempt at the database. 
+            if not study.checkPermission(request.user.user_id):
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
         else:
-            event = models.BaseEvent(name=request.data["event_name"], type=request.data["event_type"], date=models.current_time()).save()
-        participant.events.connect(event)
-        return Response(status=200, data={"event_uid": event.uid})
+            has_permission = False
+            for study in participant.studies:
+                if study.checkPermission(request.user.user_id):
+                    has_permission = True
+                    break 
+            if not has_permission:
+                return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
+        if request.data["request_type"] == "Create":
+            required_keys.extend(["experiment", "metadata"])
+            if not checkAPIInput(request.data, required_keys, accepted_keys):
+                return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
+            
+            for experiment in participant.experiments:
+                if experiment.name == request.data["experiment"]:
+                    return Response(status=400, data={"message": "Experiment already exists"})
+            
+            experiment = models.Experiment(name=request.data["experiment"], metadata=json.loads(request.data["metadata"])).save()
+            participant.experiments.connect(experiment)
+            return Response(status=200, data={"value": experiment.uid, "label": experiment.name})
+        
+        elif request.data["request_type"] == "Query":
+            data = []
+            for experiment in participant.experiments:
+                data.append({
+                    "uid": experiment.uid, "name": experiment.name, "type": experiment.type, "metadata": experiment.metadata,
+                    "recordings": 0, "events": 0
+                })
+                for source_file in experiment.source_files:
+                    data[-1]["recordings"] += len(source_file.recordings)
+                    data[-1]["events"] += len(source_file.events)
+            return Response(status=200, data=data)
+            
 class UpdateStudyParticipant(RestViews.APIView):
     """ Update Study Participant in BRAVO Database
 
@@ -263,9 +300,10 @@ class UpdateDeviceInformation(RestViews.APIView):
         if not request.user.checkPermission(participant, "edit"):
             return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
 
-        device = participant.devices.get_or_none(uid=request.data["device"])
-        if not device:
+        devices = participant.getDevices(device_uid=request.data["device"])
+        if len(devices) == 0:
             return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+        device = devices[0]
         
         if "name" in request.data:
             if not request.data["name"] == "":
@@ -304,31 +342,35 @@ class DeleteStudyParticipant(RestViews.APIView):
 
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
-        accepted_keys = ["name", "study"]
-        required_keys = ["name", "study"]
+        accepted_keys = ["participant_uid"]
+        required_keys = ["participant_uid"]
         if not checkAPIInput(request.data, required_keys, accepted_keys):
             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
         
         try:
-            UUID(request.data["study"]) # Will throw if it is not UUID
-            study = models.Study.nodes.get_or_none(uid=request.data["study"])
+            UUID(request.data["participant_uid"]) # Will throw if it is not UUID
+            participant = models.Participant.nodes.get_or_none(uid=request.data["participant_uid"])
         except:
             # uid is not a UUID
             return Response(status=400, data={"code": ERROR_CODE["IMPROPER_SUBMISSION"]})
         
-        # If UID provided does not match existing study. This is malicious attempt at the database. 
-        if not study:
+        # If UID provided does not match existing participant. This is malicious attempt at the database. 
+        if not participant:
             return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
         
-        # User has no permission to this study. This is malicious attempt at the database. 
-        if not study.checkPermission(request.user.user_id):
+        if not request.user.checkPermission(participant, "edit"):
             return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
-        
-        for participant in study.participants:
-            if participant.uid == request.data["name"]:
-                participant.delete()
-                return Response(status=200, data={"uid": participant.uid, "study": study.uid})
-        return Response(status=400, data={"code": ERROR_CODE["PERMISSION_DENIED"]})
+
+        for experiment in participant.experiments:
+            for source_file in experiment.source_files:
+                source_file.purge()
+            experiment.delete()
+        participant.delete()
+
+        for analysis in models.CombinedAnalysis.nodes.all():
+            analysis.delete()
+            
+        return Response(status=200)
 
 class QueryStudyParticipant(RestViews.APIView):
     """ Query Study Participant in BRAVO Database
@@ -351,9 +393,13 @@ class QueryStudyParticipant(RestViews.APIView):
             data["studies"].append({"uid": study.uid, "name": study.name})
             data["participants"][study.uid] = []
             for participant in study.participants:
-                ParticipantInfo = {"uid": participant.uid, "name": participant.name}
-                ParticipantInfo["diagnosis"] = participant.diagnosis if participant.diagnosis else "Control"
+                ParticipantInfo = {"uid": participant.uid, "name": participant.getName()}
+                try:
+                    ParticipantInfo["diagnosis"] = participant.diagnosis
+                except:
+                    ParticipantInfo["diagnosis"] = "Control"
                 ParticipantInfo["tags"] = [tag.name for tag in participant.tags]
+                ParticipantInfo["experiments"] = [{"name": experiment.name, "uid": experiment.uid} for experiment in participant.experiments]
                 data["participants"][study.uid].append(ParticipantInfo)
 
         return Response(status=200, data=data)
@@ -391,24 +437,32 @@ class QueryParticipantInformation(RestViews.APIView):
 
         info = dict()
         info["name"] = participant.getName()
-        info["diagnosis"] = participant.diagnosis if participant.diagnosis else "Control"
+        try:
+            info["diagnosis"] = participant.diagnosis
+        except:
+            info["diagnosis"] = "Control"
         info["dob"] = participant.date_of_birth
         info["sex"] = participant.sex
 
-        info["devices"] = list()
+        info["dbsDevices"] = list()
         info["tags"] = [tag.name for tag in participant.tags]
-        info["events"] = [event.getInfo() for event in participant.events]
 
-        for device in participant.devices:
-            deviceInfo = dict()
-            deviceInfo["uid"] = device.uid
-            deviceInfo["location"] = device.implanted_location
-            if device.implanted_date:
-                deviceInfo["implant_date"] = device.implanted_date
-            deviceInfo["name"] = device.getDeviceName()
-            deviceInfo["type"] = device.type
-            deviceInfo["leads"] = [{"type": lead.type, "name": lead.name, "custom_name": lead.custom_name}for lead in device.electrodes]
-            info["devices"].append(deviceInfo)
+        UniqueDevices = []
+        for experiment in participant.experiments:
+            for sourceFile in experiment.source_files:
+                for device in sourceFile.device:
+                    if type(device) == models.DBSDevice and not device.uid in UniqueDevices:
+                        UniqueDevices.append(device.uid)
+                        deviceInfo = dict()
+                        deviceInfo["uid"] = device.uid
+                        deviceInfo["location"] = device.implanted_location
+                        if device.implanted_date:
+                            deviceInfo["implant_date"] = device.implanted_date
+                        deviceInfo["name"] = device.getName()
+                        deviceInfo["type"] = device.type
+                        deviceInfo["leads"] = [{"type": lead.type, "name": lead.name, "custom_name": lead.custom_name} for lead in device.electrodes]
+                        info["dbsDevices"].append(deviceInfo)
+                        print(deviceInfo)
 
         return Response(status=200, data=info)
 

@@ -348,11 +348,9 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       
       <Dialog
         open={queueState.show}
-        PaperProps={{
-          sx: {
-            minWidth: 700
-          }
-        }}
+        PaperProps={{ sx: {minWidth: {
+          xs: "100vw", sm: 900
+        }} }}
         onClose={() => setQueueState({...queueState, show: false})}
       >
         <ProcessingQueue queues={queueState.queues} clearQueue={clearQueue}/>

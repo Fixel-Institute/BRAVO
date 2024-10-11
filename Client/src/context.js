@@ -19,7 +19,6 @@ const PlatformContext = React.createContext();
 PlatformContext.displayName = "UF BRAVO Platform Context"
 
 function reducer(state, action) {
-  SessionController.setSession(action.name, action.value);
   return { ...state, [action.name]: action.value};
 }
 
@@ -37,7 +36,8 @@ function usePlatformContext() {
   return context;
 }
 
-function setContextState(dispatch, name, value) {
+function setContextState(dispatch, name, value, update=true) {
+  SessionController.setSession(name, value, update);
   dispatch({name: name, value: value});
 }
 

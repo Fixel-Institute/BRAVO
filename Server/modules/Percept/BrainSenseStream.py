@@ -44,7 +44,7 @@ from modules import Database
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveBrainSenseStreams(participant, device, StreamingTD, StreamingPower):
+def saveBrainSenseStreams(participant, StreamingTD, StreamingPower):
     """ Save BrainSense Streaming Data in Database Storage
 
     Args:
@@ -233,32 +233,27 @@ def saveBrainSenseStreams(participant, device, StreamingTD, StreamingPower):
     
     TimeDomainRecordingModel = []
     for i in range(len(TimeDomainRecordings)):
-        recording = device.recordings.get_or_none(type="BrainSenseTimeDomain", date=TimeDomainRecordings[i]["StartTime"])
-        if not recording:
-            recording = models.TimeSeriesRecording(type="BrainSenseTimeDomain", date=TimeDomainRecordings[i]["StartTime"], 
-                                                    sampling_rate=TimeDomainRecordings[i]["SamplingRate"], duration=TimeDomainRecordings[i]["Duration"]).save()
-            filename = Database.saveSourceFiles(TimeDomainRecordings[i], "BrainSenseTimeDomain", recording.uid, participant.uid)
-            recording.channel_names = TimeDomainRecordings[i]["ChannelNames"]
-            recording.data_pointer = filename
-            recording.save()
-            recording.devices.connect(device)
-            device.recordings.connect(recording)
+        recording = models.TimeSeriesRecording(type="TimeDomainStreaming", date=TimeDomainRecordings[i]["StartTime"], 
+                                                sampling_rate=TimeDomainRecordings[i]["SamplingRate"], duration=TimeDomainRecordings[i]["Duration"]).save()
+        filename, hashed = Database.saveSourceFiles(TimeDomainRecordings[i], "TimeDomainStreaming", recording.uid, participant.uid)
+        recording.channel_names = TimeDomainRecordings[i]["ChannelNames"]
+        recording.data_pointer = filename
+        recording.hashed = hashed
+        recording.save()
         TimeDomainRecordingModel.append(recording)
 
     PowerDomainRecordingModel = []
     for i in range(len(PowerDomainRecordings)):
-        recording = device.recordings.get_or_none(type="BrainSensePowerDomain", date=PowerDomainRecordings[i]["StartTime"])
-        if not recording:
-            recording = models.TimeSeriesRecording(type="BrainSensePowerDomain", date=PowerDomainRecordings[i]["StartTime"], 
-                                                    sampling_rate=PowerDomainRecordings[i]["SamplingRate"], duration=PowerDomainRecordings[i]["Duration"]).save()
-            filename = Database.saveSourceFiles(PowerDomainRecordings[i], "BrainSensePowerDomain", recording.uid, participant.uid)
-            recording.data_pointer = filename
-            recording.channel_names = PowerDomainRecordings[i]["ChannelNames"]
-            recording.save()
-            recording.devices.connect(device)
-            device.recordings.connect(recording)
+        recording = models.TimeSeriesRecording(type="PowerDomainStreaming", date=PowerDomainRecordings[i]["StartTime"], 
+                                                sampling_rate=PowerDomainRecordings[i]["SamplingRate"], duration=PowerDomainRecordings[i]["Duration"]).save()
+        filename, hashed = Database.saveSourceFiles(PowerDomainRecordings[i], "PowerDomainStreaming", recording.uid, participant.uid)
+        recording.data_pointer = filename
+        recording.hashed = hashed
+        recording.channel_names = PowerDomainRecordings[i]["ChannelNames"]
+        recording.save()
         PowerDomainRecordingModel.append(recording)
 
+    AllAnalyses = []
     for i in range(len(TimeDomainRecordings)):
         recording_date = TimeDomainRecordings[i]["StartTime"]
         CorrespondingRecordingFound = False
@@ -272,17 +267,139 @@ def saveBrainSenseStreams(participant, device, StreamingTD, StreamingPower):
                     if CorrespondingRecordingFound:
                         raise Exception("Multiple Corresponding Power Channel?")
                     
-                    analysis = models.CombinedAnalysis.nodes.get_or_none(name="DefaultBrainSenseStreaming", type=participant.uid, date=recording_date)
-                    if not analysis:
-                        analysis = models.CombinedAnalysis(name="DefaultBrainSenseStreaming", type=participant.uid, date=recording_date).save()
-                        
-                    analysis.recordings.connect(TimeDomainRecordingModel[i])
-                    analysis.recordings.connect(PowerDomainRecordingModel[i])
+                    analysis = models.CombinedAnalysis(name="DefaultBrainSenseStreaming", type="DefaultBrainSenseStreaming", date=recording_date).save()
+                    analysis.recordings.connect(TimeDomainRecordingModel[i], {
+                        "data_type": "Signal",
+                    })
+                    analysis.recordings.connect(PowerDomainRecordingModel[i], {
+                        "data_type": "Therapy",
+                    })
+                    AllAnalyses.append(analysis)
                     CorrespondingRecordingFound = True
                 else:
                     print(f"Matching Data with low overlap: {Overlap} - {ShortestDuration}")
     
-    return TimeDomainRecordingModel + PowerDomainRecordingModel
+    return TimeDomainRecordingModel + PowerDomainRecordingModel, AllAnalyses
+
+def queryTherapeuticAnalysis(analysis, config):
+    ProcessedData = []
+    for recording in analysis.recordings:
+        rel = analysis.recordings.relationship(recording)
+
+        if rel.data_type == "Therapy":
+            device = recording.source_file.get().device.get()
+            RawData = Database.loadSourceDataPointer(recording.data_pointer, recording.hashed)
+            TherapeuticLabel, TherapyGraphs = processTherapyInformation(RawData, device)
+            ProcessedData.append({
+                "Type": "Therapy",
+                "RecordingId": recording.uid,
+                "AlignmentOffset": rel.time_shift,
+                "TherapySeries": TherapeuticLabel,
+                "TherapyGraphs": TherapyGraphs   
+            })
+        elif rel.data_type == "Signal":
+            data = Database.loadSourceDataPointer(recording.data_pointer, recording.hashed)
+            DeviceInfo = recording.source_file.get().device.get().getInfo()
+            for i in range(len(data["ChannelNames"])):
+                Channel, Hemisphere = Percept.reformatChannelName(data["ChannelNames"][i])
+                Target = ""
+                for lead in DeviceInfo["electrodes"]:
+                    if lead["name"].startswith(Hemisphere):
+                        Target = lead["custom_name"] + " " + f"E{Channel[0]:02}-E{Channel[1]:02}"
+                data["ChannelNames"][i] = Target
+
+            ProcessedData.append({
+                "Type": "RawSignal",
+                "RecordingId": recording.uid,
+                "AlignmentOffset": rel.time_shift,
+                "Recording": recording,
+                "Data": data
+            })
+
+    return ProcessedData
+
+def processTherapyInformation(recording, device):
+    DeviceInfo = device.getInfo()
+    StimulationSeries = []
+    TherapyConfiguration = recording["Descriptor"]
+    for i in range(len(recording["ChannelNames"])):
+        if recording["ChannelNames"][i].endswith("Stimulation"):
+            Channel, Hemisphere = Percept.reformatChannelName(recording["ChannelNames"][i].replace(" Stimulation",""))
+            Target = ""
+            for lead in DeviceInfo["electrodes"]:
+                if lead["name"].startswith(Hemisphere):
+                    Target = lead["custom_name"] + " " + f"E{Channel[0]:02}-E{Channel[1]:02}"
+            StimulationContact = Percept.reformatStimulationChannel(TherapyConfiguration["Therapy"][Hemisphere]["ElectrodeState"])
+            Stimulation = np.around(recording["Data"][:,i],2)
+            TimeArray = np.arange(len(Stimulation)) / recording["SamplingRate"]
+            indexOfChanges = np.where(np.abs(np.diff(Stimulation)) > 0)[0]+1
+            if len(indexOfChanges) == 0:
+                indexOfChanges = np.insert(indexOfChanges,0,0)
+            elif indexOfChanges[0] < 0:
+                indexOfChanges[0] = 0
+            else:
+                indexOfChanges = np.insert(indexOfChanges,0,0)
+            indexOfChanges = np.insert(indexOfChanges,len(indexOfChanges),len(Stimulation)-1)
+
+            for j in indexOfChanges:
+                StimulationSeries.append({"Time": TimeArray[j], "TherapyOverview": {
+                    "Type": "StandardIPGStimulation",
+                    "Name": StimulationContact, "Hemisphere": Hemisphere, 
+                    "Amplitude": Stimulation[j], "Frequency": TherapyConfiguration["Therapy"][Hemisphere]["RateInHertz"],
+                    "Pulsewidth": TherapyConfiguration["Therapy"][Hemisphere]["PulseWidthInMicroSecond"],
+                    "ChannelName": Target
+                }})
+
+    StimulationSeries.sort(key=lambda x: x["Time"])
+
+    CurrentTherapy = {}
+    StimulationSeriesFormatted = []
+    for i in range(len(StimulationSeries)):
+        CurrentTherapy[StimulationSeries[i]["TherapyOverview"]["Hemisphere"]] = StimulationSeries[i]["TherapyOverview"]
+        if i > 0:
+            if not StimulationSeries[i-1]["Time"] == StimulationSeries[i]["Time"]:
+                StimulationSeries[i]["TherapyOverview"] = CurrentTherapy.copy()
+                StimulationSeriesFormatted.append(StimulationSeries[i])
+            else:
+                StimulationSeriesFormatted[-1]["TherapyOverview"] = CurrentTherapy.copy()
+        else:
+            StimulationSeries[i]["TherapyOverview"] = CurrentTherapy.copy()
+            StimulationSeriesFormatted.append(StimulationSeries[i])
+
+    TherapyKey = "Amplitude"
+    TherapyGraph = []
+    for hemisphere in ["Left", "Right"]:
+        TherapyGraphTrend = {
+            "Channel": "", 
+            "Value": [],
+            "Unit": "mA",
+            "Legend": ""
+        }
+
+        LastTherapyIndex = ""
+        for i in range(len(StimulationSeriesFormatted)):
+            if hemisphere in StimulationSeriesFormatted[i]["TherapyOverview"].keys():
+                if LastTherapyIndex == "" or StimulationSeriesFormatted[i]["TherapyOverview"][hemisphere][TherapyKey] != LastTherapyIndex:
+                    LastTherapyIndex = StimulationSeriesFormatted[i]["TherapyOverview"][hemisphere][TherapyKey]
+                    if len(TherapyGraphTrend["Value"]) > 0:
+                        TherapyGraphTrend["Value"].append({
+                            "Time": StimulationSeriesFormatted[i]["Time"],
+                            "Value": TherapyGraphTrend["Value"][len(TherapyGraphTrend["Value"])-1]["Value"]
+                        })
+                    TherapyGraphTrend["Value"].append({
+                        "Time": StimulationSeriesFormatted[i]["Time"],
+                        "Value": LastTherapyIndex
+                    })
+                    TherapyGraphTrend["Channel"] = StimulationSeriesFormatted[i]["TherapyOverview"][hemisphere]["ChannelName"]
+        
+        if len(TherapyGraphTrend["Value"]) > 0:
+            TherapyGraphTrend["Value"].append({
+                "Time": StimulationSeriesFormatted[-1]["Time"],
+                "Value": TherapyGraphTrend["Value"][len(TherapyGraphTrend["Value"])-1]["Value"]
+            })
+            TherapyGraph.append(TherapyGraphTrend)
+
+    return StimulationSeriesFormatted, TherapyGraph
 
 def processRealtimeStreams(stream, cardiacFilter=False):
     """ Process BrainSense Streaming Data 

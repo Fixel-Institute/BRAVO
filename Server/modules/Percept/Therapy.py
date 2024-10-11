@@ -36,7 +36,7 @@ def matchAttribute(obj, item):
             return False 
     return True
     
-def saveTherapyEvents(participant, device, therapyList):
+def saveTherapyEvents(therapyList):
     """ Save Therapy Change History in Database
 
     Args:
@@ -49,48 +49,23 @@ def saveTherapyEvents(participant, device, therapyList):
     """
 
     NewTherapies = list()
-    PreviousChangeGroups = participant.events.filter(type="TherapyStatus").all()
     for therapy in therapyList:
         if "TherapyStatus" in therapy.keys():
-            LogFound = False
-            for group in PreviousChangeGroups:
-                if matchAttribute(group, {
-                    "new_group": "ON" if therapy["TherapyStatus"] else "OFF",
-                    "date": therapy["DateTime"].timestamp(),
-                }):
-                    LogFound = True 
-                    break
+            event = models.TherapyModification(name="TherapyStatus", type="TherapyStatus", date=therapy["DateTime"].timestamp())
+            event.new_group = "ON" if therapy["TherapyStatus"] else "OFF"
+            event.old_group = "OFF" if therapy["TherapyStatus"] else "ON"
+            event.save()
+            NewTherapies.append(event)
 
-            if not LogFound:
-                event = models.TherapyModification(name="TherapyStatus", type="TherapyStatus", date=therapy["DateTime"].timestamp())
-                event.new_group = "ON" if therapy["TherapyStatus"] else "OFF"
-                event.old_group = "OFF" if therapy["TherapyStatus"] else "ON"
-                event.device = device.uid
-                event.save()
-                participant.events.connect(event)
-                NewTherapies.append(event)
-
-    PreviousChangeGroups = participant.events.filter(type="TherapyChangeGroup").all()
     for therapy in therapyList:
         if not "TherapyStatus" in therapy.keys():
-            LogFound = False
-            for group in PreviousChangeGroups:
-                if matchAttribute(group, {
-                    "new_group": therapy["NewGroupId"],
-                    "old_group": therapy["OldGroupId"],
-                    "date": therapy["DateTime"].timestamp(),
-                }):
-                    LogFound = True 
-                    break
-            if not LogFound:
-                event = models.TherapyModification(name="TherapyChangeGroup", type="TherapyChangeGroup", date=therapy["DateTime"].timestamp(),
-                                                    new_group=therapy["NewGroupId"], old_group=therapy["OldGroupId"], device=device.uid).save()
-                participant.events.connect(event)
-                NewTherapies.append(event)
+            event = models.TherapyModification(name="TherapyChangeGroup", type="TherapyChangeGroup", date=therapy["DateTime"].timestamp(),
+                                                new_group=therapy["NewGroupId"], old_group=therapy["OldGroupId"]).save()
+            NewTherapies.append(event)
 
     return NewTherapies
 
-def saveTherapySettings(participant, device, therapyList, sessionDate, type):
+def saveTherapySettings(device, therapyList, sessionDate, type):
     """ Save Therapy Settings in Database
 
     Args:
@@ -105,46 +80,32 @@ def saveTherapySettings(participant, device, therapyList, sessionDate, type):
     """
 
     NewTherapies = []
-    ExistingTherapies = [therapy for therapy in participant.therapies if therapy.group_name]
     for therapy in therapyList:
         for hemisphere in ["LeftHemisphere", "RightHemisphere"]:
             if hemisphere in therapy.keys():
-                therapyObject = None
-                for item in ExistingTherapies:
-                    if matchAttribute(item, {
-                        "name": "Left Channel DBS Setting" if hemisphere == "LeftHemisphere" else "Right Channel DBS Setting",
-                        "group_name": therapy["GroupId"] if therapy["GroupName"] == "" else therapy["GroupName"],
-                        "type": type,
-                        "date": sessionDate,
-                    }):
-                        therapyObject = item
-                        break
+                if therapy[hemisphere]["Mode"] == "Adaptive":
+                    therapyObject = models.AdaptiveTherapy(
+                        name= "Left Channel DBS Setting" if hemisphere == "LeftHemisphere" else "Right Channel DBS Setting",
+                        group_name= therapy["GroupId"] if therapy["GroupName"] == "" else therapy["GroupName"],
+                        group_id= therapy["GroupId"],
+                        type= type,
+                        date= sessionDate,
+                    )
                     
-                if not therapyObject:
-                    if therapy[hemisphere]["Mode"] == "Adaptive":
-                        therapyObject = models.AdaptiveTherapy(
-                            name= "Left Channel DBS Setting" if hemisphere == "LeftHemisphere" else "Right Channel DBS Setting",
-                            group_name= therapy["GroupId"] if therapy["GroupName"] == "" else therapy["GroupName"],
-                            type= type,
-                            date= sessionDate,
-                            device= device.uid
-                        )
-                        
-                    else:
-                        therapyObject = models.ElectricalTherapy(
-                            name= "Left Channel DBS Setting" if hemisphere == "LeftHemisphere" else "Right Channel DBS Setting",
-                            group_name= therapy["GroupId"] if therapy["GroupName"] == "" else therapy["GroupName"],
-                            type= type,
-                            date= sessionDate,
-                            device= device.uid
-                        )
+                else:
+                    therapyObject = models.ElectricalTherapy(
+                        name= "Left Channel DBS Setting" if hemisphere == "LeftHemisphere" else "Right Channel DBS Setting",
+                        group_name= therapy["GroupId"] if therapy["GroupName"] == "" else therapy["GroupName"],
+                        group_id= therapy["GroupId"],
+                        type= type,
+                        date= sessionDate,
+                    )
                 
                 if len(therapyObject.settings) > 0:
                     continue 
                 
                 therapyObject.stimulation_type = therapy[hemisphere]["Mode"]
                 therapyObject.save()
-                participant.therapies.connect(therapyObject)
                 NewTherapies.append(therapyObject)
 
                 if therapyObject.stimulation_type == "Interleaving":

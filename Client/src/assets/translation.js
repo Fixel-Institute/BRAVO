@@ -447,7 +447,7 @@ export const dictionary = {
       },
     }
   },
-  BrainSenseStreaming: {
+  TherapeuticAnalysis: {
     Table: {
       TableTitle: {
         en: "Select Recording Date",
@@ -457,13 +457,13 @@ export const dictionary = {
         en: "Recording Time",
         zh: "日期"
       },
-      StreamingTableLeftHemisphere: {
-        en: "Left Channel",
-        zh: "左频道"
+      StreamingTableChannels: {
+        en: "Recording Channels",
+        zh: ""
       },
-      StreamingTableRightHemisphere: {
-        en: "Right Channel",
-        zh: "右频道"
+      StreamingTableTherapy: {
+        en: "Therapy Overview",
+        zh: ""
       },
       StreamingTableRecordingDuration: {
         en: "Recording Duration",
@@ -894,9 +894,29 @@ export const dictionary = {
       en: "Access Permission List",
       zh: "Access Permission List"
     },
+    Experiments: {
+      en: "Experiments",
+      zh: "实验统计"
+    },
     Reports: {
       en: "Reports",
       zh: "汇报"
+    },
+    UploadRawData: {
+      en: "Upload Data",
+      zh: "上传数据"
+    },
+    UploadDeidentifiedData: {
+      en: "Upload Deidentified Data",
+      zh: "上传数据（无PHI）"
+    },
+    GeneralReports: {
+      en: "General Reports",
+      zh: "普通报告"
+    },
+    ImagingReports: {
+      en: "Imaging Analysis Reports",
+      zh: "脑成像"
     },
     Experimental: {
       en: "Experimental",

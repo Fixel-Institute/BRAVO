@@ -68,10 +68,11 @@ class QuerySessionConfigs(RestViews.APIView):
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
         if request.user.is_authenticated:
-            userConfig = request.user.getConfiguration()
+            userConfig = request.user.configuration
             userConfig["ProcessingSettings"], changed = Database.retrieveProcessingSettings(userConfig)
             if changed:
-                request.user.setConfiguration(userConfig)
+                request.user.configuration = userConfig
+                request.user.is_modified = True
 
             userSession = formatRequestSession(userConfig)
             for key in request.data["session"].keys():
@@ -94,7 +95,7 @@ class UpdateSessionConfig(RestViews.APIView):
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
         if request.user.is_authenticated:
-            userConfig = request.user.getConfiguration()
+            userConfig = request.user.configuration
             userConfig["ProcessingSettings"], _ = Database.retrieveProcessingSettings(userConfig)
 
             for key in request.data.keys():
@@ -102,5 +103,6 @@ class UpdateSessionConfig(RestViews.APIView):
                     if key in request.data.keys():
                         userConfig[key] = request.data[key]
 
-            request.user.setConfiguration(userConfig)
+            request.user.configuration = userConfig
+            request.user.is_modified = True
         return Response(status=200)

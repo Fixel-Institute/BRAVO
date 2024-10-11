@@ -20,32 +20,15 @@ Device Models (Recording Systems)
 
 from uuid import uuid4
 
-from neomodel import StructuredNode, StringProperty, ArrayProperty, FloatProperty, IntegerProperty, Relationship
+from neomodel import StructuredNode, StringProperty, ArrayProperty, FloatProperty, IntegerProperty, Relationship, RelationshipTo, RelationshipFrom
 from .HelperFunctions import encryptMessage, decryptMessage
 
 class BaseDevice(StructuredNode):
-    uid = StringProperty(unique_index=True, default=uuid4)
+    uid = StringProperty(default=uuid4)
     name = StringProperty(max_length=512)
     type = StringProperty(max_length=128)
 
-    electrodes = Relationship("Electrode", "CONNECTED_ELECTRODE")
-    recordings = Relationship(".Recording.Recording", "DATA_RECORDED")
-    source_files = Relationship(".SourceFile.SourceFile", "HAS_SOURCEFILE")
-
-    def setDeviceName(self, name):
-        self.name = encryptMessage(name)
-
-    def getDeviceName(self):
-        return decryptMessage(self.name)
-    
-    def purge(self):
-        for electrode in self.electrodes:
-            electrode.purge()
-        for recording in self.recordings:
-            recording.purge()
-        for file in self.source_files:
-            file.purge()
-        self.delete()
+    source_files = RelationshipFrom(".SourceFile.SourceFile", "RECORDED_WITH")
 
 class DBSDevice(BaseDevice):
     implanted_location = StringProperty()
@@ -53,6 +36,22 @@ class DBSDevice(BaseDevice):
     estimated_eol = FloatProperty()
 
     device_bloodline = StringProperty()
+
+    electrodes = Relationship("Electrode", "CONNECTED_ELECTRODE")
+
+    def setName(self, name):
+        self.name = encryptMessage(name)
+    
+    def getName(self):
+        return decryptMessage(self.name)
+    
+    def getInfo(self):
+        return {
+            "uid": self.uid,
+            "name": self.name,
+            "type": self.type,
+            "electrodes": [electrode.getInfo() for electrode in self.electrodes]
+        }
 
 class Electrode(StructuredNode):
     type = StringProperty()
@@ -63,8 +62,15 @@ class Electrode(StructuredNode):
     channel_coordinates = ArrayProperty(StringProperty()) # It is in reality XYZ coordinates or trajectory, but will be encoded into String for simplicity
     implanted_date = FloatProperty()
 
-    def purge(self):
-        self.delete()
-
 class DBSElectrode(Electrode):
     custom_name = StringProperty()
+
+    def getInfo(self):
+        return {
+            "type": self.type,
+            "name": self.name,
+            "channel_count": self.channel_count,
+            "channel_names": self.channel_names,
+            "date": self.implanted_date,
+            "custom_name": self.custom_name
+        }

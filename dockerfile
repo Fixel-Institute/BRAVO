@@ -22,4 +22,4 @@ RUN chmod 0644 /etc/cron.d/cron-job && \
 EXPOSE 443
 EXPOSE 3001
 
-CMD ["bash"]
+CMD ["cron","&&","tail","-f","/var/log/cron.log"]

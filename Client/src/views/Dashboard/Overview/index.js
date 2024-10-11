@@ -157,11 +157,11 @@ export default function DashboardOverview() {
           return state;
         }));
       } else {
-        if (availableParticipants.participants[currentStudy.uid].length > 0) setFilteredParticipants([...availableParticipants.participants[currentStudy.uid]]);
+        setFilteredParticipants([...availableParticipants.participants[currentStudy.uid]]);
       }
     }, 200);
     return () => clearTimeout(filterTimer);
-  }, [filterOptions, availableParticipants]);
+  }, [filterOptions, currentStudy, availableParticipants]);
 
   const currentDate = new Date();
 
@@ -203,7 +203,7 @@ export default function DashboardOverview() {
                   {dictionary.Dashboard.ParticipantTable[language]}
                 </MDTypography>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={6} md={6}>
                 <Autocomplete
                   options={availableParticipants.studies ? availableParticipants.studies : []}
                   value={currentStudy}
@@ -222,7 +222,7 @@ export default function DashboardOverview() {
                   disableClearable
                 />
               </Grid>
-              <Grid item sm={12} md={6} display="flex" sx={{
+              <Grid item sm={6} md={6} display="flex" sx={{
                 justifyContent: {
                   sm: "space-between",
                   md: "end"

@@ -18,12 +18,14 @@ Therapy Models
 @email: jackson.cagle@neurology.ufl.edu
 """
 
-from neomodel import StructuredNode, StringProperty, FloatProperty, ArrayProperty, IntegerProperty, Relationship
+from neomodel import StructuredNode, StringProperty, FloatProperty, ArrayProperty, IntegerProperty, Relationship, RelationshipTo, RelationshipFrom
 
 class Therapy(StructuredNode):
     name = StringProperty(max_length=128)
     type = StringProperty(max_length=128)
     date = FloatProperty()
+
+    source_file = RelationshipFrom(".SourceFile.SourceFile", "SOURCE_OF_THERAPY")
 
     def purge(self):
         self.delete()
@@ -35,17 +37,31 @@ class Medication(Therapy):
 
 class ElectricalTherapy(Therapy):
     group_name = StringProperty()
+    group_id = StringProperty()
     stimulation_type = StringProperty()
-    device = StringProperty()
     
     settings = Relationship("ElectricalStimulation", "HAS_ELECTRICAL_STIMULATION")
 
     def purge(self):
         for setting in self.settings:
-            setting.purge()
+            setting.delete()
         self.delete()
 
+    def getInfo(self):
+        return {
+            "Name": self.name,
+            "GroupName": self.group_name,
+            "GroupId": self.group_id,
+            "Type": self.type,
+            "StimulationType": self.stimulation_type,
+            "Date": self.date,
+            "TherapyConfigurations": [setting.getInfo() for setting in self.settings],
+        }
+
 class AdaptiveTherapy(ElectricalTherapy):
+    pass
+
+class MedtronicPerceptAdaptiveTherapy(AdaptiveTherapy):
     pass
 
 class ElectricalStimulation(StructuredNode):
@@ -62,5 +78,19 @@ class ElectricalStimulation(StructuredNode):
 
     waveform = StringProperty() # This needs to be implemented as a method later, typical options being passive or active, cathode/anode etc.
 
-    def purge(self):
-        self.delete()
+    def getInfo(self):
+        Electrode = self.electrode.get().getInfo()
+        return {
+            "LeadName": Electrode["custom_name"],
+            "Contact": [Electrode["channel_names"][i] for i in self.contact],
+            "ReturnContact": [Electrode["channel_names"][i] for i in self.return_contact if i >= 0],
+            "Amplitude": self.amplitude,
+            "AmplitudeUnit": self.amplitude_unit,
+            "Pulsewidth": self.pulsewidth,
+            "PulsewidthUnit": self.pulsewidth_unit,
+            "Pulsewidth": self.pulsewidth,
+            "PulsewidthUnit": self.pulsewidth_unit,
+            "Frequency": self.frequency,
+            "Cycling": self.cycling,
+            "CyclingPeriod": self.cycling_period 
+        }

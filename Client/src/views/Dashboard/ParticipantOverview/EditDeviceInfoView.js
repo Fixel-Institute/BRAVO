@@ -11,7 +11,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { createRef, useState, memo } from "react";
+import { createRef, useState, memo, useEffect } from "react";
 
 import {
   Autocomplete,
@@ -21,6 +21,7 @@ import {
   DialogContent,
   DialogTitle,
   TextField,
+  Tooltip, IconButton
 } from "@mui/material";
 
 import { createFilterOptions } from "@mui/material/Autocomplete";
@@ -30,6 +31,8 @@ import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";
 import MDButton from "components/MDButton";
 import DropzoneUploader from "components/DropzoneUploader";
+
+import { FaCopy } from "react-icons/fa";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context";
@@ -43,29 +46,40 @@ function EditDeviceInfoView({show, deviceInfo, onUpdate, onCancel}) {
 
   const [editDeviceInfo, setEditDeviceInfo] = useState({...deviceInfo});
   
-  if (!deviceInfo) return;
+  useEffect(() => {
+    if (!deviceInfo) return;
+    setEditDeviceInfo({...deviceInfo});
+  }, [deviceInfo]);
+
+  if (Object.keys(editDeviceInfo).length == 0) return;
 
   return (
     <Dialog open={show} onClose={() => {
       onCancel();
       setEditDeviceInfo({...deviceInfo});
     }}>
-      <MDBox px={2} pt={2}>
+      
+      <MDBox px={2} pt={2} display={"flex"} flexDirection={"row"} justifyContent={"center"} alignItems={"center"}>
         <MDTypography variant="h5">
-          Edit Device Information
+          {"Edit Device Information"}
         </MDTypography>
-        <MDTypography variant="h5">
-          {editDeviceInfo.uid}
-        </MDTypography>
+        <Tooltip title={"Click to Copy Device Unique Identifier"}>
+          <IconButton onClick={() => {
+            navigator.clipboard.writeText(editDeviceInfo.uid);
+          }}>
+            <FaCopy />
+          </IconButton>
+        </Tooltip>
       </MDBox>
       <DialogContent>
         <Grid container spacing={2}>
           <Grid item xs={12}>
             <TextField
               id="device-name"
+              name="device-name"
               variant="standard"
               margin="dense"
-              label="Device Name"
+              label="Device Name (Encoded)"
               placeholder="Device Name"
               value={editDeviceInfo.name}
               onChange={(event) => setEditDeviceInfo({...editDeviceInfo, name: event.target.value})}

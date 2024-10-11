@@ -39,12 +39,62 @@ from decoder import Percept
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 key = os.environ.get('ENCRYPTION_KEY')
 
-def decodeMedtronicJSON(cache_file):
-    metadata = cache_file.metadata
-    participant = cache_file.participant[0]
-
-    JSON = Percept.decodeEncryptedJSON(cache_file.file_pointer, os.environ.get('ENCRYPTION_KEY'))
+def createParticipantFromMedtronicJSON(cache_file):
     try:
+        JSON = Percept.decodeEncryptedJSON(cache_file.file_pointer, key)
+    except:
+        return {"error": "Percept JSON Decoding Error"}
+    
+    metadata = cache_file.metadata
+    study = models.Study.nodes.get_or_none(uid=metadata["study"])
+    if not study:
+        return {"error": "Unidentified Study"}
+
+    PatientInformation = JSON["PatientInformation"]["Final"]
+    participant_name = PatientInformation["PatientFirstName"] + " " + PatientInformation["PatientLastName"]
+    participant = None
+    for existing_participant in study.participants:
+        if existing_participant.getName() == participant_name:
+            participant = existing_participant
+
+    if not participant:
+        participant = models.Participant(type="Patient")
+        participant.setName(participant_name)
+
+    if PatientInformation["Diagnosis"] == "DiagnosisTypeDef.ParkinsonsDisease":
+        participant.diagnosis = "Parkinson's Disease"
+    elif PatientInformation["Diagnosis"] == "DiagnosisTypeDef.EssentialTremor":
+        participant.diagnosis = "Essential Tremor"
+
+    if PatientInformation["PatientGender"] == "PatientGenderDef.MALE":
+        participant.sex = "Male"
+    elif PatientInformation["PatientGender"] == "PatientGenderDef.FEMALE":
+        participant.sex = "Female"
+    else:
+        participant.sex = "Other"
+
+    # Patient Date of Birth does not exist for non-Percept Device
+    if "PatientDateOfBirth" in PatientInformation.keys():
+        if not PatientInformation["PatientDateOfBirth"] == "":
+            participant.date_of_birth = Percept.getTimestamp(PatientInformation["PatientDateOfBirth"])
+    participant.save()
+    study.participants.connect(participant)
+
+    experiment = participant.experiments.get_or_none(name="Default Experiment")
+    if not experiment:
+        experiment = models.Experiment(name="Default Experiment", metadata={}).save()
+        participant.experiments.connect(experiment)
+    experiment.source_files.connect(cache_file)
+    
+    return participant
+
+def decodeMedtronicJSON(cache_file, participant=None):
+    metadata = cache_file.metadata
+    if not participant:
+        participant = cache_file.experiment.get().participant.get()
+
+    try:
+        JSON = Percept.decodeEncryptedJSON(cache_file.file_pointer, key)
         Data = Percept.extractPerceptJSON(JSON)
     except:
         return {"error": "Percept JSON Decoding Error"}
@@ -56,28 +106,30 @@ def decodeMedtronicJSON(cache_file):
     SessionTimestamp = Percept.estimateSessionDateTime(JSON)
     DeviceInformation = JSON["DeviceInformation"]["Final"]
 
-    device = None
-    for existingDevice in participant.devices:
-        if existingDevice.getDeviceName() == DeviceInformation["NeurostimulatorSerialNumber"]:
-            device = existingDevice
-            break
-        
-    if not device:
-        device = models.DBSDevice(type=DeviceInformation["Neurostimulator"])
-        device.setDeviceName(DeviceInformation["NeurostimulatorSerialNumber"])
+    existingDevices = participant.getDevices()
+    existingDevices = [device for device in existingDevices if device.getName() == DeviceInformation["NeurostimulatorSerialNumber"]]
+
+    if len(existingDevices) == 0:
+        device = models.DBSDevice(type=DeviceInformation["Neurostimulator"]).save()
+        device.setName(DeviceInformation["NeurostimulatorSerialNumber"])
+        cache_file.device.connect(device)
+    else:
+        device = existingDevices[0]
 
     if metadata["infer_from_device"]:
         PatientInformation = JSON["PatientInformation"]["Final"]
         if PatientInformation["Diagnosis"] == "DiagnosisTypeDef.ParkinsonsDisease":
             participant.diagnosis = "Parkinson's Disease"
-        elif PatientInformation["Diagnosis"] == "DiagnosisTypeDef.ParkinsonsDisease":
+        elif PatientInformation["Diagnosis"] == "DiagnosisTypeDef.EssentialTremor":
             participant.diagnosis = "Essential Tremor"
+
         if PatientInformation["PatientGender"] == "PatientGenderDef.MALE":
             participant.sex = "Male"
         elif PatientInformation["PatientGender"] == "PatientGenderDef.FEMALE":
             participant.sex = "Female"
         else:
             participant.sex = "Other"
+
         # Patient Date of Birth does not exist for non-Percept Device
         if "PatientDateOfBirth" in PatientInformation.keys():
             participant.date_of_birth = Percept.getTimestamp(PatientInformation["PatientDateOfBirth"])
@@ -89,14 +141,14 @@ def decodeMedtronicJSON(cache_file):
             device.implanted_location = "Left IPG"
         else:
             device.implanted_location = DeviceInformation["NeurostimulatorLocation"].replace("InsLocation.", "")
+
         device.implanted_date = Percept.getTimestamp(DeviceInformation["ImplantDate"])
+
     else:
         if not device.implanted_location and not metadata.device_location == "":
             device.implanted_location = metadata.device_location
 
     device.save()
-    if not device.uid in [i.uid for i in participant.devices]:
-        participant.devices.connect(device)
 
     LeadInformation = JSON["LeadConfiguration"]["Final"]
     for lead in LeadInformation:
@@ -144,75 +196,73 @@ def decodeMedtronicJSON(cache_file):
 
     # Handle Therapy History
     if "StimulationGroups" in Data.keys():
-        NewTherapies = PerceptTherapy.saveTherapySettings(participant, device, Data["StimulationGroups"], SessionTimestamp, "Post-visit Therapy")
-        [cache_file.therapies.connect(item) for item in NewTherapies]
+        NewTherapies = PerceptTherapy.saveTherapySettings(device, Data["StimulationGroups"], SessionTimestamp, "Post-visit Therapy")
+        for item in NewTherapies:
+            cache_file.therapies.connect(item)
     
     if "PreviousGroups" in Data.keys():
-        NewTherapies = PerceptTherapy.saveTherapySettings(participant, device, Data["PreviousGroups"], SessionTimestamp, "Pre-visit Therapy")
-        [cache_file.therapies.connect(item) for item in NewTherapies]
+        NewTherapies = PerceptTherapy.saveTherapySettings(device, Data["PreviousGroups"], SessionTimestamp, "Pre-visit Therapy")
+        for item in NewTherapies:
+            cache_file.therapies.connect(item)
     
     if "TherapyHistory" in Data.keys():
         for i in range(len(Data["TherapyHistory"])):
             HistorySessionDate = Percept.getTimestamp(Data["TherapyHistory"][i]["DateTime"])
-            NewTherapies = PerceptTherapy.saveTherapySettings(participant, device, Data["TherapyHistory"][i]["Therapy"], HistorySessionDate, "Past Therapy")
-            [cache_file.therapies.connect(item) for item in NewTherapies]
+            NewTherapies = PerceptTherapy.saveTherapySettings(device, Data["TherapyHistory"][i]["Therapy"], HistorySessionDate, "Past Therapy")
+            for item in NewTherapies:
+                cache_file.therapies.connect(item)
     
     # Handle Therapy Change History
     if "TherapyChangeHistory" in Data.keys():
-        NewTherapies = PerceptTherapy.saveTherapyEvents(participant, device, Data["TherapyChangeHistory"])
-        [cache_file.events.connect(item) for item in NewTherapies]
-
-    # Handle Recording Data
-    visit = models.Visit.nodes.get_or_none(name="Generic Percept Session")
-    if not visit:
-        visit = models.Visit(name="Generic Percept Session").save()
+        NewTherapies = PerceptTherapy.saveTherapyEvents(Data["TherapyChangeHistory"])
+        for item in NewTherapies:
+            cache_file.events.connect(item)
 
     # Process BrainSense Survey
     if "MontagesTD" in Data.keys():
-        NewRecordings = BrainSenseSurvey.saveBrainSenseSurvey(participant, device, Data["MontagesTD"])
+        NewRecordings = BrainSenseSurvey.saveBrainSenseSurvey(participant, Data["MontagesTD"], "BrainSenseSurvey")
         for item in NewRecordings:
             cache_file.recordings.connect(item)
-            visit.recordings.connect(item)
 
     if "BaselineTD" in Data.keys():
-        NewRecordings = BrainSenseSurvey.saveBrainSenseSurvey(participant, device, Data["BaselineTD"])
+        NewRecordings = BrainSenseSurvey.saveBrainSenseSurvey(participant, Data["BaselineTD"], "BaselineMontages")
         for item in NewRecordings:
             cache_file.recordings.connect(item)
-            visit.recordings.connect(item)
+    
+    if "StimulationTD" in Data.keys():
+        NewRecordings = BrainSenseSurvey.saveBrainSenseSurvey(participant, Data["StimulationTD"], "StimulationMontages")
+        for item in NewRecordings:
+            cache_file.recordings.connect(item)
     
     # Process Montage Streams
     if "IndefiniteStream" in Data.keys():
-        NewRecordings = IndefiniteStream.saveIndefiniteStreams(participant, device, Data["IndefiniteStream"])
+        NewRecordings = IndefiniteStream.saveMontageStreams(participant, Data["IndefiniteStream"])
         for item in NewRecordings:
             cache_file.recordings.connect(item)
-            visit.recordings.connect(item)
 
     # Process Realtime Streams
     if "StreamingTD" in Data.keys() and "StreamingPower" in Data.keys():
-        NewRecordings = BrainSenseStream.saveBrainSenseStreams(participant, device, Data["StreamingTD"], Data["StreamingPower"])
+        NewRecordings, NewAnalyses = BrainSenseStream.saveBrainSenseStreams(participant, Data["StreamingTD"], Data["StreamingPower"])
         for item in NewRecordings:
             cache_file.recordings.connect(item)
-            visit.recordings.connect(item)
+        for item in NewAnalyses:
+            cache_file.experiment.get().analyses.connect(item)
 
     # Stiore Chronic LFPs
     if "LFPTrends" in Data.keys():
-        NewRecordings = ChronicBrainSense.saveChronicBrainSense(participant, device, Data["LFPTrends"], Data["PreviousGroups"], SessionTimestamp)
+        NewRecordings = ChronicBrainSense.saveChronicBrainSense(participant, Data["LFPTrends"])
         for item in NewRecordings:
             cache_file.recordings.connect(item)
-            visit.recordings.connect(item)
 
     if "PatientEventLogs" in Data.keys():
-        NewEvents = BrainSenseEvent.saveBrainSenseEvents(participant, device, Data["PatientEventLogs"])
-        [cache_file.events.connect(item) for item in NewEvents]
+        NewEvents = BrainSenseEvent.saveBrainSenseEvents(Data["PatientEventLogs"])
+        for item in NewEvents:
+            cache_file.events.connect(item)
 
     if "Impedance" in Data.keys():
-        if len(device.recordings.filter(type="ImpedanceMeasurement", date=SessionTimestamp)) == 0:
-            for impedanceData in Data["Impedance"]:
-                recording = models.InMemoryRecording(type="ImpedanceMeasurement", date=SessionTimestamp, in_memory_storage=impedanceData).save()
-                recording.devices.connect(device)
-                device.recordings.connect(recording)
-                cache_file.recordings.connect(recording)
-                visit.recordings.connect(recording)
+        for impedanceData in Data["Impedance"]:
+            recording = models.InMemoryRecording(type="ImpedanceMeasurement", date=SessionTimestamp, in_memory_storage=impedanceData).save()
+            cache_file.recordings.connect(recording)
 
     os.makedirs(DATABASE_PATH + "raws" + os.path.sep + participant.uid, exist_ok=True)
     os.rename(cache_file.file_pointer, DATABASE_PATH + "raws" + os.path.sep + participant.uid + os.path.sep + cache_file.uid + ".json")
@@ -225,9 +275,14 @@ def saveCacheFile(rawBytes, filename, data_type, metadata, event=None):
     sourceFile = models.SourceFile(name=filename, metadata=metadata)
     extension = filename.replace(filename.split(".")[0],"")
     sourceFile.file_pointer = DATABASE_PATH + "cache" + os.path.sep + sourceFile.uid + extension
-    with open(sourceFile.file_pointer, "wb+") as file:
-        file.write(rawBytes)
 
+    if data_type == "MedtronicJSON":
+        secureEncoder = Fernet(key)
+        with open(sourceFile.file_pointer, "wb+") as file:
+            file.write(secureEncoder.encrypt(rawBytes))
+    else:
+        with open(sourceFile.file_pointer, "wb+") as file:
+            file.write(rawBytes)
     sourceFile.save()
     queue = models.ProcessingQueue(status="created", job_type=data_type).save()
     queue.cache_file.connect(sourceFile)

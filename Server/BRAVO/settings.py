@@ -39,6 +39,7 @@ os.makedirs(DATASERVER_PATH + "cache", exist_ok=True)
 os.makedirs(DATASERVER_PATH + "imaging", exist_ok=True)
 os.makedirs(DATASERVER_PATH + "raws", exist_ok=True)
 os.makedirs(DATASERVER_PATH + "recordings", exist_ok=True)
+os.makedirs(DATASERVER_PATH + "visualization", exist_ok=True)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not (os.environ.get('MODE') == "PRODUCTION")

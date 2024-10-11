@@ -8,6 +8,9 @@ def checkAPIInput(data, required_keys=[], accepted_keys=[]):
     
     for key in dataKey:
         FoundKey = False
+        if len(accepted_keys) == 0:
+            continue
+        
         for checkKey in accepted_keys:
             if checkKey == key:
                 FoundKey = True

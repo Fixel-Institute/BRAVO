@@ -53,16 +53,27 @@ def processJSONUploads():
     queue = models.ProcessingQueue.nodes.filter(job_type="MedtronicJSON", status="created").all()
     if len(queue) > 0:
         for job in queue:
-            cache_file = job.cache_file[0]
+            try:
+                cache_file = job.cache_file.get()
+            except:
+                job.delete()
+                continue
+            cache_file = job.cache_file.get()
             MatchingData = False
-
             time_start = datetime.datetime.now().timestamp()
-            for existing_session in models.SourceFile.getAllSessionFilesForParticipant(cache_file.participant[0]):
-                if (not existing_session.uid == cache_file.uid):
-                    if existing_session.file_pointer == DATABASE_PATH + "raws" + os.path.sep + existing_session.participant[0].uid + os.path.sep + existing_session.uid + ".json":
+            
+            if "batch_upload" in cache_file.metadata.keys():
+                participant = DataDecoder.createParticipantFromMedtronicJSON(cache_file)
+            else:
+                participant = cache_file.experiment.get().participant.get()
+                
+            for experiment in participant.experiments:
+                for existing_session in experiment.source_files:
+                    if existing_session.type == cache_file.type and (not existing_session.uid == cache_file.uid) and existing_session.queue.get_or_none(status="complete"):
                         if checkFiles(existing_session.file_pointer, cache_file.file_pointer):
                             MatchingData = True 
                             break
+
             time_end = datetime.datetime.now().timestamp()
             print(f"Time to Check: {time_end-time_start}")
 
@@ -73,9 +84,8 @@ def processJSONUploads():
                 job.save()
                 continue
 
-            job.status = "in_progress"
             try:
-                result = DataDecoder.decodeMedtronicJSON(cache_file)
+                result = DataDecoder.decodeMedtronicJSON(cache_file, participant=participant)
             except Exception as e:
                 result = {"error": str(e)}
 
@@ -90,6 +100,38 @@ def processJSONUploads():
     if len(models.ProcessingQueue.nodes.filter(job_type="MedtronicJSON", status="created")) > 0:
         processJSONUploads()
 
+def processImageData():
+    queue = models.ProcessingQueue.nodes.filter(job_type="MRImages", status="created").all()
+    if len(queue) > 0:
+        for job in queue:
+            cache_file = job.cache_file[0]
+            job.status = "in_progress"
+            
+            result = None
+            try:
+                participant = cache_file.experiment[0].participant[0]
+                os.makedirs(DATABASE_PATH + "imaging" + os.path.sep + participant.uid, exist_ok=True)
+                newFilePointer = cache_file.file_pointer.replace(DATABASE_PATH + "cache", DATABASE_PATH + "imaging" + os.path.sep + participant.uid)
+                if os.path.exists(newFilePointer):
+                    raise Exception("File Exists")
+                
+                os.rename(cache_file.file_pointer, newFilePointer) 
+                cache_file.file_pointer = newFilePointer
+                cache_file.save()
+            except Exception as e:
+                result = {"error": str(e)}
+
+            if result:
+                job.status = "error"
+                job.result = result["error"]
+                print(result)
+            else:
+                job.status = "complete"
+            job.save()
+
+    if len(models.ProcessingQueue.nodes.filter(job_type="MRImages", status="created")) > 0:
+        processImageData()
+
 def processUniversalData():
     queue = models.ProcessingQueue.nodes.filter(job_type="RawData", status="created").all()
     if len(queue) > 0:
@@ -102,6 +144,9 @@ def processUniversalData():
                 participant = cache_file.participant[0]
                 os.makedirs(DATABASE_PATH + "raws" + os.path.sep + participant.uid, exist_ok=True)
                 newFilePointer = cache_file.file_pointer.replace(DATABASE_PATH + "cache", DATABASE_PATH + "raws" + os.path.sep + participant.uid)
+                if os.path.exists(newFilePointer):
+                    raise Exception("File Exists")
+                
                 os.rename(cache_file.file_pointer, newFilePointer) 
                 cache_file.file_pointer = newFilePointer
                 cache_file.save()
@@ -121,6 +166,7 @@ def processUniversalData():
 
 if __name__ == '__main__':
     processJSONUploads()
+    processImageData()
     processUniversalData()
     #processSummitZIPUpload()
     #processExternalRecordingUpload()

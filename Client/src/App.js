@@ -72,15 +72,20 @@ export default function App() {
   }, [pathname]);
 
   const getRoutes = (allRoutes) => {
-    return allRoutes.map((route) => {
-      if (route.collapse) {
-        return getRoutes(route.collapse);
+    if (allRoutes.Main) {
+      let routes = [];
+      for (let key in allRoutes) {
+        routes.push(...getRoutes(allRoutes[key]));
       }
+      return routes;
+    }
+    
+    return allRoutes.children.map((route) => {
       if (route.route) {
         return <Route exact path={route.route} element={route.component} key={route.key} />;
-      }
+      } 
       return null;
-    });
+    })
   }
 
   return <>

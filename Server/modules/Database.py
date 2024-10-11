@@ -22,7 +22,7 @@ import os, sys, pathlib
 RESOURCES = str(pathlib.Path(__file__).parent.parent.resolve())
 
 from datetime import datetime, date, timedelta
-import pickle, blosc
+import pickle, blosc, hmac, hashlib
 import dateutil, pytz
 import numpy as np
 import pandas as pd
@@ -37,23 +37,47 @@ DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 def retrieveProcessingSettings(config=dict()):
     options = {
         "TimeSeriesRecording": {
+            "StandardFilter": {
+                "name": "Standard Bandpass Filter",
+                "description": "",
+                "options": ["No Filter","Butterworth 1-100Hz"],
+                "value": "Butterworth 1-100Hz"
+            },
+            "NotchFilter": {
+                "name": "Powerline Noise Notch Filter",
+                "description": "",
+                "options": ["No Filter","Notch 55-65Hz","Notch 45-55Hz"],
+                "value": "No Filter"
+            },
+            "WienerFilter": {
+                "name": "Wiener Filter for Artifact Removals",
+                "description": "",
+                "options": ["No Filter","Use Wiener Filter"],
+                "value": "No Filter"
+            },
+            "CardiacFilter": {
+                "name": "Cardiac Filter for EKG Removals",
+                "description": "",
+                "options": ["No Filter","Use Adaptive Template Matching"],
+                "value": "No Filter"
+            },
             "SpectrogramMethod": {
                 "name": "Time-Frequency Analysis Algorithm",
                 "description": "",
-                "options": ["Welch","Spectrogram","Wavelet"],
-                "value": "Spectrogram"
+                "options": ["Welch's Periodogram","Short-time Fourier Transform","Wavelet","Autoregressive Model (Yule-Walker)"],
+                "value": "Welch's Periodogram"
             },
-            "PSDMethod": {
-                "name": "Stimulation Epoch Power Spectrum Algorithm",
+            "BaselineCorrection": {
+                "name": "Baseline Correlation for Time-Frequency Analysis",
                 "description": "",
-                "options": ["Welch","Time-Frequency Analysis"],
-                "value": "Welch"
+                "options": ["No Correction", "Use Baseline Correction"],
+                "value": "No Correction"
             },
-            "NormalizedPSD": {
-                "name": "Normalize Stimulation Epoch Power Spectrum",
+            "Normalization": {
+                "name": "Normalization for Time-Frequency Analysis",
                 "description": "",
-                "options": ["true", "false"],
-                "value": "false"
+                "options": ["No Normalization", "1/f PSD Trend Removal"],
+                "value": "No Normalization"
             },
         },
         "PowerSpectralDensity": {
@@ -72,20 +96,32 @@ def retrieveProcessingSettings(config=dict()):
         }
     }
 
-    if not "ProcessingSettings" in config.keys():
+    if not "ProcessingConfiguration" in config.keys():
         return options, True
     
-    if not type(config["ProcessingSettings"]) == dict:
+    if not type(config["ProcessingConfiguration"]) == dict:
         return options, True
 
-    for key in config["ProcessingSettings"].keys():
-        if type(config["ProcessingSettings"][key]) == dict:
-            for subkey in config["ProcessingSettings"][key].keys():
-                if type(config["ProcessingSettings"][key][subkey]) == dict and subkey in options[key].keys():
-                    if config["ProcessingSettings"][key][subkey]["name"] == options[key][subkey]["name"] and config["ProcessingSettings"][key][subkey]["description"] == options[key][subkey]["description"] and config["ProcessingSettings"][key][subkey]["options"] == options[key][subkey]["options"]:
-                        options[key][subkey]["value"] = config["ProcessingSettings"][key][subkey]["value"]
+    for key in config["ProcessingConfiguration"].keys():
+        if type(config["ProcessingConfiguration"][key]) == dict:
+            for subkey in config["ProcessingConfiguration"][key].keys():
+                if type(config["ProcessingConfiguration"][key][subkey]) == dict and subkey in options[key].keys():
+                    if config["ProcessingConfiguration"][key][subkey]["name"] == options[key][subkey]["name"] and config["ProcessingConfiguration"][key][subkey]["description"] == options[key][subkey]["description"] and config["ProcessingConfiguration"][key][subkey]["options"] == options[key][subkey]["options"]:
+                        options[key][subkey]["value"] = config["ProcessingConfiguration"][key][subkey]["value"]
     
-    return options, not (options==config["ProcessingSettings"])
+    return options, not (options==config["ProcessingConfiguration"])
+
+def checkConfiguration(metadata, config):
+    if not type(metadata) == dict:
+        return False 
+    
+    for key in config:
+        if not key in metadata.keys():
+            return False
+        if not metadata[key] == config[key]:
+            return False
+    
+    return True
 
 def extractUserInfo(user):
     userInfo = dict()
@@ -466,17 +502,25 @@ def saveResultMATFiles(datastruct, datatype, info, id, device_id):
     sio.savemat(DATABASE_PATH + "recordings" + os.path.sep + filename, datastruct, long_field_names=True)
     return filename
 
-def loadSourceDataPointer(filename, bytes=False):
-    with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "rb") as file:
-        if bytes:
-            datastruct = file.read()
-        else:
-            if filename.endswith(".pkl"):
-                datastruct = pickle.load(file)
-            elif filename.endswith(".bpkl"):
-                datastruct = pickle.loads(blosc.decompress(file.read()))
-            elif filename.endswith(".mat"):
-                datastruct = sio.loadmat(file, simplify_cells=True)["ProcessedData"]
+EncryptionKey = "BRAVOEncrpytionKey"
+
+def loadSourceDataPointer(filename, verifiedHash, dataType="recordings", bytes=False):
+    # .mat Procedure
+    if filename.endswith(".mat"):
+        return sio.loadmat(file, simplify_cells=True)["ProcessedData"]
+    
+    # .bdata Procedure
+    with open(DATABASE_PATH + dataType + os.path.sep + filename, "rb") as file:
+        rawBytes = file.read()
+
+    if bytes:
+        return rawBytes
+    
+    hashed = hmac.new(EncryptionKey.encode("utf8"), rawBytes, hashlib.sha256).hexdigest()
+    if not hashed == verifiedHash:
+        raise Exception(f"DANGER: Unauthorized Modification of Data {filename}, risk of Pickle Arbitrary Code Execution.")
+    
+    datastruct = pickle.loads(blosc.decompress(rawBytes))
     return datastruct
 
 def deleteSourceDataPointer(filename):
@@ -485,15 +529,41 @@ def deleteSourceDataPointer(filename):
     except:
         pass
 
+def loadCacheFile(datastruct, user="", uid=""):
+    pData = pickle.dumps(datastruct, protocol=pickle.HIGHEST_PROTOCOL)
+
+    os.makedirs(DATABASE_PATH + "visualization" + os.path.sep + str(user), exist_ok=True)
+    filename = str(user) + os.path.sep + str(uid) + ".bdata"
+    with open(DATABASE_PATH + "visualization" + os.path.sep + filename, "wb+") as file:
+        rawBytes = blosc.compress(pData)
+        hashed = hmac.new(EncryptionKey.encode("utf8"), rawBytes, hashlib.sha256).hexdigest()
+        file.write(rawBytes)
+    return filename, hashed
+
+def saveCacheFile(datastruct, user="", uid=""):
+    pData = pickle.dumps(datastruct, protocol=pickle.HIGHEST_PROTOCOL)
+
+    os.makedirs(DATABASE_PATH + "visualization" + os.path.sep + str(user), exist_ok=True)
+    filename = str(user) + os.path.sep + str(uid) + ".bdata"
+    with open(DATABASE_PATH + "visualization" + os.path.sep + filename, "wb+") as file:
+        rawBytes = blosc.compress(pData)
+        hashed = hmac.new(EncryptionKey.encode("utf8"), rawBytes, hashlib.sha256).hexdigest()
+        file.write(rawBytes)
+    return filename, hashed
+
 def saveSourceFiles(datastruct, datatype="", uid="", participant_id="", filename=None):
-    pData = pickle.dumps(datastruct)
+    pData = pickle.dumps(datastruct, protocol=pickle.HIGHEST_PROTOCOL)
     if filename:
         with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
-            file.write(blosc.compress(pData))
-        return filename
+            rawBytes = blosc.compress(pData)
+            hashed = hmac.new(EncryptionKey.encode("utf8"), rawBytes, hashlib.sha256).hexdigest()
+            file.write(rawBytes)
+        return filename, hashed
     
     os.makedirs(DATABASE_PATH + "recordings" + os.path.sep + str(participant_id), exist_ok=True)
-    filename = str(participant_id) + os.path.sep + datatype + "_" + str(uid) + ".bpkl"
+    filename = str(participant_id) + os.path.sep + datatype + "_" + str(uid) + ".bdata"
     with open(DATABASE_PATH + "recordings" + os.path.sep + filename, "wb+") as file:
-        file.write(blosc.compress(pData))
-    return filename
+        rawBytes = blosc.compress(pData)
+        hashed = hmac.new(EncryptionKey.encode("utf8"), rawBytes, hashlib.sha256).hexdigest()
+        file.write(rawBytes)
+    return filename, hashed

@@ -34,11 +34,11 @@ import MDButton from "components/MDButton";
 import DropzoneUploader from "components/DropzoneUploader";
 import { SessionController } from "database/session-control";
 
-function MRImagesUploader({study, participant}) {
+function MRImagesUploader({study, participant, experiment}) {
   const [metadata, setMetadata] = useState({});
 
   useEffect(() => {
-
+    
   }, []);
 
   const uploadSessions = () => {
@@ -51,6 +51,7 @@ function MRImagesUploader({study, participant}) {
       formData.append("data_type", "MRImages");  
       formData.append("participant", participant);  
       formData.append("study", study);
+      formData.append("experiment", experiment);
       formData.append("metadata", JSON.stringify(metadata));
     });
 
@@ -84,15 +85,12 @@ function MRImagesUploader({study, participant}) {
   return (
     <MDBox pt={2}>
       <Divider variant="insert" />
-      <MDTypography variant="h6">
-        {"Metadata"}
+      <MDTypography variant="h5" fontSize={15} lineHeight={1}>
+        {"Accept NifTi (.nii) format for CT/MRI Images. \
+          Accept binary STL file for Segmented Atlas. \
+          Accept MRTRIX TCK file for tractography. \
+          Accept Blender GLB file for scene exports for better visualization/controls."}
       </MDTypography>
-      <MDBox pt={2} px={3}>
-      
-        <MDBox pt={2} style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
-          
-        </MDBox>
-      </MDBox>
       <Divider variant="insert" />
       <MDTypography variant="h6">
         {"Data Uploader"}
@@ -101,7 +99,8 @@ function MRImagesUploader({study, participant}) {
         url: SessionController.getServer() + "/api/uploadData",
         paramName: "file",
         addRemoveLinks: true,
-        acceptedFiles: ".nii,.nii.gz",
+        acceptedFiles: ".nii,.nii.gz,.stl,.glb,.tck",
+        maxFilesize: 2000000,
         autoDiscover: false,
         autoProcessQueue: false,
         uploadMultiple: true,

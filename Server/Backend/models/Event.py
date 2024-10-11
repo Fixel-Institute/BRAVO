@@ -20,13 +20,15 @@ Event Nodes
 
 from uuid import uuid4
 
-from neomodel import StructuredNode, StringProperty, FloatProperty, Relationship, db
+from neomodel import StructuredNode, StringProperty, FloatProperty, Relationship, RelationshipFrom, RelationshipTo, db
 
 class BaseEvent(StructuredNode):
-    uid = StringProperty(unique_index=True, default=uuid4)
+    uid = StringProperty(default=uuid4)
     name = StringProperty(max_length=128)
     type = StringProperty(max_length=128)
     date = FloatProperty(required=True)
+
+    source_file = RelationshipFrom(".SourceFile.SourceFile", "SOURCE_OF_EVENT")
 
     ### All these could be empty, or could all be filled with data, I don't have a good design yet. 
     scales = Relationship("BaseScale", "WITH_SCALE") # Scale Event
@@ -49,19 +51,31 @@ class BaseEvent(StructuredNode):
     def purge(self):
         for scale in self.scales:
             scale.purge()
+
         for data in self.data:
             data.purge()
+
         for therapy in self.therapy:
             therapy.purge()
+
         self.delete()
 
 class TherapyModification(BaseEvent):
     new_group = StringProperty()
     old_group = StringProperty()
-    device = StringProperty()
+
+    def getInfo(self):
+        return {
+            "uid": self.uid,
+            "name": self.name,
+            "type": self.type,
+            "date": self.date,
+            "new_group": self.new_group,
+            "old_group": self.old_group
+        }
 
 class BaseScale(StructuredNode):
-    uid = StringProperty(unique_index=True, default=uuid4)
+    uid = StringProperty(default=uuid4)
     name = StringProperty(max_length=128)
     date = FloatProperty(required=True)
 

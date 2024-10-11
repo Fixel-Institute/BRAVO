@@ -37,7 +37,7 @@ from modules import Database
 
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveIndefiniteStreams(participant, device, streamList):
+def saveMontageStreams(participant, streamList):
     """ Save Indefinite Streaming Data in Database Storage
 
     Args:
@@ -56,53 +56,49 @@ def saveIndefiniteStreams(participant, device, streamList):
     UniqueSessionDates = np.unique(StreamDates)
 
     for date in UniqueSessionDates:
-        recording = device.recordings.get_or_none(type="IndefiniteStream", date=date)
-        if not recording:
-            Recording = dict()
-            Recording["SamplingRate"] = streamList[0]["SamplingRate"]
-            StreamGroupIndexes = [stream["FirstPacketDateTime"] == date for stream in streamList]
-            Recording["ChannelNames"] = [streamList[i]["Channel"] for i in range(len(streamList)) if StreamGroupIndexes[i]]
+        Recording = dict()
+        Recording["SamplingRate"] = streamList[0]["SamplingRate"]
+        StreamGroupIndexes = [stream["FirstPacketDateTime"] == date for stream in streamList]
+        Recording["ChannelNames"] = [streamList[i]["Channel"] for i in range(len(streamList)) if StreamGroupIndexes[i]]
+        
+        RecordingSize = [len(streamList[i]["Data"]) for i in range(len(streamList)) if StreamGroupIndexes[i]]
+        if len(np.unique(RecordingSize)) > 1:
+            print("Inconsistent Recording Size for Indefinite Stream")
+            maxSize = np.max(RecordingSize)
+            Recording["Data"] = np.zeros((maxSize, len(RecordingSize)))
+            Recording["Missing"] = np.ones((maxSize, len(RecordingSize)))
+            n = 0
+            for i in range(len(streamList)): 
+                if StreamGroupIndexes[i]:
+                    Recording["Data"][:RecordingSize[n], n] = streamList[i]["Data"]
+                    Recording["Missing"][:RecordingSize[n], n] = streamList[i]["Missing"]
+                    if streamList[i]["Ticks"][0] > 3276800:
+                        streamList[i]["Ticks"][0] -= 3276800
+                    Recording["StartTime"] = date + (streamList[i]["Ticks"][0]%1000)/1000
+                    n += 1
+        else:
+            Recording["Data"] = np.zeros((RecordingSize[0], len(RecordingSize)))
+            Recording["Missing"] = np.ones((RecordingSize[0], len(RecordingSize)))
+            n = 0
+            for i in range(len(streamList)): 
+                if StreamGroupIndexes[i]:
+                    Recording["Data"][:, n] = streamList[i]["Data"]
+                    Recording["Missing"][:, n] = streamList[i]["Missing"]
+                    if streamList[i]["Ticks"][0] > 3276800:
+                        streamList[i]["Ticks"][0] -= 3276800
+                    Recording["StartTime"] = date + (streamList[i]["Ticks"][0]%1000)/1000
+                    n += 1
             
-            RecordingSize = [len(streamList[i]["Data"]) for i in range(len(streamList)) if StreamGroupIndexes[i]]
-            if len(np.unique(RecordingSize)) > 1:
-                print("Inconsistent Recording Size for Indefinite Stream")
-                maxSize = np.max(RecordingSize)
-                Recording["Data"] = np.zeros((maxSize, len(RecordingSize)))
-                Recording["Missing"] = np.ones((maxSize, len(RecordingSize)))
-                n = 0
-                for i in range(len(streamList)): 
-                    if StreamGroupIndexes[i]:
-                        Recording["Data"][:RecordingSize[n], n] = streamList[i]["Data"]
-                        Recording["Missing"][:RecordingSize[n], n] = streamList[i]["Missing"]
-                        if streamList[i]["Ticks"][0] > 3276800:
-                            streamList[i]["Ticks"][0] -= 3276800
-                        Recording["StartTime"] = date + (streamList[i]["Ticks"][0]%1000)/1000
-                        n += 1
-            else:
-                Recording["Data"] = np.zeros((RecordingSize[0], len(RecordingSize)))
-                Recording["Missing"] = np.ones((RecordingSize[0], len(RecordingSize)))
-                n = 0
-                for i in range(len(streamList)): 
-                    if StreamGroupIndexes[i]:
-                        Recording["Data"][:, n] = streamList[i]["Data"]
-                        Recording["Missing"][:, n] = streamList[i]["Missing"]
-                        if streamList[i]["Ticks"][0] > 3276800:
-                            streamList[i]["Ticks"][0] -= 3276800
-                        Recording["StartTime"] = date + (streamList[i]["Ticks"][0]%1000)/1000
-                        n += 1
-                
-            Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
+        Recording["Duration"] = Recording["Data"].shape[0] / Recording["SamplingRate"]
 
-
-            recording = models.TimeSeriesRecording(type="IndefiniteStream", date=date, 
-                                                    sampling_rate=Recording["SamplingRate"], duration=Recording["Duration"]).save()
-            filename = Database.saveSourceFiles(Recording, "IndefiniteStream", recording.uid, participant.uid)
-            recording.data_pointer = filename
-            recording.channel_names = Recording["ChannelNames"]
-            recording.save()
-            recording.devices.connect(device)
-            device.recordings.connect(recording)
-            NewRecordings.append(recording)
+        recording = models.TimeSeriesRecording(type="TimeDomainStreaming", date=date, 
+                                                sampling_rate=Recording["SamplingRate"], duration=Recording["Duration"]).save()
+        filename, hashed = Database.saveSourceFiles(Recording, "TimeDomainStreaming", recording.uid, participant.uid)
+        recording.data_pointer = filename
+        recording.hashed = hashed
+        recording.channel_names = Recording["ChannelNames"]
+        recording.save()
+        NewRecordings.append(recording)
             
     return NewRecordings
 
@@ -215,7 +211,9 @@ def queryMontageData(user, devices, timestamps, authority):
 
                 if not "Spectrums" in stream.keys():
                     stream = processMontageStreams(stream)
-                    Database.saveSourceFiles(stream,"IndefiniteStream","Combined",recording.recording_id, recording.device_deidentified_id)
+                    _, hashed = Database.saveSourceFiles(stream,"IndefiniteStream","Combined",recording.recording_id, recording.device_deidentified_id)
+                    recording.hashed = hashed 
+                    recording.save()
 
                 data = dict()
                 data["Timestamp"] = stream["StartTime"]

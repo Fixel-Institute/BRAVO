@@ -36,7 +36,7 @@ from modules import Database
 
 key = os.environ.get('ENCRYPTION_KEY')
 
-def saveBrainSenseEvents(participant, device, LfpFrequencySnapshotEvents):
+def saveBrainSenseEvents(LfpFrequencySnapshotEvents):
     """ Save BrainSense Events Data in NoSQL Database.
 
     Args:
@@ -49,7 +49,6 @@ def saveBrainSenseEvents(participant, device, LfpFrequencySnapshotEvents):
     """
 
     NewRecordings = []
-
     for event in LfpFrequencySnapshotEvents:
         EventTime = event["DateTime"].timestamp()
         SensingExist = False
@@ -57,14 +56,11 @@ def saveBrainSenseEvents(participant, device, LfpFrequencySnapshotEvents):
             SensingExist = True
             EventData = event["LfpFrequencySnapshotEvents"]
 
-        if len(participant.events.filter(name=event["EventName"], type="PatientControllerEvent", date=EventTime)) == 0:
-            event = models.BaseEvent(name=event["EventName"], type="PatientControllerEvent", date=EventTime).save()
-            if SensingExist:
-                recording = models.InMemoryRecording(type="PatientControllerEvent", date=EventTime, in_memory_storage=EventData).save()
-                recording.devices.connect(device)
-                event.data.connect(recording)
-            participant.events.connect(event)
-            NewRecordings.append(event)
+        event = models.BaseEvent(name=event["EventName"], type="PatientControllerEvent", date=EventTime).save()
+        if SensingExist:
+            recording = models.InMemoryRecording(type="PatientControllerEvent", date=EventTime, in_memory_storage=EventData).save()
+            event.data.connect(recording)
+        NewRecordings.append(event)
     return NewRecordings
 
 def queryPatientEventPSDsByTime(user, patientUniqueID, timeRange, authority):

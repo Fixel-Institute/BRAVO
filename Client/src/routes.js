@@ -34,10 +34,13 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import BoltIcon from '@mui/icons-material/Bolt';
 import PollIcon from '@mui/icons-material/Poll';
 import SensorsIcon from '@mui/icons-material/Sensors';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import PersonIcon from '@mui/icons-material/Person';
 import BiotechIcon from '@mui/icons-material/Biotech';
 import { AccessAlarm, People, Article, IosShare } from "@mui/icons-material";
+
+import { FaBrain } from "react-icons/fa6";
 
 import { experimentalRoutes } from "views/Experimental/plugins";
 import TimeSeriesAnalysis from "views/Reports/TimeSeriesAnalysis";
@@ -47,44 +50,86 @@ const DashboardOverview = lazy(() => import('views/Dashboard/Overview'));
 const UploadDataView = lazy(() => import('views/Dashboard/UploadDataView'));
 const ResearchAccessView = lazy(() => import('views/Dashboard/ShareResearchAccess'));
 const ParticipantOverview = lazy(() => import('views/Dashboard/ParticipantOverview'));
+const ImageVisualization = lazy(() => import('views/Experimental/ImageVisualization'));
 const SurveyList = lazy(() => import('views/Survey/Overview'));
-const TherapyHistory = lazy(() => import('views/Reports/Percept/TherapyHistory'));
+const TherapyHistory = lazy(() => import('views/Reports/TherapyHistory'));
 const BrainSenseSurvey = lazy(() => import('views/Reports/Percept/BrainSenseSurvey'));
-const BrainSenseStreaming = lazy(() => import('views/Reports/BrainSenseStreaming'));
+const TherapeuticEffects = lazy(() => import('views/Reports/TherapeuticEffects'));
 const IndefiniteStreaming = lazy(() => import('views/Reports/IndefiniteStreaming'));
 const ChronicBrainSense = lazy(() => import('views/Reports/ChronicBrainSense'));
 const SessionOverview = lazy(() => import('views/Reports/SessionsOverview'));
 
+const routes = {
+  "Main": {
+    children: [
+      {
+        type: "collapse",
+        name: "Dashboard",
+        key: "dashboard",
+        component: <DashboardOverview />,
+        route: "/dashboard",
+        icon: <DashboardIcon/>,
+        noCollapse: true,
+      },
+      {
+        type: "collapse",
+        name: "UploadRawData",
+        key: "upload-data",
+        component: <UploadDataView />,
+        route: "/upload-data",
+        icon: <IosShare/>,
+        noCollapse: true,
+      },
+      { type: "divider", key: "divider-1" },
+      {
+        type: "collapse",
+        name: "ParticipantOverview",
+        key: "participant-overview",
+        component: <ParticipantOverview />,
+        route: "/participant-overview",
+        icon: <PersonIcon/>,
+        noCollapse: true,
+      }
+    ]
+  },
+  "GeneralReports": {
+    icon: <AssessmentIcon />,
+    name: "General Reports",
+    children: [
+      {
+        key: "therapyHistory",
+        name: "Therapy History",
+        icon: <BoltIcon />,
+        route: "/reports/therapy-history",
+        component: <TherapyHistory />,
+      },
+      {
+        key: "therapeutic-effect",
+        name: "Therapeutic Effect Analysis",
+        icon: <TimelineIcon />,
+        route: "/reports/therapeutic-effect",
+        component: <TherapeuticEffects />,
+      }
+    ]
+  },
+  "ImagingReports": {
+    icon: <FaBrain />,
+    name: "Imaging Reports",
+    children: [
+      {
+        key: "3dImageViewer",
+        name: "3D Image Viewer",
+        icon: <FaBrain />,
+        route: "/reports/image-visualization",
+        component: <ImageVisualization />,
+      }
+    ]
+  }
+}
 
+/*
 const routes = [
-  {
-    type: "collapse",
-    name: "Dashboard",
-    key: "dashboard",
-    component: <DashboardOverview />,
-    route: "/dashboard",
-    icon: <DashboardIcon/>,
-    noCollapse: true,
-  },
-  {
-    type: "collapse",
-    name: "UploadData",
-    key: "upload-data",
-    component: <UploadDataView />,
-    route: "/upload-data",
-    icon: <IosShare/>,
-    noCollapse: true,
-  },
-  { type: "divider", key: "divider-1" },
-  {
-    type: "collapse",
-    name: "ParticipantOverview",
-    key: "participant-overview",
-    component: <ParticipantOverview />,
-    route: "/participant-overview",
-    icon: <PersonIcon/>,
-    noCollapse: true,
-  },
+  
   { type: "title", name: "Reports for Percept™", key: "Percept-Reports-title", report_type: "PerceptReport"},
   {
     type: "collapse",
@@ -127,6 +172,7 @@ const routes = [
     ]
   },
 ];
+*/
 
 /*
 const routes = [

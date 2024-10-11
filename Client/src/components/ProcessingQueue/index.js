@@ -46,7 +46,7 @@ export default function ProcessingQueue({queues, clearQueue}) {
   return <MDBox style={{
     minHeight: 500
   }}>
-    <MDTypography variant="h2" align="center" fontSize={30} style={{paddingTop: 15}}>
+    <MDTypography variant="h1" align="center" fontSize={30} style={{paddingTop: 15, paddingBottom: 15}}>
       {"Processing Queue"}
     </MDTypography>
     <MDBox px={5} style={{display: "flex", justifyContent: "space-around"}}>
@@ -65,17 +65,22 @@ export default function ProcessingQueue({queues, clearQueue}) {
       <Table>
         <TableHead sx={{display: "table-header-group"}}>
           <TableRow>
-            <TableCell variant="head" style={{width: "50%"}}>
+            <TableCell variant="head" style={{width: "50%", padding: 0}}>
               <MDTypography variant="p" align="center" fontSize={12}>
                 {"Queue Filename"}
               </MDTypography>
             </TableCell>
-            <TableCell variant="head" style={{width: "30%"}}>
+            <TableCell variant="head" style={{width: "20%", padding: 0}}>
+              <MDTypography variant="p" align="center" fontSize={12}>
+                {"Queue Type"}
+              </MDTypography>
+            </TableCell>
+            <TableCell variant="head" style={{width: "20%", padding: 0}}>
               <MDTypography variant="p" align="center" fontSize={12}>
                 {"Queue Time Since"}
               </MDTypography>
             </TableCell>
-            <TableCell variant="head" style={{width: "20%"}}>
+            <TableCell variant="head" style={{width: "10%", padding: 0}}>
               <MDTypography variant="p" align="center" fontSize={12}>
                 {"Job State"}
               </MDTypography>
@@ -84,26 +89,31 @@ export default function ProcessingQueue({queues, clearQueue}) {
         </TableHead>
         <TableBody>
           {queues.map((queue) => {
-            return <TableRow key={queue.uid}>
-              <TableCell>
+            return <TableRow key={queue.taskId}>
+              <TableCell style={{paddingTop: 5, paddingBottom: 5, paddingLeft: 0, paddingRight: 0}}>
                 <MDTypography variant="p" align="center" fontSize={9}>
                   {queue.filename}
                 </MDTypography>
               </TableCell>
-              <TableCell>
+              <TableCell style={{paddingTop: 5, paddingBottom: 5, paddingLeft: 0, paddingRight: 0}}>
+                <MDTypography variant="p" align="center" fontSize={12}>
+                  {queue.job_type}
+                </MDTypography>
+              </TableCell>
+              <TableCell style={{paddingTop: 5, paddingBottom: 5, paddingLeft: 0, paddingRight: 0}}>
                 <MDTypography variant="p" align="center" fontSize={12}>
                   {new Date(queue.since*1000).toLocaleString({
                     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                   })}
                 </MDTypography>
               </TableCell>
-              <TableCell>
+              <TableCell style={{paddingTop: 5, paddingBottom: 5, paddingLeft: 0, paddingRight: 0}}>
                 <MDBox style={{display: "flex", alignItems: "center"}}>
                   {queue.state === "created" ? <PendingOutlined fontSize={"medium"}/> : null}
-                  {queue.state === "in_progress" ? <CircularProgress size={"20px"}/> : null}
+                  {queue.state === "processing" ? <CircularProgress size={"20px"}/> : null}
                   {queue.state === "complete" ? <TaskAlt color={"success"} fontSize="medium"/> : null}
                   {queue.state === "error" ? (
-                    <Tooltip title={queue.descriptor.Message}>
+                    <Tooltip title={queue.descriptor}>
                       <Error color={"error"} fontSize="medium"/>
                     </Tooltip>
                   ) : null}

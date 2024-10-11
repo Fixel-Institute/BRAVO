@@ -29,6 +29,8 @@ services:
       MODE: "DEBUG"
     stdin_open: true
     tty: true
+    volumes:
+      - BRAVOStorage:/usr/src/BRAVO/BRAVOStorage
     depends_on:
       - neo4j
       - redis
@@ -40,7 +42,7 @@ services:
       - '80:80'
       - '443:443'
     command: >
-      bash -c "service nginx start && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
+      bash -c "env >> /etc/environment && service nginx start && cron && daphne -p 3001 -b 0.0.0.0 BRAVO.asgi:application"
   
   redis:
     image: redis:5

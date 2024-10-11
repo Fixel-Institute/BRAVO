@@ -15,7 +15,7 @@
 from django.urls import path
 from django.conf import settings
 
-from . import Auth, Session, ParticipantManager, DataHandler, Queries
+from . import Auth, Session, ParticipantManager, DataHandler, Queries, Therapy, TimeSeriesAnalysis
 
 urlpatterns = [
 	path('handshake', Auth.Handshake.as_view()),
@@ -30,7 +30,7 @@ urlpatterns = [
 	path('querySessions', Session.QuerySessionConfigs.as_view()),
   
 	path('createStudyParticipant', ParticipantManager.CreateStudyParticipant.as_view()),
-	path('createParticipantEvent', ParticipantManager.CreateParticipantEvent.as_view()),
+	path('queryParticipantExperiments', ParticipantManager.QueryParticipantExperiments.as_view()),
 	path('updateStudyParticipant', ParticipantManager.UpdateStudyParticipant.as_view()),
 	path('updateDeviceInformation', ParticipantManager.UpdateDeviceInformation.as_view()),
 	path('deleteStudyParticipant', ParticipantManager.DeleteStudyParticipant.as_view()),
@@ -40,6 +40,7 @@ urlpatterns = [
   
 	path('uploadData', DataHandler.DataUpload.as_view()),
   path('retrieveDataList', DataHandler.QueryAvailableRecordings.as_view()),
+  path('updateRecordings', DataHandler.UpdateRecordings.as_view()),
 	path('retrieveData', DataHandler.DataRetrieve.as_view()),
   path('queryProcessingQueue', DataHandler.QueryProcessingQueue.as_view()),
   path('clearProcessingQueue', DataHandler.ClearProcessingQueue.as_view()),
@@ -47,7 +48,10 @@ urlpatterns = [
   path('queryDatabaseInfo', DataHandler.QueryDatabaseInfo.as_view()),
   path('deleteData', DataHandler.DeleteData.as_view()),
   
-	path('queryTherapyHistory', Queries.QueryTherapyHistory.as_view()),
+	path('queryTherapyHistory', Therapy.QueryTherapyHistory.as_view()),
+  
+	path('queryTherapeuticEffectAnalysis', TimeSeriesAnalysis.QueryTherapeuticEffectAnalysis.as_view()),
+  
 	path('queryBaselinePSDs', Queries.QueryBaselinePSDs.as_view()),
 	path('queryTimeSeriesAnalysis', Queries.QueryTimeSeriesAnalysis.as_view()),
 	path('queryTimeSeriesRecording', Queries.QueryTimeSeriesRecording.as_view())
