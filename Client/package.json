@@ -54,7 +54,7 @@
     "react-window": "^1.8.9",
     "stylis": "4.0.13",
     "stylis-plugin-rtl": "2.1.1",
-    "three": "^0.145.0",
+    "three": "^0.169.0",
     "uuid": "8.3.2",
     "web-vitals": "2.1.4",
     "wrangler": "^2.6.2",
