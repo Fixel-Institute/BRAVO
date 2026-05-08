@@ -63,6 +63,7 @@ function PredictTherapyParameters() {
 
   const [surveyResults, setSurveyResults] = useState([]);
   const [surveyAIResults, setSurveyAIResults] = useState([]);
+  const [surveyAIResults2026, setSurveyAIResults2026] = useState([]);
   const [betaResults, setBetaResults] = useState([]);
 
   const [drawerOpen, setDrawerOpen] = useState({open: false, config: {}});
@@ -176,6 +177,43 @@ function PredictTherapyParameters() {
           E02: results[target].E02,
           E01_Percent: (results[target].E01 / results[target].Total * 100).toFixed(1),
           E02_Percent: (results[target].E02 / results[target].Total * 100).toFixed(1),
+        });
+      }
+      return options; 
+    });
+
+    let results2026 = {};
+    for (let i = 0; i < surveyList.list.length; i++) {
+      if (surveyList.list[i].Label === surveyList.active) {
+        const response = await SessionController.query("/api/queryAIModels", {
+          RequestType: "RequestAIResult",
+          ModelType: "Survey-based Contact Selection (Wong et. al., 2026)",
+          ParticipantId: participant_uid,
+          RecordingId: surveyList.list[i].Id,
+        });
+        for (let target in response.data) {
+          if (!results2026[target]) {
+            results2026[target] = {E01: 0, E02: 0, Total: 0}
+          }
+          if (response.data[target][0] == 0) {
+            results2026[target].E01 += 1;
+          } else if (response.data[target][0] == 1) {
+            results2026[target].E02 += 1;
+          }
+          results2026[target].Total += 1;
+        }
+      }
+    }
+
+    setSurveyAIResults2026(() => {
+      let options = [];
+      for (let target in results2026) {
+        options.push({
+          target: target,
+          E01: results2026[target].E01,
+          E02: results2026[target].E02,
+          E01_Percent: (results2026[target].E01 / results2026[target].Total * 100).toFixed(1),
+          E02_Percent: (results2026[target].E02 / results2026[target].Total * 100).toFixed(1),
         });
       }
       return options; 
@@ -332,7 +370,7 @@ function PredictTherapyParameters() {
               <Grid item xs={6}>
                 <MDBox px={2} pt={2} lineHeight={1}>
                   <MDTypography variant="h6" fontSize={20}>
-                    {"Survey-based AI Contact Selection (Lavu et. al., 2025)"}
+                    {"Survey-based AI Contact Selection (Wong 2026)"}
                   </MDTypography>
                 </MDBox>
                 <MDBox px={2} pb={2} lineHeight={1}>
@@ -353,7 +391,7 @@ function PredictTherapyParameters() {
                   />
                 </MDBox>
                 <MDBox px={2} pb={2} lineHeight={1}>
-                  {surveyAIResults.map((result, index) => (
+                  {surveyAIResults2026.map((result, index) => (
                     <MDBox key={index} mb={2}>
                       <MDTypography variant="h6" fontSize={18}>
                         {`Target: ${result.target}`}
@@ -424,6 +462,42 @@ function PredictTherapyParameters() {
                         </MDTypography>
                       ) : (
                         surveyAIResults.map((result, index) => (
+                          <MDBox key={index} mb={2}>
+                            <MDTypography variant="h6" fontSize={18}>
+                              {`Target: ${result.target}`}
+                            </MDTypography>
+                            <MDTypography variant="body2" color={result.E01 > result.E02 ? "error" : "text"}>
+                              {`Contact E01: ${result.E01} selections (${result.E01_Percent}%)`}
+                            </MDTypography>
+                            <MDTypography variant="body2" color={result.E02 > result.E01 ? "error" : "text"}>
+                              {`Contact E02: ${result.E02} selections (${result.E02_Percent}%)`}
+                            </MDTypography>
+                          </MDBox>
+                        ))
+                      )}
+                    </MDBox>
+                  </Grid>
+                </Grid>
+              </Card>
+            </Grid>
+            <Grid item xs={12}>
+              <Card sx={{width: "100%"}}>
+                <Grid container>
+                  <Grid item xs={12}>
+                    <MDBox p={2} lineHeight={1}>
+                      <MDTypography variant="h6" fontSize={24}>
+                        {"Survey-based Contact Selection (Wong et. al., 2026)"}
+                      </MDTypography>
+                    </MDBox>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <MDBox p={2}>
+                      {surveyAIResults2026.length === 0 ? (
+                        <MDTypography variant="body2" color="text">
+                          {"No survey results found for the selected date."}
+                        </MDTypography>
+                      ) : (
+                        surveyAIResults2026.map((result, index) => (
                           <MDBox key={index} mb={2}>
                             <MDTypography variant="h6" fontSize={18}>
                               {`Target: ${result.target}`}
