@@ -44,6 +44,7 @@ from modules.Empatica import DataManager as EmpaticaDataManager
 from modules.AnalysisPipelineScripts import ExtractSpectralFeaturesDuringStimulation
 from modules.SurveyForms import RedcapForm
 #from modules.AIModels.ContactSelection.ContactSelection import ContactPredictor
+#from modules.AIModels.ContactSelection_VerWong2026.ContactSelection import ContactPredictor as ContactPredictor_VerWong2026
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 HASH_KEY = os.environ.get('DATASERVER_HASHKEY')
@@ -1323,6 +1324,8 @@ def computeTherapeuticEffects(AnalysisStruct):
             for j in range(len(AnalysisStruct["Signal"][i]["SignalSeries"]["ChannelNames"])):
                 if not AnalysisStruct["Signal"][i]["SignalSeries"]["ChannelNames"][j] in StimulationPSDs[label].keys():
                     StimulationPSDs[label][AnalysisStruct["Signal"][i]["SignalSeries"]["ChannelNames"][j]] = {}
+                if not "Spectrum" in AnalysisStruct["Signal"][i]["SignalSeries"].keys():
+                    continue
                 Time = AnalysisStruct["Signal"][i]["SignalSeries"]["Spectrum"][j]["Time"] + AnalysisStruct["Signal"][i]["SignalSeries"]["StartTime"] + AnalysisStruct["Signal"][i]["Alignment"]
 
                 for parameter in parameters:
@@ -1831,15 +1834,16 @@ def processTimeDomainStreaming(recording, data, config):
             "CardiacFilter": config["TimeSeriesRecording"]["CardiacFilter"]["value"]
         }, recording=recording)
     
-    data = handleTimeFrequencyAnalysis(data, {
-        "StandardFilter": config["TimeSeriesRecording"]["StandardFilter"]["value"],
-        "NotchFilter": config["TimeSeriesRecording"]["NotchFilter"]["value"],
-        "WienerFilter": config["TimeSeriesRecording"]["WienerFilter"]["value"],
-        "CardiacFilter": config["TimeSeriesRecording"]["CardiacFilter"]["value"],
-        "SpectrogramMethod": config["TimeSeriesRecording"]["SpectrogramMethod"]["value"],
-        "BaselineCorrection": config["TimeSeriesRecording"]["BaselineCorrection"]["value"],
-        "Normalization": config["TimeSeriesRecording"]["Normalization"]["value"]
-    }, recording=recording)
+    if not config["TimeSeriesRecording"]["SpectrogramMethod"]["value"] == "No Spectrogram":
+        data = handleTimeFrequencyAnalysis(data, {
+            "StandardFilter": config["TimeSeriesRecording"]["StandardFilter"]["value"],
+            "NotchFilter": config["TimeSeriesRecording"]["NotchFilter"]["value"],
+            "WienerFilter": config["TimeSeriesRecording"]["WienerFilter"]["value"],
+            "CardiacFilter": config["TimeSeriesRecording"]["CardiacFilter"]["value"],
+            "SpectrogramMethod": config["TimeSeriesRecording"]["SpectrogramMethod"]["value"],
+            "BaselineCorrection": config["TimeSeriesRecording"]["BaselineCorrection"]["value"],
+            "Normalization": config["TimeSeriesRecording"]["Normalization"]["value"]
+        }, recording=recording)
 
     return data
 
@@ -1936,7 +1940,7 @@ def handleTimeFrequencyAnalysis(data, config, recording=None):
             Spectrum["Time"] = Spectrum["Time"][::int(data["SamplingRate"]/2)] + 0.5
 
         elif config["SpectrogramMethod"] == "Autoregressive Model (Yule-Walker)":
-            Spectrum = SPU.autoRegressiveSpectrogram(data["Data"][:,i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=data["SamplingRate"], order=int(data["SamplingRate"]/10))
+            Spectrum = SPU.autoRegressiveSpectrogram(data["Data"][:,i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=data["SamplingRate"], order=0)
 
         else: # Default Welch's Periodogram
             Spectrum = SPU.welchSpectrogram(data["Data"][:,i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=data["SamplingRate"])
@@ -2765,6 +2769,81 @@ def queryChronicNeuralActivity(participant_uid, config):
 
     return ChronicNeuralActivity
 
+def handleSurveybasedWongAIContactSelection(participant_uid, config):
+    Participant = models.Participant.find(uid=participant_uid)
+
+    if config["RequestType"] == "RequestQualifyRecordings":
+        SourceFiles = models.SourceFile.find_all(owner=Participant)
+        Recordings = models.Recording.find_all(source__in=SourceFiles, type__in=["MedtronicBrainSenseSurvey", "MedtronicBaselineMontages"])
+
+        DBSDevices = models.DBSDevice.find_all(owner=Participant)
+        DBSDeviceDictionary = {}
+        for i in range(len(DBSDevices)):
+            DBSDeviceDictionary[DBSDevices[i].uid] = DBSDevices[i].get_info()
+
+        RecordingList = []
+        for recording in Recordings:
+            Description = recording.get_info()
+            
+            # This only give us results without segments
+            Found = False
+            if "Type" in Description["Metadata"] and Description["Metadata"]["Type"] == "MedtronicBrainSenseSurvey":
+                for i in range(len(Description["Metadata"]["ChannelNames"])):
+                    if "SEGMENT" in Description["Metadata"]["ChannelNames"][i]:
+                        Found = True 
+                        break
+
+            if not Found:
+                DBSDevice = DBSDeviceDictionary[Description["Device"]]
+                for i in range(len(Description["Metadata"]["ChannelNames"])):
+                    ElectrodeIdentifier = BrainSenseStream.reformatChannelName(Description["Metadata"]["ChannelNames"][i], DBSDevice["Electrodes"])
+                    Description["Metadata"]["ChannelNames"][i] = DBSDevice["Heritage"] + ": " + ElectrodeIdentifier
+
+                RecordingList.append(Description)
+        
+        return RecordingList
+
+    elif config["RequestType"] == "RequestAIResult":
+        SourceFiles = models.SourceFile.find_all(owner=Participant)
+        recording = models.Recording.find(uid=config["RecordingId"], source__in=SourceFiles, type__in=["MedtronicBrainSenseSurvey", "MedtronicBaselineMontages"])
+
+        if not recording:
+            return None
+        Description = recording.get_info()
+
+        DBSDevices = models.DBSDevice.find_all(owner=Participant)
+        DBSDeviceDictionary = {}
+        for i in range(len(DBSDevices)):
+            DBSDeviceDictionary[DBSDevices[i].uid] = DBSDevices[i].get_info()
+
+        # Run your AI Model here
+        Data = Database.loadSourceFile(recording.pointer, recording.hashed)
+        userConfig, _ = Database.retrieveProcessingSettings({"ProcessingConfiguration": {
+            "TimeSeriesRecording": {
+                "StandardFilter": {
+                    "value": "Butterworth 1-100Hz"
+                },
+                "CardiacFilter": {
+                    "value": "No Filter"
+                },
+                "SpectrogramMethod": {
+                    "value": "Welch's Periodogram"
+                }
+            }
+        }})
+        userConfig["APIAccess"] = True
+
+        Data = processNeuralActivitySnapshot(recording, Data, userConfig)
+        Data["Channels"] = []
+        for i in range(len(Data["ChannelNames"])):
+            DBSDevice = DBSDeviceDictionary[recording.source.metadata["Device"]]
+            Data["Channels"].append(DBSDevice["Heritage"] + ": " + BrainSenseStream.reformatChannelName(Data["ChannelNames"][i], DBSDevice["Electrodes"]))
+        Data["PSDs"] = Data["PSD"]
+        Results = ContactPredictor_VerWong2026(Data)
+        return Results
+
+    return None
+
 def handleSurveybasedAIContactSelection(participant_uid, config):
     Participant = models.Participant.find(uid=participant_uid)
 
@@ -2837,6 +2916,8 @@ def handleSurveybasedAIContactSelection(participant_uid, config):
         Data["PSDs"] = Data["PSD"]
         Results = ContactPredictor(Data)
         return Results
+
+    return None
 
 def handleSurveybasedContactSelection(participant_uid, config):
     Participant = models.Participant.find(uid=participant_uid)
@@ -2979,6 +3060,7 @@ def extractMachineLearningModels(participant_uid, model_key=None, config={}):
     models = {
         "Survey-based Contact Selection (Lavu et. al., 2025)": handleSurveybasedAIContactSelection,
         "Peak Beta Power in Survey": handleSurveybasedContactSelection,
+        "Survey-based Contact Selection (Wong et. al., 2026)": handleSurveybasedWongAIContactSelection,
         "Automated Beta Detection (BRAVO)": handleAutomatedBetaDetection,
     }
 
