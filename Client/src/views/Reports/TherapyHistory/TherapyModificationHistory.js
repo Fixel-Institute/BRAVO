@@ -213,7 +213,7 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
                     border: "1px solid rgba(0,0,0,0.12)",
                     padding: "6px 8px",
                     textAlign: "center",
-                    background: rIdx % 2 === 0 ? "rgba(0,0,0,0.02)" : "transparent",
+                    background: rIdx % 2 === 0 ? "rgba(0,0,0,0.02)" : "rgba(0,0,0,0)",
                     fontSize: 12,
                   }}>
                     <MDTypography variant={"p"} fontWeight={rIdx === 0 ? "bold" : "regular"} color={"light"}>
@@ -523,129 +523,6 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
   return useMemo(() => (
     <MDBox>
       {alert}
-      {therapyDateSlider.options.length > 1 && (
-        <MDBox p={2} mt={2} pb={0}>
-          <div style={{ position: "relative" }}>
-            {/* The real slider - leave props unchanged but attach a ref if desired */}
-            <Slider
-              ref={sliderRef}
-              aria-label="TherapyDates"
-              value={therapyDateSlider.active}
-              getAriaValueText={(value) => {
-                return new Date(value*1000).toLocaleDateString("en-US", {
-                  month: "2-digit",
-                  day: "2-digit",
-                  year: "2-digit"
-                });
-              }}
-              marks={therapyDateSlider.options.map((date,i) => {
-                // keep existing logic for label visibility
-                if (i > 0) {
-                  const minScale = therapyDateSlider.options[therapyDateSlider.options.length-1] - therapyDateSlider.options[0];
-                  if (date - therapyDateSlider.options[i-1] < minScale * 0.01) {
-                    return { value: date, label: "" };
-                  }
-                }
-                return { value: date, label: new Date(date*1000).toLocaleDateString("en-US", {
-                  month: "2-digit", day: "2-digit", year: "2-digit"
-                }) };
-              })}
-              valueLabelDisplay="on"
-              valueLabelFormat={value =>
-                new Date(value * 1000).toLocaleDateString("en-US", {
-                  month: "2-digit",
-                  day: "2-digit",
-                  year: "2-digit"
-                })
-              }
-              step={null}
-              min={therapyDateSlider.options.length > 0 ? therapyDateSlider.options[0] : 0}
-              max={therapyDateSlider.options.length > 0 ? therapyDateSlider.options[therapyDateSlider.options.length-1] : 0}
-              onChange={(event, newValue) => {
-                setTherapyDateSlider((state) => ({ ...state, active: newValue }));
-              }}
-              sx={{
-                '& .MuiSlider-markLabel': {
-                  transform: 'rotate(-45deg) translate(-50px, -40px)',
-                  whiteSpace: 'nowrap',
-                  fontSize: '0.85em',
-                  minWidth: '40px',
-                  textAlign: 'left',
-                  display: "none"
-                },
-                '& .MuiSlider-mark': {
-                  width: '4px',
-                  height: '4px',
-                  borderRadius: '50%',
-                  backgroundColor: '#f53131ff',
-                  marginLeft: '-6px',
-                }
-              }}
-            />
-
-            {/* Overlay container: pointer-events none so it does not break slider interactions,
-                but each marker sets pointerEvents:'auto' so it captures hover/click */}
-            <div style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              right: 0,
-              bottom: 0,
-              pointerEvents: "none",
-            }}>
-              {therapyDateSlider.options.map((date, i) => {
-                // handle edge-case where min==max (single value)
-                const percent = sliderMax !== sliderMin ? ((date - sliderMin) / (sliderMax - sliderMin)) * 100 : 0;
-                // hide labels for points you were hiding before? This overlay only controls tooltip.
-                return (
-                  <Tooltip
-                    key={i}
-                    title={formatMarkTooltip(date)}
-                    placement="bottom"
-                    interactive arrow
-                    componentsProps={{
-                      tooltip: {
-                        sx: {
-                          maxWidth: '700px', // Or '6rem', '400px', etc.
-                          whiteSpace: 'normal', // To wrap long text
-                        },
-                      },
-                    }}
-                  >
-                    <div
-                      onClick={(e) => {
-                        // jump to this mark when clicked
-                        setTherapyDateSlider((state) => ({ ...state, active: date }));
-                      }}
-                      style={{
-                        position: "absolute",
-                        left: `${percent}%`,
-                        top: "30px",
-                        transform: "translateX(-50%)",
-                        pointerEvents: "auto", // allow this element to capture hover/click
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {/* visual marker (tweak size/color as needed) */}
-                      <div style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        background: "#f53131",
-                        boxShadow: "0 0 4px rgba(0,0,0,0.3)"
-                      }} />
-                    </div>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          </div>
-        </MDBox>
-      )}
-      
       {therapyTable.Date ? (
         <MDBox p={2} pt={0}>
           <Grid container spacing={2}>

@@ -50,7 +50,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 #CSRF_COOKIIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 3600*1  # 1 hour
 
-ALLOWED_HOSTS = ["localhost", os.environ.get('SERVER_HOST')]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", os.environ.get('SERVER_HOST')]
 
 # Application definition
 
