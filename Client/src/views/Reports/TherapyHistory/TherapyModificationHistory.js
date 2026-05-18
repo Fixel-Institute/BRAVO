@@ -523,6 +523,120 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
   return useMemo(() => (
     <MDBox>
       {alert}
+      {therapyDateSlider.options.length > 1 && (
+        <MDBox p={2} mt={2} pb={0}>
+          <div style={{ position: "relative" }}>
+            <Slider
+              ref={sliderRef}
+              aria-label="TherapyDates"
+              value={therapyDateSlider.active}
+              getAriaValueText={(value) => {
+                return new Date(value*1000).toLocaleDateString("en-US", {
+                  month: "2-digit",
+                  day: "2-digit",
+                  year: "2-digit"
+                });
+              }}
+              marks={therapyDateSlider.options.map((date,i) => {
+                if (i > 0) {
+                  const minScale = therapyDateSlider.options[therapyDateSlider.options.length-1] - therapyDateSlider.options[0];
+                  if (date - therapyDateSlider.options[i-1] < minScale * 0.01) {
+                    return { value: date, label: "" };
+                  }
+                }
+                return { value: date, label: new Date(date*1000).toLocaleDateString("en-US", {
+                  month: "2-digit", day: "2-digit", year: "2-digit"
+                }) };
+              })}
+              valueLabelDisplay="on"
+              valueLabelFormat={value =>
+                new Date(value * 1000).toLocaleDateString("en-US", {
+                  month: "2-digit",
+                  day: "2-digit",
+                  year: "2-digit"
+                })
+              }
+              step={null}
+              min={therapyDateSlider.options.length > 0 ? therapyDateSlider.options[0] : 0}
+              max={therapyDateSlider.options.length > 0 ? therapyDateSlider.options[therapyDateSlider.options.length-1] : 0}
+              onChange={(event, newValue) => {
+                setTherapyDateSlider((state) => ({ ...state, active: newValue }));
+              }}
+              sx={{
+                '& .MuiSlider-markLabel': {
+                  transform: 'rotate(-45deg) translate(-50px, -40px)',
+                  whiteSpace: 'nowrap',
+                  fontSize: '0.85em',
+                  minWidth: '40px',
+                  textAlign: 'left',
+                  display: "none"
+                },
+                '& .MuiSlider-mark': {
+                  width: '4px',
+                  height: '4px',
+                  borderRadius: '50%',
+                  backgroundColor: '#f53131ff',
+                  marginLeft: '-6px',
+                }
+              }}
+            />
+            <div style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              right: 0,
+              bottom: 0,
+              pointerEvents: "none",
+            }}>
+              {therapyDateSlider.options.map((date, i) => {
+                const percent = sliderMax !== sliderMin ? ((date - sliderMin) / (sliderMax - sliderMin)) * 100 : 0;
+                return (
+                  <Tooltip
+                    key={i}
+                    title={formatMarkTooltip(date)}
+                    placement="bottom"
+                    interactive arrow
+                    componentsProps={{
+                      tooltip: {
+                        sx: {
+                          maxWidth: '700px',
+                          whiteSpace: 'normal',
+                        },
+                      },
+                    }}
+                  >
+                    <div
+                      onClick={(e) => {
+                        setTherapyDateSlider((state) => ({ ...state, active: date }));
+                      }}
+                      style={{
+                        position: "absolute",
+                        left: `${percent}%`,
+                        top: "30px",
+                        transform: "translateX(-50%)",
+                        pointerEvents: "auto",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: "#f53131",
+                        boxShadow: "0 0 4px rgba(0,0,0,0.3)"
+                      }} />
+                    </div>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
+        </MDBox>
+      )}
+
       {therapyTable.Date ? (
         <MDBox p={2} pt={0}>
           <Grid container spacing={2}>

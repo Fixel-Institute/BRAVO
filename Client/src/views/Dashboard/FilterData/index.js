@@ -376,19 +376,8 @@ export default function FilterData() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      SessionController.query("/api/queryFilterData", { RequestType: "GetFilterOptions" }),
-      SessionController.query("/api/queryFilterData", {
-        RequestType: "ApplyFilters",
-        Filters: { ...EMPTY_FILTERS, DateRange: { Start: null, End: null } },
-      }),
-    ])
-      .then(([optR, resR]) => {
-        setAvailableOptions(optR.data);
-        setResults(resR.data);
-        setSearched(true);
-        setLoading(false);
-      })
+    SessionController.query("/api/queryFilterData", { RequestType: "GetFilterOptions" })
+      .then((r) => { setAvailableOptions(r.data); setLoading(false); })
       .catch((e) => { SessionController.displayError(e, setAlert); setLoading(false); });
   }, []);
 
@@ -677,6 +666,18 @@ export default function FilterData() {
           </MDBox>
         </MDBox>
       </Card>
+
+      {!searched && !loading && (
+        <MDBox display="flex" flexDirection="column" alignItems="center" py={6}>
+          <FilterListIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1.5 }} />
+          <MDTypography variant="h6" color="secondary" fontWeight="medium">
+            Set your filters and click Apply
+          </MDTypography>
+          <MDTypography variant="caption" color="secondary">
+            No data is loaded until you apply filters.
+          </MDTypography>
+        </MDBox>
+      )}
 
       {/* Stats + Results */}
       {searched && (
