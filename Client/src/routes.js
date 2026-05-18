@@ -31,7 +31,7 @@ import Icon from "@mui/material/Icon";
 import { MdOutlineEventAvailable, MdFitbit, MdBuildCircle, MdStorage, MdSdStorage } from "react-icons/md";
 import { BsCollectionFill } from "react-icons/bs"
 import { IoWatch } from "react-icons/io5";
-import { FaBrain, FaFileWaveform, FaClipboardList, FaRing, FaMicrophone, FaTimeline } from "react-icons/fa6";
+import { FaBrain, FaFileWaveform, FaClipboardList, FaRing, FaMicrophone, FaTimeline, FaFilter } from "react-icons/fa6";
 import { PiWavesBold } from "react-icons/pi";
 import { FcSurvey } from "react-icons/fc";
 
@@ -70,6 +70,7 @@ const AIHealthcare = lazy(() => import('views/Experimental/AIHealthcare'));
 const InClinicMedicationCycle = lazy(() => import('views/Experimental/InClinicMedicationCycle'));
 const PredictTherapyParameters = lazy(() => import('views/Experimental/PredictTherapyParameters'));
 
+const FilterData = lazy(() => import('views/Dashboard/FilterData'));
 const TherapyHistory = lazy(() => import('views/Reports/TherapyHistory'));
 const NeuralActivitySnapshot = lazy(() => import('views/Reports/NeuralActivitySnapshot'));
 const ParticipantEvents = lazy(() => import('views/Reports/ParticipantEvents'));
@@ -95,6 +96,15 @@ const routes = {
         component: <DashboardOverview />,
         route: "/database",
         icon: <DashboardIcon/>,
+        noCollapse: true,
+      },
+      {
+        type: "collapse",
+        name: "Filter Data",
+        key: "filter-data",
+        component: <FilterData />,
+        route: "/filter-data",
+        icon: <FaFilter />,
         noCollapse: true,
       },
       {

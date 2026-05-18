@@ -25,6 +25,7 @@ from . import Auth, WebSession, Participants
 from . import FitbitDashboard, OuraRingDashboard, EmpaticaDashboard 
 from . import DataHandler, EventAnnotationHandler, DataAnalysis, Therapy, GroupAnalysis, AIModels
 from . import AsyncJobScheduling
+from . import DataFilter
 
 urlpatterns = [
     path('register', Auth.UserRegister.as_view()),
@@ -94,4 +95,6 @@ urlpatterns = [
     
     path('queryTherapyHistory', Therapy.QueryTherapyHistory.as_view()),
     path('assignTherapyLabel', Therapy.AssignTherapyLabel.as_view()),
+
+    path('queryFilterData', DataFilter.QueryFilterData.as_view()),
 ]
