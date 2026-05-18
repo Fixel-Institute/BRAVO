@@ -83,5 +83,5 @@ class Homepage(RestViews.APIView):
         context = {}
         
         # If Development Uncomment the following: 
-        # return render(request, "index_dev.html", context=context)
+        return render(request, "index_dev.html", context=context)
         return render(request, "index.html", context=context)
