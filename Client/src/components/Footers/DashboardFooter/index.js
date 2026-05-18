@@ -66,8 +66,8 @@ function Footer({ light }) {
             color={light ? "white" : "text"}
             fontSize={size.sm}
           >
-            &copy; {1900 + new Date().getYear()}, Programmed by{" "}
-            Jackson Cagle (Department of Neurology, University of Florida).
+            &copy; {1900 + new Date().getYear()}, 
+            Developed by Research Scientists at the Fixel Institute, University of Florida
           </MDBox>
           <MDBox
             component="ul"
