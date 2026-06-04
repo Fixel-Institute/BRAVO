@@ -213,7 +213,7 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
                     border: "1px solid rgba(0,0,0,0.12)",
                     padding: "6px 8px",
                     textAlign: "center",
-                    background: rIdx % 2 === 0 ? "rgba(0,0,0,0.02)" : "transparent",
+                    background: rIdx % 2 === 0 ? "rgba(0,0,0,0.02)" : "rgba(0,0,0,0)",
                     fontSize: 12,
                   }}>
                     <MDTypography variant={"p"} fontWeight={rIdx === 0 ? "bold" : "regular"} color={"light"}>
@@ -526,7 +526,6 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
       {therapyDateSlider.options.length > 1 && (
         <MDBox p={2} mt={2} pb={0}>
           <div style={{ position: "relative" }}>
-            {/* The real slider - leave props unchanged but attach a ref if desired */}
             <Slider
               ref={sliderRef}
               aria-label="TherapyDates"
@@ -539,7 +538,6 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
                 });
               }}
               marks={therapyDateSlider.options.map((date,i) => {
-                // keep existing logic for label visibility
                 if (i > 0) {
                   const minScale = therapyDateSlider.options[therapyDateSlider.options.length-1] - therapyDateSlider.options[0];
                   if (date - therapyDateSlider.options[i-1] < minScale * 0.01) {
@@ -582,9 +580,6 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
                 }
               }}
             />
-
-            {/* Overlay container: pointer-events none so it does not break slider interactions,
-                but each marker sets pointerEvents:'auto' so it captures hover/click */}
             <div style={{
               position: "absolute",
               left: 0,
@@ -594,9 +589,7 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
               pointerEvents: "none",
             }}>
               {therapyDateSlider.options.map((date, i) => {
-                // handle edge-case where min==max (single value)
                 const percent = sliderMax !== sliderMin ? ((date - sliderMin) / (sliderMax - sliderMin)) * 100 : 0;
-                // hide labels for points you were hiding before? This overlay only controls tooltip.
                 return (
                   <Tooltip
                     key={i}
@@ -606,15 +599,14 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
                     componentsProps={{
                       tooltip: {
                         sx: {
-                          maxWidth: '700px', // Or '6rem', '400px', etc.
-                          whiteSpace: 'normal', // To wrap long text
+                          maxWidth: '700px',
+                          whiteSpace: 'normal',
                         },
                       },
                     }}
                   >
                     <div
                       onClick={(e) => {
-                        // jump to this mark when clicked
                         setTherapyDateSlider((state) => ({ ...state, active: date }));
                       }}
                       style={{
@@ -622,14 +614,13 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
                         left: `${percent}%`,
                         top: "30px",
                         transform: "translateX(-50%)",
-                        pointerEvents: "auto", // allow this element to capture hover/click
+                        pointerEvents: "auto",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
-                      {/* visual marker (tweak size/color as needed) */}
                       <div style={{
                         width: 10,
                         height: 10,
@@ -645,7 +636,7 @@ function TherapyModificationHistory({therapyHistoryRaw, device, viewConfiguratio
           </div>
         </MDBox>
       )}
-      
+
       {therapyTable.Date ? (
         <MDBox p={2} pt={0}>
           <Grid container spacing={2}>

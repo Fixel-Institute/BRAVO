@@ -1438,7 +1438,6 @@ def processTimeseriesAnalysis(participant_uid, recording_uid, config):
         for i in range(Data["Missing"].shape[1]):
             Data["MissingIndex"].append(np.where(Data["Missing"][:,i])[0])
         del Data["Missing"]
-        
         #DBSDevice = models.DBSDevice.find(uid=recording.source.metadata["Device"]).get_info()
 
         TimeShift = recording.adjusted_alignment

@@ -316,4 +316,11 @@ BRAVO/BRAVOStorage
 BRAVO/Certificates
 
 *.sql
-
+CLAUDE.md
+sample_data
+docs/BRAVO_Reference.html
+changes.txt
+handoff.md
+update.html
+bravo_filter_results.csv
+BRAVOStorage/
