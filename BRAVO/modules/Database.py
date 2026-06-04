@@ -20,6 +20,7 @@ Database Interaction
 
 import os, sys, pathlib
 import pickle, blosc2
+import zlib
 import hashlib, hmac
 import shutil
 from filelock import Timeout, FileLock
@@ -31,6 +32,7 @@ from modules.MedtronicPercept import BrainSenseStream
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 HASH_KEY = os.environ.get('DATASERVER_HASHKEY')
+FALLBACK_COMPRESSION_MAGIC = b"BRAVO_ZLIB_v1\0"
 
 def retrieveProcessingSettings(config=dict()):
     options = {
@@ -697,11 +699,24 @@ def saveSourceFile(datastruct, pointer, bytes=False):
     else:
         pData = datastruct
 
+    # Convert common binary-like inputs to bytes to ensure stable compression behavior.
+    if isinstance(pData, memoryview):
+        pData = pData.tobytes()
+    elif isinstance(pData, bytearray):
+        pData = bytes(pData)
+
     lock = FileLock(pointer + ".lock")
     try:
         with lock.acquire(timeout=30):
             with open(pointer + ".tmp", "wb+") as file:
-                rawBytes = blosc2.compress2(pData, typesize=1)
+                try:
+                    rawBytes = blosc2.compress2(pData, typesize=1)
+                except ValueError as e:
+                    # blosc2 may throw "negative count" on very large payloads; fallback keeps data path alive.
+                    if "negative count" in str(e):
+                        rawBytes = FALLBACK_COMPRESSION_MAGIC + zlib.compress(pData)
+                    else:
+                        raise
                 hashed = hmac.new(HASH_KEY.encode("utf8"), rawBytes, hashlib.sha256).hexdigest()
                 file.write(rawBytes)
             shutil.move(pointer + ".tmp", pointer)
@@ -722,7 +737,10 @@ def loadSourceFile(pointer, verifiedHash, bytes=False):
     if not hashed == verifiedHash:
         raise Exception(f"DANGER: Unauthorized Modification of Data {pointer}, risk of Pickle Arbitrary Code Execution.")
 
-    decompressed = blosc2.decompress2(rawBytes)
+    if rawBytes.startswith(FALLBACK_COMPRESSION_MAGIC):
+        decompressed = zlib.decompress(rawBytes[len(FALLBACK_COMPRESSION_MAGIC):])
+    else:
+        decompressed = blosc2.decompress2(rawBytes)
 
     # If Request Raw Byte Data
     if bytes:

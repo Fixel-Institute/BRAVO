@@ -442,8 +442,12 @@ def MATFileDecoder(source_file, person, startTime=None):
 
     elif DataType == "CustomizedStreamingData":
         for ProcessedData in MATFile:
+            if "RecordingName" in ProcessedData["Descriptor"].keys():
+                name = ProcessedData["Descriptor"]["RecordingName"]
+            else:
+                name = ""
             recording = models.Recording(**{
-                "name": "", "type": "CustomizedStreamingData", "date": ProcessedData["StartTime"], "metadata": {**{
+                "name": name, "type": "CustomizedStreamingData", "date": ProcessedData["StartTime"], "metadata": {**{
                     "ChannelNames": ProcessedData["ChannelNames"],
                     "Duration": ProcessedData["Duration"]
                 }, **ProcessedData["Descriptor"]}
