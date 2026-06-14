@@ -22,10 +22,11 @@ import MDBox from "components/MDBox";
 import { PlotlyRenderManager } from "graphing-utility/Plotly";
 import { formatSegmentString, matchArray } from "database/helper-function";
 
+import { SessionController } from "database/session-control";
 import { usePlatformContext } from "context";
 import { dictionary, dictionaryLookup } from "assets/translation";
 
-function SnapshotPSDs({dataToRender, figureTitle}) {
+function SnapshotPSDs({dataToRender, figureTitle, monopolarEstimate}) {
   const [controller, dispatch] = usePlatformContext();
   const { language } = controller;
   
@@ -55,7 +56,7 @@ function SnapshotPSDs({dataToRender, figureTitle}) {
       
       if (key.endsWith("Boxplot")) {
         const ax = fig.subplots(1, 1, {sharey: false, sharex: false});
-        fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)})`, {fontSize: 15});
+        fig.setYlabel(`${dictionaryLookup(dictionary.FigureStandardText, "Power", language)} (${dictionaryLookup(dictionary.FigureStandardUnit, monopolarEstimate ? "dB" : "uV2Hz", language)})`, {fontSize: 15});
 
       } else {
         fig.subplots(1, 1, {sharey: false, sharex: false});
@@ -72,62 +73,116 @@ function SnapshotPSDs({dataToRender, figureTitle}) {
         refreshRender(fig, key);
       }
     }
-  }, [figGroup]);
+  }, [monopolarEstimate, figGroup]);
 
   useEffect(() => {
-    const colors = ["#f44336", "#9c27b0", "#2196f3", "#4caf50", "#ffc107", "#b23c17",
-                    "#f44336", "#9c27b0", "#2196f3", "#4caf50", "#ffc107", "#b23c17"]
-
-    const getFrequencyIndex = (freq) => {
-      for (let i = 0; i < freq.length; i++) {
-        if (freq[i] >= centerFreq) return i;
-      }
-    }
-
-    let graphSeries = [];
-    for (let i in dataToRender) {
-      let ylim = math.quantileSeq(dataToRender[i].Power, [0.25, 1]);
-      ylim[0] = Math.floor(Math.log10(ylim[0]));
-      ylim[1] = Math.ceil(Math.log10(ylim[1]));
-      graphSeries.push({
-        type: "line", x: dataToRender[i].Frequency, y: dataToRender[i].Power, error_y: dataToRender[i].stdPower,
-        ylim: ylim,
-        line_options: {
-          linewidth: 2,
-          name: dataToRender[i].ChannelName.split(": ")[1],
-          legendgroup: dataToRender[i].ChannelName.split(": ")[1],
-          color: colors[i],
-          hovertemplate: `  ${dataToRender[i].ChannelName.split(": ")[1]}<br>  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)}<extra></extra>`,
-          showlegend: true
-        }, 
-        shade_options: {
-          legendgroup: dataToRender[i].ChannelName.split(": ")[1],
-          color: colors[i],
-          alpha: 0.3,
-          showlegend: false
-        }, 
-        figName: figureTitle
-      });
-
-      const index = getFrequencyIndex(dataToRender[i].Frequency);
-      graphSeries.push({
-        type: "bar", x: [dataToRender[i].ChannelName.split(": ")[1]], y: [dataToRender[i].Power[index]], 
-        options: {
-          error_y: {
-            type: "data",
-            array: [dataToRender[i].stdPower[index]],
-            visible: true
-          },
-          facecolor: colors[i],
-          hovertemplate: `  %{y:.2f} <extra></extra>`,
-          showlegend: false,
-        },
-        figName: figureTitle + "_Boxplot"
-      })
-    }
     
-    setRenderData(graphSeries);
-  }, [figGroup, dataToRender, centerFreq]);
+    const asyncFunc = async () => {
+      const colors = ["#f44336", "#9c27b0", "#2196f3", "#4caf50", "#ffc107", "#b23c17",
+                      "#f44336", "#9c27b0", "#2196f3", "#4caf50", "#ffc107", "#b23c17"]
+
+      const getFrequencyIndex = (freq) => {
+        for (let i = 0; i < freq.length; i++) {
+          if (freq[i] >= centerFreq) return i;
+        }
+      }
+
+      let uniqueHemisphere = {};
+
+      let graphSeries = [];
+      for (let i in dataToRender) {
+        let ylim = math.quantileSeq(dataToRender[i].Power, [0.25, 1]);
+        ylim[0] = Math.floor(Math.log10(ylim[0]));
+        ylim[1] = Math.ceil(Math.log10(ylim[1]));
+        graphSeries.push({
+          type: "line", x: dataToRender[i].Frequency, y: dataToRender[i].Power, error_y: dataToRender[i].stdPower,
+          ylim: ylim,
+          line_options: {
+            linewidth: 2,
+            name: dataToRender[i].ChannelName.split(": ")[1],
+            legendgroup: dataToRender[i].ChannelName.split(": ")[1],
+            color: colors[i],
+            hovertemplate: `  ${dataToRender[i].ChannelName.split(": ")[1]}<br>  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "uV2Hz", language)}<extra></extra>`,
+            showlegend: true
+          }, 
+          shade_options: {
+            legendgroup: dataToRender[i].ChannelName.split(": ")[1],
+            color: colors[i],
+            alpha: 0.3,
+            showlegend: false
+          }, 
+          figName: figureTitle
+        });
+
+        const index = getFrequencyIndex(dataToRender[i].Frequency);
+        if (!monopolarEstimate) {
+          graphSeries.push({
+            type: "bar", x: [dataToRender[i].ChannelName.split(": ")[1]], y: [dataToRender[i].Power[index]], 
+            options: {
+              error_y: {
+                type: "data",
+                array: [dataToRender[i].stdPower[index]],
+                visible: true
+              },
+              facecolor: colors[i],
+              hovertemplate: `  %{y:.2f} <extra></extra>`,
+              showlegend: false,
+            },
+            figName: figureTitle + "_Boxplot"
+          })
+        } else {
+          const parts = dataToRender[i].ChannelName.split(": ")[1].split(" ");
+          const hemisphere = parts.slice(0, -1).join(" ");
+          if (!uniqueHemisphere[hemisphere]) {
+            uniqueHemisphere[hemisphere] = {}
+          }
+          if (parts[parts.length - 1] === "E00-E03") {
+            uniqueHemisphere[hemisphere]["C0-C3"] = dataToRender[i].Power[index];
+          } else if (parts[parts.length - 1] === "E01-E02") {
+            uniqueHemisphere[hemisphere]["C1-C2"] = dataToRender[i].Power[index];
+          } else if (parts[parts.length - 1] === "E02-E03") {
+            uniqueHemisphere[hemisphere]["C2-C3"] = dataToRender[i].Power[index];
+          }
+        }
+      }
+      
+      if (monopolarEstimate) {
+        let i = 0;
+        for (let key in uniqueHemisphere) {
+          try {
+            const response = await SessionController.query("/api/requestAIPrediction", {
+              RequestType: "Fleeting2026",
+              AnalysisName: "MonopolarPowerEstimation",
+              Data: uniqueHemisphere[key]
+            })
+            
+            for (let chan in ["0", "1", "2", "3"]) {
+              graphSeries.push({
+                type: "bar", x: [key + " E0" + chan], y: response.data["C" + chan], 
+                options: {
+                  error_y: {
+                    type: "data",
+                    array: response.data["C" + chan + "_SE"],
+                    visible: true
+                  },
+                  facecolor: colors[i],
+                  hovertemplate: `  %{y:.2f} <extra></extra>`,
+                  showlegend: false,
+                },
+                figName: figureTitle + "_Boxplot"
+              });
+              i++;
+            }
+          } catch (error) {
+            console.error("Error fetching monopolar estimation:", error);
+          }
+        }
+      }
+      setRenderData(graphSeries);
+    }
+
+    asyncFunc();
+  }, [figGroup, monopolarEstimate, dataToRender, centerFreq]);
 
   const refreshRender = (fig, figName) => {
     let psdYlim = [0,0];

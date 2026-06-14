@@ -67,6 +67,8 @@ function NeuralActivitySnapshot() {
   const [snapshot, setSnapshot] = useState([]);
   const [chronicSnapshot, setChronicSnapshot] = useState([]);
 
+  const [monopolarEstimate, setMonopolarEstimate] = useState(false);
+
   const [drawerOpen, setDrawerOpen] = useState({open: false, config: {}});
   const [channel, setChannel] = useState({active: "", options: []});
 
@@ -261,7 +263,20 @@ function NeuralActivitySnapshot() {
                     </MDBox>
                   </Grid>
                   <Grid item xs={12}>
-                    <SnapshotPSDs dataToRender={snapshot} figureTitle={"Neural Activity Montages"} />
+                    <MDBox position="relative">
+                      <MDBox sx={{position: "absolute", top: 54, right: 8, zIndex: 2, pointerEvents: "auto"}}>
+                        <ToggleButton
+                          value={"monopolar"}
+                          selected={monopolarEstimate}
+                          onChange={() => setMonopolarEstimate((p) => !p)}
+                          size="small"
+                          sx={{fontSize: 12}}
+                        >
+                          {"Monopolar Estimate (Fleeting et. al. 2026)"}
+                        </ToggleButton>
+                      </MDBox>
+                      <SnapshotPSDs dataToRender={snapshot} figureTitle={"Neural Activity Montages"} monopolarEstimate={monopolarEstimate} />
+                    </MDBox>
                   </Grid>
                 </Grid>
                 ) : (
