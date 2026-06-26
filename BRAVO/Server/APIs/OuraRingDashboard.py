@@ -72,7 +72,18 @@ class OuraRingAuthHandler(RestViews.APIView):
             if len(device.auth.keys()) > 0:
                 return Response(status=200, data=device.date_periods)
             
-            return Response(status=200, data={"OAuthURL": "NOT_IMPLEMENTED"})
+        if request.data["RequestType"] == "RequestURL":
+            if len(device.auth.keys()) > 0:
+                return Response(status=200, data=device.date_periods)
+
+            OuraAuthURL = "https://cloud.ouraring.com/oauth/authorize?" + urlencode({
+                "response_type": "code",
+                "client_id": os.environ["OURA_CLIENT_ID"],
+                "state": device.uid,
+                "redirect_uri": os.environ["OURA_CLIENT_REDIRECT_URI"],
+                "scope": "email personal daily heartrate tag workout session spo2 ring_configuration stress heart_health"
+            })
+            return Response(status=200, data={"OAuthURL": OuraAuthURL})
 
         elif request.data["RequestType"] == "VerifyToken":
             if not get_or_none(sanitize_input)(request.data, required_keys=["RequestType", "ParticipantId", "AccessToken"]):
@@ -81,16 +92,32 @@ class OuraRingAuthHandler(RestViews.APIView):
             if not Participant.institute.has_permission(request.user, "Upload"):
                 return Response(status=403)
             
-            OuraRing = OuraDataManager.OuraRingAPI(request.data["AccessToken"])
+            if not request.data["AccessToken"].startswith("https://bravo-redirect.jcagle.solutions/oauth/redirect?"):
+                return Response(status=400, data={"message": "Malformed Input"})
+            
+            tokenURL = parse_qs(request.data["AccessToken"].replace("https://bravo-redirect.jcagle.solutions/oauth/redirect?",""))
+            if not len(tokenURL.keys()) == 3:
+                return Response(status=400, data={"message": "Malformed Input"})
+
+            if not tokenURL["state"][0] == device.uid:
+                return Response(status=400, data={"message": "Verification Failed"})
+            
+            OuraRing = OuraDataManager.OuraRingAPI(tokenURL["code"][0])
+            verified = False
             try:
-                OuraRing.verifyToken()  # This will raise an exception if the token is invalid
+                OuraRing.refreshToken(auth_code=tokenURL["code"][0])
+                verified = OuraRing.verifyToken()
             except Exception as e:
                 return Response(status=400, data={"message": "Verification Failed"})
             
-            device.auth["token"] = request.data["AccessToken"]
-            #device.auth["timezoneOffset"] = DataQuery.getUserTimezone(device)
+            if not verified:
+                return Response(status=400, data={"message": "Verification Failed"})
+            
+            device.auth["refresh_token"] = OuraRing.refresh_token
+            device.auth["token"] = tokenURL["code"][0]
             device.save()
             return Response(status=200)
+        
             
         elif request.data["RequestType"] == "DeleteAuthentication":
             #DataManager.deleteFitbitData(Participant)
