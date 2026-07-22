@@ -243,7 +243,7 @@ def refreshFitbitData(device):
     Data = loadFitbitData(Participant)
 
     for key in Data.keys():
-        Data[key] = [recording for recording in Data[key] if "StartTime" in recording.keys()]
+        Data[key] = [recording for recording in Data[key] if "StartTime" in recording.keys() and len(recording["Time"]) > 0]
     
     AcceptedDates = []
     for date in device.date_periods:

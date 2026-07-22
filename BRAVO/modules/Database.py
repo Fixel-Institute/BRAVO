@@ -27,6 +27,8 @@ from filelock import Timeout, FileLock
 import numpy as np
 import datetime
 
+import zarr
+
 from Server import models
 from modules.MedtronicPercept import BrainSenseStream
 
@@ -749,6 +751,50 @@ def loadSourceFile(pointer, verifiedHash, bytes=False):
     # Else just pickle load it
     datastruct = pickle.loads(decompressed)
     return datastruct
+
+def saveProcessedCollection(pointer, key, data, metadata):
+    if not os.path.exists(pointer.replace(".bdat", ".zarr")):
+        root = zarr.create_group(pointer.replace(".bdat", ".zarr"))
+    else:
+        root = zarr.open(pointer.replace(".bdat", ".zarr"), mode="r+")
+
+    # Reset the array if it already exists to avoid appending to old data in case of re-processing the same file.
+    if key in root.array_keys():
+        del root[key]
+
+    z = root.create_array(
+        name=key,
+        data=data,
+        chunks=(data.shape[0] if data.shape[0] < 400000 else 400000, 1),
+        compressors=zarr.codecs.BloscCodec(cname='zstd', clevel=5, shuffle=zarr.codecs.BloscShuffle.shuffle, typesize=1)
+    )
+    for metaKey in metadata.keys():
+        if type(metadata[metaKey]) == np.ndarray:
+            if len(metadata[metaKey]) == 1:
+                z.attrs[metaKey] = metadata[metaKey][0]
+            else:
+                z.attrs[metaKey] = metadata[metaKey].tolist()
+        else:
+            z.attrs[metaKey] = metadata[metaKey]
+
+def delete_directory(path):
+    for root, dirs, files in os.walk(path, topdown=False):
+        for file in files:
+            os.remove(os.path.join(root, file))
+        for dir in dirs:
+            os.rmdir(os.path.join(root, dir))
+    os.rmdir(path)
+
+def loadProcessedCollection(pointer, key):
+    if not os.path.exists(pointer.replace(".bdat", ".zarr")):
+        raise Exception(f"Collection not found")
+    
+    root = zarr.open(pointer.replace(".bdat", ".zarr"), mode="r")
+    print(list(root.array_keys()))
+    if key not in root.array_keys():
+        raise Exception(f"Key {key} not found in processed collection at {pointer}.")
+    metadata = dict(root[key].attrs)
+    return root[key], metadata
 
 def loadSourceBinary(pointer):
     pointer = pointer.replace("\\", os.path.sep).replace("/", os.path.sep)

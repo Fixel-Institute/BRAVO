@@ -161,7 +161,7 @@ class UpdateParticipantInformation(RestViews.APIView):
 
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
-        if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId"], accepted_keys=["ParticipantId", "MergeWith", "Name", "DOB", "Sex", "Diagnosis", "DiagnosisStartTime", "Tags"]):
+        if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId"], accepted_keys=["ParticipantId", "MergeWith", "Name", "MRN", "DOB", "Sex", "Diagnosis", "DiagnosisStartTime", "Tags"]):
             return Response(status=400, data={"message": "Malformed Input"})
         
         Permissions = Database.checkAccessPermission(request.user, request.data["ParticipantId"], 
@@ -192,6 +192,8 @@ class UpdateParticipantInformation(RestViews.APIView):
 
         if "Name" in request.data.keys():
             Participant.name = request.data["Name"]
+        if "MRN" in request.data.keys():
+            Participant.mrn = request.data["MRN"]
         if "DOB" in request.data.keys():
             Participant.date_of_birth = request.data["DOB"]
         if "Sex" in request.data.keys():

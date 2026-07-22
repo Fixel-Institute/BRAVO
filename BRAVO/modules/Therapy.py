@@ -155,6 +155,32 @@ def queryTherapyHistory(Participant):
 
     return {"TherapyModification": TherapyModifications, "TherapyDevices": TherapyDevices, "TherapyConfiguration": TherapyHistories, "TherapyTimeline": TherapyTimeline}
 
+def queryTherapyHistoryMetadata(Participant):
+    TherapyVisitDates = models.Therapy.find_all(source__owner=Participant, type__in=["Pre-visit Therapy", "Post-visit Therapy", "Past Therapy"]).values_list("date", "source__metadata__Device").distinct()
+    TherapyVisitDates = [{"Date": i[0], "Device": i[1]} for i in TherapyVisitDates]
+    return {"TherapyVisitDates": TherapyVisitDates}
+
+def queryTherapyModification(Participant):
+    DBSDevices = models.DBSDevice.find_all(owner=Participant)
+    TherapyModifications = []
+    for device in DBSDevices:
+        SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__Device=device.uid)
+        TherapyModification = [{**i.get_info(), **{"Device": device.uid}} for i in models.TherapyModification.find_all(source__in=SourceFiles)]
+        TherapyModifications.extend(TherapyModification)
+    return {"TherapyModifications": TherapyModifications}
+
+def queryTherapyGroups(Participant):
+    DBSDevices = models.DBSDevice.find_all(owner=Participant)
+    TherapyGroups = []
+    for device in DBSDevices:
+        SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__Device=device.uid)
+        if len(SourceFiles) > 0:
+            TherapyGroup = [{**i.get_info(), **{"Device": device.uid}} for i in models.ElectricalTherapy.find_all(therapy__source__in=SourceFiles)]
+            TherapyGroups.extend(TherapyGroup)
+    
+    json.dump(TherapyGroups, open(r"TherapyGroups.json", "w"), indent=4)
+    return {"TherapyGroups": TherapyGroups}
+
 def createTherapyTimeline(TherapyHistory):
     AllSessionDates = []
     AllTherapyGroups = []
