@@ -111,6 +111,29 @@ class MERDevice(models.Model):
     def find_all(*args, **kwargs):
         return MERDevice.objects.select_related("owner").filter(**kwargs).all()
 
+class GoogleHealth(models.Model):
+    uid = models.CharField(max_length=32, default=uuid4_hex, unique=True, primary_key=True)
+    name = models.CharField(max_length=128, default="")
+    type = models.CharField(max_length=128, default="")
+    owner = models.ForeignKey('Participant', models.CASCADE)
+
+    auth = models.JSONField(default=dict)
+    date_periods = models.JSONField(default=list)
+
+    def include(*args, **kwargs):
+        return GoogleHealth.objects.select_related("owner").filter(**kwargs).exists()
+
+    def find(*args, **kwargs):
+        return GoogleHealth.objects.select_related("owner").filter(**kwargs).first()
+
+    def find_all(*args, **kwargs):
+        return GoogleHealth.objects.select_related("owner").filter(**kwargs).all()
+
+    def create(owner):
+        device = GoogleHealth(owner=owner)
+        device.save()
+        return device
+
 class FitbitDevice(models.Model):
     uid = models.CharField(max_length=32, default=uuid4_hex, unique=True, primary_key=True)
     name = models.CharField(max_length=128, default="")

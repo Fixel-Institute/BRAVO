@@ -380,7 +380,7 @@ export default function GenericTimeline({data, availableChannels, annotations, h
       return () => {
         ref.removeEventListener("contextmenu", fig.onClick);
         document.removeEventListener("PlotlyClick", plotly_onClick);
-        document.addEventListener("PlotlyRelayout", plotly_onZoom);
+        document.removeEventListener("PlotlyRelayout", plotly_onZoom);
       }
     };
   }, [fig, renderData]);

@@ -82,53 +82,6 @@ function DashboardNavbar({ absolute, light, isMini, fixedNavbar }) {
       navigate("/", {replace: false});
       return;
     };
-
-    let client = new WebSocket(SessionController.getServer().replace("http","ws") + "/socket/notification");
-    client.onerror = function() {
-      console.log('Connection Error');
-    };
-    client.onopen = () => {
-      
-    };
-    client.onclose = () => {
-      console.log('Connection Closed');
-    };
-
-    client.onmessage = (event) => {
-      let content = JSON.parse(event.data);
-      if (content["Notification"] === "QueueUpdate") {
-        if (content["UpdateType"] === "JobCompletion") {
-          setQueueState(currentState => {
-            for (let i in currentState.queues) {
-              if (currentState.queues[i].taskId == content["TaskID"]) {
-                currentState.queues[i].state = content["State"];
-                currentState.queues[i].descriptor = {...currentState.queues[i].descriptor, Message: content["Message"]};
-              }
-            }
-            return {...currentState};
-          });
-        } else if (content["UpdateType"] === "JobUpdate") {
-          setQueueState(currentState => {
-            for (let i in currentState.queues) {
-              if (currentState.queues[i].taskId == content["TaskID"]) {
-                currentState.queues[i].state = content["State"];
-                currentState.queues[i].descriptor = {...currentState.queues[i].descriptor, Message: content["Message"]};
-              }
-            }
-            return {...currentState};
-          });
-        } else if (content["UpdateType"] === "NewJob") {
-          setQueueState(currentState => {
-            currentState.queues.push(content["NewJob"]);
-            return {...currentState};
-          });
-        }
-      }
-    };
-
-    return () => {
-      client.close();
-    }
   }, []);
 
   useEffect(() => {

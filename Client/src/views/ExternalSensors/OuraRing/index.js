@@ -261,7 +261,11 @@ export default function OuraRingDashboard() {
                 </Grid>
                 {OAuthURL ? (
                 <Grid item xs={12} sx={{lineHeight: 1}}>
-                  
+                  <Link href={OAuthURL} target="_blank">
+                    <MDTypography variant="p" fontWeight="regular" color={"info"} fontSize={12}>
+                      {OAuthURL}
+                    </MDTypography>
+                  </Link>
                 </Grid>
                 ) : null}
 

@@ -64,6 +64,7 @@ const FormViewer = lazy(() => import('views/Survey/Viewer'));
 const ParticipantSurveyRecords = lazy(() => import('views/Reports/ParticipantRecords'));
 const EmpaticaDataExplorer = lazy(() => import('views/ExternalSensors/Empatica'));
 const FitbitDashboard = lazy(() => import('views/ExternalSensors/Fitbit'));
+const GoogleHealthDashboard = lazy(() => import('views/ExternalSensors/GoogleHealth'));
 const OuraRingDashboard = lazy(() => import('views/ExternalSensors/OuraRing'));
 const CustomizedAnalysis = lazy(() => import('views/CustomizedAnalysis'));
 const AIHealthcare = lazy(() => import('views/Experimental/AIHealthcare'));
@@ -325,6 +326,13 @@ const routes = {
         icon: <MdFitbit />,
         route: "/fitbit/dashboard/:participant_uid",
         component: <FitbitDashboard />,
+      },
+      {
+        key: "GoogleHealthDashboard",
+        name: "Google Health Dashboard",
+        icon: <img src={"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Google_Health_app_logo.svg/3840px-Google_Health_app_logo.svg.png"} width={"30pt"} alt="Google Health" />,
+        route: "/google-health/dashboard/:participant_uid",
+        component: <GoogleHealthDashboard />,
       },
       {
         key: "OuraRingDashboard",

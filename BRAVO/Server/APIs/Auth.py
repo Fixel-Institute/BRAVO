@@ -78,7 +78,7 @@ class UserLogin(RestViews.APIView):
     permission_classes = [AllowAny,]
     parser_classes = [RestParsers.JSONParser]
     
-    @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
+    @method_decorator(csrf_exempt)
     def post(self, request):
         if not get_or_none(sanitize_input)(request.data, required_keys=["Email", "Password"]):
             return Response(status=400, data={"message": "Malformed Input"})

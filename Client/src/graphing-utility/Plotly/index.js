@@ -131,7 +131,6 @@ const setDictionaryProps = (dict, key, value) => {
     dict[key] = value;
   }
   return dict;
-
 }
 
 function downsampleLTTB(x, y, threshold) {

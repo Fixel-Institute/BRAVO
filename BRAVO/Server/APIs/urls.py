@@ -22,7 +22,7 @@ from django.urls import path
 from django.conf import settings
 
 from . import Auth, WebSession, Participants
-from . import FitbitDashboard, OuraRingDashboard, EmpaticaDashboard 
+from . import FitbitDashboard, OuraRingDashboard, EmpaticaDashboard, GoogleHealthDashboard
 from . import DataHandler, EventAnnotationHandler, DataAnalysis, Therapy, GroupAnalysis, AIModels
 from . import AsyncJobScheduling
 from . import DataFilter
@@ -35,6 +35,8 @@ urlpatterns = [
     
     path('requestFitbitAuth', FitbitDashboard.FitbitAuthHandler.as_view()),
     path('queryFitbitData', FitbitDashboard.QueryFitbitData.as_view()),
+    path('requestGoogleHealthAuth', GoogleHealthDashboard.GoogleHealthAuthHandler.as_view()),
+    path('queryGoogleHealthData', GoogleHealthDashboard.QueryGoogleHealthData.as_view()),
     path('requestOuraRingAuth', OuraRingDashboard.OuraRingAuthHandler.as_view()),
     path('queryOuraRingData', OuraRingDashboard.QueryOuraRingData.as_view()),
     path('queryEmpaticaData', EmpaticaDashboard.QueryEmpaticaData.as_view()),
