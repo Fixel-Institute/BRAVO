@@ -20,15 +20,18 @@ Data Upload Handler Module
 
 import os
 import json
+import time
 import traceback
 from copy import deepcopy
 from pathlib import Path
 import hmac, hashlib
+import numpy as np
 
 import rest_framework.views as RestViews
 import rest_framework.parsers as RestParsers
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from Server.renderers import BinaryRenderer
 
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
@@ -395,6 +398,7 @@ class QueryTimeseriesAnalysis(RestViews.APIView):
 
     parser_classes = [RestParsers.JSONParser]
     permission_classes = [IsAuthenticated]
+    renderer_classes = [BinaryRenderer]
 
     @method_decorator(csrf_protect if not settings.DEBUG else csrf_exempt)
     def post(self, request):
@@ -428,12 +432,13 @@ class QueryTimeseriesAnalysis(RestViews.APIView):
             if request.data["TherapyId"]:
                 Analysis["Therapy"] = DataAnalysis.processTimeseriesAnalysis(request.data["ParticipantId"], request.data["TherapyId"], userConfig)["Therapy"]
                 Analysis = DataAnalysis.computeTherapeuticEffects(Analysis)
-                
+
+            Analysis["ProcessingConfiguration"] = userConfig
+
             if not request.data["ActiveChannels"] == "RequestAllChannel":
                 Analysis = DataAnalysis.selectRecordingChannel(Analysis, request.data["ActiveChannels"])
             Analysis = json_compliant_handler(Analysis)
 
-            Analysis["ProcessingConfiguration"] = userConfig
             Database.saveCachedResult(Analysis, "/queryTimeseriesAnalysis", request.data["ParticipantId"], {**userConfig, **request.data})
             return Response(status=200, data=Analysis)
 
@@ -464,6 +469,36 @@ class QueryTimeseriesAnalysis(RestViews.APIView):
 
         return Response(status=400, data={"message": "Malformed Input"})
     
+    def get(self, request):
+        ParticipantId = request.GET.get("ParticipantId", None)
+        RecordingId = request.GET.get("RecordingId", None)
+        StartTime = int(request.GET.get("StartTime", 0))
+        StopTime = int(request.GET.get("StopTime", 0))
+        Step = int(request.GET.get("Step", 0))
+        ChannelName = request.GET.get("ChannelName", None)
+
+        ProcessingConfiguration = {key: request.GET.get(key, None) for key in request.GET.dict().keys() if key not in ["ParticipantId", "RecordingId", "StartTime", "StopTime", "Step", "ChannelName"]}
+        Permissions = Database.checkAccessPermission(request.user, ParticipantId, 
+                                study_uid=request.user.configuration["ActiveStudy"] if "ActiveStudy" in request.user.configuration.keys() else None)
+        if not Permissions:
+            return Response(status=403)
+        
+        start_time = time.time()
+        Data, Metadata = DataAnalysis.getTimeseriesData(ParticipantId, RecordingId, {**ProcessingConfiguration, **{
+            "ChannelName": ChannelName,
+            "StartTime": StartTime,
+            "StopTime": StopTime,
+            "Step": Step
+        }})
+        stop_time = time.time()
+        print(len(Data))
+        print(f"Time series data loaded in {stop_time - start_time:.2f} seconds.")
+
+        response = Response(Data.tobytes(), status=200, content_type='application/octet-stream')
+        response["X-Metadata"] = json.dumps(Metadata)
+        return response
+    
+
 class QueryNeuralActivitySnapshot(RestViews.APIView):
     """
     API View for neural activity snapshots (PSD from short recordings) analysis.

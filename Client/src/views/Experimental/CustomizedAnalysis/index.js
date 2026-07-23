@@ -77,42 +77,7 @@ function CustomizedAnalysis() {
   const [alert, setAlert] = useState(null);
 
   useEffect(() => {
-    let client = new WebSocket(SessionController.getServer().replace("http","ws") + "/socket/notification");
-    client.onerror = function() {
-      console.log('Connection Error');
-    };
-    client.onopen = () => {
-      
-    };
-    client.onclose = () => {
-      console.log('Connection Closed');
-    };
-
-    client.onmessage = (event) => {
-      let content = JSON.parse(event.data);
-      if (content["Notification"] === "AnalysisUpdate") {
-        if (content["State"] === "StartProcessing") {
-          if (analysisIdRef.current == content["TaskID"]) {
-            setAnalysisData((analysisData) => {
-              analysisData.Analysis.ProcessingQueued = true;
-              return {...analysisData};
-            });
-          }
-        } else if (content["State"] === "EndProcessing") {
-          if (analysisIdRef.current == content["TaskID"]) {
-            setAnalysisData((analysisData) => {
-              analysisData.Analysis.ProcessingQueued = false;
-              analysisData.Configuration.Results = content["Message"];
-              return {...analysisData};
-            });
-          }
-        }
-      }
-    };
-
-    return () => {
-      client.close();
-    }
+    
   }, []);
 
   useEffect(() => {

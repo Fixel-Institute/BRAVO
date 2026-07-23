@@ -26,6 +26,7 @@ import copy
 import pandas as pd
 from filelock import Timeout, FileLock
 import datetime
+import time
 
 import numpy as np
 from scipy import signal, stats, optimize
@@ -1370,6 +1371,69 @@ def computeTherapeuticEffects(AnalysisStruct):
                         
     AnalysisStruct["TherapeuticEffects"] = StimulationPSDs
     return AnalysisStruct
+
+def getTimeseriesData(participant_uid, recording_uid, config):
+    recording = models.Recording.find(uid=recording_uid)
+    if not recording.source.owner.pk == participant_uid:
+        raise Exception("Permission Denied. Accessing Denied Recordings")
+    
+    try:
+        start_time = time.time()
+        Data, Metadata = Database.loadProcessedCollection(recording.pointer, "Data")
+        end_time = time.time()
+        print(f"Processed collection loaded in {end_time - start_time:.2f} seconds.")
+
+    except Exception as e:
+        print(f"Error loading processed collection: {e}")
+        Source = Database.loadSourceFile(recording.pointer, recording.hashed)
+        Data = Source["Data"]
+        Metadata = {
+            "SamplingRate": Source["SamplingRate"],
+            "ChannelNames": Source["ChannelNames"],
+            "StartTime": Source["StartTime"],
+            "Duration": Source["Duration"]
+        }
+        if str(e) == "Collection not found":
+            print("Attempting to process raw data and save processed collection...")
+            Database.saveProcessedCollection(recording.pointer, "Data", Data, Metadata)
+            Database.saveProcessedCollection(recording.pointer, "Missing", Source["Missing"], {})
+    
+    if config["StopTime"] == 0:
+        config["StopTime"] = Metadata["StartTime"] + Metadata["Duration"]
+    if config["StartTime"] == 0:
+        config["StartTime"] = Metadata["StartTime"]
+
+    config["StartIndex"] = (config["StartTime"] - Metadata["StartTime"]) * Metadata["SamplingRate"]
+    config["StopIndex"] = (config["StopTime"] - Metadata["StartTime"]) * Metadata["SamplingRate"]
+    ChannelIndex = None
+    DataRange = None
+    try:
+        if config["Step"] < 1:
+            config["Step"] = 1 if Metadata["SamplingRate"] == 250 else int(Metadata["SamplingRate"]/250)
+
+        DataRange = slice(int(config["StartIndex"]), int(config["StopIndex"]), int(config["Step"]))
+        if "ChannelName" in config.keys():
+            if not config["ChannelName"] in Metadata["ChannelNames"]:
+                raise Exception(f"Channel {config['ChannelName']} not found in recording.")
+            ChannelIndex = Metadata["ChannelNames"].index(config["ChannelName"])
+    except:
+        pass
+
+    Metadata["DataSize"] = Data.shape
+    
+    if ChannelIndex is not None and DataRange is not None:
+        Data = Data[DataRange,ChannelIndex]
+    elif ChannelIndex is not None:
+        Data = Data[:,ChannelIndex]
+    elif DataRange is not None:
+        Data = Data[DataRange,:]
+    else:
+        Data = Data[...]
+
+    Metadata["DataStep"] = config["Step"]
+    Metadata["StartIndex"] = config["StartIndex"]
+    Metadata["StopIndex"] = config["StopIndex"] if config["StopIndex"] > 0 else Metadata["DataSize"][0]
+    return Data, Metadata
 
 def processTimeseriesAnalysis(participant_uid, recording_uid, config):
     recording = models.Recording.find(uid=recording_uid)
