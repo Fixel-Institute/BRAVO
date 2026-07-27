@@ -161,6 +161,23 @@ export default function FormEditor({match}) {
           default: [],
           show: data.data[i]["Field Note"] != "hide"
         });
+      } else if (data.data[i]["Field Type"] === "dropdown") {
+        let options = data.data[i]["Choices, Calculations, OR Slider Labels"].split("|");
+        
+        contents.contents[0].questions.push({
+          variableName: data.data[i]["Variable / Field Name"],
+          type: "multiple-choice",
+          text: data.data[i]["Field Label"],
+          multiple: false,
+          value: [],
+          options: options.map((text) => {
+            let position = text.search(",");
+            let textOption = text.slice(position+1);
+            return textOption.trim();
+          }),
+          default: [],
+          show: data.data[i]["Field Note"] != "hide"
+        });
       } else if (data.data[i]["Field Type"] === "slider") {
         let options = data.data[i]["Choices, Calculations, OR Slider Labels"].split("|");
         contents.contents[0].questions.push({
