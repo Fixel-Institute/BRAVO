@@ -27,6 +27,7 @@ import pandas as pd
 from filelock import Timeout, FileLock
 import datetime
 import time
+import zstandard as zstd
 
 import numpy as np
 from scipy import signal, stats, optimize
@@ -1307,6 +1308,139 @@ def processTimeseriesAnalysisRaw(data, config):
     AnalysisStruct["Annotations"] = uniqueList(AnalysisStruct["Annotations"])
     return AnalysisStruct
 
+def retrieveTimeseriesData(participant_uid, recording_uid, config):
+    recording = models.Recording.find(uid=recording_uid)
+    if not recording.source.owner.pk == participant_uid:
+        raise Exception("Permission Denied. Accessing Denied Recordings")
+
+    if recording.type in ["MedtronicElectrodeIdentifier", "MedtronicBrainSenseSurvey", "MedtronicBaselineMontages", "MedtronicBrainSenseTimeDomain", "MedtronicIndefiniteStream"]:
+        Data = Database.loadSourceFile(recording.pointer, recording.hashed)
+        
+        DBSDevice = models.DBSDevice.find(uid=recording.source.metadata["Device"]).get_info()
+        for i in range(len(Data["ChannelNames"])):
+            Data["ChannelNames"][i] = DBSDevice["GenericName"] + ": " + BrainSenseStream.reformatChannelName(Data["ChannelNames"][i], DBSDevice["Electrodes"])
+
+        TimeShift = recording.adjusted_alignment
+
+        Metadata = {
+            "Id": recording.uid,
+            "ChannelNames": Data["ChannelNames"],
+            "SamplingRate": Data["SamplingRate"],
+            "StartTime": Data["StartTime"] + TimeShift,
+            "DataShape": Data["Data"].T.shape 
+        }
+
+        BinaryData = Data["Data"].T.tobytes()
+        compressor = zstd.ZstdCompressor(level=5)
+        payload = compressor.compress(BinaryData)
+        return {"Metadata": Metadata, "Payload": payload}
+
+    elif recording.type in ["MedtronicBrainSensePowerDomain"]:
+        pass 
+
+    elif recording.type in ["CustomizedStreamingData"]:
+        pass 
+
+    elif recording.type in ["AOMPX"]:
+        Data = Database.loadSourceFile(recording.pointer, recording.hashed)
+        Metadata = {
+            "Id": recording.uid,
+            "ChannelNames": Data["ChannelNames"],
+            "SamplingRate": Data["SamplingRate"],
+            "StartTime": Data["StartTime"],
+            "DataShape": Data["Data"].T.shape,
+        }
+
+        BinaryData = Data["Data"].astype(np.float64).T.tobytes()
+        compressor = zstd.ZstdCompressor(level=5)
+        payload = compressor.compress(BinaryData)
+        return {"Metadata": Metadata, "Payload": payload}
+
+    elif recording.type in ["HPFCSV", "MATFile", "SynchronizedMDAT"]:
+        pass
+
+    else:
+        print(recording.type)
+
+    raise Exception("Unsupported recording type for timeseries data retrieval.")
+
+def retrieveSpectrogramData(participant_uid, recording_uid, config):
+    recording = models.Recording.find(uid=recording_uid)
+    if not recording.source.owner.pk == participant_uid:
+        raise Exception("Permission Denied. Accessing Denied Recordings")
+
+    if recording.type in ["MedtronicElectrodeIdentifier", "MedtronicBrainSenseSurvey", "MedtronicBaselineMontages", "MedtronicBrainSenseTimeDomain", "MedtronicIndefiniteStream"]:
+        Data = Database.loadSourceFile(recording.pointer, recording.hashed)
+        start_time = time.time()
+        Data = handleTimeFrequencyAnalysis(Data, {
+            "StandardFilter": "No Filter",
+            "NotchFilter": "No Filter",
+            "WienerFilter": "No Filter",
+            "CardiacFilter": "No Filter",
+            "SpectrogramMethod": "Welch's Periodogram",
+            "BaselineCorrection": "No Correction",
+            "Normalization": "No Normalization",
+            "SpectrogramParameters": {
+                "Window": 1,
+                "Overlap": 0.5,
+                "FrequencyResolution": 0.5,
+                "FrequencyRange": [0, 100]
+            }
+        }, recording=recording)
+
+        Metadata = {
+            "Time": Data["Spectrum"][0]["Time"].tolist(),
+            "Frequency": Data["Spectrum"][0]["Frequency"].tolist(),
+        }
+        print(np.array([spectrum["Power"] for spectrum in Data["Spectrum"]]).shape)
+        BinaryData = np.array([spectrum["Power"] for spectrum in Data["Spectrum"]]).astype(np.float64).tobytes()
+        compressor = zstd.ZstdCompressor(level=5)
+        payload = compressor.compress(BinaryData)
+        return {"Metadata": Metadata, "Payload": payload}
+
+    elif recording.type in ["MedtronicBrainSensePowerDomain"]:
+        pass 
+
+    elif recording.type in ["CustomizedStreamingData"]:
+        pass 
+
+    elif recording.type in ["AOMPX"]:
+        Data = Database.loadSourceFile(recording.pointer, recording.hashed)
+        start_time = time.time()
+        Data = handleTimeFrequencyAnalysis(Data, {
+            "StandardFilter": "No Filter",
+            "NotchFilter": "No Filter",
+            "WienerFilter": "No Filter",
+            "CardiacFilter": "No Filter",
+            "SpectrogramMethod": "Welch's Periodogram",
+            "BaselineCorrection": "No Correction",
+            "Normalization": "No Normalization",
+            "SpectrogramParameters": {
+                "Window": 1,
+                "Overlap": 0.5,
+                "FrequencyResolution": 0.5,
+                "FrequencyRange": [0, 100]
+            }
+        }, recording=recording)
+
+        Metadata = {
+            "Time": Data["Spectrum"][0]["Time"].tolist(),
+            "Frequency": Data["Spectrum"][0]["Frequency"].tolist(),
+        }
+        print(np.array([spectrum["Power"] for spectrum in Data["Spectrum"]]).shape)
+        BinaryData = np.array([spectrum["Power"] for spectrum in Data["Spectrum"]]).astype(np.float64).tobytes()
+        compressor = zstd.ZstdCompressor(level=5)
+        payload = compressor.compress(BinaryData)
+        return {"Metadata": Metadata, "Payload": payload}
+
+    elif recording.type in ["HPFCSV", "MATFile", "SynchronizedMDAT"]:
+        pass
+
+    else:
+        print(recording.type)
+
+    raise Exception("Unsupported recording type for timeseries data retrieval.")
+
 def computeTherapeuticEffects(AnalysisStruct):
     AllTherapyLabels = []
     for i in range(len(AnalysisStruct["Therapy"])):
@@ -1986,15 +2120,25 @@ def handleTimeFrequencyAnalysis(data, config, recording=None):
         data["Data"] = data["Data"].reshape(-1,1)
         data["Missing"] = data["Missing"].reshape(-1,1)
 
+    WindowSize = 1.0
+    OverlapSize = 0.5
+    FrequencyResolution = 0.5
+    MaxFrequency = data["SamplingRate"] / 2
+    if "SpectrogramParameters" in config.keys():
+        WindowSize = config["SpectrogramParameters"]["Window"]
+        OverlapSize = config["SpectrogramParameters"]["Overlap"]
+        FrequencyResolution = config["SpectrogramParameters"]["FrequencyResolution"]
+        MaxFrequency = config["SpectrogramParameters"]["FrequencyRange"][1]
+
     for i in range(len(data["ChannelNames"])):
         if config["SpectrogramMethod"] == "Welch's Periodogram":
-            Spectrum = SPU.welchSpectrogram(data["Data"][:,i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=data["SamplingRate"])
+            Spectrum = SPU.welchSpectrogram(data["Data"][:,i], window=WindowSize, overlap=OverlapSize, frequency_resolution=FrequencyResolution, max_frequency=MaxFrequency, fs=data["SamplingRate"])
         
         elif config["SpectrogramMethod"] == "Medtronic Percept PSD":
             Spectrum = SPU.MedtronicPSD(data["Data"][:,i], packets=[5], fs=data["SamplingRate"])
 
         elif config["SpectrogramMethod"] == "Short-time Fourier Transform":
-            Spectrum = SPU.defaultSpectrogram(data["Data"][:,i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=data["SamplingRate"])
+            Spectrum = SPU.defaultSpectrogram(data["Data"][:,i], window=WindowSize, overlap=OverlapSize, frequency_resolution=FrequencyResolution, fs=data["SamplingRate"])
 
         elif config["SpectrogramMethod"] == "Wavelet":
             Spectrum = SPU.waveletTimeFrequency(data["Data"][:,i], freq=np.arange(0.5,data["SamplingRate"]/2,0.5), ma=int(data["SamplingRate"]/2), fs=data["SamplingRate"])
@@ -2003,12 +2147,12 @@ def handleTimeFrequencyAnalysis(data, config, recording=None):
             Spectrum["Time"] = Spectrum["Time"][::int(data["SamplingRate"]/2)] + 0.5
 
         elif config["SpectrogramMethod"] == "Autoregressive Model (Yule-Walker)":
-            Spectrum = SPU.autoRegressiveSpectrogram(data["Data"][:,i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=data["SamplingRate"], order=0)
+            Spectrum = SPU.autoRegressiveSpectrogram(data["Data"][:,i], window=WindowSize, overlap=OverlapSize, frequency_resolution=FrequencyResolution, fs=data["SamplingRate"], order=0)
 
         else: # Default Welch's Periodogram
-            Spectrum = SPU.welchSpectrogram(data["Data"][:,i], window=1.0, overlap=0.5, frequency_resolution=0.5, fs=data["SamplingRate"])
+            Spectrum = SPU.welchSpectrogram(data["Data"][:,i], window=WindowSize, overlap=OverlapSize, frequency_resolution=FrequencyResolution, fs=data["SamplingRate"])
 
-        Spectrum["Missing"] = SPU.calculateMissingLabel(data["Missing"][:,i], window=1.0, overlap=0.5, fs=data["SamplingRate"])
+        Spectrum["Missing"] = SPU.calculateMissingLabel(data["Missing"][:,i], window=WindowSize, overlap=OverlapSize, fs=data["SamplingRate"])
         #Spectrum["Time"] += data["StartTime"] + (Configuration["Descriptor"][recordingId]["TimeShift"]/1000)# TODO Check later
         del Spectrum["logPower"]
 

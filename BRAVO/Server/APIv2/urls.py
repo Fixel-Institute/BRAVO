@@ -21,8 +21,9 @@ All API URLs
 from django.urls import path
 from django.conf import settings
 
-from . import Therapy
+from . import Therapy, DataAnalysis
 
 urlpatterns = [
     path('queryTherapyHistory', Therapy.QueryTherapyHistory.as_view()),
+    path('queryTimeseriesAnalysis', DataAnalysis.QueryTimeseriesAnalysis.as_view()),
 ]

@@ -167,7 +167,7 @@ def queryTherapyModification(Participant):
         SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__Device=device.uid)
         TherapyModification = [{**i.get_info(), **{"Device": device.uid}} for i in models.TherapyModification.find_all(source__in=SourceFiles)]
         TherapyModifications.extend(TherapyModification)
-    return {"TherapyModifications": TherapyModifications}
+    return TherapyModifications
 
 def queryTherapyGroups(Participant):
     DBSDevices = models.DBSDevice.find_all(owner=Participant)

@@ -386,20 +386,28 @@ def autoRegressiveSpectrogram(data, window=2.0, overlap=1.0, frequency_resolutio
 
 def welchSpectrogram(data, window=2.0, overlap=1.0, frequency_resolution=0.5, max_frequency=100, fs=100):
     configuration = {"Window": window, "Overlap": overlap}
+
+    target_fs = max_frequency * 4
+    decimation_factor = int(fs // target_fs)
+    while decimation_factor > 1:
+        step = min(decimation_factor, 10)
+        data = signal.decimate(data, step, zero_phase=True)
+        fs = fs / step
+        decimation_factor = int(fs // target_fs)
+
     window = int(window * fs)
     overlap = int(overlap * fs)
     NFFT = int(fs / frequency_resolution)
     epochs = getIndices(len(data),window,overlap)
-    
-    if len(data) > NFFT:
-        frequency, pxx = signal.welch(data[:NFFT], fs=fs, nfft=NFFT)
-    else:
-        frequency, pxx = signal.welch(data, fs=fs, nfft=NFFT)
+
+    frequency = np.fft.rfftfreq(NFFT, d=1/fs)
+    frequency_mask = frequency <= max_frequency
+    frequency = frequency[frequency_mask]
 
     spectrum = np.ndarray((len(frequency), len(epochs)))
     for index in range(len(epochs)):
-        (frequency, p) = signal.welch(data[epochs[index]:epochs[index]+window], fs=fs, nfft=NFFT)
-        spectrum[:,index] = p
+        _, p = signal.welch(data[epochs[index]:epochs[index]+window], fs=fs, nfft=NFFT)
+        spectrum[:,index] = p[frequency_mask]
     time = (epochs + window) / fs
     
     return dict({"Time": time, "Frequency": frequency, "Power": spectrum, "logPower": 10*np.log10(spectrum), "Config": configuration})

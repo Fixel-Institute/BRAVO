@@ -101,7 +101,10 @@ class UserLogin(RestViews.APIView):
 
                 token = models.AuthenticationTokens(user=user, ip_address=ip, type="Desktop")
                 token.save()
-                return Response(status=200, data={**user.get_info(), "AuthToken": token.token})
+                return Response(status=200, data={**user.get_info(), "AuthToken": token.token,
+                                                    "Institutes": [{"Id": institute.uid, "Name": institute.name} for institute in models.Institute.find_all(members=user)],
+                                                    "Studies": [{"Id": study.uid, "Name": study.name} for study in models.Study.find_all(members=user)]
+                                                  })
 
             return Response(status=200, data=user.get_info())
         return Response(status=400, data={"message": "Incorrect Email or Password"})
@@ -143,6 +146,8 @@ class QueryProfile(RestViews.APIView):
                 if not institute.has_permission(request.user):
                     return Response(status=400, data={"message": "Permission Denied"})
                 
+                if "ActiveStudy" in request.user.configuration.keys():
+                    del request.user.configuration["ActiveStudy"]
                 request.user.institute = institute
                 request.user.save()
                 return Response(status=200)
