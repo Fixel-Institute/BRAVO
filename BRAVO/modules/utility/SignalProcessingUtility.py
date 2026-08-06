@@ -403,7 +403,7 @@ def welchSpectrogram(data, window=2.0, overlap=1.0, frequency_resolution=0.5, ma
     frequency = np.fft.rfftfreq(NFFT, d=1/fs)
     frequency_mask = frequency <= max_frequency
     frequency = frequency[frequency_mask]
-
+    
     spectrum = np.ndarray((len(frequency), len(epochs)))
     for index in range(len(epochs)):
         _, p = signal.welch(data[epochs[index]:epochs[index]+window], fs=fs, nfft=NFFT)

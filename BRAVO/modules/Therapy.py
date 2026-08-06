@@ -177,9 +177,7 @@ def queryTherapyGroups(Participant):
         if len(SourceFiles) > 0:
             TherapyGroup = [{**i.get_info(), **{"Device": device.uid}} for i in models.ElectricalTherapy.find_all(therapy__source__in=SourceFiles)]
             TherapyGroups.extend(TherapyGroup)
-    
-    json.dump(TherapyGroups, open(r"TherapyGroups.json", "w"), indent=4)
-    return {"TherapyGroups": TherapyGroups}
+    return TherapyGroups
 
 def createTherapyTimeline(TherapyHistory):
     AllSessionDates = []

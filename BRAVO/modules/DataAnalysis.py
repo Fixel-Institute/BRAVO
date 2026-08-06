@@ -1427,7 +1427,6 @@ def retrieveSpectrogramData(participant_uid, recording_uid, config):
             "Time": Data["Spectrum"][0]["Time"].tolist(),
             "Frequency": Data["Spectrum"][0]["Frequency"].tolist(),
         }
-        print(np.array([spectrum["Power"] for spectrum in Data["Spectrum"]]).shape)
         BinaryData = np.array([spectrum["Power"] for spectrum in Data["Spectrum"]]).astype(np.float64).tobytes()
         compressor = zstd.ZstdCompressor(level=5)
         payload = compressor.compress(BinaryData)
@@ -2167,12 +2166,25 @@ def handleTimeFrequencyAnalysis(data, config, recording=None):
         if config["Normalization"] == "1/f PSD Trend Removal":
             meanPSDs = np.nanmedian(np.array(Spectrum["Power"]), axis=1)
             WindowRange = [1,data["SamplingRate"]/2 if data["SamplingRate"] < 200 else 100]
-
             FrequencyWindow = rangeSelection(Spectrum["Frequency"], WindowRange)
-            fm = SpectralModel(peak_width_limits=[1,24])
-            fm.fit(np.array(Spectrum["Frequency"])[FrequencyWindow], meanPSDs[FrequencyWindow], WindowRange)
-            oof = fm.get_model("aperiodic", "linear")
             
+            FrequencyOfInterest = (Spectrum["Frequency"] > 3) & (Spectrum["Frequency"] < 98)
+            MaskedPeaks = np.zeros(len(Spectrum["Frequency"]), dtype=bool)
+            while True:
+                x = np.log10(Spectrum["Frequency"][FrequencyOfInterest & ~MaskedPeaks])
+                y = np.log10(meanPSDs[FrequencyOfInterest & ~MaskedPeaks])
+                coe = np.polyfit(x, y, 1)
+                residual = y - np.polyval(coe, x)
+                MaskedPeak = np.abs(stats.zscore(residual)) > 2
+                MaskedPeak = np.convolve(MaskedPeak, np.ones(3, dtype=bool), mode="same") > 0
+                MaskedPeaks[FrequencyOfInterest & ~MaskedPeaks] = MaskedPeak
+                if np.sum(MaskedPeak) == 0:
+                    break
+
+            oof = np.zeros(len(Spectrum["Frequency"]))
+            oof[Spectrum["Frequency"] > 0] = np.power(10, np.polyval(coe, np.log10(Spectrum["Frequency"][Spectrum["Frequency"] > 0])));
+            oof[Spectrum["Frequency"] == 0] = oof[Spectrum["Frequency"] > 0][0]
+
             for j in range(Spectrum["Power"].shape[1]):
                 Spectrum["Power"][FrequencyWindow,j] = np.array(Spectrum["Power"][FrequencyWindow,j]) / oof
 
