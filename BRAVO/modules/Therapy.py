@@ -158,7 +158,9 @@ def queryTherapyHistory(Participant):
 def queryTherapyHistoryMetadata(Participant):
     TherapyVisitDates = models.Therapy.find_all(source__owner=Participant, type__in=["Pre-visit Therapy", "Post-visit Therapy", "Past Therapy"]).values_list("date", "source__metadata__Device").distinct()
     TherapyVisitDates = [{"Date": i[0], "Device": i[1]} for i in TherapyVisitDates]
-    return {"TherapyVisitDates": TherapyVisitDates}
+    DBSDevices = models.DBSDevice.find_all(owner=Participant)
+    DBSDevices = [i.get_info() for i in DBSDevices]
+    return {"TherapyVisitDates": TherapyVisitDates, "DBSDevices": DBSDevices}
 
 def queryTherapyModification(Participant):
     DBSDevices = models.DBSDevice.find_all(owner=Participant)
@@ -176,7 +178,21 @@ def queryTherapyGroups(Participant):
         SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__Device=device.uid)
         if len(SourceFiles) > 0:
             TherapyGroup = [{**i.get_info(), **{"Device": device.uid}} for i in models.ElectricalTherapy.find_all(therapy__source__in=SourceFiles)]
-            TherapyGroups.extend(TherapyGroup)
+            TherapySources = np.unique([group["SourceId"] for group in TherapyGroup])
+            TherapyGroupDates = np.unique([group["Date"] for group in TherapyGroup])
+            TherapyGroupIds = np.unique([group["GroupId"] for group in TherapyGroup])
+            TherapyTypes = ["Pre-visit Therapy", "Post-visit Therapy", "Past Therapy"]
+            for SourceId in TherapySources:
+                for GroupDate in TherapyGroupDates:
+                    for GroupId in TherapyGroupIds:
+                        for GroupType in TherapyTypes:
+                            TherapyGroupSubset = sorted([group for group in TherapyGroup if group["GroupId"] == GroupId and group["Date"] == GroupDate and group["Type"] == GroupType and group["SourceId"] == SourceId], key=lambda x: x["Date"])
+                            if len(TherapyGroupSubset) > 0:
+                                if len(TherapyGroupSubset) > 1:
+                                    for i in range(1, len(TherapyGroupSubset)):
+                                        TherapyGroupSubset[0]["StimulationSettings"].extend(TherapyGroupSubset[i]["StimulationSettings"])
+                                        TherapyGroupSubset[0]["AdaptiveSettings"].extend(TherapyGroupSubset[i]["AdaptiveSettings"])
+                                TherapyGroups.append(TherapyGroupSubset[0])
     return TherapyGroups
 
 def createTherapyTimeline(TherapyHistory):

@@ -426,7 +426,7 @@ class QueryTimeseriesAnalysis(RestViews.APIView):
             userConfig["APIAccess"] = hasattr(request.user, "api_access")
             result = Database.getCachedResult("/queryTimeseriesAnalysis", request.data["ParticipantId"], {**userConfig, **request.data})
             if result:
-                return Response(status=200, data=result)
+                return Response(status=200, data=result, content_type='application/json')
             
             Analysis = DataAnalysis.processTimeseriesAnalysis(request.data["ParticipantId"], request.data["AnalysisId"], userConfig)
             if request.data["TherapyId"]:
@@ -440,7 +440,7 @@ class QueryTimeseriesAnalysis(RestViews.APIView):
             Analysis = json_compliant_handler(Analysis)
 
             Database.saveCachedResult(Analysis, "/queryTimeseriesAnalysis", request.data["ParticipantId"], {**userConfig, **request.data})
-            return Response(status=200, data=Analysis)
+            return Response(status=200, data=Analysis, content_type='application/json')
 
         elif request.data["RequestType"] == "UpdateData":
             if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId", "RequestType", "AnalysisId", "RecordingName", "RecordingTags"]):

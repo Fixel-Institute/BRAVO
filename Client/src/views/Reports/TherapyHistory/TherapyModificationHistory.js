@@ -11,7 +11,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import React, { useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -21,6 +21,9 @@ import {
   Tooltip,
   Autocomplete,
   TextField,
+  Menu,
+  MenuItem,
+  Link
 } from "@mui/material"
 
 // core components
@@ -31,744 +34,643 @@ import MDBadge from "components/MDBadge";
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";
 import { dictionary, dictionaryLookup } from "assets/translation.js";
+import MDButton from "components/MDButton";
 
-function TherapyModificationHistory({therapyHistoryRaw, device, viewConfigurationTable}) {
-  const navigate = useNavigate();
-  const [controller, dispatch] = usePlatformContext();
-  const { language, report } = controller;
+const monthLabels = ['Past', 'Current', 'Next'];
+const groupLegend = [
+  { label: 'Group A', color: '#7c65ff' },
+  { label: 'Group B', color: '#21f3b4' },
+  { label: 'Group C', color: '#ffae00' },
+  { label: 'Group D', color: '#f43636' },
+];
 
-  const [therapyTable, setTherapyTable] = React.useState({});
-  const [interleavingSwitch, setInterleavingSwitch] = React.useState({});
-  const [therapyDateSlider, setTherapyDateSlider] = React.useState({active: 0, options: []});
-  const [therapyHistory, setTherapyHistory] = React.useState(therapyHistoryRaw);
-  const [mostUsedConfig, setMostUsedConfig] = React.useState([]);
+function toMonthStart(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
 
-  const [therapyOptions, setTherapyOptions] = React.useState({active: null, options: []});
+function toMonthIndex(date) {
+  return date.getFullYear() * 12 + date.getMonth();
+}
 
-  const sliderRef = React.useRef(null);
+function fromMonthIndex(monthIndex) {
+  const year = Math.floor(monthIndex / 12);
+  const month = monthIndex % 12;
+  return new Date(year, month, 1);
+}
 
-  const [alert, setAlert] = React.useState(null);
+function addMonths(baseDate, monthOffset) {
+  return new Date(baseDate.getFullYear(), baseDate.getMonth() + monthOffset, 1);
+}
+
+function clampMonthIndex(value, min, max) {
+  return Math.max(min, Math.min(value, max));
+}
+
+function toDayStart(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date, dayOffset) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + dayOffset);
+  return toDayStart(next);
+}
+
+function isSameDay(left, right) {
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
+}
+
+function toDayKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function toVisibilityKey(eventId, day) {
+  return `${eventId}|${toDayKey(day)}`;
+}
+
+function isWithinEventDay(date, event) {
+  return date >= event.startDate && date <= event.endDate;
+}
+
+function getGroupColor(groupId) {
+  if (groupId) {
+    if (groupId === 'A') return '#7c65ff';
+    if (groupId === 'B') return '#21f3b4';
+    if (groupId === 'C') return '#ffae00';
+    if (groupId === 'D') return '#f43636';
+    return '#6a6b6b';
+  }
+}
+
+const getDateString = (timestamp, timezone) => {
+  return new Date(timestamp * 1000).toLocaleDateString("en-CA", {
+    month: 'long',
+    day: '2-digit',
+    year: 'numeric',
+  })
+}
+
+const getTimeString = (timestamp, timezone) => {
+  return new Date(timestamp * 1000).toLocaleTimeString("en-US", {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function LeadComponentSvg({ components }) {
+  const maxAmplitude = Math.max(...components);
+  const componentColor = components.map((value) => {
+    const intensity = Math.max(0, Math.min(1, value / maxAmplitude));
+    const contactColor = `color-mix(in srgb, ${"#AAAAAA"}, ${"#FF0000"} ${(intensity)*100}%)`;
+    return contactColor;
+  });
+
+  return (
+    <svg
+      className="group-history-lead-svg"
+      viewBox="0 0 86 212"
+      role="img"
+      aria-label="Electrode component intensities"
+    >
+      <rect x="31" y="0" width="24" height="182" rx="12" fill="#000000" stroke="var(--dashboard-border)" />
+      <path 
+        d="M 31 176 
+          H 55 
+          V 200 
+          A 12 12 0 0 1 31 200 
+          Z" 
+        fill="color-mix(in srgb, var(--dashboard-surface-raised), transparent 12%)" 
+        stroke="var(--dashboard-border)" 
+      />
+      
+      <rect x="31" y="162" width="24" height="25" fill={componentColor[0]} stroke="var(--dashboard-border)">
+        <title>{components[0]}</title>
+      </rect>
+      {components.length === 8 && <rect x="62" y="112" width="24" height="25" fill={componentColor[1]} stroke="var(--dashboard-border)">
+        <title>{components[1]}</title>
+      </rect>}
+      <rect x="31" y="112" width="24" height="25" fill={componentColor.length === 8 ? componentColor[2] : componentColor[1]} stroke="var(--dashboard-border)">
+        <title>{componentColor.length === 8 ? components[2] : components[1]}</title>
+      </rect>
+      {components.length === 8 && <rect x="0" y="112" width="24" height="25" fill={componentColor[3]} stroke="var(--dashboard-border)" >
+        <title>{components[3]}</title>
+      </rect>}
+      {components.length === 8 && <rect x="62" y="62" width="24" height="25" fill={componentColor[4]} stroke="var(--dashboard-border)" >
+        <title>{components[4]}</title>
+      </rect>}
+      <rect x="31" y="62" width="24" height="25" fill={componentColor.length === 8 ? componentColor[5] : componentColor[2]} stroke="var(--dashboard-border)">
+        <title>{componentColor.length === 8 ? components[5] : components[2]}</title>
+      </rect>
+      {components.length === 8 && <rect x="0" y="62" width="24" height="25" fill={componentColor[6]} stroke="var(--dashboard-border)" >
+        <title>{components[6]}</title>
+      </rect>}
+      <rect x="31" y="12" width="24" height="25" fill={componentColor.length === 8 ? componentColor[7] : componentColor[3]} stroke="var(--dashboard-border)">
+        <title>{componentColor.length === 8 ? components[7] : components[3]}</title>
+      </rect>
+    </svg>
+  );
+};
+
+function TherapyModificationHistory({therapyHistoryRaw, availableDevices, device, visitDates}) {
   const { participant_uid } = useParams();
+  const [therapyGroups, setTherapyGroups] = useState([]);
 
-  React.useEffect(() => {
-    if (therapyHistoryRaw) setTherapyHistory(therapyHistoryRaw);
+  const [timelineMenu, setTimelineMenu] = useState({open: false, anchorEl: null, eventId: "Pre", options: [], groupId: "A"});
+  const [timelineData, setTimelineData] = useState([]);
+  const [timelineStart, setTimelineStart] = useState(new Date().getTime() / 1000);
+  const [timelineEnd, setTimelineEnd] = useState(new Date().getTime() / 1000 );
+
+  const [sliderValue, setSliderValue] = useState(0);
+  const sliderMin = 0;
+  const sliderMax = Math.max(0, visitDates.length - 1);
+  const selectedVisitDate = visitDates[sliderValue] ?? 0;
+
+  useEffect(() => {
+    setTherapyGroups(therapyHistoryRaw.map((a) => {
+      a.Settings = a.StimulationSettings.map((s, i) => ({ ...s, ...a.AdaptiveSettings[i] }));
+      return a;
+    }));
   }, [therapyHistoryRaw]);
 
-  React.useEffect(() => {
-    if (!therapyHistoryRaw) return;
+  useEffect(() => {
+    if (therapyGroups.length == 0) return;
+    setTimelineStart(therapyGroups.length > 0 ? therapyGroups[0].Date : new Date().getTime() / 1000);
+    setTimelineEnd(therapyGroups.length > 0 ? therapyGroups[therapyGroups.length - 1].Date : new Date().getTime() / 1000);
+    setSliderValue(sliderMax);
+  }, [therapyGroups]);
 
-    let therapyDates = {active: 0, options: []};
-    for (let i in therapyHistoryRaw.TherapyTimeline) {
-      if (therapyHistoryRaw.TherapyTimeline[i].DefinedTherapies.some((a) => a.Device.Name == device) == false) continue;
-      therapyDates.options.push(therapyHistoryRaw.TherapyTimeline[i].Date);
-    }
+  useEffect(() => {
+    const visitDate = getDateString(selectedVisitDate.Date);
+    const groups = therapyGroups.filter((group) =>  getDateString(group.Date) === visitDate && availableDevices.filter((device) => device.Id === group.Device)[0].Heritage === device);
 
-    if (therapyDates.options.length > 0) {
-      if (therapyDates.options.length > 1) {
-        if (therapyDates.options[therapyDates.options.length-1] - therapyDates.options[therapyDates.options.length-2] < 3600*12) {
-          therapyDates.active = therapyDates.options[therapyDates.options.length-2];
-        }
-      } else {
-        therapyDates.active = therapyDates.options[therapyDates.options.length-1];
-      }
-    } 
-    setTherapyDateSlider(therapyDates);
-  }, [therapyHistoryRaw, device]);
-
-  React.useEffect(() => {
-    for (let i in therapyHistory.TherapyTimeline) {
-      if (therapyHistory.TherapyTimeline[i].Date == therapyDateSlider.active) {
-        setTherapyOptions(() => {
-          let options = {active: null, pre: [], post: [], options: []};
-          for (let j in therapyHistory.TherapyTimeline[i].DefinedTherapies) {
-            for (let l in therapyHistory.TherapyTimeline[i].Therapies) {
-              for (let k in therapyHistory.TherapyTimeline[i].Therapies[l].Processed) {
-                if (therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Device.Id == therapyHistory.TherapyTimeline[i].DefinedTherapies[j].Device.Id) {
-                  if (!options.options.map((a) => a.TherapyIds).includes(therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].TherapyIds)) {
-                    options.options.push(therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k]);
-                  }
-                  if (listMatch(therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].TherapyIds, therapyHistory.TherapyTimeline[i].DefinedTherapies[j].Pre)) {
-                    options.pre.push(therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k]);
-                  }
-                  if (listMatch(therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].TherapyIds, therapyHistory.TherapyTimeline[i].DefinedTherapies[j].Post)) {
-                    options.post.push(therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k]);
-                  }
-                }
-              }
-            }
-            if (options.pre.length < parseInt(j)+1) {
-              options.pre.push(null);
-            }
-            if (options.post.length < parseInt(j)+1) {
-              options.post.push(null);
-            }
-          }
-          return options;
-        });
-
-        setTherapyTable(() => {
-          const definedTherapies = therapyHistory.TherapyTimeline[i].DefinedTherapies.filter((a) => a.Device.GenericName == device);
-          return { ...therapyHistory.TherapyTimeline[i], DefinedTherapies: definedTherapies, };
-        });
-        break;
-      }
-    }
-  }, [therapyHistory, therapyDateSlider]);
-
-  React.useEffect(() => {
-    setMostUsedConfig(() => {
-      let mostUsed = [];
-      for (let i in therapyHistory.TherapyTimeline) {
-        let activeConfigs = {
-          LeftAmplitude: "", LeftContact: "", LeftFrequency: "", LeftPulsewidth: "", PercentUsage: 0,
-          RightAmplitude: "", RightContact: "", RightFrequency: "", RightPulsewidth: "", Date: therapyHistory.TherapyTimeline[i].Date,
-        };
-        for (let j in therapyHistory.TherapyTimeline[i].DefinedTherapies) {
-          if (therapyHistory.TherapyTimeline[i].DefinedTherapies[j].Device.GenericName != device) continue;
-          if (therapyHistory.TherapyTimeline[i].DefinedTherapies[j].PercentUsage > activeConfigs.PercentUsage) {
-            activeConfigs = {
-              LeftAmplitude: "", LeftContact: "", LeftFrequency: "", LeftPulsewidth: "", PercentUsage: 0,
-              RightAmplitude: "", RightContact: "", RightFrequency: "", RightPulsewidth: "", Date: therapyHistory.TherapyTimeline[i].Date,
-            };
-            for (let l in therapyHistory.TherapyTimeline[i].Therapies) {
-              for (let k in therapyHistory.TherapyTimeline[i].Therapies[l].Processed) {
-                if (therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Device.Id == therapyHistory.TherapyTimeline[i].DefinedTherapies[j].Device.Id) {
-                  if (listMatch(therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].TherapyIds, therapyHistory.TherapyTimeline[i].DefinedTherapies[j].Pre)) {
-                    for (let m in therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation) {
-                      if (therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m].length == 0) continue;
-                      for (let n in therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m]) {
-                        if (therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Electrodes[m].Target.startsWith("Left") && therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Electrode.Target.startsWith("Left")) {
-                          activeConfigs.LeftAmplitude += therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Amplitude.toFixed(1) + " " + therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].AmplitudeUnit;
-                          let contacts = [];
-                          for (let c of therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Contact) {
-                            if (!contacts.includes(c.split("-")[0])) {
-                              contacts.push(c.split("-")[0]);
-                            }
-                          }
-                          activeConfigs.LeftContact += contacts.join(", ");
-                          activeConfigs.LeftFrequency += therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Frequency.toFixed(0) + " Hz";
-                          activeConfigs.LeftPulsewidth += therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Pulsewidth.toFixed(0) + " " + therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].PulsewidthUnit;
-                        } else if (therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Electrodes[m].Target.startsWith("Right") && therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Electrode.Target.startsWith("Right")) {
-                          activeConfigs.RightAmplitude += therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Amplitude.toFixed(1) + " " + therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].AmplitudeUnit;
-                          let contacts = [];
-                          for (let c of therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Contact) {
-                            if (!contacts.includes(c.split("-")[0])) {
-                              contacts.push(c.split("-")[0]);
-                            }
-                          }
-                          activeConfigs.RightContact += contacts.join(", ");
-                          activeConfigs.RightFrequency += therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Frequency.toFixed(0) + " Hz";
-                          activeConfigs.RightPulsewidth += therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].Pulsewidth.toFixed(0) + " " + therapyHistory.TherapyTimeline[i].Therapies[l].Processed[k].Stimulation[m][n].PulsewidthUnit;
-                        }
-                      }
-                    }
-                    activeConfigs.PercentUsage = therapyHistory.TherapyTimeline[i].DefinedTherapies[j].PercentUsage;
-                  }
-                }
-              }
-            }
-          }
-        }
-        mostUsed.push(activeConfigs);
-      }
-      return mostUsed;
+    let groupOptions = groups.map((group) => {
+      return { ...group, Time: getTimeString(group.Date), Active: false }
     });
-  }, [therapyHistory]);
 
-  const sliderMin = therapyDateSlider.options.length > 0 ? therapyDateSlider.options[0] : 0;
-  const sliderMax = therapyDateSlider.options.length > 0 ? therapyDateSlider.options[therapyDateSlider.options.length-1] : sliderMin;
-  const formatMarkTooltip = (ts) => {
-    let tableRows = [];
-    for (let i in mostUsedConfig) {
-      if (mostUsedConfig[i].Date == ts) {
-        const rowIndex = ["Current", "Last Visit", "2 Visits Ago"];
-        tableRows.push(["", "Left Amplitude", "Left Contact", "Left Frequency", "Left Pulsewidth",
-                      "Right Amplitude", "Right Contact", "Right Frequency", "Right Pulsewidth"]);
-        for (let j = i; (j > 0 && j > i-3); j--) {
-          tableRows.push([rowIndex[i-j], mostUsedConfig[j].LeftAmplitude, mostUsedConfig[j].LeftContact, mostUsedConfig[j].LeftFrequency, mostUsedConfig[j].LeftPulsewidth,
-                        mostUsedConfig[j].RightAmplitude, mostUsedConfig[j].RightContact, mostUsedConfig[j].RightFrequency, mostUsedConfig[j].RightPulsewidth]);
-        }
-        break;
-      }
-    }
-
-    return <MDBox p={1}>
-      <MDTypography variant={"h6"} fontWeight={"bold"} color={"light"}> 
-        {new Date(ts*1000).toLocaleDateString("en-US", {
-          month: "2-digit",
-          day: "2-digit",
-          year: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </MDTypography>
-
-      <div style={{ marginTop: 6 }}>
-        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 180 }}>
-          <tbody>
-            {tableRows.map((row, rIdx) => (
-              <tr key={rIdx}>
-                {row.map((cell, cIdx) => (
-                  <td key={cIdx} style={{
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    padding: "6px 8px",
-                    textAlign: "center",
-                    background: rIdx % 2 === 0 ? "rgba(0,0,0,0.02)" : "rgba(0,0,0,0)",
-                    fontSize: 12,
-                  }}>
-                    <MDTypography variant={"p"} fontWeight={rIdx === 0 ? "bold" : "regular"} color={"light"}>
-                      {cell}
-                    </MDTypography>
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </MDBox>
-  };
-
-  const getPreTherapySettingsBilateral = (config) => {
-    if (!config) return;
-
-    for (let i = 0; i < config.Electrodes.length; i++) {
-      config.Adaptive[i] = config.Adaptive[i].filter((a,j) => config.Stimulation[i][j].Electrode.Target.split(" ")[0] == config.Electrodes[i].Target.split(" ")[0]);
-      config.Stimulation[i] = config.Stimulation[i].filter((a) => a.Electrode.Target.split(" ")[0] == config.Electrodes[i].Target.split(" ")[0]);
-    }
-    
-    return (
-      <MDBox px={2} pt={1} pb={2}>
-        <MDTypography variant={"h6"} fontWeight={"bold"}>
-          {"Therapy Settings Before Visit:"}
-        </MDTypography>
-        {getTherapySettings(config, 0)}
-        {getTherapySettings(config, 1)}
-      </MDBox>
-    )
-  }
-
-  const getPostTherapySettingsBilateral = (config) => {
-    if (!config) return;
-
-    for (let i = 0; i < config.Electrodes.length; i++) {
-      config.Adaptive[i] = config.Adaptive[i].filter((a,j) => config.Stimulation[i][j].Electrode.Target == config.Electrodes[i].Target);
-      config.Stimulation[i] = config.Stimulation[i].filter((a) => a.Electrode.Target == config.Electrodes[i].Target);
-    }
-
-    return (
-      <MDBox px={2} pt={1} pb={2}>
-        <MDTypography variant={"h6"} fontWeight={"bold"}>
-          {"Therapy Settings After Visit:"}
-        </MDTypography>
-        {config.GroupType == "Active" ? (
-        <MDTypography variant={"h5"} fontWeight={"bold"} color={"error"}>
-          {"(Active)"}
-        </MDTypography>
-        ) : null}
-        {getTherapySettings(config, 0)}
-        {getTherapySettings(config, 1)}
-      </MDBox>
-    )
-  }
-
-  const getTherapySettings = (config, index) => {
-    if (config.Stimulation.length < index+1) return;
-
-    let interleaving = false;
-    if (config.Stimulation[index].length > 1) {
-      interleaving = true;
-    }
-
-    if (config.Stimulation[index].length == 0) return;
-
-    let sensing = false;
-    let adaptive = false;
-    if (!interleaving && config.Adaptive[index][0]) {
-      if (config.Adaptive[index][0].RecordingConfiguration) {
-        if (!interleaving && config.Adaptive[index][0].RecordingConfiguration.Type !== "Unknown") {
-          sensing = true;
+    for (const groupId of ["A", "B", "C", "D"]) {
+      const previsit = groupOptions.filter((group) => group.GroupId.endsWith(groupId) && ["Pre-visit Therapy", "Past Therapy"].includes(group.Type) && group.Label == "Preferenced");
+      if (previsit.length > 0) {
+        groupOptions = groupOptions.map((group) => {
+          if (group.Id === previsit[0].Id) {
+            return {...group, Active: true, Label: "Preferenced"};
+          } else {
+            return group;
+          }
+        });
+      } else {
+        const firstPrevisit = groupOptions.filter((group) => group.GroupId.endsWith(groupId) && group.Type == "Pre-visit Therapy");
+        if (firstPrevisit.length > 0) {
+          const visit = firstPrevisit.reduce((prev, curr) => (prev.Time < curr.Time ? prev : curr));
+          groupOptions = groupOptions.map((group) => {
+            if (group.Id === visit.Id) {
+              return {...group, Active: true, Label: "Preferenced"};
+            } else {
+              return group;
+            }
+          });
+        } else {
+          const firstVisitHistory = groupOptions.filter((group) => group.GroupId.endsWith(groupId) && group.Type == "Past Therapy");
+          if (firstVisitHistory.length > 0) {
+            const visit = firstVisitHistory.reduce((prev, curr) => (prev.Time < curr.Time ? prev : curr));
+            groupOptions = groupOptions.map((group) => {
+              if (group.Id === visit.Id) {
+                return {...group, Active: true, Label: "Preferenced"};
+              } else {
+                return group;
+              }
+            });
+          }
         }
       }
       
-      try {
-        if (config.Adaptive[index][0].StimulationConfiguration) {
-          if (config.Adaptive[index][0].StimulationConfiguration.Type === "Medtronic Adaptive") {
-            if (config.Adaptive[index][0].RecordingConfiguration.Config.Thresholds.LFPThresholds[0] != 20 && config.Adaptive[index][0].RecordingConfiguration.Config.Thresholds.LFPThresholds[1] != 30) {
-              adaptive = true;
-            }
+      const postvisit = groupOptions.filter((group) => group.GroupId.endsWith(groupId) && group.Type == "Post-visit Therapy" && group.Label == "Preferenced");
+      if (postvisit.length > 0) {
+        groupOptions = groupOptions.map((group) => {
+          if (group.Id === postvisit[0].Id) {
+            return {...group, Active: true, Label: "Preferenced"};
+          } else {
+            return group;
           }
+        });
+      } else {
+        const lastPostvisit = groupOptions.filter((group) => group.GroupId.endsWith(groupId) && group.Type == "Post-visit Therapy");
+        if (lastPostvisit.length > 0) {
+          const visit = lastPostvisit.reduce((prev, curr) => (prev.Time > curr.Time ? prev : curr));
+          groupOptions = groupOptions.map((group) => {
+            if (group.Id === visit.Id) {
+              return {...group, Active: true, Label: "Preferenced"};
+            } else {
+              return group;
+            }
+          });
         }
-      } catch (e) {
-        console.log(e)
       }
     }
 
-    if (config.Type == "Past Therapy") {
-      for (let i in config.Stimulation[index]) {
-        for (let j in config.Stimulation[index][i].FractionalAmplitudes) {
-          config.Stimulation[index][i].FractionalAmplitudes[j] = (config.Stimulation[index][0].FractionalAmplitudes[j] / config.Stimulation[index][i].Contact.length);
-        }
-      }
+    setTimelineData(groupOptions);
+  }, [device, availableDevices, therapyGroups, selectedVisitDate]);
+
+  const getLFPThresholds = (thresholdList) => {
+    if (thresholdList[0] == 20 && thresholdList[1] == 30) {
+      return null;
     }
+    if (thresholdList[0] == thresholdList[1]) {
+      return thresholdList[0].toFixed(0);
+    }
+    return thresholdList[0].toFixed(0) + " - " + thresholdList[1].toFixed(0);
+  }
 
-    return (
-      <MDBox pt={1} pb={2}>
-        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"}>
-          <MDTypography variant={"h6"} fontWeight={"bold"} color={"primary"}>
-            {config.Stimulation[index][0].Electrode.CustomName}
-          </MDTypography>
-          <MDTypography variant={"subtitle1"} color={"secondary"} fontSize={15} fontWeight={"medium"} lineHeight={1} style={{cursor: "pointer"}}>
-            {" ( " + new Date(interleaving ? (config.Stimulation[index][0].Date*1000) : (config.Stimulation[index][0].Date*1000)).toLocaleString("en-US", {...SessionController.getTimezoneName(config.Stimulation[index][0].Timezone),
-              hour: "2-digit",
-              minute: "2-digit",
-            }) + " ) "}
-          </MDTypography>
-        </MDBox>
-        <MDBox display={"flex"} flexDirection={"column"} justifyContent={"start"} pt={1}>
-          {interleaving ? (
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Frequency: "}<b>{config.Stimulation[index][0].Frequency}</b>{" Hz"}{" | "}<b>{config.Stimulation[index][1].Frequency}</b>{" Hz"}<br/>
-          </MDTypography>
-          ) : (
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Frequency: "}<b>{config.Stimulation[index][0].Frequency}</b>{" Hz"}<br/>
-          </MDTypography>
-          )}
-        </MDBox>
-        <MDBox display={"flex"} flexDirection={"column"} justifyContent={"start"} pt={1}>
-          {interleaving ? (
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Pulsewidth: "}<b>{config.Stimulation[index][0].Pulsewidth}</b>{" "}{config.Stimulation[index][0].PulsewidthUnit}{" | "}<b>{config.Stimulation[index][1].Pulsewidth}</b>{" "}{config.Stimulation[index][1].PulsewidthUnit}<br/>
-          </MDTypography>
-          ) : (
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Pulsewidth: "}<b>{config.Stimulation[index][0].Pulsewidth}</b>{" "}{config.Stimulation[index][0].PulsewidthUnit}<br/>
-          </MDTypography>
-          )}
-        </MDBox>
-        <MDBox display={"flex"} flexDirection={"column"} justifyContent={"start"} pt={1}>
-          {interleaving ? (
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Amplitude: "}<b>{config.Stimulation[index][0].Amplitude}</b>{" " + config.Stimulation[index][0].AmplitudeUnit}{" | "}<b>{config.Stimulation[index][1].Amplitude}</b>{" " + config.Stimulation[index][1].AmplitudeUnit}<br/>
-          </MDTypography>
-          ) : (
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Amplitude: "}<b>{config.Stimulation[index][0].Amplitude}</b>{" " + config.Stimulation[index][0].AmplitudeUnit}<br/>
-          </MDTypography>
-          )}
-        </MDBox>
-        
-        {interleaving ? (
-        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} justifyContent={"start"} pt={1}>
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Active Contact: "}
-          </MDTypography>
-          {config.Stimulation[index][0].Contact.map((a, sindex) => {
-            return <MDBox key={a}>
-              <MDBadge badgeContent={a} color={"error"} size={"xs"} container sx={{marginLeft: 1, cursor: "pointer"}} />
-              <MDTypography variant={"h6"} fontSize={12} fontWeight={"regular"} lineHeight={1} ml={1}>
-                {(config.Stimulation[index][0].FractionalAmplitudes[sindex]).toFixed(1) + " " + config.Stimulation[index][0].AmplitudeUnit}
-              </MDTypography>
-            </MDBox>
-          })}
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1} ml={1}>
-            {" | "}
-          </MDTypography>
-          {config.Stimulation[index][1].Contact.map((a, sindex) => {
-            return <MDBox key={a}>
-              <MDBadge badgeContent={a} color={"error"} size={"xs"} container sx={{marginLeft: 1, cursor: "pointer"}} />
-              <MDTypography variant={"h6"} fontSize={12} fontWeight={"regular"} lineHeight={1} ml={1}>
-                {(config.Stimulation[index][1].FractionalAmplitudes[sindex]).toFixed(1) + " " + config.Stimulation[index][1].AmplitudeUnit}
-              </MDTypography>
-            </MDBox>
-          })}
-        </MDBox>
-        ) : (
-        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} justifyContent={"start"} pt={1}>
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Active Contact: "}
-          </MDTypography>
-          {config.Stimulation[index][0].Contact.map((a, sindex) => {
-            return <MDBox key={a}>
-              <MDBadge badgeContent={a} color={"error"} size={"xs"} container sx={{marginLeft: 1, cursor: "pointer"}} />
-              <MDTypography variant={"h6"} fontSize={12} fontWeight={"regular"} lineHeight={1} ml={1}>
-                {(config.Stimulation[index][0].FractionalAmplitudes[sindex]).toFixed(1) + " " + config.Stimulation[index][0].AmplitudeUnit}
-              </MDTypography>
-            </MDBox>
-          })}
-        </MDBox>
-        )}
-        
-        {interleaving ? (
-        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} justifyContent={"start"} pt={1}>
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Return Contact: "}
-          </MDTypography>
-          {config.Stimulation[index][0].ReturnContact.map((a) => {
-            return <MDBadge key={a} badgeContent={a} color={"info"} size={"xs"} container sx={{marginLeft: 1}} />
-          })}
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1} ml={1}>
-            {" | "}
-          </MDTypography>
-          {config.Stimulation[index][1].ReturnContact.map((a) => {
-            return <MDBadge key={a} badgeContent={a} color={"info"} size={"xs"} container sx={{marginLeft: 1}} />
-          })}
-        </MDBox>
-        ) : (
-        <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} pt={1}>
-          <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-            {"Return Contact: "}
-          </MDTypography>
-          {config.Stimulation[index][0].ReturnContact.map((a) => {
-            return <MDBadge key={a} badgeContent={a} color={"info"} size={"xs"} container sx={{marginLeft: 1}} />
-          })}
-        </MDBox>
-        )}
+  const getRecordingConfigurationCard = (recordingConfiguration) => {
+    if (recordingConfiguration.Type == "Unknown") return null;
 
-        {config.Stimulation[index][0].CyclingPeriod > 0 ? <>
-          {interleaving? ( 
-          <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} pt={1}>
-            <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1} pr={1}>
-              {"Cycling: "}{" "}
-            </MDTypography>
-            <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-              {"Duty Cycle " + (config.Stimulation[index][0].Cycling*100).toFixed(1) + "%"}<br/>
-              {"Duty Period " + (config.Stimulation[index][0].CyclingPeriod/60000).toFixed(1) + " minutes"}
-            </MDTypography>
-            <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1} px={1}>
-              {" | "}
-            </MDTypography>
-            <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-              {"Duty Cycle " + (config.Stimulation[index][1].Cycling*100).toFixed(1) + "%"}<br/>
-              {"Duty Period " + (config.Stimulation[index][1].CyclingPeriod/60000).toFixed(1) + " minutes"}
+    if (recordingConfiguration.Type == "Medtronic BrainSense") {
+      return (
+        <MDBox sx={{ display: "flex", flexDirection: "column", width: "100%", mt: 2 }}>
+          <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+            <MDTypography variant="caption" color="error" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+              {"Recording Configuration:"}
             </MDTypography>
           </MDBox>
-          ) : (
-          <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} pt={1}>
-            <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1} pr={1}>
-              {"Cycling: "}{" "}
+          <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+            <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+              {"LFP Sense:"}
             </MDTypography>
-            <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-              {"Duty Cycle " + (config.Stimulation[index][0].Cycling*100).toFixed(1) + "%"}<br/>
-              {"Duty Period " + (config.Stimulation[index][0].CyclingPeriod/60000).toFixed(1) + " minutes"}
+            <MDTypography variant="caption" color="text" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+              {recordingConfiguration.Config.SensingSetup.FrequencyInHertz}{" Hz"} ({(recordingConfiguration.Config.SensingSetup.AveragingDurationInMilliSeconds / 1000).toFixed(1)}{" sec"})
             </MDTypography>
           </MDBox>
-          )}
-        </> : null}
-        
-        {interleaving || !sensing ? null : (
-          <MDBox pt={2}>
-            <MDBox display={"flex"} flexDirection={"column"} justifyContent={"start"} pt={1}>
-              <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-                {"Sensing Frequency: "}<b>{config.Adaptive[index][0].RecordingConfiguration.Config.SensingSetup.FrequencyInHertz}</b>{" Hz"}<br/>
+          {getLFPThresholds(recordingConfiguration.Config.Thresholds.LFPThresholds) && (
+            <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+              <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+                {"LFP Threshold:"}
               </MDTypography>
-            </MDBox>
-            {adaptive ? (
-              <MDBox display={"flex"} flexDirection={"column"} justifyContent={"start"} pt={1}>
-                <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-                  {"Adaptive Mode: "}<b>{config.Adaptive[index][0].StimulationConfiguration.Config.Status}</b><br/>
-                </MDTypography>
-                <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-                  {"Onset Durations (L|H): "}<b>{config.Adaptive[index][0].StimulationConfiguration.Config.LowerThresholdOnsetInMilliSeconds}</b>{" ms"} {" | "}
-                  <b>{config.Adaptive[index][0].StimulationConfiguration.Config.UpperThresholdOnsetInMilliSeconds}</b>{" ms"}<br/>
-                </MDTypography>
-                <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-                  {"Ramp Time (Up|Down): "}<b>{config.Adaptive[index][0].StimulationConfiguration.Config.RampUpTime}</b>{" ms"} {" | "}
-                  <b>{config.Adaptive[index][0].StimulationConfiguration.Config.RampDownTime}</b>{" ms"}<br/>
-                </MDTypography>
-                <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-                  {"Amplitude Limits (Up|Down): "}<b>{config.Adaptive[index][0].RecordingConfiguration.Config.Thresholds.AmplitudeThreshold[0]}</b>{" mA"} {" | "}
-                  <b>{config.Adaptive[index][0].RecordingConfiguration.Config.Thresholds.AmplitudeThreshold[1]}</b>{" mA"}<br/>
-                </MDTypography>
-                <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-                  {"LFP Thresholds (Up|Down): "}<b>{config.Adaptive[index][0].RecordingConfiguration.Config.Thresholds.LFPThresholds[0]}</b>{" a.u."} {" | "}
-                  <b>{config.Adaptive[index][0].RecordingConfiguration.Config.Thresholds.LFPThresholds[1]}</b>{" a.u."}<br/>
-                </MDTypography>
-                <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-                  {"Medtronic LFP Thresholds (Up|Down): "}<b>{config.Adaptive[index][0].RecordingConfiguration.Config.Thresholds.MeasuredLFP[0]}</b>{" a.u."} {" | "}
-                  <b>{config.Adaptive[index][0].RecordingConfiguration.Config.Thresholds.MeasuredLFP[1]}</b>{" a.u."}<br/>
-                </MDTypography>
-                {config.Adaptive[index][0].StimulationConfiguration.Config.Bypass ? (
-                  <MDTypography variant={"h6"} fontSize={15} fontWeight={"regular"} lineHeight={1}>
-                    {"Signal Bypass: "}<b>{config.Adaptive[index][0].StimulationConfiguration.Config.Bypass}</b><br/>
-                  </MDTypography>
-                ) : null}
-              </MDBox>
-            ) : null}
+              <MDTypography variant="caption" color="text" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+              {getLFPThresholds(recordingConfiguration.Config.Thresholds.LFPThresholds)}
+            </MDTypography>
+          </MDBox>)}
+          <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+            <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+              {"Amplitude Range:"}
+            </MDTypography>
+            <MDTypography variant="caption" color="text" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+              {recordingConfiguration.Config.Thresholds.AmplitudeThreshold[0]} - {recordingConfiguration.Config.Thresholds.AmplitudeThreshold[1]}{" mA"}
+            </MDTypography>
           </MDBox>
-        )}
-      </MDBox>
-    )
-  };
-
-  const getTimeString = (timestamp) => {
-    return new Date(timestamp*1000).toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  };
+        </MDBox>
+      );
+    }
+  }
   
-  const listMatch = (list1, list2) => {
-    if (list1.length != list2.length) return false;
-    for (let i in list1) {
-      if (list1[i] != list2[i]) return false;
+  const getAdaptiveConfigurationCard = (adaptiveConfiguration) => {
+    if (adaptiveConfiguration.Type == "Unknown") return null;
+
+    if (adaptiveConfiguration.Type == "Medtronic Adaptive") {
+      if (adaptiveConfiguration.Config.Status == "ADBSStatusDef.NOT_CONFIGURED") return null;
+      
+      return (
+        <MDBox sx={{ display: "flex", flexDirection: "column", width: "100%", mt: 2 }}>
+          <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+            <MDTypography variant="caption" color="error" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+              {"Adaptive Configuration:"}
+            </MDTypography>
+          </MDBox>
+          <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+            <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+              {"Mode:"}
+            </MDTypography>
+            <MDTypography variant="caption" color="text" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+              {adaptiveConfiguration.Config.Mode.split(".")[1].split("_").map((a) => a.charAt(0).toUpperCase() + a.slice(1).toLowerCase()).join(" ")}
+            </MDTypography>
+          </MDBox>
+          <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+            <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+              {"Ramp Up Onset Duration:"}
+            </MDTypography>
+            <MDTypography variant="caption" color="text" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+              {(adaptiveConfiguration.Config.UpperThresholdOnsetInMilliSeconds / 1000).toFixed(1)}{" sec"}
+            </MDTypography>
+          </MDBox>
+          <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+            <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+              {"Ramp Up Time:"}
+            </MDTypography>
+            <MDTypography variant="caption" color="text" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+              {(adaptiveConfiguration.Config.RampUpTime / 1000).toFixed(1)}{" sec"}
+            </MDTypography>
+          </MDBox>
+          <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+            <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+              {"Ramp Down Onset Duration:"}
+            </MDTypography>
+            <MDTypography variant="caption" color="text" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+              {(adaptiveConfiguration.Config.LowerThresholdOnsetInMilliSeconds / 1000).toFixed(1)}{" sec"}
+            </MDTypography>
+          </MDBox>
+          <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+            <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+              {"Ramp Down Time:"}
+            </MDTypography>
+            <MDTypography variant="caption" color="text" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+              {(adaptiveConfiguration.Config.RampDownTime / 1000).toFixed(1)}{" sec"}
+            </MDTypography>
+          </MDBox>
+        </MDBox>
+      );
     }
-    return true;
+  }
+  
+  const displayGroupParameters = (group) => {
+    return group.Settings.sort((a, b) => a.Electrode.CustomName.localeCompare(b.Electrode.CustomName)).map((setting, index) => {
+      const fractionalAmplitudes = setting.Electrode.ChannelNames.map((contact) => {
+        if (setting.Contact.includes(contact)) return setting.FractionalAmplitudes[setting.Contact.indexOf(contact)] ?? 1;
+        return 0;
+      });
+
+      return (
+        <Grid item xs={12} sm={12} lg={6} key={setting.Electrode.CustomName + group.Id + " " + index}>
+          <MDBox sx={{ display: "flex", flexDirection: "row", alignItems: "start", justifyContent: "start", mt: 1, width: "100%" }}>
+            <MDBox sx={{ width: "75%", display: "flex", flexDirection: "column", alignItems: "start", justifyContent: "start", mr: 2 }}>
+              <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+                <MDTypography variant="caption" color="black" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+                  {"Target: "}
+                </MDTypography>
+                <MDTypography variant="caption" color="info" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+                  {setting.Electrode.CustomName}
+                </MDTypography>
+              </MDBox>
+              <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+                <MDTypography variant="caption" color="black" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+                  {"Therapy Type:"}
+                </MDTypography>
+                <MDTypography variant="caption" color="text" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+                  {setting.StimulationType}
+                </MDTypography>
+              </MDBox>
+              <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+                <MDTypography variant="caption" color="black" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+                  {"Frequency:"}
+                </MDTypography>
+                <MDTypography variant="caption" color="text" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "100%", display: "block" }}>
+                  {setting.Frequency}{" Hz"}
+                </MDTypography>
+              </MDBox>
+              <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+                <MDTypography variant="caption" color="black" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+                  {"Pulsewidth:"}
+                </MDTypography>
+                <MDTypography variant="caption" color="text" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "100%", display: "block" }}>
+                  {setting.Pulsewidth} {setting.PulsewidthUnit}
+                </MDTypography>
+              </MDBox>
+              <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+                <MDTypography variant="caption" color="black" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+                  {"Amplitude:"}
+                </MDTypography>
+                <MDTypography variant="caption" color="text" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "100%", display: "block" }}>
+                  {setting.Amplitude} {setting.AmplitudeUnit}
+                </MDTypography>
+              </MDBox>
+              
+              {getRecordingConfigurationCard(setting.RecordingConfiguration)}
+              {getAdaptiveConfigurationCard(setting.StimulationConfiguration)}
+
+            </MDBox>
+            <MDBox id={"electrode_contact"} sx={{ height: "100%", width: "15%" }}>
+              <LeadComponentSvg components={fractionalAmplitudes} />
+            </MDBox>
+          </MDBox>
+        </Grid>
+      )
+    });
   }
 
   return useMemo(() => (
     <MDBox>
-      {alert}
-      {therapyDateSlider.options.length > 1 && (
-        <MDBox p={2} mt={2} pb={0}>
-          <div style={{ position: "relative" }}>
-            <Slider
-              ref={sliderRef}
-              aria-label="TherapyDates"
-              value={therapyDateSlider.active}
-              getAriaValueText={(value) => {
-                return new Date(value*1000).toLocaleDateString("en-US", {
-                  month: "2-digit",
-                  day: "2-digit",
-                  year: "2-digit"
-                });
-              }}
-              marks={therapyDateSlider.options.map((date,i) => {
-                if (i > 0) {
-                  const minScale = therapyDateSlider.options[therapyDateSlider.options.length-1] - therapyDateSlider.options[0];
-                  if (date - therapyDateSlider.options[i-1] < minScale * 0.01) {
-                    return { value: date, label: "" };
-                  }
-                }
-                return { value: date, label: new Date(date*1000).toLocaleDateString("en-US", {
-                  month: "2-digit", day: "2-digit", year: "2-digit"
-                }) };
-              })}
-              valueLabelDisplay="on"
-              valueLabelFormat={value =>
-                new Date(value * 1000).toLocaleDateString("en-US", {
-                  month: "2-digit",
-                  day: "2-digit",
-                  year: "2-digit"
-                })
-              }
-              step={null}
-              min={therapyDateSlider.options.length > 0 ? therapyDateSlider.options[0] : 0}
-              max={therapyDateSlider.options.length > 0 ? therapyDateSlider.options[therapyDateSlider.options.length-1] : 0}
-              onChange={(event, newValue) => {
-                setTherapyDateSlider((state) => ({ ...state, active: newValue }));
-              }}
-              sx={{
-                '& .MuiSlider-markLabel': {
-                  transform: 'rotate(-45deg) translate(-50px, -40px)',
-                  whiteSpace: 'nowrap',
-                  fontSize: '0.85em',
-                  minWidth: '40px',
-                  textAlign: 'left',
-                  display: "none"
-                },
-                '& .MuiSlider-mark': {
-                  width: '4px',
-                  height: '4px',
-                  borderRadius: '50%',
-                  backgroundColor: '#f53131ff',
-                  marginLeft: '-6px',
-                }
-              }}
-            />
-            <div style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              right: 0,
-              bottom: 0,
-              pointerEvents: "none",
+      <MDBox sx={{ paddingBottom: 2, width: "100%" }}>
+        <Card sx={{ px: 3, py: 1, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <MDBox sx={{ width: "100%" }}>
+            <MDBox color={"black"} sx={{
+              fontFamily: 'Roboto',
+              fontSize: '13px',
+              fontWeight: 700,
+              textAlign: 'center',
             }}>
-              {therapyDateSlider.options.map((date, i) => {
-                const percent = sliderMax !== sliderMin ? ((date - sliderMin) / (sliderMax - sliderMin)) * 100 : 0;
-                return (
-                  <Tooltip
-                    key={i}
-                    title={formatMarkTooltip(date)}
-                    placement="bottom"
-                    interactive arrow
-                    componentsProps={{
-                      tooltip: {
-                        sx: {
-                          maxWidth: '700px',
-                          whiteSpace: 'normal',
-                        },
-                      },
-                    }}
-                  >
-                    <div
-                      onClick={(e) => {
-                        setTherapyDateSlider((state) => ({ ...state, active: date }));
-                      }}
-                      style={{
-                        position: "absolute",
-                        left: `${percent}%`,
-                        top: "30px",
-                        transform: "translateX(-50%)",
-                        pointerEvents: "auto",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <div style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        background: "#f53131",
-                        boxShadow: "0 0 4px rgba(0,0,0,0.3)"
-                      }} />
-                    </div>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          </div>
-        </MDBox>
-      )}
-
-      {therapyTable.Date ? (
-        <MDBox p={2} pt={0}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <MDBox p={2} pt={0}>
-                <MDTypography variant={"h4"} fontWeight={"bold"}>
-                  {"Therapy Configurations on " + new Date(therapyTable.Date*1000).toLocaleDateString("en-US", {
-                    month: "2-digit",
-                    day: "2-digit",
-                    year: "2-digit"
-                  })}
-                </MDTypography>
-              </MDBox>
-            </Grid>
-          
-            {therapyTable.DefinedTherapies.map((config, g) => {
-              let PreTherapy = [], PostTherapy = [];
-              for (let h in therapyTable.Therapies) {
-                for (let k in therapyTable.Therapies[h].Processed) {
-                  if (therapyTable.Therapies[h].Processed[k].Device.Id != config.Device.Id) continue;
-                  if (listMatch(therapyTable.Therapies[h].Processed[k].TherapyIds, config.Pre)) {
-                    PreTherapy = [therapyTable.Therapies[h].Processed[k]];
+              {selectedVisitDate ? getDateString(selectedVisitDate.Date) : 'No date selected'}
+            </MDBox>
+            <MDBox sx={{ width: "100%", px: 2 }}>
+              <Slider
+                type="range"
+                min={0}
+                max={1}
+                step={0.0001}
+                value={(() => {
+                  // normalize sliderValue to 0..1 based on visit date timestamp
+                  if (!visitDates || visitDates.length === 0) return 0;
+                  const first = visitDates[0].Date || visitDates[0];
+                  const last = visitDates[visitDates.length - 1].Date || visitDates[visitDates.length - 1];
+                  const cur = selectedVisitDate ? (selectedVisitDate.Date || selectedVisitDate) : first;
+                  if (last === first) return 0;
+                  return Math.max(0, Math.min(1, (cur - first) / (last - first)));
+                })()}
+                onChange={(e) => {
+                  const t = Number(e.target.value);
+                  if (!visitDates || visitDates.length === 0) return;
+                  const first = visitDates[0].Date || visitDates[0];
+                  const last = visitDates[visitDates.length - 1].Date || visitDates[visitDates.length - 1];
+                  const targetTs = first + t * (last - first);
+                  let nearest = 0;
+                  let mindiff = Infinity;
+                  visitDates.forEach((d, idx) => {
+                    const ts = d.Date || d;
+                    const diff = Math.abs(ts - targetTs);
+                    if (diff < mindiff) { mindiff = diff; nearest = idx; }
+                  });
+                  if (nearest !== sliderValue) {
+                    setSliderValue(nearest);
                   }
-                  if (listMatch(therapyTable.Therapies[h].Processed[k].TherapyIds, config.Post)) {
-                    PostTherapy = [therapyTable.Therapies[h].Processed[k]];
+                }}
+                aria-label="Therapy history date slider (time-scaled)"
+                style={{ width: '100%', cursor: 'pointer' }}
+              />
+            </MDBox>
+            <MDBox sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontFamily: 'Roboto',
+              fontSize: '11px',
+            }}>
+              <MDTypography variant="caption" color="text" sx={{ fontSize: "15px", fontWeight: 500, textAlign: "start", width: "100%", display: "block" }}>
+                {getDateString(timelineStart)}
+              </MDTypography>
+              <MDTypography variant="caption" color="text" sx={{ fontSize: "15px", fontWeight: 500, textAlign: "end", width: "100%", display: "block" }}>
+                {getDateString(timelineEnd)}
+              </MDTypography>
+            </MDBox>
+          </MDBox>
+        </Card>
+      </MDBox>
+      <MDBox py={2} pt={0}>
+        <Grid container spacing={2} sx={{ mb: 1 }}>
+          <Grid item xs={12} sm={6}>
+            <MDBox sx={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "start", width: "100%" }}>
+              <MDTypography variant="caption" color="black" sx={{ fontSize: "18px", fontWeight: 800, textAlign: "start", width: "auto", display: "block" }}>
+                {"Therapy Configurations Before Visit"}
+              </MDTypography>
+            </MDBox>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <MDBox sx={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "start", width: "100%" }}>
+              <MDTypography variant="caption" color="black" sx={{ fontSize: "18px", fontWeight: 800, textAlign: "start", width: "auto", display: "block" }}>
+                {"Therapy Configurations After Visit"}
+              </MDTypography>
+            </MDBox>
+          </Grid>
+          {["A", "B", "C", "D"].map((groupId) => {
+            const pre_visit = timelineData.filter((event) => event.GroupId.endsWith(groupId) && event.Active && ["Pre-visit Therapy", "Past Therapy"].includes(event.Type));
+            const post_visit = timelineData.filter((event) => event.GroupId.endsWith(groupId) && event.Active && ["Post-visit Therapy"].includes(event.Type));
+            const therapy_cards = [];
+
+            if (pre_visit.length === 0) {
+              therapy_cards.push(
+                <Grid item xs={12} sm={6} key={`group-${groupId}-pre`} />
+              );
+            } else {
+              therapy_cards.push(
+                <Grid item xs={12} sm={6} key={`group-${groupId}-pre`}>
+                  <Card sx={{ px: 2, py: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <MDBox sx={{ display: "flex", flexDirection: "column", alignItems: "start", justifyContent: "center", width: "100%" }}>
+                      <MDTypography variant="caption" color="black" sx={{ fontSize: "18px", fontWeight: 800, textAlign: "start", width: "100%", display: "block" }}>
+                        {`Group ${groupId}`} {pre_visit[0].GroupName ? `(${pre_visit[0].GroupName})` : ''}
+                      </MDTypography>
+                      <MDBox sx={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "start" }}>
+                        <MDTypography variant="caption" color="text" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "100%", display: "block" }}>
+                          {pre_visit[0].Date !== Infinity ? `Visit Time: ${getTimeString(pre_visit[0].Date)}` : 'No Pre-Visit Therapy'}
+                        </MDTypography>
+                        <MDTypography variant="caption" color="text" onClick={(event) => {
+                          setTimelineMenu({...timelineMenu, open: true, anchorEl: event.currentTarget, eventId: "Pre", groupId: groupId});
+                        }} sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", ml: 2, p: 0, minWidth: "200px", height: "auto", width: "auto", cursor: "pointer", textDecoration: "underline" }} >
+                          {"View Another Record"}
+                        </MDTypography>
+                      </MDBox>
+                      <Grid container spacing={2} sx={{ display: "flex", flexDirection: "row", alignItems: "start", justifyContent: "start", mt: 1, width: "100%" }}>
+                        {displayGroupParameters(pre_visit[0])}
+                      </Grid>
+                    </MDBox>
+                  </Card>
+                </Grid>
+              );
+            }
+            
+            if (post_visit.length === 0) {
+              therapy_cards.push(
+                <Grid item xs={12} sm={6} key={`group-${groupId}-post`} />
+              );
+            } else {
+              therapy_cards.push(
+                <Grid item xs={12} sm={6} key={`group-${groupId}-post`}>
+                  <Card sx={{ px: 3, py: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <MDBox sx={{ display: "flex", flexDirection: "column", alignItems: "start", justifyContent: "center", width: "100%" }}>
+                      <MDTypography variant="caption" color="black" sx={{ fontSize: "18px", fontWeight: 800, textAlign: "start", width: "100%", display: "block" }}>
+                        {`Group ${groupId}`} {post_visit[0].GroupName ? `(${post_visit[0].GroupName})` : ''}
+                      </MDTypography>
+                      <MDBox sx={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "start" }}>
+                        <MDTypography variant="caption" color="text" sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", width: "100%", display: "block" }}>
+                          {post_visit[0].Date !== Infinity ? `Visit Time: ${getTimeString(post_visit[0].Date)}` : 'No Post-Visit Therapy'}
+                        </MDTypography>
+                        <MDTypography variant="caption" color="text" onClick={(event) => {
+                          setTimelineMenu({...timelineMenu, open: true, anchorEl: event.currentTarget, eventId: "Post", groupId: groupId});
+                        }} sx={{ fontSize: "15px", fontWeight: 800, textAlign: "start", ml: 2, p: 0, minWidth: "200px", height: "auto", width: "auto", cursor: "pointer", textDecoration: "underline" }} >
+                          {"View Another Record"}
+                        </MDTypography>
+                      </MDBox>
+                      <Grid container spacing={2} sx={{ display: "flex", flexDirection: "row", alignItems: "start", justifyContent: "start", mt: 1, width: "100%" }}>
+                        {displayGroupParameters(post_visit[0])}
+                      </Grid>
+                    </MDBox>
+                  </Card>
+                </Grid>
+              );
+            }
+            return therapy_cards;
+          })}
+        </Grid>
+      </MDBox>
+      <Menu
+        anchorEl={timelineMenu.anchorEl}
+        anchorReference={null}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "left",
+        }}
+        keepMounted={false}
+        disableRestoreFocus={false}
+        autoFocus={false}
+        open={timelineMenu.open}
+        onClose={() => {
+          setTimelineMenu({...timelineMenu, open: false, anchorEl: null, eventId: ""})
+        }}
+        slotProps={{
+          paper: {
+            sx: {
+              py: 0.5,
+              px: 0.3
+            }
+          }
+        }}
+        sx={{ mt: 2, p: 0 }}
+      >
+        {timelineData.filter((option) => option.GroupId.endsWith(timelineMenu.groupId) 
+          && ((timelineMenu.eventId === "Pre" && ["Pre-visit Therapy", "Past Therapy"].includes(option.Type)) 
+          || (timelineMenu.eventId === "Post" && ["Post-visit Therapy"].includes(option.Type)))
+        ).map((option, index) => (
+          <MenuItem key={option.Id} onClick={() => {
+            setTherapyGroups((prev) => {
+              return prev.map((group) => {
+                if (getDateString(group.Date) === getDateString(option.Date) && group.GroupId === option.GroupId) {
+                  if (timelineMenu.eventId === "Pre" && ["Pre-visit Therapy", "Past Therapy"].includes(group.Type)) {
+                    return { ...group, Label: group.Id === option.Id ? "Preferenced" : "" };
+                  } else if (timelineMenu.eventId === "Post" && ["Post-visit Therapy"].includes(group.Type)) {
+                    return { ...group, Label: group.Id === option.Id ? "Preferenced" : "" };
                   }
                 }
-              }
+                return group;
+              });
+            });
 
-              return <Grid item xs={12} key={config.Date+"_"+config.GroupId+"_"+config.Device.Id}>
-                <Card p={2}>
-                  <MDBox px={2} pt={1}>
-                    <MDTypography variant={"h5"} >
-                      {config.GroupName ? config.GroupName : config.GroupId.replace("GroupIdDef.", "").replace("_", " ")}{config.PercentUsage ? (" ("+(config.PercentUsage*100).toFixed(1)+"%)") : ""}
-                    </MDTypography>
-                  </MDBox>
-                  
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <MDBox px={2}>
-                        <Autocomplete selectOnFocus clearOnBlur disableClearable
-                          renderInput={(params) => (
-                            <TextField {...params} variant="standard" label={"Select Configuration as Active Pre-visit Group"}/>
-                          )}
-                          isOptionEqualToValue={(option, value) => {
-                            return listMatch(option.TherapyIds, value.TherapyIds);
-                          }}
-                          renderOption={(props, option) => <li {...props}>{getTimeString(option.Date) + " " + option.Type + " [" + option.TherapyIds + "]"}</li>}
-                          getOptionLabel={(option) => option ? getTimeString(option.Date) + " " + option.Type : ""}
-                          value={therapyOptions.pre[g]}
-                          options={therapyOptions.options.filter((a) => a.GroupId == config.GroupId && ["Pre-visit Therapy", "Past Therapy"].includes(a.Type))}
-                          onChange={(event, newValue) => {
-                            SessionController.query("/api/assignTherapyLabel", {
-                              ParticipantId: participant_uid,
-                              TimelineDate: therapyTable.Date,
-                              GroupId: config.GroupId,
-                              TherapyLabel: "Pre-visit Preferred",
-                              TherapyIds: newValue ? newValue.TherapyIds : [],
-                            }).then((response) => {
-                              setTherapyTable((table) => {
-                                table.DefinedTherapies[g] = {
-                                  ...table.DefinedTherapies[g],
-                                  Pre: newValue ? newValue.TherapyIds : [],
-                                }
-                                return {...table};
-                              });
-                              setTherapyOptions((state) => {
-                                state.pre[g] = newValue;
-                                return {...state};
-                              });
-                            }).catch((error) => {
-                              SessionController.displayError(error, setAlert);
-                            });
-                          }}
-                        />
-                      </MDBox>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <MDBox px={2}>
-                        <Autocomplete selectOnFocus clearOnBlur disableClearable
-                          renderInput={(params) => (
-                            <TextField {...params} variant="standard" label={"Select Configuration as Active Post-visit Group"}/>
-                          )}
-                          isOptionEqualToValue={(option, value) => {
-                            return listMatch(option.TherapyIds, value.TherapyIds);
-                          }}
-                          renderOption={(props, option) => <li {...props}>{getTimeString(option.Date) + " " + option.Type + " [" + option.TherapyIds + "]"}</li>}
-                          getOptionLabel={(option) => getTimeString(option.Date) + " " + option.Type}
-                          value={therapyOptions.post[g]}
-                          options={therapyOptions.options.filter((a) => a.GroupId == config.GroupId && ["Post-visit Therapy"].includes(a.Type))}
-                          onChange={(event, newValue) => {
-                            SessionController.query("/api/assignTherapyLabel", {
-                              ParticipantId: participant_uid,
-                              TimelineDate: therapyTable.Date,
-                              GroupId: config.GroupId,
-                              TherapyLabel: "Post-visit Preferred",
-                              TherapyIds: newValue ? newValue.TherapyIds : [],
-                            }).then((response) => {
-                              setTherapyTable((table) => {
-                                table.DefinedTherapies[g] = {
-                                  ...table.DefinedTherapies[g],
-                                  Post: newValue ? newValue.TherapyIds : [],
-                                }
-                                return {...table};
-                              });
-                              setTherapyOptions((state) => {
-                                state.post[g] = newValue;
-                                return {...state};
-                              });
-                            }).catch((error) => {
-                              SessionController.displayError(error, setAlert);
-                            });
-                          }}
-                        />
-                      </MDBox>
-                    </Grid>
+            const allIds = []
+            if (timelineMenu.eventId === "Pre") {
+              allIds.push(...timelineData.filter((option) => option.GroupId.endsWith(timelineMenu.groupId) && ["Pre-visit Therapy", "Past Therapy"].includes(option.Type)).map((option) => option.Id));
+            } else if (timelineMenu.eventId === "Post") {
+              allIds.push(...timelineData.filter((option) => option.GroupId.endsWith(timelineMenu.groupId) && ["Post-visit Therapy"].includes(option.Type)).map((option) => option.Id));
+            }
 
-                    <Grid item xs={12} md={6}>
-                      {getPreTherapySettingsBilateral(PreTherapy.length > 0 ? PreTherapy[0] : null)}
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      {getPostTherapySettingsBilateral(PostTherapy.length > 0 ? PostTherapy[0] : null)}
-                    </Grid>
-                  </Grid>
-                </Card>
-              </Grid>
-            })}
-          </Grid>
-        </MDBox>
-      ) : null}
+            SessionController.query("/api/assignTherapyLabel", {
+              ParticipantId: participant_uid,
+              TimelineDate: option.Date,
+              SelectiveIds: allIds,
+              GroupId: option.GroupId,
+              TherapyLabel: "Preferenced",
+              TherapyIds: [option.Id],
+            }).then((response) => {
+            }).catch((error) => {
+              console.log("Error assigning therapy label:", error);
+            });
+            setTimelineMenu({...timelineMenu, open: false, anchorEl: null, eventId: ""});
+          }}>
+            <MDBox component={Link} sx={{ fontSize: "15px", p: 0, m: 0 }}>
+              {option.Time} - ({option.Type})
+            </MDBox>
+          </MenuItem>
+        ))}
+      </Menu>
     </MDBox>
-  ), [therapyTable, therapyOptions, device, therapyDateSlider, interleavingSwitch]);
+  ), [selectedVisitDate, sliderValue, timelineStart, timelineData, timelineMenu, alert]);
 }
 
 export default TherapyModificationHistory;

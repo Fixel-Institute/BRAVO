@@ -70,12 +70,14 @@ function TherapyHistory() {
   const [therapyDate, setTherapyDate] = React.useState({active: false, options: []});
   const [therapyConfigurations, setTherapyConfigurations] = React.useState([]);
 
+  const [therapyMetadata, setTherapyMetadata] = React.useState({DBSDevices: [], TherapyVisitDates: []});
+  const [therapyGroups, setTherapyGroups] = React.useState([]);
+
   const [impedanceLogs, setImpedanceLogs] = React.useState([]);
   const [impedanceMode, setImpedanceMode] = React.useState({show: false, history: [], config: null});
   const [availableDevices, setAvailableDevices] = React.useState({active: "", options: []});
   const [therapyConfig, setTherapyConfig] = React.useState({show: false, config: null});
   const [currentTherapy, setCurrentTherapy] = React.useState({show: false, configs: []});
-  const [interleavingSwitch, setInterleavingSwitch] = React.useState({});
 
   const [alert, setAlert] = React.useState(null);
   const [therapyTypes, setTherapyTypes] = React.useState([]);
@@ -91,23 +93,42 @@ function TherapyHistory() {
     }
     setContextState(dispatch, "report", "GeneralReports");
 
-    setAlert(<LoadingProgress/>);
-    SessionController.query("/api/queryTherapyHistory", {
-      ParticipantId: participant_uid
-    }).then((response) => {
-      let availableDevices = [];
-      for (let i in response.data.TherapyDevices) {
-        if (!availableDevices.includes(response.data.TherapyDevices[i].Name)) {
-          availableDevices.push(response.data.TherapyDevices[i].Name);
+    const queryTherapyHistory = async () => {
+      setAlert(<LoadingProgress/>);
+      try {
+        const response = await SessionController.query("/api/queryTherapyHistory", {
+          ParticipantId: participant_uid
+        });
+        let availableDevices = [];
+        for (let i in response.data.TherapyDevices) {
+          if (!availableDevices.includes(response.data.TherapyDevices[i].Name)) {
+            availableDevices.push(response.data.TherapyDevices[i].Name);
+          }
         }
+        setAvailableDevices({active: availableDevices[0], options: availableDevices});
+        setImpedanceLogs(response.data.DeviceImpedance);
+        setTherapyHistory(response.data);
+
+        const metadataResponse = await SessionController.query("/api/v2/queryTherapyHistory", {
+          ParticipantId: participant_uid,
+          RequestType: "Metadata"
+        });
+        setTherapyMetadata(metadataResponse.data);
+        const groupResponse = await SessionController.query("/api/v2/queryTherapyHistory", {
+          ParticipantId: participant_uid,
+          RequestType: "TherapyGroup"
+        });
+        setTherapyGroups(groupResponse.data);
+        
+      } catch (error) {
+        SessionController.displayError(error, setAlert);
+      } finally {
+        setAlert(null);
       }
-      setAvailableDevices({active: availableDevices[0], options: availableDevices});
-      setImpedanceLogs(response.data.DeviceImpedance);
-      setTherapyHistory(response.data);
-      setAlert(null);
-    }).catch((error) => {
-      SessionController.displayError(error, setAlert);
-    });
+    }
+
+    queryTherapyHistory();
+
   }, [participant_uid]);
 
   React.useEffect(() => {
@@ -385,7 +406,7 @@ function TherapyHistory() {
           
           <Grid item xs={12}>
             <MDBox>
-              <TherapyModificationHistory therapyHistoryRaw={therapyHistory} device={availableDevices.active} viewConfigurationTable={() => {}} />
+              <TherapyModificationHistory therapyHistoryRaw={therapyGroups} availableDevices={therapyMetadata.DBSDevices} device={availableDevices.active} visitDates={therapyMetadata.TherapyVisitDates} viewConfigurationTable={() => {}} />
             </MDBox>
           </Grid>
         </Grid>

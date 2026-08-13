@@ -120,6 +120,7 @@ class ElectricalStimulation(models.Model):
         Electrode = self.electrode.get_info()
 
         Info = {
+            "StimulationType": self.group.stimulation_type,
             "Electrode": Electrode,
             "Contact": self.contact,
             "ReturnContact": self.return_contact,

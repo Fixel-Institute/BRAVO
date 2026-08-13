@@ -82,14 +82,15 @@ class AssignTherapyLabel(RestViews.APIView):
                                 study_uid=request.user.configuration["ActiveStudy"] if "ActiveStudy" in request.user.configuration.keys() else None)
         if not Permissions:
             return Response(status=403)
-        
-        """
-        result = Database.getCachedResult("/queryTherapyHistory", request.data["ParticipantId"], {**request.data})
-        if result:
-            return Response(status=200, data=result)
-        """
-
+         
         Participant = models.Participant.find(uid=request.data["ParticipantId"])
+        if "SelectiveIds" in request.data.keys() and len(request.data["SelectiveIds"]) > 0:
+            AllTherapies = request.data["SelectiveIds"]
+            ToBeUpdated = models.ElectricalTherapy.objects.filter(therapy__uid__in=AllTherapies, therapy__source__owner=Participant)
+            ToBeUpdated.update(label="")
+            models.ElectricalTherapy.objects.filter(therapy__uid__in=request.data["TherapyIds"], therapy__source__owner=Participant).update(label=request.data["TherapyLabel"])
+            return Response(status=200)
+
         TherapyHistory = Therapy.queryTherapyHistory(Participant)
         AllTherapies = []
         for i in range(len(TherapyHistory["TherapyTimeline"])):
