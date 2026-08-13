@@ -32,7 +32,7 @@ from Server import models
 from openai import OpenAI
 import json
 
-if "GEMINI_API_KEY" in os.environ.keys():
+if "GEMINI_API_KEY" in os.environ.keys() and os.environ.get("GEMINI_API_KEY") != "":
     openai_client = OpenAI(
         api_key=os.environ.get("GEMINI_API_KEY"),
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
