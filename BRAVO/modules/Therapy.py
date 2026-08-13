@@ -29,6 +29,17 @@ from cryptography.fernet import Fernet
 
 from Server import models
 
+from openai import OpenAI
+import json
+
+if "GEMINI_API_KEY" in os.environ.keys():
+    openai_client = OpenAI(
+        api_key=os.environ.get("GEMINI_API_KEY"),
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
+else:
+    openai_client = None
+
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 HASH_KEY = os.environ.get('DATASERVER_HASHKEY')
 key = os.environ.get('DATASERVER_ENCRYPTION')
@@ -194,6 +205,61 @@ def queryTherapyGroups(Participant):
                                         TherapyGroupSubset[0]["AdaptiveSettings"].extend(TherapyGroupSubset[i]["AdaptiveSettings"])
                                 TherapyGroups.append(TherapyGroupSubset[0])
     return TherapyGroups
+
+def createAgenticAIOverview(PreGroup, PostGroup):
+    with open(os.path.join(os.path.dirname(__file__), "AgenticAI", "TherapyGroupComparison.md"), "r") as f:
+        SYSTEM_PROMPT = f.read()
+
+    AI_input_token = [
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT,
+        },
+        {
+            "role": "user",
+            "content": f""" Pre-Visit Therapy:
+                {json.dumps(PreGroup, indent=2)}
+
+                Post-Visit Therapy:
+                {json.dumps(PostGroup, indent=2)}
+            """
+        }
+    ]
+
+    cache = models.LLMCache.get_LLMCache(
+        name="",
+        type="TherapyGroupComparison",
+        message=AI_input_token,
+        metadata={
+            "model": "gemini-3.5-flash"
+        }
+    )
+
+    if not cache and openai_client:
+        print("Regenerating Therapy Comparison Summary with Gemini API")
+        response = openai_client.chat.completions.create(
+            model="gemini-3.5-flash",
+            messages=AI_input_token,
+            temperature=0.1
+        )
+        try:
+            summary = response.choices[0].message.content
+            models.LLMCache.add_LLMCache(
+                name="",
+                type="TherapyGroupComparison",
+                message=AI_input_token,
+                response=summary,
+                metadata={
+                    "model": "gemini-3.5-flash"
+                }
+            )
+        except Exception as e:
+            print(f"Error occurred while processing the response: {e}")
+            summary = "Error occurred while processing the response."
+        return summary
+    
+    else:
+        return cache.response if cache else "Error: No cache found and Gemini API is not available."
 
 def createTherapyTimeline(TherapyHistory):
     AllSessionDates = []

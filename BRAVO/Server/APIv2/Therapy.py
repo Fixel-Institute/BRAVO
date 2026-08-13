@@ -66,5 +66,12 @@ class QueryTherapyHistory(RestViews.APIView):
             case "TherapyGroup":
                 TherapyGroups = Therapy.queryTherapyGroups(Participant)
                 return Response(status=200, data=TherapyGroups)
+            case "TherapyComparison":
+                if "Pre" not in request.data.keys() or "Post" not in request.data.keys():
+                    return Response(status=400, data={"message": "Malformed Input"})
+                PreGroup = request.data["Pre"]
+                PostGroup = request.data["Post"]
+                TherapyComparison = Therapy.createAgenticAIOverview(PreGroup, PostGroup)
+                return Response(status=200, data=TherapyComparison)
 
         return Response(status=400, data={"message": "Malformed Input"})
