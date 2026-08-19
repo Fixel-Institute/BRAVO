@@ -1330,13 +1330,11 @@ def retrieveTimeseriesData(participant_uid, recording_uid, config):
         for i in range(len(Data["ChannelNames"])):
             Data["ChannelNames"][i] = DBSDevice["GenericName"] + ": " + BrainSenseStream.reformatChannelName(Data["ChannelNames"][i], DBSDevice["Electrodes"])
 
-        TimeShift = recording.adjusted_alignment
-
         Metadata = {
             "Id": recording.uid,
             "ChannelNames": Data["ChannelNames"],
             "SamplingRate": Data["SamplingRate"],
-            "StartTime": Data["StartTime"] + TimeShift,
+            "StartTime": Data["StartTime"],
             "DataShape": Data["Data"].T.shape 
         }
 
@@ -1351,12 +1349,11 @@ def retrieveTimeseriesData(participant_uid, recording_uid, config):
         for i in range(len(Data["ChannelNames"])):
             Data["ChannelNames"][i] = DBSDevice["GenericName"] + ": " + BrainSenseStream.reformatChannelName(Data["ChannelNames"][i].split(" ")[0], DBSDevice["Electrodes"]) + " - " + Data["ChannelNames"][i].split(" ")[1]
             
-        TimeShift = recording.adjusted_alignment
         Metadata = {
             "Id": recording.uid,
             "ChannelNames": Data["ChannelNames"],
             "SamplingRate": Data["SamplingRate"],
-            "StartTime": Data["StartTime"] + TimeShift,
+            "StartTime": Data["StartTime"],
             "DataShape": Data["Data"].T.shape 
         }
         BinaryData = Data["Data"].T.tobytes()
@@ -1364,31 +1361,21 @@ def retrieveTimeseriesData(participant_uid, recording_uid, config):
         payload = compressor.compress(BinaryData)
         return {"Metadata": Metadata, "Payload": payload} 
 
-    elif recording.type in ["CustomizedStreamingData"]:
-        pass 
-
-    elif recording.type in ["AOMPX"]:
+    elif recording.type in ["CustomizedStreamingData", "AOMPX", "HPFCSV", "MATFile", "SynchronizedMDAT"]:
         Data = Database.loadSourceFile(recording.pointer, recording.hashed)
         Metadata = {
             "Id": recording.uid,
             "ChannelNames": Data["ChannelNames"],
-            "SamplingRate": Data["SamplingRate"],
+            "SamplingRate": Data["SamplingRate"][0] if type(Data["SamplingRate"]) == np.ndarray else Data["SamplingRate"],
             "StartTime": Data["StartTime"],
             "DataShape": Data["Data"].T.shape,
         }
-
         BinaryData = Data["Data"].astype(np.float64).T.tobytes()
         compressor = zstd.ZstdCompressor(level=5)
         payload = compressor.compress(BinaryData)
         return {"Metadata": Metadata, "Payload": payload}
 
-    elif recording.type in ["HPFCSV", "MATFile", "SynchronizedMDAT"]:
-        pass
-
-    else:
-        print(recording.type)
-
-    raise Exception("Unsupported recording type for timeseries data retrieval.")
+    raise Exception(f"Unsupported recording type {recording.type} for timeseries data retrieval.")
 
 def retrieveSpectrogramData(participant_uid, recording_uid, config):
     recording = models.Recording.find(uid=recording_uid)
