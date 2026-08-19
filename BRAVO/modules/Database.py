@@ -537,7 +537,7 @@ def listSourceFiles(participant_uid, file_type=None):
     SourceFiles = []
     DBSDevices = models.DBSDevice.find_all(owner=Participant)
     for source in source_files:
-        if source.type == "MedtronicJSON":
+        if source.type == "MedtronicJSON" or source.type == "DefaultType":
             SourceFile = {
                 "Id": source.uid,
                 "Name": source.name,
