@@ -125,6 +125,11 @@ const getTimeString = (timestamp, timezone) => {
 function LeadComponentSvg({ components }) {
   const maxAmplitude = Math.max(...components);
   const componentColor = components.map((value) => {
+    if (value < 0) {
+      const contactColor = `color-mix(in srgb, ${"#AAAAAA"}, ${"#00c3ff"} 100%)`;
+      return contactColor;
+    }
+    
     const intensity = Math.max(0, Math.min(1, value / maxAmplitude));
     const contactColor = `color-mix(in srgb, ${"#AAAAAA"}, ${"#FF0000"} ${(intensity)*100}%)`;
     return contactColor;
@@ -388,6 +393,7 @@ function TherapyModificationHistory({therapyHistoryRaw, availableDevices, device
     return group.Settings.sort((a, b) => a.Electrode.CustomName.localeCompare(b.Electrode.CustomName)).map((setting, index) => {
       const fractionalAmplitudes = setting.Electrode.ChannelNames.map((contact) => {
         if (setting.Contact.includes(contact)) return setting.FractionalAmplitudes[setting.Contact.indexOf(contact)] ?? 1;
+        if (setting.ReturnContact.includes(contact)) return -1;
         return 0;
       });
 

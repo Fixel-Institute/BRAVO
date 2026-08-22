@@ -746,7 +746,6 @@ def loadSourceFile(pointer, verifiedHash, bytes=False):
     elif b"b2frame" in rawBytes[:16]:
         decompressed = blosc2.unpack_tensor(rawBytes).tobytes()
     else:
-        print(f"Loading {pointer} with blosc2 decompression.")
         decompressed = blosc2.decompress2(rawBytes)
 
     # If Request Raw Byte Data

@@ -1417,7 +1417,6 @@ def retrieveSpectrogramData(participant_uid, recording_uid, config):
 
     elif recording.type in ["AOMPX"]:
         Data = Database.loadSourceFile(recording.pointer, recording.hashed)
-        start_time = time.time()
         Data = handleTimeFrequencyAnalysis(Data, {
             "StandardFilter": "No Filter",
             "NotchFilter": "No Filter",
