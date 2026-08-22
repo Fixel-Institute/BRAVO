@@ -196,7 +196,7 @@ function TherapyModificationHistory({therapyHistoryRaw, availableDevices, device
   const selectedVisitDate = visitDates[sliderValue] ?? 0;
 
   useEffect(() => {
-    setTherapyGroups(therapyHistoryRaw.map((a) => {
+    setTherapyGroups(therapyHistoryRaw.sort((a, b) => a.Date - b.Date).map((a) => {
       a.Settings = a.StimulationSettings.map((s, i) => ({ ...s, ...a.AdaptiveSettings[i] }));
       return a;
     }));
