@@ -36,6 +36,7 @@ class Recording(models.Model):
     type = models.CharField(max_length=128, default="")
     date = models.FloatField(default=current_time)
     adjusted_alignment = models.FloatField(default=0)
+    fs_scaling_factor = models.FloatField(default=1)
     
     pointer = models.CharField(max_length=1024, default="")
     hashed = models.CharField(max_length=64, default="")
@@ -64,6 +65,7 @@ class Recording(models.Model):
             "Type": self.type,
             "Date": self.date,
             "Alignment": self.adjusted_alignment,
+            "SamplingRateScaling": self.fs_scaling_factor,
             "Metadata": self.metadata,
             "Device": self.source.metadata["Device"] if "Device" in self.source.metadata.keys() else "",
             "Timezone": self.source.metadata["Timezone"] if "Timezone" in self.source.metadata.keys() else "",
