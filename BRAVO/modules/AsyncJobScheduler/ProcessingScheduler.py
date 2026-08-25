@@ -15,7 +15,8 @@ AsyncJobScripts = {
     "BurstAnalysis": "/modules/AnalysisPipelineScripts/AnalysisPipeline.py BurstAnalysis ${JOB_ARGS}",
     "FitbitRefresh": "/modules/Fitbit/FitbitDataUpdateService.py ${JOB_ARGS}",
     "ExtractSpectralFeaturesDuringStimulation": "/modules/AnalysisPipelineScripts/AnalysisPipeline.py ExtractSpectralFeaturesDuringStimulation",
-    "ExtractSpectralFeaturesDuringSurvey": "/modules/AnalysisPipelineScripts/AnalysisPipeline.py ExtractSpectralFeaturesDuringSurvey"
+    "ExtractSpectralFeaturesDuringSurvey": "/modules/AnalysisPipelineScripts/AnalysisPipeline.py ExtractSpectralFeaturesDuringSurvey",
+    "BIDSExport": "/modules/AnalysisPipelineScripts/AnalysisPipeline.py BIDSExport ${JOB_ARGS}",
 }
 
 def ScheduleSlurmJob(requester, recording_uid, script_name, config, refresh=False):
@@ -45,7 +46,7 @@ def ScheduleSlurmJob(requester, recording_uid, script_name, config, refresh=Fals
     
     sbatch_script = sbatch_script.replace("${SLURM_JOB_NAME}", job.uid)
     sbatch_script = sbatch_script.replace("${SLURM_WORKING_DIR}", SLURM_JOB_PATH)
-    sbatch_script = sbatch_script.replace("${PYTHON_ENV}", BRAVO_Path + "/venv/bin/activate")
+    sbatch_script = sbatch_script.replace("${PYTHON_ENV}", os.path.dirname(BRAVO_Path) + "/.venv/bin/activate")
     sbatch_script = sbatch_script.replace("${SLURM_JOB_SCRIPT}", BRAVO_Path + AsyncJobScripts[script_name])
     sbatch_script = sbatch_script.replace("${JOB_ARGS}", job.uid)
 
@@ -62,10 +63,16 @@ def ScheduleSlurmJob(requester, recording_uid, script_name, config, refresh=Fals
         while True:
             try:
                 ps_proc = psutil.Process(job.metadata["pid"])
+                # PIDs get recycled by the OS - record the process's actual
+                # start time alongside it so a later liveness check
+                # (CheckJobStatus) can tell "still this job" apart from "some
+                # unrelated process now sitting at the same PID", instead of
+                # trusting the bare PID number forever.
+                job.metadata["pid_create_time"] = ps_proc.create_time()
                 job.state = "Running"
-                job.save() 
+                job.save()
                 break
-            except:
+            except psutil.Error:
                 job.state = "Pending"
                 job.save()
             time.sleep(1)
@@ -76,12 +83,23 @@ def CheckJobStatus(job):
     if job.type == "LOCAL":
         try:
             ps_proc = psutil.Process(job.metadata["pid"])
+            # A PID alone isn't proof this job's process is still running -
+            # the OS recycles PIDs, so a long-finished job's PID can later
+            # get reassigned to some unrelated process that's simply alive
+            # at the moment of this check. Confirming create_time() matches
+            # what was recorded when this job was actually launched is what
+            # tells the two apart - found via a real stuck "Running" BIDS
+            # export job whose PID had been reused, which meant
+            # ScheduleSlurmJob's refresh=True re-export never actually
+            # re-ran (it kept handing back the same stale job instead).
+            if ps_proc.create_time() != job.metadata.get("pid_create_time"):
+                raise psutil.NoSuchProcess(job.metadata["pid"])
             job.state = "Running"
-            job.save() 
+            job.save()
 
-        except:
-                job.state = "Completed"
-                job.save()
+        except psutil.Error:
+            job.state = "Completed"
+            job.save()
 
     elif job.type == "SLURM":
         format_str = "\"%.18i|%.9P|%.20j|%.8u|%.2t|%.10M|%.6D|%.30R\""
