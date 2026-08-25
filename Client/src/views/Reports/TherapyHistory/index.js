@@ -101,8 +101,8 @@ function TherapyHistory() {
         });
         let availableDevices = [];
         for (let i in response.data.TherapyDevices) {
-          if (!availableDevices.includes(response.data.TherapyDevices[i].Name)) {
-            availableDevices.push(response.data.TherapyDevices[i].Name);
+          if (!availableDevices.includes(response.data.TherapyDevices[i].Heritage)) {
+            availableDevices.push(response.data.TherapyDevices[i].Heritage);
           }
         }
         setAvailableDevices({active: availableDevices[0], options: availableDevices});

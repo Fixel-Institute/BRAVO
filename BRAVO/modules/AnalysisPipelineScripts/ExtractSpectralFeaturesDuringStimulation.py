@@ -14,7 +14,7 @@ from modules.HelperFunctions import utc_offset_to_timezone
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 
 AnalysisScriptType = "ExtractSpectralFeaturesDuringStimulation"
-AnalysisMethodVersion = "1.0.4"
+AnalysisMethodVersion = "1.1.0"
 
 def checkHistory(items, newItem):
     for item in items:
@@ -119,6 +119,93 @@ def ExtractAvailableDates(participant):
                         
     return RecordingCollections
 
+def FTGDetection(Frequency, NormalizedPSDs, Amplitude, CenterFreq=0):
+    GammaStats = {
+        "FTGFrequency": 0,
+            "BaselineFTGPower": 0.0,
+            "FTGThreshold": 0.0,
+            "FTGCorrelation": 0.0,
+            "InitialFTGDetection": {
+                "Power": 0.0, "Amplitude": 0.0
+            },
+            "MaximumFTGPower": {
+            "Power": 0.0, "Amplitude": 0.0
+            },
+            "LastSignificantFTGPower": {
+            "Power": 0.0, "Amplitude": 0.0
+            }
+    }
+
+    GammaSelection = (Frequency > 55) & (Frequency < 95)
+    MaskedPeaks = np.zeros(len(Frequency), dtype=bool)
+    for j in range(NormalizedPSDs.shape[0]):
+        residuals = NormalizedPSDs[j,GammaSelection]
+        MaskedPeaks[GammaSelection] |= stats.zscore(residuals) > 2
+    MaskedPeaks = np.convolve(MaskedPeaks, np.ones(3, dtype=bool), mode="same") > 0
+
+    MeanPSD = np.max(NormalizedPSDs, axis=0)
+    MaskStart = np.where(np.diff(np.array(MaskedPeaks, dtype=float)) == 1)[0]
+    MaskEnd = np.where(np.diff(np.array(MaskedPeaks, dtype=float)) == -1)[0]
+    PeakIndexes = []
+    for j in range(len(MaskStart)):
+        if (Frequency[MaskStart[j]] + Frequency[MaskEnd[j]]) / 2 > 50 and (Frequency[MaskStart[j]] + Frequency[MaskEnd[j]]) / 2 < 95:
+            PeakIndexes.append(np.argmax(MeanPSD[MaskStart[j]:MaskEnd[j]]) + MaskStart[j])
+
+    # Find FTG
+    PeaknessThreshold = 0.2 # db
+    for i in range(len(PeakIndexes)):
+        GammaPeakSelection = (Frequency >= Frequency[PeakIndexes[i]] - 2.5) & (Frequency <= Frequency[PeakIndexes[i]] + 2.5)
+        FTGFrequency = Frequency[PeakIndexes[i]]
+
+        GammaPower = np.max(NormalizedPSDs[:,GammaPeakSelection],axis=1)
+        r, p = stats.spearmanr(Amplitude, GammaPower)
+        MaxGamma = np.max(GammaPower)
+        if MaxGamma == GammaPower[0]:
+            continue
+
+        AmpIndex = np.argmax(GammaPower)
+        Peakness = GammaPower[AmpIndex] - np.mean(NormalizedPSDs[AmpIndex,GammaSelection & ~GammaPeakSelection])
+
+        BaselineGamma = np.mean(GammaPower[Amplitude < 0.5])
+        FTGThreshold = (np.max(GammaPower) - BaselineGamma) * 0.5
+
+        ReferenceData = NormalizedPSDs[:, GammaSelection & ~GammaPeakSelection]
+        ReferenceData -= np.mean(ReferenceData, axis=0)
+        Threshold = np.std(ReferenceData) * 5
+
+        ReferenceFrequency = Frequency[GammaSelection & ~GammaPeakSelection]
+        InterpFrequency = Frequency[GammaPeakSelection]
+        Threshold = np.interp(InterpFrequency, ReferenceFrequency, np.mean(ReferenceData, axis=0) + Threshold)
+        Threshold = np.mean(Threshold)
+
+        #print(f"Peakness: {Peakness:.2f}, Threshold: {FTGThreshold:.2f}")
+        #print(f"FTG Candidate: {FTGFrequency:.1f}Hz, Correlation: {r:.2f}, Max Gamma: {MaxGamma:.2f}, Threshold for Significance: {Threshold:.2f}")
+        if FTGThreshold > GammaStats["FTGThreshold"] and MaxGamma > Threshold and Peakness > PeaknessThreshold:
+            GammaStats["FTGFrequency"] = FTGFrequency
+            GammaStats["FTGThreshold"] = FTGThreshold
+            GammaStats["FTGCorrelation"] = r
+            GammaStats["BaselineFTGPower"] = BaselineGamma
+            PeaknessThreshold = Peakness
+
+            IndexOfReduction = np.where(GammaPower > BaselineGamma + FTGThreshold)[0][0]
+            GammaStats["InitialFTGDetection"] = {
+                "Power": GammaPower[IndexOfReduction],
+                "Amplitude": Amplitude[IndexOfReduction]
+            }
+
+            GammaStats["MaximumFTGPower"] = {
+                "Power": np.max(GammaPower),
+                "Amplitude": Amplitude[np.argmax(GammaPower)]
+            }
+
+            IndexOfReduction = np.where(GammaPower > BaselineGamma + FTGThreshold)[0][-1]
+            GammaStats["LastSignificantFTGPower"] = {
+                "Power": GammaPower[IndexOfReduction],
+                "Amplitude": Amplitude[IndexOfReduction]
+            }
+            
+    return GammaStats
+
 def ProcessCollection(collection, userConfig):
     SensingChannel = "Unknown"
     if collection["Contact"].endswith("E01-E02"):
@@ -127,7 +214,7 @@ def ProcessCollection(collection, userConfig):
         SensingChannel = collection["Contact"].replace("E02","E01-E03")
     elif collection["Contact"].endswith("E01"):
         SensingChannel = collection["Contact"].replace("E01","E00-E02")
-    
+
     UniqueTherapyAmplitudes = {}
     for recording in collection["Recordings"]:
         try:
@@ -151,7 +238,7 @@ def ProcessCollection(collection, userConfig):
                                         UniqueTherapyAmplitudes[amp] = therapy["TherapySeries"][k]["Spectrum"][chan]
                                     else:
                                         UniqueTherapyAmplitudes[amp] = np.concatenate((UniqueTherapyAmplitudes[amp], therapy["TherapySeries"][k]["Spectrum"][chan]), axis=1)
-    
+
     GammaFrequency = float(collection["TherapyParameters"].split("Hz ")[0]) / 2
     GammaSelection = (PSDFrequency < GammaFrequency+5) & (PSDFrequency > GammaFrequency-5)
 
@@ -191,25 +278,42 @@ def ProcessCollection(collection, userConfig):
                 GammaFluctuation = signal.detrend(GammaFluctuation[~np.isnan(GammaFluctuation)])
                 collection["PSDs"].append(PSDInfo)
 
+    collection["FTGStats"] = {"FirstAppearance": 0, "MaxGamma": [-99,-99], "LastAppearance": 0, "GammaFrequency": GammaFrequency}
     if len(collection["PSDs"]) > 1:
-        PSDLists = np.array([collection["PSDs"][i]["PowerSpectrum"][GammaSelection]-collection["PSDs"][0]["PowerSpectrum"][GammaSelection] for i in range(0, len(collection["PSDs"]))])
+        PSDLists = np.array([collection["PSDs"][i]["PowerSpectrum"] for i in range(0, len(collection["PSDs"]))])
         PeakIndex = np.argmax(np.max(PSDLists, axis=0))
 
-        for i in range(len(collection["PSDs"])):
-            GammaPower = collection["PSDs"][i]["PowerSpectrum"][GammaSelection]
-            GammaPower = GammaPower[~np.isnan(GammaPower)]
-            GammaFluctuation = collection["PSDs"][i]["PowerSpectrum"][((PSDFrequency < 90) & (PSDFrequency > 60)) & (~GammaSelection)]
+        FrequencyOfInterest = (PSDFrequency > 3) & (PSDFrequency < 98)
+        MeanPSD = MovingAverageFilter(np.mean(PSDLists, axis=0), 5)
+        MaskedPeaks = np.zeros(len(PSDFrequency), dtype=bool)
+        while True:
+            x = np.log10(PSDFrequency[FrequencyOfInterest & ~MaskedPeaks])
+            y = np.log10(MeanPSD[FrequencyOfInterest & ~MaskedPeaks])
+            coe = np.polyfit(x, y, 1)
+            residual = y - np.polyval(coe, x)
+            MaskedPeak = stats.zscore(residual) > 2
+            MaskedPeak = np.convolve(MaskedPeak, np.ones(3, dtype=bool), mode="same") > 0
+            MaskedPeaks[FrequencyOfInterest & ~MaskedPeaks] = MaskedPeak
+            if np.sum(MaskedPeak) == 0:
+                break
 
-            if stats.sem(GammaPower) > 1e5 or stats.sem(GammaFluctuation) > 1e5:
-                continue
+        AperiodicPower = np.zeros(len(PSDFrequency))
+        AperiodicPower[PSDFrequency > 0] = np.power(10, np.polyval(coe, np.log10(PSDFrequency[PSDFrequency > 0])));
+        AperiodicPower[PSDFrequency == 0] = AperiodicPower[PSDFrequency > 0][0]
 
-            GammaFluctuation = signal.detrend(GammaFluctuation[~np.isnan(GammaFluctuation)])
-            ConfidenceInterval = GammaPower[PeakIndex] + np.array([-5,5]) * np.std(GammaFluctuation)
-            collection["PSDs"][i]["FTG"] = {
-                "CenterFrequency": GammaFrequency,
-                "Power": ConfidenceInterval,
-            }
-    
+        NormalizedPSDs = np.zeros(PSDLists.shape)
+        for j in range(PSDLists.shape[0]):
+            scale = np.median(PSDLists[j,FrequencyOfInterest] / AperiodicPower[FrequencyOfInterest])
+            NormalizedPSDs[j,:] = PSDLists[j,:] / AperiodicPower / scale
+
+        Amplitude = np.array([collection["PSDs"][i]["Amplitudes"] for i in range(len(collection["PSDs"]))])
+        GammaStats = FTGDetection(PSDFrequency, np.log10(NormalizedPSDs), Amplitude)
+        if GammaStats["MaximumFTGPower"]["Power"] > 0.8:
+            collection["FTGStats"]["FirstAppearance"] = GammaStats["InitialFTGDetection"]["Amplitude"]
+            collection["FTGStats"]["MaxGamma"] = [GammaStats["MaximumFTGPower"]["Power"], GammaStats["MaximumFTGPower"]["Power"]]
+            collection["FTGStats"]["LastAppearance"] = GammaStats["LastSignificantFTGPower"]["Amplitude"]
+            collection["FTGStats"]["GammaFrequency"] = GammaStats["FTGFrequency"]
+        
     # Calculate the Stimulation-induced Power Increase
     collection["StimulationCorrelation"] = {"MeanSlope": 0, "PercentSignificant": 0, "MeanCorrelation": 0}
     if len(collection["PSDs"]) > 1:
@@ -294,16 +398,6 @@ def ProcessCollection(collection, userConfig):
             
             collection["BetaStats"]["LastBeta"] = {"Amplitude": collection["PSDs"][-1]["Amplitudes"], "Power": BetaPowers[-1]}
 
-    collection["FTGStats"] = {"FirstAppearance": 0, "MaxGamma": [-99,-99], "LastAppearance": 0, "GammaFrequency": GammaFrequency}
-    if len(collection["PSDs"]) > 1:
-        for i in range(1, len(collection["PSDs"])):
-            if collection["PSDs"][i]["FTG"]["Power"][0] > collection["PSDs"][0]["FTG"]["Power"][1]:
-                if collection["FTGStats"]["FirstAppearance"] == 0:
-                    collection["FTGStats"]["FirstAppearance"] = collection["PSDs"][i]["Amplitudes"]
-                if collection["PSDs"][i]["FTG"]["Power"][0] > collection["FTGStats"]["MaxGamma"][1]:
-                    collection["FTGStats"]["MaxGamma"] = collection["PSDs"][i]["FTG"]["Power"]
-                collection["FTGStats"]["LastAppearance"] = collection["PSDs"][i]["Amplitudes"]
-    
     return collection
 
 def HandleRefreshAnalysis():

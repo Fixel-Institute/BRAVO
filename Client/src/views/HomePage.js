@@ -40,14 +40,16 @@ export default function HomePage() {
       }}>
         <CardContent>
           <MDTypography variant={"h2"} color={"black"} align={"center"} fontSize={48}>
-            {"Brain Recording Analysis and Visualization Online ver 3.0"}
+            {"Brain Recording Analysis and Visualization Online"}
           </MDTypography>
           <MDTypography variant={"h4"} color={"black"} align={"center"} fontSize={24}>
             {"Fixel Institute for Neurological Diseases, University of Florida"}
           </MDTypography>
         </CardContent>
         <CardContent>
-        
+          <MDTypography variant={"h5"} color={"black"} align={"center"} fontSize={20}>
+            {"Version 3.1.3"}
+          </MDTypography>
         </CardContent>
       </Card>
 

@@ -536,7 +536,7 @@ def queryElectrodeImpedances(participant):
     for impedance in ElectrodeImpedances:
         for device in DBSDevices:
             if len(impedance["Recording"]) > 0 and impedance["Recording"][0]["Device"] == device["Id"]:
-                impedance["DeviceHeritage"] = device["Name"]
+                impedance["DeviceHeritage"] = device["Heritage"]
 
     return ElectrodeImpedances
     
