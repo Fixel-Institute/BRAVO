@@ -46,11 +46,12 @@ def ExtractAperiodicComponents(Frequency, Power):
     YData = np.log10(Power[FrequencySelection])
     XData = np.log10(Frequency[FrequencySelection])
     coe = np.polyfit(XData, YData, 1)
-    AperiodicBaseline = np.polyval(coe, np.log10(Frequency))
+    AperiodicBaseline = np.polyval(coe, np.log10(Frequency[1:]))
     for j in range(len(AperiodicBaseline)):
         if np.isnan(AperiodicBaseline[-j-1]):
             AperiodicBaseline[-j-1] = AperiodicBaseline[-j]
     AperiodicBaseline = np.power(10,AperiodicBaseline)
+    AperiodicBaseline = np.insert(AperiodicBaseline, 0, AperiodicBaseline[0])
     return AperiodicBaseline
 
 def FindPeaks(signal):
@@ -225,7 +226,6 @@ def ProcessCollection(collection, userConfig):
             continue
 
         TherapyPSDs = ExtractTherapyLevelPSDs(Analysis)
-        
         for amp in collection["UniqueAmplitudes"]:
             for therapy in TherapyPSDs:
                 for k in range(len(therapy["TherapySeries"])):
