@@ -250,6 +250,8 @@ def MedtronicPerceptJSONDecoder(source_file, device=None, person=None):
     
     for survey in DatabaseEntries["SurveyRecordings"]:
         recording = models.Recording(**{key: survey[key] for key in survey.keys() if key in ["name", "type", "date", "metadata"]}, source=source_file)
+        content_hashed = hmac.new(HASH_KEY.encode("utf8"), pickle.dumps(survey["recording"]), hashlib.sha256).hexdigest()
+        recording.metadata["ContentHash"] = content_hashed
         if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__owner=person):
             recording.delete()
             continue
@@ -269,6 +271,8 @@ def MedtronicPerceptJSONDecoder(source_file, device=None, person=None):
 
     for stream in DatabaseEntries["StreamingRecordings"]:
         recording = models.Recording(**{key: stream[key] for key in stream.keys() if key in ["name", "type", "date", "metadata"]}, source=source_file)
+        content_hashed = hmac.new(HASH_KEY.encode("utf8"), pickle.dumps(stream["recording"]), hashlib.sha256).hexdigest()
+        recording.metadata["ContentHash"] = content_hashed
         if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__owner=person):
             recording.delete()
             continue

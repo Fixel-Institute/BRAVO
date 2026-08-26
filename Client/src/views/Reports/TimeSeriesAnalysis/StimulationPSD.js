@@ -149,7 +149,7 @@ function StimulationPSD({dataToRender, activeChannels, onRequestServerAnalysis, 
               );
             })
           });
-          if (selected_data[0].length > 50) {
+          if (selected_data[0].length > 10) {
             cacheData[dataToRender.Signal[i].SignalSeries.ChannelNames][parameter][stage].freq = dataToRender.Signal[i].SignalSeries.Spectrum.Frequency;
             cacheData[dataToRender.Signal[i].SignalSeries.ChannelNames][parameter][stage].power = math.matrix(selected_data);
             cacheData[dataToRender.Signal[i].SignalSeries.ChannelNames][parameter][stage].state = therapySeries[parameter][stage].state;

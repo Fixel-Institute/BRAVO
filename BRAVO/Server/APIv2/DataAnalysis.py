@@ -103,7 +103,9 @@ class QueryTimeseriesAnalysis(RestViews.APIView):
             #if not Analysis:
             Analysis = DataAnalysis.retrieveSpectrogramData(request.data["ParticipantId"], request.data["RecordingId"], userConfig)
             #    Database.saveCachedResult(Analysis, "/v2/queryTimeseriesAnalysis", request.data["ParticipantId"], {**userConfig, **request.data})
-            
+            if not Analysis:
+                return Response(status=400, data={"message": "Failed to retrieve spectrogram data"})
+
             response = HttpResponse(Analysis["Payload"], content_type='application/octet-stream')
             response['X-Spectrogram-Metadata'] = json.dumps(Analysis["Metadata"])
             response['Access-Control-Expose-Headers'] = 'X-Spectrogram-Metadata'

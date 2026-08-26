@@ -22,6 +22,7 @@ import os, sys, pathlib
 import hashlib, hmac
 import shutil
 import json
+import pickle
 import copy
 import pandas as pd
 from filelock import Timeout, FileLock
@@ -263,9 +264,18 @@ def queryAvailableAnalyses(participant_uid, request_type):
                                                                                  "DelsysMDAT", "SynchronizedMDAT", "HPFCSV", "AOMPX", "MATFile"])
         
         Overview["Recordings"] = []
+        Recordings = Recordings.order_by("uid") # NOTE: SQL-Specific QuerySet
+        ExistingHashed = []
         for recording in Recordings:
             Description = recording.get_info()
             if recording.type == "MedtronicBrainSenseTimeDomain" or recording.type == "MedtronicIndefiniteStream":
+                if "ContentHash" in recording.metadata:
+                    Hash = recording.metadata["ContentHash"]
+                    if not Hash in ExistingHashed:
+                        ExistingHashed.append(Hash)
+                    else:
+                        continue
+                    
                 for device in DBSDevices:
                     if device["Id"] == recording.source.metadata["Device"]:
                         Description["Device"] = device
@@ -1320,13 +1330,11 @@ def retrieveTimeseriesData(participant_uid, recording_uid, config):
         for i in range(len(Data["ChannelNames"])):
             Data["ChannelNames"][i] = DBSDevice["GenericName"] + ": " + BrainSenseStream.reformatChannelName(Data["ChannelNames"][i], DBSDevice["Electrodes"])
 
-        TimeShift = recording.adjusted_alignment
-
         Metadata = {
             "Id": recording.uid,
             "ChannelNames": Data["ChannelNames"],
             "SamplingRate": Data["SamplingRate"],
-            "StartTime": Data["StartTime"] + TimeShift,
+            "StartTime": Data["StartTime"],
             "DataShape": Data["Data"].T.shape 
         }
 
@@ -1336,33 +1344,38 @@ def retrieveTimeseriesData(participant_uid, recording_uid, config):
         return {"Metadata": Metadata, "Payload": payload}
 
     elif recording.type in ["MedtronicBrainSensePowerDomain"]:
-        pass 
-
-    elif recording.type in ["CustomizedStreamingData"]:
-        pass 
-
-    elif recording.type in ["AOMPX"]:
         Data = Database.loadSourceFile(recording.pointer, recording.hashed)
+        DBSDevice = models.DBSDevice.find(uid=recording.source.metadata["Device"]).get_info()
+        for i in range(len(Data["ChannelNames"])):
+            Data["ChannelNames"][i] = DBSDevice["GenericName"] + ": " + BrainSenseStream.reformatChannelName(Data["ChannelNames"][i].split(" ")[0], DBSDevice["Electrodes"]) + " - " + Data["ChannelNames"][i].split(" ")[1]
+            
         Metadata = {
             "Id": recording.uid,
             "ChannelNames": Data["ChannelNames"],
             "SamplingRate": Data["SamplingRate"],
             "StartTime": Data["StartTime"],
+            "DataShape": Data["Data"].T.shape 
+        }
+        BinaryData = Data["Data"].T.tobytes()
+        compressor = zstd.ZstdCompressor(level=5)
+        payload = compressor.compress(BinaryData)
+        return {"Metadata": Metadata, "Payload": payload} 
+
+    elif recording.type in ["CustomizedStreamingData", "AOMPX", "HPFCSV", "MATFile", "SynchronizedMDAT"]:
+        Data = Database.loadSourceFile(recording.pointer, recording.hashed)
+        Metadata = {
+            "Id": recording.uid,
+            "ChannelNames": Data["ChannelNames"],
+            "SamplingRate": Data["SamplingRate"][0] if type(Data["SamplingRate"]) == np.ndarray else Data["SamplingRate"],
+            "StartTime": Data["StartTime"],
             "DataShape": Data["Data"].T.shape,
         }
-
         BinaryData = Data["Data"].astype(np.float64).T.tobytes()
         compressor = zstd.ZstdCompressor(level=5)
         payload = compressor.compress(BinaryData)
         return {"Metadata": Metadata, "Payload": payload}
 
-    elif recording.type in ["HPFCSV", "MATFile", "SynchronizedMDAT"]:
-        pass
-
-    else:
-        print(recording.type)
-
-    raise Exception("Unsupported recording type for timeseries data retrieval.")
+    raise Exception(f"Unsupported recording type {recording.type} for timeseries data retrieval.")
 
 def retrieveSpectrogramData(participant_uid, recording_uid, config):
     recording = models.Recording.find(uid=recording_uid)
@@ -1371,7 +1384,6 @@ def retrieveSpectrogramData(participant_uid, recording_uid, config):
 
     if recording.type in ["MedtronicElectrodeIdentifier", "MedtronicBrainSenseSurvey", "MedtronicBaselineMontages", "MedtronicBrainSenseTimeDomain", "MedtronicIndefiniteStream"]:
         Data = Database.loadSourceFile(recording.pointer, recording.hashed)
-        start_time = time.time()
         Data = handleTimeFrequencyAnalysis(Data, {
             "StandardFilter": "No Filter",
             "NotchFilter": "No Filter",
@@ -1392,21 +1404,19 @@ def retrieveSpectrogramData(participant_uid, recording_uid, config):
             "Time": Data["Spectrum"][0]["Time"].tolist(),
             "Frequency": Data["Spectrum"][0]["Frequency"].tolist(),
         }
-        print(np.array([spectrum["Power"] for spectrum in Data["Spectrum"]]).shape)
         BinaryData = np.array([spectrum["Power"] for spectrum in Data["Spectrum"]]).astype(np.float64).tobytes()
         compressor = zstd.ZstdCompressor(level=5)
         payload = compressor.compress(BinaryData)
         return {"Metadata": Metadata, "Payload": payload}
 
     elif recording.type in ["MedtronicBrainSensePowerDomain"]:
-        pass 
+        return None 
 
     elif recording.type in ["CustomizedStreamingData"]:
         pass 
 
     elif recording.type in ["AOMPX"]:
         Data = Database.loadSourceFile(recording.pointer, recording.hashed)
-        start_time = time.time()
         Data = handleTimeFrequencyAnalysis(Data, {
             "StandardFilter": "No Filter",
             "NotchFilter": "No Filter",
@@ -1577,6 +1587,10 @@ def processTimeseriesAnalysis(participant_uid, recording_uid, config):
 
     if recording.type in ["MedtronicElectrodeIdentifier", "MedtronicBrainSenseSurvey", "MedtronicBaselineMontages", "MedtronicBrainSenseTimeDomain", "MedtronicIndefiniteStream"]:
         Data = Database.loadSourceFile(recording.pointer, recording.hashed)
+        if not "ContentHash" in recording.metadata.keys():
+            content_hashed = hmac.new(HASH_KEY.encode("utf8"), pickle.dumps(Data), hashlib.sha256).hexdigest()
+            recording.metadata["ContentHash"] = content_hashed
+            recording.save()
         Data = processTimeDomainStreaming(recording, Data, config)
 
         Data["Data"] = Data["Data"].T
