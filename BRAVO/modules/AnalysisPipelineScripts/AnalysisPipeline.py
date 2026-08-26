@@ -41,4 +41,16 @@ if __name__ == "__main__":
                 del userConfig["ParticipantId"]
                 processBurstAnalysis(participant_uid, job.recording_uid, userConfig)
                 job.state = "Completed"
-                job.save() 
+                job.save()
+
+            elif sys.argv[1] == "BIDSExport":
+                from modules.BIDSExport.Gather import export_participant
+                participant_uid = job.metadata["config"]["ParticipantId"]
+                try:
+                    exported = export_participant(participant_uid)
+                    job.result_message = f"Exported {len(exported)} session(s) to BRAVOStorage/BIDS"
+                    job.state = "Completed"
+                except Exception as e:
+                    job.result_message = str(e)
+                    job.state = "Failed"
+                job.save()
