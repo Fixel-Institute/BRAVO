@@ -219,7 +219,7 @@ def extractChronicNeuralActivity(participant, devices, recordings, config):
                     "ChannelNames": copy.deepcopy(ChannelNames),
                     "ChannelNamesFix": copy.deepcopy(ChannelNames),
                     "ChannelUnits": ["" if x.endswith("LFP") else "mA" for x in ChannelNames],
-                    "Data": TimelineDataframe[ChannelNames].to_numpy().T
+                    "Data": TimelineDataframe[ChannelNames].to_numpy(copy=True).T
                 }
 
                 for k in range(len(Activity["ChannelNames"])):
