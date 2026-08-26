@@ -41,13 +41,16 @@ from modules.MedtronicPercept import BrainSenseStream
 
 BIDS_VERSION = "1.10.0"
 
-# ---------------------------------------------------------------------------
-# CONFIRM before using on real participant data for publication - see
-# docs/BIDS_MAPPING.md "Open items". Not verified against Medtronic's
-# technical documentation, just the commonly assumed values.
-TD_UNITS_UV = True          # BrainSense TD assumed microvolt-scale
-POWER_LINE_FREQUENCY_HZ = 60  # US clinical site assumption (UF)
-# ---------------------------------------------------------------------------
+# BrainSense TD is confirmed microvolt-scale - the raw Percept JSON field
+# BRAVO reads it from is literally named "TimeDomainDatainMicroVolts" (see
+# modules/MedtronicPercept/Percept.py's decodeTimeDomainData, ~line 1890).
+# Applied unconditionally via write_ieeg_recording()'s scale=1e-6 - no flag
+# needed here since there's no site-to-site variation to configure.
+
+# Mains frequency is site-specific (BRAVO isn't only ever deployed in the
+# US) - override via the BIDS_POWER_LINE_FREQUENCY_HZ env var for a 50Hz
+# site; defaults to the UF clinical site's 60Hz.
+POWER_LINE_FREQUENCY_HZ = float(os.environ.get("BIDS_POWER_LINE_FREQUENCY_HZ", 60))
 
 # BRAVO Recording `type` -> BIDS ieeg destination. Anything not listed here
 # is skipped rather than guessed at - see convert_participant().
@@ -99,6 +102,15 @@ def write_dataset_description(bids_root, name="BRAVO BIDS Export", dataset_type=
         "DatasetType": dataset_type,
         "GeneratedBy": [{"Name": "BRAVO BIDSExport", "Version": "0.1.0"}],
     }
+    # No real name/institution to default to - was a bare hardcoded
+    # omission (bids-validator's NO_AUTHORS warning) rather than a
+    # configurable site fact. BIDS_DATASET_AUTHORS unset keeps today's
+    # behavior (omitted); set it (comma-separated) once a real dataset is
+    # being prepared for publication/DOI-registration.
+    authors_env = os.environ.get("BIDS_DATASET_AUTHORS", "")
+    authors = [author.strip() for author in authors_env.split(",") if author.strip()]
+    if authors:
+        description["Authors"] = authors
     if dataset_type == "derivative":
         description["GeneratedBy"][0]["Description"] = "See dataset_description.json's top-level directory for the raw dataset this was derived from."
     with open(path, "w") as fid:
