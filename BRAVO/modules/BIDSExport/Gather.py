@@ -416,10 +416,9 @@ def export_participant(participant_uid):
     # boundary could land in the "wrong" day bucket. Written both as the
     # bravo-chronic-neural-activity derivative (below) and, per segment, as
     # a real ieeg/ task-ChronicLFP recording (see convert_participant()'s
-    # chronic_activities) - unlike the derivative's old "only if there's
-    # already an upload day" limitation, a chronic-only day now gets a real
-    # session of its own (chronic_only_days below), same reasoning as
-    # annotation_only_days.
+    # chronic_activities) - reassigned onto a real existing session below
+    # (real_session_dates) if its own day has no upload/annotation, rather
+    # than manufacturing a synthetic session just to hold it.
     chronic_neural_activity_recording = models.Recording.find(type="MedtronicChronicNeuralActivity", source__owner=person)
     chronic_activity_by_day = {}
     chronic_device_cache = {}
@@ -477,13 +476,27 @@ def export_participant(participant_uid):
         if date_label not in by_day and any(a["type"] == "ChronicCustomEvent" for a in annotations)
     })
 
-    # A day whose only content is chronic segments (their own TherapyStartTime
-    # doesn't land on any real upload/annotation day) still gets a real
-    # session - same reasoning as annotation_only_days.
-    chronic_only_days = sorted({
-        date_label for date_label in chronic_activity_by_day
-        if date_label not in by_day and date_label not in annotation_only_days
-    })
+    # ChronicLFP is real ieeg/ data, not a special category - it never gets
+    # its own synthetic session the way annotation_only_days does. A segment
+    # whose own TherapyStartTime doesn't land on a real upload/annotation
+    # day is reassigned to the nearest PRECEDING real session instead (that
+    # visit is chronologically "when" the device was on this segment's
+    # therapy setting, same reasoning TherapyHistory's "Past Therapy"
+    # readouts already get retroactively attached to whichever visit
+    # captured them) - or the very first real session, for a segment that
+    # predates every upload (device was logging before anyone ever
+    # uploaded).
+    real_session_dates = sorted(set(by_day) | set(annotation_only_days))
+    if real_session_dates:
+        reassigned_chronic_activity_by_day = {}
+        for date_label, activities in chronic_activity_by_day.items():
+            if date_label in real_session_dates:
+                target = date_label
+            else:
+                preceding = [d for d in real_session_dates if d <= date_label]
+                target = preceding[-1] if preceding else real_session_dates[0]
+            reassigned_chronic_activity_by_day.setdefault(target, []).extend(activities)
+        chronic_activity_by_day = reassigned_chronic_activity_by_day
 
     # ScaleRecord (clinical rating scale / questionnaire submissions) isn't
     # tied to a SourceFile either (participant is a direct FK) - grouped by
@@ -516,7 +529,7 @@ def export_participant(participant_uid):
     # first session's rows are left unclamped on the low end.
     prev_session_end = None
     last_date_label, last_participant = None, None
-    for date_label in sorted(set(by_day) | set(annotation_only_days) | set(chronic_only_days)):
+    for date_label in sorted(set(by_day) | set(annotation_only_days)):
         day_chronic_activities = chronic_activity_by_day.get(date_label, [])
         if date_label in by_day:
             day_source_files = by_day[date_label]
@@ -540,11 +553,7 @@ def export_participant(participant_uid):
                 "dob": person.date_of_birth or None, "session_date": earliest,
                 "session_end": latest,
             }}
-            # Reflects why this session exists in the export at all - not a
-            # claim about everything it contains (an AnnotationOnly session
-            # can still pick up chronic_activities for the same date, see
-            # kwargs["chronic_activities"] below).
-            session_type = "AnnotationOnly" if date_label in annotation_only_days else "ChronicOnly"
+            session_type = "AnnotationOnly"
 
         kwargs["participant"]["prev_session_end"] = prev_session_end
         kwargs["participant"]["timezone"] = timezone or "n/a"

@@ -86,7 +86,7 @@ def _channel_units_for(ch_type, ch_names):
     if ch_type == "power_stim":
         return {name: ("n/a" if name.endswith(" Power") else "mA") for name in ch_names}
     if ch_type == "chronic":
-        return {name: ("n/a" if name.endswith(" LFP") else "mA") for name in ch_names}
+        return {name: ("s" if name == "TimeError" else "n/a" if name.endswith(" LFP") else "mA") for name in ch_names}
     return None
 
 
@@ -115,6 +115,33 @@ def write_dataset_description(bids_root, name="BRAVO BIDS Export", dataset_type=
         description["GeneratedBy"][0]["Description"] = "See dataset_description.json's top-level directory for the raw dataset this was derived from."
     with open(path, "w") as fid:
         json.dump(description, fid, indent=2)
+
+
+def write_events_json(bids_root):
+    """Dataset-root events.json - the BIDS inheritance principle means this
+    one file covers every *_events.tsv in the dataset, so mne-bids's
+    identical per-run copy is deleted in write_ieeg_recording() instead of
+    kept alongside each one. Column set/text matches what mne-bids itself
+    would have written - not a new schema, just written once instead of
+    once per run."""
+    path = os.path.join(bids_root, "events.json")
+    with open(path, "w") as fid:
+        json.dump({
+            "onset": {
+                "Description": "Onset (in seconds) of the event from the beginning of the first datapoint. Negative onsets account for events before the first stored data point.",
+                "Units": "s",
+            },
+            "duration": {
+                "Description": "Duration of the event in seconds from onset. Must be zero, positive, or 'n/a' if unavailable. A zero value indicates an impulse event.",
+                "Units": "s",
+            },
+            "sample": {"Description": "The event onset time in number of sampling points. First sample is 0."},
+            "value": {"Description": "The event code (also known as trigger code or event ID) associated with the event. Always 1 here - BRAVO only ever writes one annotation label (see trial_type)."},
+            "trial_type": {
+                "Description": "The type, category, or name of the event. Always 'BAD_missing' here - marks a gap/invalid-data segment held at the nearest valid sample (see docs/BIDS_MAPPING.md), not a behavioral/task event.",
+                "Levels": {"BAD_missing": "Gap or invalid-data segment in the recording"},
+            },
+        }, fid, indent=2)
 
 
 def write_readme(bids_root):
@@ -200,7 +227,15 @@ def write_sessions_tsv(bids_root, subject, sessions):
     os.makedirs(subject_dir, exist_ok=True)
     path = os.path.join(subject_dir, f"sub-{subject}_sessions.tsv")
 
-    df = pd.DataFrame(sessions).rename(columns={"timezone": "Timezone", "session_type": "SessionType"}).sort_values("acq_time").reset_index(drop=True)
+    # pd.DataFrame([]) has zero columns - sort_values("acq_time") would
+    # KeyError rather than just producing an empty table. Hit in production
+    # for a participant with no exportable session at all (no upload,
+    # annotation, chronic activity, or scale record - session_rows stays
+    # empty in Gather.export_participant()).
+    columns = ["session_id", "acq_time", "timezone", "session_type"]
+    df = pd.DataFrame(sessions, columns=columns).rename(columns={"timezone": "Timezone", "session_type": "SessionType"})
+    if not df.empty:
+        df = df.sort_values("acq_time").reset_index(drop=True)
     df.to_csv(path, sep="\t", index=False, na_rep="n/a")
 
     json_path = path.replace(".tsv", ".json")
@@ -208,10 +243,9 @@ def write_sessions_tsv(bids_root, subject, sessions):
         json.dump({
             "acq_time": {"Description": "Local calendar date/time of the earliest clinic-visit upload merged into this session"},
             "Timezone": {"Description": "BRAVO-stored UTC offset (e.g. 'UTC-04:00') acq_time was localized with"},
-            "SessionType": {"Description": "Why this session exists in the export - not a claim about everything it contains (e.g. an AnnotationOnly session can still carry a ChronicLFP recording for the same date)", "Levels": {
+            "SessionType": {"Description": "Why this session exists in the export - not a claim about everything it contains (e.g. an AnnotationOnly session can still carry a ChronicLFP recording reassigned onto this date from a segment with no upload/annotation of its own)", "Levels": {
                 "Upload": "A real device JSON upload landed on this calendar day",
                 "AnnotationOnly": "No device upload, but a ChronicCustomEvent annotation exists for this date",
-                "ChronicOnly": "No upload or annotation - exists only because a chronic segment's TherapyStartTime falls on this date",
                 "ScaleOnly": "No upload/annotation/chronic activity - exists only for a trailing ScaleRecord submitted after the participant's last known session",
             }},
         }, fid, indent=2)
@@ -497,18 +531,35 @@ INVALID_VALUE_THRESHOLD = 1_000_000
 
 
 def _mask_invalid_samples(data):
-    """Returns (cleaned_data, any_invalid_row_mask). Rows containing an
-    implausibly large reading in any channel are forward/back-filled per
-    channel from the nearest valid sample - see INVALID_VALUE_THRESHOLD."""
-    invalid = np.abs(data) >= INVALID_VALUE_THRESHOLD
-    any_invalid = invalid.any(axis=1)
-    if not any_invalid.any():
-        return data, any_invalid
+    """Returns (cleaned_data, any_invalid_row_mask, dead_channels). Values
+    that are an implausibly large reading OR non-finite (NaN/Inf) are
+    forward/back-filled per channel from the nearest valid sample - see
+    INVALID_VALUE_THRESHOLD. The isfinite check is separate from the
+    magnitude check on purpose: a NaN that already arrived that way from
+    upstream (rather than as a large-magnitude sentinel) silently passes
+    `np.abs(nan) >= THRESHOLD` (always False - NaN comparisons never
+    evaluate True), so a magnitude-only check misses it entirely and lets
+    it reach mne/edfio's own finite-value check, which crashes the whole
+    export instead of being caught and held here.
+
+    dead_channels flags any column that's invalid for EVERY sample - ffill/
+    bfill has nothing to fill from, so it's left NaN in cleaned_data;
+    callers must drop those columns (see write_ieeg_recording's/
+    write_chronic_lfp_recording's dead-channel drop). any_invalid_row is
+    deliberately computed only from the surviving (non-dead) channels - a
+    channel that's permanently dead and about to be dropped shouldn't
+    retroactively flag every row of an otherwise-continuous recording as
+    BAD_missing just because it existed."""
+    invalid = (np.abs(data) >= INVALID_VALUE_THRESHOLD) | ~np.isfinite(data)
+    dead_channels = invalid.all(axis=0)
+    any_invalid = invalid[:, ~dead_channels].any(axis=1) if not dead_channels.all() else np.zeros(len(data), dtype=bool)
+    if not invalid.any():
+        return data, any_invalid, dead_channels
 
     cleaned = data.copy()
     cleaned[invalid] = np.nan
     cleaned = pd.DataFrame(cleaned).ffill().bfill().to_numpy()
-    return cleaned, any_invalid
+    return cleaned, any_invalid, dead_channels
 
 
 # EDF signal labels are hard-capped at 16 characters. BRAVO's raw Medtronic
@@ -583,7 +634,22 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
     ch_types = _channel_types_for(ch_type, recording["ChannelNames"])
     ch_names, original_names = _shorten_channel_names(recording["ChannelNames"])
 
-    data, sentinel_missing = _mask_invalid_samples(data)
+    data, sentinel_missing, dead_channels = _mask_invalid_samples(data)
+
+    # A channel with zero valid samples anywhere in the recording (every
+    # reading is a device glitch) has nothing for ffill/bfill to recover -
+    # found in production as both "Signal data must contain only finite
+    # values" (mne/edfio's own check) and "cannot convert float NaN to
+    # integer" (edfio computing a NaN physical_range) crashing the whole
+    # recording. Dropping just that channel keeps the rest of a real
+    # recording exportable instead of losing it to one dead contact.
+    if dead_channels.any():
+        if dead_channels.all():
+            raise ValueError(f"All {len(ch_names)} channel(s) have zero valid samples - nothing real to export")
+        data = data[:, ~dead_channels]
+        ch_names = [name for name, dead in zip(ch_names, dead_channels) if not dead]
+        ch_types = [t for t, dead in zip(ch_types, dead_channels) if not dead]
+
     missing = recording.get("Missing")
     any_missing = np.any(np.asarray(missing) > 0, axis=1) if missing is not None else None
     any_missing = sentinel_missing if any_missing is None else (any_missing | sentinel_missing)
@@ -618,6 +684,18 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
         stale = bids_path.copy().update(task=None, run=None, suffix=suffix, extension=extension).fpath
         if os.path.exists(stale):
             os.remove(stale)
+
+    # mne-bids also writes an _events.json next to every _events.tsv it
+    # creates (whenever `annotations` above is non-None) - always the same
+    # boilerplate column descriptions (onset/duration/trial_type/value/
+    # sample), byte-identical across every run in the dataset since BRAVO
+    # only ever writes one annotation label (BAD_missing). Removed here in
+    # favor of one dataset-root events.json (see write_dataset_description's
+    # caller) - the BIDS inheritance principle means that single file
+    # already covers every _events.tsv with no per-run sidecar needed.
+    events_json = bids_path.copy().update(suffix="events", extension=".json").fpath
+    if os.path.exists(events_json):
+        os.remove(events_json)
 
     sidecar_path = bids_path.copy().update(suffix="ieeg", extension=".json").fpath
     with open(sidecar_path) as fid:
@@ -826,6 +904,38 @@ def _chronic_recording(activity):
     # consumer this slot isn't real data.
     grid_data = pd.DataFrame(grid_data).ffill().bfill().to_numpy()
 
+    # Per-reading timing error, measured against the PREVIOUS real reading's
+    # own actual timestamp (+ however many 600s slots elapsed since it) -
+    # deliberately NOT measured against the single fixed `start` anchor
+    # above. Anchoring every sample's expected time to `start` lets any tiny
+    # persistent mismatch between the device's clock rate and true 600.000s
+    # spacing compound linearly across an entire segment - verified on a
+    # real 52-day/7614-sample segment, that grew from ~1s at the start to
+    # ~118s by the end, which is drift, not a per-reading error. Re-basing
+    # to the last real reading each step keeps this a true LOCAL residual -
+    # what a device with perfect internal 600.000s spacing would have
+    # logged next, given only where it actually was last time - so it stays
+    # small and bounded instead of accumulating. 0 for the first reading
+    # (nothing to compare against yet) and at gap-filled slots (no real
+    # reading there to have a timing error at all - those slots are already
+    # flagged via `missing` same as every other channel). Not folded into
+    # LFP/Amplitude since it's a property of WHEN the reading happened, not
+    # what it measured, and it's shared across every channel here (they all
+    # come from one shared timestamp series per sample, not independently
+    # per hemisphere).
+    time_error_per_sample = np.zeros(len(time))
+    prev_actual = time[0]
+    for i in range(1, len(time)):
+        elapsed_slots = max(round((time[i] - prev_actual) / CHRONIC_SAMPLING_INTERVAL), 1)
+        time_error_per_sample[i] = time[i] - (prev_actual + elapsed_slots * CHRONIC_SAMPLING_INTERVAL)
+        prev_actual = time[i]
+
+    time_error = np.zeros(n_slots)
+    time_error[slot_idx] = time_error_per_sample
+    grid_data = np.column_stack([grid_data, time_error])
+    missing = np.column_stack([missing, missing[:, 0]])
+    channel_names = list(channel_names) + ["TimeError"]
+
     return {
         "SamplingRate": 1.0 / CHRONIC_SAMPLING_INTERVAL,
         "Data": grid_data,
@@ -869,14 +979,25 @@ def write_chronic_lfp_recording(bids_root, subject, session, activity, run, devi
     workaround doesn't apply here - that exists purely to cancel out mne's
     own internal Volts assumption, which this path never goes through.
     Real values are written directly; edfio computes each signal's
-    physical_range from the actual data by default, so there's no EDF
-    physical-range overflow risk the way Power-domain hit either."""
+    physical_range from the actual data by default. That range still hits
+    the same 8-ASCII-character EDF header overflow Power-domain hit,
+    though - real production chronic data has turned up the same class of
+    implausibly-large device glitch values as TD/Power (e.g. 143377008),
+    so the same _mask_invalid_samples() sentinel treatment applies here
+    too, not just to write_ieeg_recording()."""
     recording = _chronic_recording(activity)
     data = recording["Data"]  # (n_samples, n_channels)
     sfreq = recording["SamplingRate"]  # the TRUE rate (1/600 Hz) - see ieeg.json's SamplingFrequency below
     channel_names = recording["ChannelNames"]
     ch_names, original_names = _shorten_channel_names(channel_names)
     units_by_original_name = _channel_units_for("chronic", channel_names) or {}
+
+    data, sentinel_missing, dead_channels = _mask_invalid_samples(data)
+    if dead_channels.any():
+        if dead_channels.all():
+            raise ValueError(f"All {len(ch_names)} channel(s) have zero valid samples - nothing real to export")
+        data = data[:, ~dead_channels]
+        ch_names = [name for name, dead in zip(ch_names, dead_channels) if not dead]
 
     # The EDF itself is written at a nominal 1 Hz - NOT the true rate. Every
     # real sample is kept as-is, none padded/held/fabricated; only the
@@ -903,7 +1024,7 @@ def write_chronic_lfp_recording(bids_root, subject, session, activity, run, devi
         ))
 
     missing = recording["Missing"]
-    any_missing = np.any(np.asarray(missing) > 0, axis=1)
+    any_missing = np.any(np.asarray(missing) > 0, axis=1) | sentinel_missing
     # Annotation onset/duration are positions on the file's OWN declared
     # timeline (nominal seconds, one per sample) - not real seconds, same
     # reasoning as edf_sfreq above.
@@ -1607,6 +1728,7 @@ def convert_participant(bids_root, subject, session, participant, electrodes=Non
     # since every session ends the same way - the whole export's) content
     # wins.
     write_dataset_description(bids_root)
+    write_events_json(bids_root)
     write_readme(bids_root)
     upsert_participant(bids_root, subject, age, participant.get("sex"), participant.get("diagnosis"))
 
@@ -1633,6 +1755,18 @@ def demo():
     n_samples = 250 * 30  # 30s at 250Hz
     session_start = 1700000000.0
 
+    td_missing = np.zeros((n_samples, 1))
+    td_missing[100:150] = 1  # one short gap - exercises the BAD_missing events.tsv/events.json path
+
+    td_data = rng.normal(0, 5, size=(n_samples, 1))
+    # A literal NaN arriving straight from upstream (not flagged via
+    # Missing, not a huge-magnitude sentinel either) - regression case for
+    # _mask_invalid_samples's isfinite check, which np.abs(x) >= THRESHOLD
+    # alone can never catch since NaN comparisons are always False. Left
+    # unmasked, this used to reach edfio and crash with "Signal data must
+    # contain only finite values".
+    td_data[300:305, 0] = np.nan
+
     participant = {
         "sex": "Male", "diagnosis": "Parkinson's Disease",
         "dob": session_start - 60 * 365.25 * 24 * 3600,
@@ -1656,8 +1790,8 @@ def demo():
         "recording": {
             "SamplingRate": 250.0,
             "ChannelNames": ["ZERO_AND_THREE_RIGHT_RING"],
-            "Data": rng.normal(0, 5, size=(n_samples, 1)),
-            "Missing": np.zeros((n_samples, 1)),
+            "Data": td_data,
+            "Missing": td_missing,
             "StartTime": session_start, "Duration": n_samples / 250.0,
             "Type": "MedtronicBrainSenseTimeDomain", "Name": "n/a",
         },
@@ -1678,13 +1812,37 @@ def demo():
             ]),
             "StartTime": session_start,
         },
+    }, {
+        # Regression case for the dead-channel drop: E02 is a device glitch
+        # for every single sample, nothing for ffill/bfill to recover from.
+        # Should disappear from channels.tsv, not crash the whole recording
+        # over one bad contact - see write_ieeg_recording's dead_channels.
+        "type": "MedtronicIndefiniteStream",
+        "recording": {
+            "SamplingRate": 250.0,
+            "ChannelNames": ["ONE_THREE_LEFT", "ZERO_TWO_LEFT"],
+            "Data": np.column_stack([rng.normal(0, 5, size=60), np.full(60, np.nan)]),
+            "StartTime": session_start,
+        },
     }]
     device = {"model": "PerceptPC", "serial_hash": "deadbeef" * 8}
-    chronic_time = (session_start + np.arange(0, 3600 * 24, 600.0)).tolist()
+    chronic_time = session_start + np.arange(0, 3600 * 24, 600.0)
+    # Real devices don't log exactly on the 600s boundary - a few seconds
+    # of jitter on one real reading, regression case for the TimeError
+    # channel (_chronic_recording()).
+    chronic_time[10] += 4.5
+    chronic_time = chronic_time.tolist()
+    chronic_data = rng.normal(50, 10, size=(2, len(chronic_time)))  # channel-major, see _chronic_recording()
+    # A real production value (143377008, from an actual export failure) -
+    # regression case for write_chronic_lfp_recording's _mask_invalid_samples
+    # call. Left unmasked, one glitch reading like this blows past edfio's
+    # 8-ASCII-character physical min/max header field and crashes the whole
+    # segment, the same way an unmasked Power-domain value used to.
+    chronic_data[0, 5] = 143377008
     chronic_activities = [{
         "TherapyStartTime": session_start,
         "Time": chronic_time,
-        "Data": rng.normal(50, 10, size=(2, len(chronic_time))),  # channel-major, see _chronic_recording()
+        "Data": chronic_data,
         "ChannelNames": ["RightHemisphere LFP", "RightHemisphere Amplitude"],
         "ChannelNamesFix": ["Right STN LFP", "Right STN Amplitude"],
         "device": device,
@@ -1740,7 +1898,7 @@ def demo():
         written = sorted(os.listdir(bids_root))
         assert "dataset_description.json" in written, "dataset_description.json missing"
         assert "participants.tsv" in written, "participants.tsv missing"
-        assert len(paths) == 3, f"expected 3 continuous recordings written (TD, Power, ChronicLFP), got {len(paths)}"
+        assert len(paths) == 4, f"expected 4 continuous recordings written (TD, Power, IndefiniteStream, ChronicLFP), got {len(paths)}"
         for path in paths:
             assert os.path.exists(path.fpath), f"EDF file was not actually written to disk: {path.fpath}"
 
@@ -1789,14 +1947,47 @@ def demo():
         )
         chronic_channels_path = str(chronic_path.copy().update(suffix="channels", extension=".tsv").fpath)
         chronic_channels_df = pd.read_csv(chronic_channels_path, sep="\t")
-        assert set(chronic_channels_df["name"]) == {"RH LFP", "RH Amp"}, (
-            f"ChronicLFP channel names should be word-abbreviated (RightHemisphere->RH, Amplitude->Amp), not blindly truncated, got {chronic_channels_df['name'].tolist()!r}"
+        assert set(chronic_channels_df["name"]) == {"RH LFP", "RH Amp", "TimeError"}, (
+            f"ChronicLFP channel names should be word-abbreviated (RightHemisphere->RH, Amplitude->Amp) "
+            f"plus the shared TimeError channel, got {chronic_channels_df['name'].tolist()!r}"
         )
-        assert set(chronic_channels_df["OriginalName"]) == {"RightHemisphere LFP", "RightHemisphere Amplitude"}, (
+        assert set(chronic_channels_df["OriginalName"]) == {"RightHemisphere LFP", "RightHemisphere Amplitude", "TimeError"}, (
             f"ChronicLFP channels.tsv OriginalName should hold the raw device spelling, got {chronic_channels_df['OriginalName'].tolist()!r}"
         )
         assert "ClinicalName" not in chronic_channels_df.columns, (
             "ChronicLFP channels.tsv should not have a ClinicalName column"
+        )
+        time_error_row = chronic_channels_df[chronic_channels_df["name"] == "TimeError"].iloc[0]
+        assert time_error_row["units"] == "s", f"TimeError channel should be in seconds, got {time_error_row['units']!r}"
+
+        chronic_raw.load_data()
+        time_error_ch_idx = chronic_raw.ch_names.index("TimeError")
+        time_error_values = chronic_raw.get_data()[time_error_ch_idx]
+        # fixture nudges only sample 10 by +4.5s (see chronic_time above) -
+        # a LOCAL residual measured against the previous real reading should
+        # show up as +4.5 right there, then -4.5 at sample 11 (that reading
+        # is back on the original grid, but now 4.5s "early" relative to
+        # sample 10's own actual time), then 0 everywhere else - NOT a
+        # lasting +4.5 offset propagating through the rest of the segment,
+        # which is what the single-fixed-anchor version used to do.
+        assert abs(time_error_values[10] - 4.5) < 1e-6, (
+            f"expected +4.5 at the nudged sample, got {time_error_values[10]}"
+        )
+        assert abs(time_error_values[11] - (-4.5)) < 1e-6, (
+            f"expected the NEXT reading to show -4.5 (back on the original grid, measured against sample "
+            f"10's own actual +4.5 time) - got {time_error_values[11]}, drift didn't reset"
+        )
+        # EDF stores physical values as 16-bit integers scaled to the
+        # channel's own physical range - with TimeError's range here
+        # spanning just [-4.5, 4.5], that digitization leaves a ~1e-4s
+        # quantization residual even at "true zero", not exact 0.0.
+        assert np.all(np.abs(time_error_values[12:]) < 1e-3), (
+            "TimeError should return to ~0 after the single nudged reading - a lasting nonzero tail means "
+            "the error is compounding again instead of being a local per-reading residual"
+        )
+        assert np.all(np.abs(time_error_values) <= 5), (
+            f"a single +4.5s nudge should never produce a residual bigger than the nudge itself, "
+            f"got max {np.abs(time_error_values).max()}"
         )
 
         beh_dir = os.path.join(bids_root, "sub-TEST01", "ses-20231114", "beh")
@@ -1848,6 +2039,52 @@ def demo():
         assert ieeg_sidecar["metadata"]["ChannelNames"] != ["ZERO_AND_THREE_RIGHT_RING"], (
             "metadata.ChannelNames still holds the raw >16-char name - shortening wasn't applied"
         )
+
+        td_events_path = td_path.copy().update(suffix="events", extension=".tsv").fpath
+        assert os.path.exists(td_events_path), "TD run has a Missing gap - should have written an events.tsv"
+        td_events_df = pd.read_csv(td_events_path, sep="\t")
+        assert set(td_events_df["trial_type"]) == {"BAD_missing"}, "gap events should all be BAD_missing"
+
+        td_events_json = td_path.copy().update(suffix="events", extension=".json").fpath
+        assert not os.path.exists(td_events_json), (
+            "per-run events.json should be removed - covered by the dataset-root events.json instead (BIDS inheritance)"
+        )
+        root_events_json = os.path.join(bids_root, "events.json")
+        assert os.path.exists(root_events_json), "dataset-root events.json should exist to cover every _events.tsv"
+        with open(root_events_json) as fid:
+            root_events = json.load(fid)
+        assert set(root_events.keys()) == {"onset", "duration", "sample", "value", "trial_type"}, (
+            f"dataset-root events.json missing expected columns, got {list(root_events.keys())!r}"
+        )
+        assert len(td_events_df) == 2, (
+            f"expected 2 gaps - the Missing-mask gap at [100:150] AND the literal-NaN gap at [300:305] "
+            f"(_mask_invalid_samples's isfinite check must catch the latter independently), got {len(td_events_df)}"
+        )
+
+        dead_channel_path = next(p for p in paths if p.task == "IndefiniteStream")
+        dead_channel_channels_df = pd.read_csv(
+            dead_channel_path.copy().update(suffix="channels", extension=".tsv").fpath, sep="\t"
+        )
+        assert list(dead_channel_channels_df["name"]) == ["1_3_L"], (
+            f"the all-NaN ZERO_TWO_LEFT channel should have been dropped, not crashed or kept, "
+            f"got {dead_channel_channels_df['name'].tolist()!r}"
+        )
+
+        chronic_raw.load_data()
+        chronic_max = chronic_raw.get_data()[0].max()
+        assert chronic_max < 1000, (
+            f"the injected 143377008 device-glitch value should have been masked/ffilled, not written "
+            f"through to the EDF (chronic_max={chronic_max})"
+        )
+
+        empty_sessions_path = os.path.join(bids_root, "sub-EMPTYTEST", "sub-EMPTYTEST_sessions.tsv")
+        write_sessions_tsv(bids_root, "EMPTYTEST", [])
+        assert os.path.exists(empty_sessions_path), "a participant with zero sessions should still get a sessions.tsv"
+        empty_sessions_df = pd.read_csv(empty_sessions_path, sep="\t")
+        assert list(empty_sessions_df.columns) == ["session_id", "acq_time", "Timezone", "SessionType"], (
+            f"empty sessions.tsv should still have the right headers, got {empty_sessions_df.columns.tolist()!r}"
+        )
+        assert len(empty_sessions_df) == 0, "empty sessions.tsv should have zero rows"
 
         # MedtronicChronicNeuralActivity derivative - synthetic single segment,
         # one LFP sample per hemisphere, shaped like ChronicBrainSense's
