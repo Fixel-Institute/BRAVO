@@ -34,6 +34,7 @@ import numpy as np
 import pandas as pd
 import mne
 from mne_bids import BIDSPath, write_raw_bids
+from pybv import write_brainvision
 from edfio import Edf, EdfSignal, EdfAnnotation, Recording as EdfRecording
 from filelock import FileLock
 
@@ -44,13 +45,27 @@ BIDS_VERSION = "1.10.0"
 # BrainSense TD is confirmed microvolt-scale - the raw Percept JSON field
 # BRAVO reads it from is literally named "TimeDomainDatainMicroVolts" (see
 # modules/MedtronicPercept/Percept.py's decodeTimeDomainData, ~line 1890).
-# Applied unconditionally via write_ieeg_recording()'s scale=1e-6 - no flag
-# needed here since there's no site-to-site variation to configure.
+# Applied via write_ieeg_recording()'s EDF-only scale (see IEEG_FORMAT
+# below) - no flag needed here since there's no site-to-site variation to
+# configure.
 
 # Mains frequency is site-specific (BRAVO isn't only ever deployed in the
 # US) - override via the BIDS_POWER_LINE_FREQUENCY_HZ env var for a 50Hz
 # site; defaults to the UF clinical site's 60Hz.
 POWER_LINE_FREQUENCY_HZ = float(os.environ.get("BIDS_POWER_LINE_FREQUENCY_HZ", 60))
+
+# "BrainVision" (default) - true 32-bit float, no channel-name length
+# limit (verified directly: a 46-character label round-trips with no
+# truncation). "EDF" - 16-bit integer, a fixed physical range per channel
+# (real Power-domain values used to overflow its 8-ASCII-character header
+# field before write_ieeg_recording()'s masking/dead-channel handling was
+# built - see that function's docstring), and a hard 16-character
+# channel-name cap (_shorten_channel_names() below only shortens names in
+# this mode). Override via BIDS_IEEG_FORMAT for a consumer that
+# specifically needs EDF.
+IEEG_FORMAT = os.environ.get("BIDS_IEEG_FORMAT", "BrainVision")
+if IEEG_FORMAT not in ("BrainVision", "EDF"):
+    raise ValueError(f"BIDS_IEEG_FORMAT must be 'BrainVision' or 'EDF', got {IEEG_FORMAT!r}")
 
 # BRAVO Recording `type` -> BIDS ieeg destination. Anything not listed here
 # is skipped rather than guessed at - see convert_participant().
@@ -58,12 +73,16 @@ POWER_LINE_FREQUENCY_HZ = float(os.environ.get("BIDS_POWER_LINE_FREQUENCY_HZ", 6
 # ch_type "power_stim" is a special case: mne-bids requires at least one
 # ieeg-family channel (dbs/seeg/ecog/eeg) to accept datatype="ieeg" - an
 # all-"misc" recording gets rejected outright. We type ALL channels in a
-# power_stim recording "dbs" uniformly - verified empirically that mixing
-# dbs+misc channel types in one multi-channel EDF export silently corrupts
-# the scaling of some channels inside mne/edfio (a real bug, not a BIDS
-# requirement). The true semantic distinction (Power = arbitrary units,
-# Stimulation = mA current) is recorded honestly in channels.tsv's "units"
-# column via _channel_units_for() instead of via the mne channel type.
+# power_stim recording "dbs" uniformly to satisfy that. (Under the old EDF
+# writer, mixing dbs+misc channel types in one multi-channel export also
+# silently corrupted some channels' scaling - a real edfio bug tied to
+# EDF's per-channel-type Volts assumption at export time, not present in
+# the BrainVision writer we use now - but the "at least one ieeg-family
+# channel" requirement itself is a mne-bids validation, not format-
+# specific, so this stays regardless.) The true semantic distinction
+# (Power = arbitrary units, Stimulation = mA current) is recorded honestly
+# in channels.tsv's "units" column via _channel_units_for() instead of via
+# the mne channel type.
 CONTINUOUS_TYPES = {
     "MedtronicBrainSenseTimeDomain": {"task": "BrainSenseStream", "acq": "TD", "ch_type": "dbs"},
     "MedtronicBrainSensePowerDomain": {"task": "BrainSenseStream", "acq": "Power", "ch_type": "power_stim"},
@@ -287,7 +306,7 @@ def write_subject_devices(bids_root, subject, device_rows):
 
 def write_dataset_manifest(bids_root, subject):
     """Rebuilds sub-{subject}/sub-{subject}_manifest.json - every real data
-    file (every ieeg/*_ieeg.edf, every beh/*_beh.tsv) across every session
+    file (every ieeg/*_ieeg.eeg, every beh/*_beh.tsv) across every session
     for this one participant, so a consumer can see what that participant's
     export contains without opening every session folder individually.
 
@@ -347,15 +366,23 @@ def write_dataset_manifest(bids_root, subject):
             datatypes = {}
             session_file_count = 0
 
+            # Matches whichever format IEEG_FORMAT was set to at export
+            # time - .eeg (BrainVision) or .edf, potentially both if the
+            # dataset was built across runs with different settings.
             ieeg_files = []
-            for edf_path in sorted(glob.glob(os.path.join(session_dir, "ieeg", "*_ieeg.edf"))):
-                basename = os.path.basename(edf_path)
-                sidecar_path = edf_path[:-len("edf")] + "json"
+            ieeg_data_paths = sorted(
+                glob.glob(os.path.join(session_dir, "ieeg", "*_ieeg.eeg"))
+                + glob.glob(os.path.join(session_dir, "ieeg", "*_ieeg.edf"))
+            )
+            for data_path in ieeg_data_paths:
+                basename = os.path.basename(data_path)
+                stem = data_path.rsplit(".", 1)[0]
+                sidecar_path = stem + ".json"
                 sidecar = {}
                 if os.path.exists(sidecar_path):
                     with open(sidecar_path) as fid:
                         sidecar = json.load(fid)
-                channels_path = edf_path.replace("_ieeg.edf", "_channels.tsv")
+                channels_path = stem[: -len("_ieeg")] + "_channels.tsv"
                 channel_names = (
                     pd.read_csv(channels_path, sep="\t")["name"].tolist()
                     if os.path.exists(channels_path) else []
@@ -562,8 +589,17 @@ def _mask_invalid_samples(data):
     return cleaned, any_invalid, dead_channels
 
 
-# EDF signal labels are hard-capped at 16 characters. BRAVO's raw Medtronic
-# channel codes (e.g. "ZERO_AND_THREE_LEFT_RING") routinely blow past that,
+# Historical: EDF signal labels were hard-capped at 16 characters, which is
+# what this shortening originally existed for. Now that every ieeg
+# recording is written as BrainVision (see write_ieeg_recording's
+# docstring) that specific constraint is gone - verified directly, a
+# 46-character label round-trips through BrainVision with no truncation -
+# but the shortening itself is left in place (not something this session
+# was asked to revisit; flagged to the user rather than changed
+# unilaterally, especially since "keep OriginalName" was an explicit,
+# deliberate call made earlier specifically because of the now-obsolete
+# EDF limit). BRAVO's raw Medtronic channel codes (e.g.
+# "ZERO_AND_THREE_LEFT_RING") routinely blow past 16 characters,
 # so we abbreviate deterministically and keep the full name recoverable via
 # an added "OriginalName" column in channels.tsv rather than losing it.
 _CHANNEL_ABBREVIATIONS = {
@@ -584,22 +620,29 @@ _CHANNEL_ABBREVIATIONS = {
 
 
 def _shorten_channel_names(names):
-    """Returns (short_names, {short: original}) - short_names <=16 chars,
-    unique within this call."""
+    """Returns (short_names, {short: original}). Only actually shortens to
+    <=16 chars when IEEG_FORMAT == "EDF" - that cap is EDF-specific
+    (verified directly: BrainVision round-trips a 46-character label with
+    no truncation), so names pass through unchanged in BrainVision mode,
+    aside from de-duplication (still needed regardless of format - BIDS
+    channel names must be unique within one recording)."""
     seen = set()
     mapping = {}
     short_names = []
     for name in names:
-        short = name
-        for word, abbr in _CHANNEL_ABBREVIATIONS.items():
-            short = short.replace(word, abbr)
-        short = short.strip("_").replace("__", "_")
-        if len(short) > 16:
-            short = short[:16]
+        if IEEG_FORMAT == "EDF":
+            short = name
+            for word, abbr in _CHANNEL_ABBREVIATIONS.items():
+                short = short.replace(word, abbr)
+            short = short.strip("_").replace("__", "_")
+            if len(short) > 16:
+                short = short[:16]
+        else:
+            short = name
         base, n = short, 1
         while short in seen:
             suffix = f"~{n}"
-            short = base[: 16 - len(suffix)] + suffix
+            short = (base[: 16 - len(suffix)] if IEEG_FORMAT == "EDF" else base) + suffix
             n += 1
         seen.add(short)
         mapping[short] = name
@@ -609,28 +652,35 @@ def _shorten_channel_names(names):
 
 def write_ieeg_recording(bids_root, subject, session, task, recording, acquisition=None, run=1, ch_type="dbs", device=None, metadata=None, electrode_info=None):
     """recording: BRAVO recording dict - Data (n_samples, n_channels),
-    SamplingRate, ChannelNames, optional Missing mask. Writes EDF + the
-    channels.tsv/ieeg.json sidecars mne-bids generates, then patches in the
-    fields mne-bids doesn't know about (RecordingType, Manufacturer).
+    SamplingRate, ChannelNames, optional Missing mask. Writes the ieeg data
+    as BrainVision (32-bit float, via mne-bids + pybv) + the channels.tsv/
+    ieeg.json sidecars mne-bids generates, then patches in the fields
+    mne-bids doesn't know about (RecordingType, Manufacturer).
 
-    mne/edfio always treat a "dbs"-typed channel's RawArray values as Volts
-    internally and multiply by 1e6 when computing the EDF physical
-    min/max, regardless of what the data actually represents. So every
-    "dbs"-typed channel - including arbitrary-unit BrainSense Power-domain
-    output, which is NOT voltage - must be pre-divided by 1e6 here, purely
-    to cancel that internal mne/edfio conversion back out and preserve the
-    real magnitude in the written file. Skipping this for a "not really
-    voltage" channel doesn't avoid a scale - it just leaves the wrong one
-    in place: real Power values (up to ~10000s) then get written as
-    physical_max ~1e10, which overflows EDF's 8-ASCII-character physical
-    min/max header field and crashes the export outright. Verified via
-    modules/BIDSExport/tests.py's round-trip check on a real Power-domain
-    recording (participant sub-001/ses-18 hit this in production before the
-    fix - values up to ~10831 were being written as ~1.08e10)."""
+    Format is IEEG_FORMAT (default "BrainVision", override via
+    BIDS_IEEG_FORMAT - see that constant's comment). BrainVision writes
+    true 32-bit float with no channel-name length limit - the historical
+    default here since EDF only has 16-bit integer samples, quantized to a
+    fixed physical range per channel: real BrainSense Power-domain values
+    (up to ~10000s) used to blow past EDF's 8-ASCII-character
+    physical-range header field outright (participant sub-001/ses-18 hit
+    this in production), and mne/edfio's EDF writer separately always
+    treats a "dbs"-typed channel's RawArray values as Volts internally,
+    multiplying by 1e6 when computing that physical range regardless of
+    what the data actually represents - both EDF-specific quirks, neither
+    applies to BrainVision. mne-bids's BrainVision writer stores true
+    32-bit float (verified: real Power-domain values round-trip to
+    <0.001% error) and never applies that internal ×1e6, so unlike EDF
+    mode, values are written completely unscaled there, exactly as given -
+    feeding it already-prescaled data the way EDF mode needs would
+    UNDERSCALE the output by 1e6 (verified empirically). mne-bids doesn't
+    accept format="BDF" for datatype="ieeg" at all (verified - hard
+    error), so EDF (not 24-bit BDF) is the only lossy option offered here."""
     data = np.asarray(recording["Data"], dtype=float)
     sfreq = float(recording["SamplingRate"])
     # Type inference (Power vs Stimulation suffix) must run on the original
-    # names - shortening can truncate the very suffix it looks for.
+    # names - shortening (EDF mode only) can truncate the very suffix it
+    # looks for.
     ch_types = _channel_types_for(ch_type, recording["ChannelNames"])
     ch_names, original_names = _shorten_channel_names(recording["ChannelNames"])
 
@@ -654,7 +704,10 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
     any_missing = np.any(np.asarray(missing) > 0, axis=1) if missing is not None else None
     any_missing = sentinel_missing if any_missing is None else (any_missing | sentinel_missing)
 
-    scale = 1e-6  # see docstring - unconditional, not just for real voltage channels
+    # EDF mode only - see this function's docstring for why: cancels out
+    # mne/edfio's internal Volts assumption at EDF export time. BrainVision
+    # applies no such conversion, so this would corrupt values there.
+    scale = 1e-6 if IEEG_FORMAT == "EDF" else 1.0
     info = mne.create_info(ch_names, sfreq, ch_types=ch_types)
     info["line_freq"] = POWER_LINE_FREQUENCY_HZ
     raw = mne.io.RawArray((data * scale).T, info, verbose=False)
@@ -674,7 +727,7 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
                           acquisition=acquisition, run=run, datatype="ieeg", root=bids_root)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        write_raw_bids(raw, bids_path, format="EDF", allow_preload=True, overwrite=True, verbose=False)
+        write_raw_bids(raw, bids_path, format=IEEG_FORMAT, allow_preload=True, overwrite=True, verbose=False)
 
     # mne-bids always writes a placeholder electrodes.tsv/coordsystem.json per
     # acquisition (all-n/a coordinates, no hemisphere/impedance/etc) even with
@@ -704,12 +757,12 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
     sidecar["Manufacturer"] = "Medtronic"
     if ch_type == "power_stim":
         # BrainSense Power-domain channels are forced to mne's "dbs" type
-        # purely for the Volts pre-scale workaround above (see this
-        # function's docstring) - they aren't real SEEG contacts, so
-        # mne-bids's auto-computed SEEGChannelCount is wrong for this run.
-        # Reclassify the count itself (not the mne channel type - that
-        # would undo the scaling workaround and reintroduce the physical
-        # min/max overflow crash it fixes).
+        # purely to satisfy mne-bids's "at least one ieeg-family channel"
+        # requirement (see CONTINUOUS_TYPES's comment) - they aren't real
+        # SEEG contacts, so mne-bids's auto-computed SEEGChannelCount is
+        # wrong for this run. Reclassify the count itself, not the mne
+        # channel type (changing the type would fail that requirement again
+        # for an all-Stimulation-channel run).
         sidecar["MiscChannelCount"] = sidecar.get("MiscChannelCount", 0) + sidecar.get("SEEGChannelCount", 0)
         sidecar["SEEGChannelCount"] = 0
     # device: {"model": DBSDevice.type, "serial_hash": HMAC-hashed serial_number}
@@ -748,11 +801,19 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
 
     channels_path = bids_path.copy().update(suffix="channels", extension=".tsv").fpath
     channels_df = pd.read_csv(channels_path, sep="\t")
-    channels_df["OriginalName"] = channels_df["name"].map(original_names)
+    # In BrainVision mode "name" already IS the real name (no shortening -
+    # see _shorten_channel_names) - an OriginalName column there would just
+    # duplicate "name", so it's only written in EDF mode, where the two
+    # genuinely differ.
+    if IEEG_FORMAT == "EDF":
+        channels_df["OriginalName"] = channels_df["name"].map(original_names)
+        name_lookup_column = "OriginalName"
+    else:
+        name_lookup_column = "name"
 
     units_by_original_name = _channel_units_for(ch_type, recording["ChannelNames"])
     if units_by_original_name is not None:
-        channels_df["units"] = channels_df["OriginalName"].map(units_by_original_name)
+        channels_df["units"] = channels_df[name_lookup_column].map(units_by_original_name)
 
     if electrode_info:
         # Same platform-canonical channel-naming reference
@@ -775,13 +836,15 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
                 # branch exactly - unconditional suffix regardless of
                 # whether a real electrode match was found above.
                 clinical_names[orig_name] += " Stimulation" if orig_name.endswith("Stimulation") else " Recording"
-        channels_df["ClinicalName"] = channels_df["OriginalName"].map(clinical_names)
+        channels_df["ClinicalName"] = channels_df[name_lookup_column].map(clinical_names)
 
     channels_df.to_csv(channels_path, sep="\t", index=False, na_rep="n/a")
 
     channels_json_path = bids_path.copy().update(suffix="channels", extension=".json").fpath
     channels_descriptions = {
-        "name": {"Description": "Shortened technical label, <=16 characters to fit the EDF signal label limit - not the channel's real name, see OriginalName"},
+        "name": {"Description": "The channel's real technical label (full Medtronic channel code)"}
+        if IEEG_FORMAT != "EDF" else
+        {"Description": "Shortened technical label, <=16 characters (EDF's channel-name limit) - not the channel's real name, see OriginalName"},
         "type": {"Description": "BIDS channel type"},
         "units": {"Description": "Physical unit of the channel's values"},
         "low_cutoff": {"Description": "Hardware/software high-pass filter cutoff applied to this channel, n/a if unknown", "Units": "Hz"},
@@ -790,7 +853,7 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
         "sampling_frequency": {"Description": "Sampling rate of this channel", "Units": "Hz"},
         "status": {"Description": "Data quality of this channel", "Levels": {"good": "Included, no known quality issue", "bad": "Known quality issue"}},
         "status_description": {"Description": "Free-text explanation for status, n/a if good"},
-        "OriginalName": {"Description": "The channel's real name (full Medtronic channel code) - name above is only the shortened EDF-safe label"},
+        "OriginalName": {"Description": "The channel's real name (full Medtronic channel code) - name above is only the shortened label"},
         "ClinicalName": {"Description": "Clinician-facing channel name (Electrode.custom_name substituted for the hemisphere prefix, e.g. 'Right STN LFP E00-E03') - same reformatting DataAnalysis.queryAllRecordings() uses platform-wide, falls back to OriginalName if no electrode matched"},
     }
     with open(channels_json_path, "w") as fid:
@@ -800,8 +863,8 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
     # unrecognized top-level keys there - see Recording.adjusted_alignment in
     # Gather.gather_session) so it's recorded per-run in scans.tsv instead,
     # same custom-column pattern as channels.tsv's OriginalName above.
-    edf_path = bids_path.copy().update(suffix="ieeg", extension=".edf")
-    scans_path = edf_path.copy().update(
+    data_path = bids_path.copy().update(suffix="ieeg", extension=".eeg")
+    scans_path = data_path.copy().update(
         datatype=None, task=None, acquisition=None, run=None, suffix="scans", extension=".tsv"
     ).fpath
     # dtype=str/keep_default_na=False: without this, pandas' default NA-string
@@ -810,7 +873,7 @@ def write_ieeg_recording(bids_root, subject, session, task, recording, acquisiti
     # SourceId to float64 the moment every row in it happens to be "n/a",
     # then crashing the next run's string assignment into it.
     scans_df = pd.read_csv(scans_path, sep="\t", dtype=str, keep_default_na=False)
-    row_filename = f"{edf_path.datatype}/{edf_path.basename}"
+    row_filename = f"{data_path.datatype}/{data_path.basename}"
     row_mask = scans_df["filename"] == row_filename
     scans_df.loc[row_mask, "AdjustedAlignment"] = str(recording.get("AdjustedAlignment", 0))
     # SourceFile.uid this run's data came from - a day-merged session can
@@ -948,7 +1011,9 @@ def _chronic_recording(activity):
 
 
 _CHRONIC_CHANNELS_DESCRIPTIONS = {
-    "name": {"Description": "Abbreviated channel label (e.g. 'RH LFP'), <=16 characters to fit the EDF signal label limit - see OriginalName for the unabbreviated device channel name"},
+    "name": {"Description": "The channel's real technical label (e.g. 'RightHemisphere LFP')"}
+    if IEEG_FORMAT != "EDF" else
+    {"Description": "Abbreviated channel label (e.g. 'RH LFP'), <=16 characters (EDF's channel-name limit) - see OriginalName for the unabbreviated device channel name"},
     "type": {"Description": "BIDS channel type"},
     "OriginalName": {"Description": "Original, unabbreviated device channel name (e.g. 'RightHemisphere LFP')"},
     "units": {"Description": "Physical unit of the channel's values"},
@@ -965,29 +1030,29 @@ def write_chronic_lfp_recording(bids_root, subject, session, activity, run, devi
     """Writes one therapy-change-bounded chronic segment (see
     _chronic_recording()) as a real ieeg/ recording, task-ChronicLFP.
 
-    Bypasses mne/mne-bids entirely for the actual EDF write. mne's EDF
-    exporter computes the EDF data-record duration as floor(sfreq)/sfreq;
-    at sfreq=1/600 Hz that's floor(0.00167)/0.00167 = 0/0.00167 = NaN - a
-    real mne bug/limitation for any sfreq < 1 Hz, reproduced with a bare
-    two-line RawArray unrelated to anything BRAVO-specific, not an EDF
-    format limitation. Writing directly via edfio instead, with an
-    explicit data_record_duration of exactly one sample per channel per
-    record, sidesteps it entirely - EDF itself has no problem representing
-    a slow-sampled signal this way.
+    Bypasses mne/mne-bids entirely for the actual write, in either format
+    IEEG_FORMAT selects. BrainVision (default): writes directly via pybv,
+    at chronic's real 1/600 Hz rate - BrainVision has no data-record-
+    duration concept, verified directly with pybv at the exact segment
+    size (778 samples) that breaks EDF below. EDF: bypasses mne/mne-bids
+    for the same reason write_ieeg_recording() needs to for other reasons -
+    mne's EDF exporter computes the EDF data-record duration as
+    floor(sfreq)/sfreq, which is NaN for any sfreq < 1 Hz (chronic is
+    1/600 Hz), a real mne bug reproduced with a bare two-line RawArray
+    unrelated to anything BRAVO-specific - so in EDF mode the file is
+    written at a nominal 1 Hz instead, with the true rate/interval
+    recorded in the sidecar's SamplingFrequency/SamplingFrequencyMultiplier
+    (BrainVision mode has neither problem nor field - SamplingFrequency
+    alone is the true rate there).
 
-    Also means write_ieeg_recording()'s forced-"dbs"-type + 1e-6 pre-scale
-    workaround doesn't apply here - that exists purely to cancel out mne's
-    own internal Volts assumption, which this path never goes through.
-    Real values are written directly; edfio computes each signal's
-    physical_range from the actual data by default. That range still hits
-    the same 8-ASCII-character EDF header overflow Power-domain hit,
-    though - real production chronic data has turned up the same class of
-    implausibly-large device glitch values as TD/Power (e.g. 143377008),
-    so the same _mask_invalid_samples() sentinel treatment applies here
-    too, not just to write_ieeg_recording()."""
+    Real production chronic data has turned up the same class of
+    implausibly-large device glitch values as TD/Power (e.g. 143377008) -
+    the same _mask_invalid_samples() sentinel treatment applies here too,
+    not just to write_ieeg_recording() (unrelated to format - those are
+    glitch VALUES, not a file-format limit)."""
     recording = _chronic_recording(activity)
     data = recording["Data"]  # (n_samples, n_channels)
-    sfreq = recording["SamplingRate"]  # the TRUE rate (1/600 Hz) - see ieeg.json's SamplingFrequency below
+    sfreq = recording["SamplingRate"]  # the true 1/600 Hz rate
     channel_names = recording["ChannelNames"]
     ch_names, original_names = _shorten_channel_names(channel_names)
     units_by_original_name = _channel_units_for("chronic", channel_names) or {}
@@ -999,51 +1064,60 @@ def write_chronic_lfp_recording(bids_root, subject, session, activity, run, devi
         data = data[:, ~dead_channels]
         ch_names = [name for name, dead in zip(ch_names, dead_channels) if not dead]
 
-    # The EDF itself is written at a nominal 1 Hz - NOT the true rate. Every
-    # real sample is kept as-is, none padded/held/fabricated; only the
-    # declared time unit changes. 1/600 Hz can't be represented exactly in
-    # binary floating point, and edfio requires n_samples/sampling_frequency
-    # to divide data_record_duration EXACTLY - verified this fails
-    # unpredictably (not size-correlated: n=778 and n=100 fail, n=2000 and
-    # n=8523 happen to pass) for real segment sizes. 1.0 Hz sidesteps this
-    # entirely (n/1.0 is always exact for any integer n). The true interval
-    # (CHRONIC_SAMPLING_INTERVAL, 600s/sample) is recorded in ieeg.json's
-    # SamplingFrequencyMultiplier so a consumer reading the raw EDF
-    # directly (bypassing our sidecar) isn't fooled into thinking this is
-    # real 1 Hz data - every declared "1 second" of file time is really
-    # CHRONIC_SAMPLING_INTERVAL real seconds.
-    edf_sfreq = 1.0
     start = datetime.datetime.fromtimestamp(recording["StartTime"], tz=datetime.timezone.utc)
-    signals = []
-    for i, short_name in enumerate(ch_names):
-        orig_name = original_names[short_name]
-        unit = units_by_original_name.get(orig_name, "n/a")
-        signals.append(EdfSignal(
-            data[:, i], sampling_frequency=edf_sfreq, label=short_name,
-            physical_dimension="" if unit == "n/a" else unit,
-        ))
-
     missing = recording["Missing"]
     any_missing = np.any(np.asarray(missing) > 0, axis=1) | sentinel_missing
-    # Annotation onset/duration are positions on the file's OWN declared
-    # timeline (nominal seconds, one per sample) - not real seconds, same
-    # reasoning as edf_sfreq above.
-    gap_annotations = _missing_annotations(any_missing, edf_sfreq)
-    edf_annotations = [
-        EdfAnnotation(onset, duration, "BAD_missing")
-        for onset, duration in zip(gap_annotations.onset, gap_annotations.duration)
-    ] if gap_annotations is not None else None
-
-    edf = Edf(
-        signals, data_record_duration=1.0 / edf_sfreq, starttime=start.time(),
-        recording=EdfRecording(startdate=start.date()), annotations=edf_annotations,
-    )
 
     bids_path = BIDSPath(subject=subject, session=session, task="ChronicLFP",
                           run=run, datatype="ieeg", root=bids_root)
-    edf_path = bids_path.copy().update(suffix="ieeg", extension=".edf")
-    os.makedirs(os.path.dirname(edf_path.fpath), exist_ok=True)
-    edf.write(edf_path.fpath)
+    units = [units_by_original_name.get(original_names[name], "n/a") for name in ch_names]
+
+    if IEEG_FORMAT == "EDF":
+        edf_sfreq = 1.0
+        gap_annotations = _missing_annotations(any_missing, edf_sfreq)
+        edf_annotations = [
+            EdfAnnotation(onset, duration, "BAD_missing")
+            for onset, duration in zip(gap_annotations.onset, gap_annotations.duration)
+        ] if gap_annotations is not None else None
+        signals = [
+            EdfSignal(
+                data[:, i], sampling_frequency=edf_sfreq, label=ch_names[i],
+                physical_dimension="" if units[i] == "n/a" else units[i],
+            ) for i in range(len(ch_names))
+        ]
+        edf = Edf(
+            signals, data_record_duration=1.0 / edf_sfreq, starttime=start.time(),
+            recording=EdfRecording(startdate=start.date()), annotations=edf_annotations,
+        )
+        data_path = bids_path.copy().update(suffix="ieeg", extension=".edf")
+        os.makedirs(os.path.dirname(data_path.fpath), exist_ok=True)
+        edf.write(data_path.fpath)
+        recording_type = "discontinuous" if edf_annotations else "continuous"
+    else:
+        gap_annotations = _missing_annotations(any_missing, sfreq)
+        # pybv's marker onset/duration are in SAMPLES, not seconds - onset*
+        # sfreq/duration*sfreq exactly recovers the slot indices
+        # _missing_annotations computed them from (sfreq is small enough
+        # here that this round-trips exactly, not just approximately).
+        events = [
+            {"onset": int(round(onset * sfreq)), "duration": max(int(round(duration * sfreq)), 1),
+             "description": "BAD_missing", "type": "Comment", "channels": "all"}
+            for onset, duration in zip(gap_annotations.onset, gap_annotations.duration)
+        ] if gap_annotations is not None else None
+        data_path = bids_path.copy().update(suffix="ieeg", extension=".eeg")
+        os.makedirs(os.path.dirname(data_path.fpath), exist_ok=True)
+        with warnings.catch_warnings():
+            # pybv warns that non-"µV" units aren't in the BrainVision spec
+            # - expected here (LFP trend/mA/s aren't voltage) and harmless,
+            # see write_ieeg_recording's docstring for the same non-issue
+            # verified via a direct round-trip check.
+            warnings.simplefilter("ignore")
+            write_brainvision(
+                data=data.T, sfreq=sfreq, ch_names=ch_names, fname_base=data_path.basename[: -len(".eeg")],
+                folder_out=os.path.dirname(data_path.fpath), overwrite=True, events=events,
+                unit=units, meas_date=start,
+            )
+        recording_type = "discontinuous" if events else "continuous"
 
     duration_s = (len(data) - 1) / sfreq if len(data) > 1 else 0.0
     sidecar = {
@@ -1051,16 +1125,10 @@ def write_chronic_lfp_recording(bids_root, subject, session, activity, run, devi
         "TaskName": "ChronicLFP",
         "Manufacturer": "Medtronic",
         "PowerLineFrequency": POWER_LINE_FREQUENCY_HZ,
-        "SamplingFrequency": sfreq,  # the TRUE rate - the EDF itself is declared at 1 Hz, see below
-        # The EDF's own internally-declared rate is a nominal 1 Hz, not this
-        # true SamplingFrequency (see write_chronic_lfp_recording's
-        # docstring) - multiply any second-based offset read directly off
-        # the raw EDF (bypassing this sidecar) by this factor to get real
-        # elapsed seconds.
-        "SamplingFrequencyMultiplier": CHRONIC_SAMPLING_INTERVAL,
+        "SamplingFrequency": sfreq,
         "SoftwareFilters": "n/a",
         "RecordingDuration": duration_s,
-        "RecordingType": "discontinuous" if edf_annotations else "continuous",
+        "RecordingType": recording_type,
         "iEEGReference": "n/a",
         "ECOGChannelCount": 0, "SEEGChannelCount": 0, "EEGChannelCount": 0,
         "EOGChannelCount": 0, "ECGChannelCount": 0, "EMGChannelCount": 0,
@@ -1069,6 +1137,14 @@ def write_chronic_lfp_recording(bids_root, subject, session, activity, run, devi
         # the start here rather than reassigned after the fact.
         "MiscChannelCount": len(ch_names), "TriggerChannelCount": 0,
     }
+    if IEEG_FORMAT == "EDF":
+        # The EDF's own internally-declared rate is a nominal 1 Hz, not
+        # this true SamplingFrequency (see this function's docstring) -
+        # multiply any second-based offset read directly off the raw EDF
+        # (bypassing this sidecar) by this factor to get real elapsed
+        # seconds. Not needed/not written in BrainVision mode - that file
+        # is already declared at the true rate directly.
+        sidecar["SamplingFrequencyMultiplier"] = CHRONIC_SAMPLING_INTERVAL
     if device and device.get("model"):
         sidecar["ManufacturersModelName"] = device["model"]
     if device and device.get("serial_hash"):
@@ -1084,7 +1160,7 @@ def write_chronic_lfp_recording(bids_root, subject, session, activity, run, devi
         "low_cutoff": 0.0, "high_cutoff": nyquist,
         "description": "Chronic BrainSense LFP trend", "sampling_frequency": sfreq,
         "status": "good", "status_description": "n/a",
-        "OriginalName": original_names[ch_names[i]],
+        **({"OriginalName": original_names[ch_names[i]]} if IEEG_FORMAT == "EDF" else {}),
     } for i in range(len(ch_names))]
     channels_path = bids_path.copy().update(suffix="channels", extension=".tsv").fpath
     pd.DataFrame(channels_rows).to_csv(channels_path, sep="\t", index=False, na_rep="n/a")
@@ -1095,22 +1171,22 @@ def write_chronic_lfp_recording(bids_root, subject, session, activity, run, devi
             for col in channels_rows[0].keys()
         }, fid, indent=2)
 
-    _write_chronic_scans_row(bids_path, edf_path, start, recording)
+    _write_chronic_scans_row(bids_path, data_path, start, recording)
 
     return bids_path
 
 
-def _write_chronic_scans_row(bids_path, edf_path, start, recording):
-    """Creates or updates one scans.tsv row for edf_path. Unlike
+def _write_chronic_scans_row(bids_path, data_path, start, recording):
+    """Creates or updates one scans.tsv row for data_path. Unlike
     write_ieeg_recording()'s scans.tsv patch (which only ever updates a row
     write_raw_bids() already created), write_chronic_lfp_recording() never
     calls write_raw_bids() at all - this has to create the row (and the
     file itself, for a chronic-only session with no other ieeg/ recording)
     from scratch as easily as it updates one."""
-    scans_path = edf_path.copy().update(
+    scans_path = data_path.copy().update(
         datatype=None, task=None, run=None, suffix="scans", extension=".tsv"
     ).fpath
-    row_filename = f"{edf_path.datatype}/{edf_path.basename}"
+    row_filename = f"{data_path.datatype}/{data_path.basename}"
     if os.path.exists(scans_path):
         # Same dtype=str/keep_default_na=False reasoning as
         # write_ieeg_recording's scans.tsv patch - our own na_rep="n/a"
@@ -1895,19 +1971,31 @@ def demo():
             impedance_measurements=impedance_measurements, device=device, annotations=annotations,
             electrode_info=electrode_info,
         )
+        # IEEG_FORMAT-dependent file layout: BrainVision's data file is
+        # .eeg but needs the separate .vhdr header for mne to read it back;
+        # EDF is both the data AND the thing mne reads directly.
+        ieeg_data_ext = ".edf" if IEEG_FORMAT == "EDF" else ".eeg"
+        ieeg_header_ext = ".edf" if IEEG_FORMAT == "EDF" else ".vhdr"
+        read_raw_ieeg = mne.io.read_raw_edf if IEEG_FORMAT == "EDF" else mne.io.read_raw_brainvision
+
         written = sorted(os.listdir(bids_root))
         assert "dataset_description.json" in written, "dataset_description.json missing"
         assert "participants.tsv" in written, "participants.tsv missing"
         assert len(paths) == 4, f"expected 4 continuous recordings written (TD, Power, IndefiniteStream, ChronicLFP), got {len(paths)}"
         for path in paths:
-            assert os.path.exists(path.fpath), f"EDF file was not actually written to disk: {path.fpath}"
+            data_file = path.copy().update(suffix="ieeg", extension=ieeg_data_ext).fpath
+            assert os.path.exists(data_file), f"{IEEG_FORMAT} data file was not actually written to disk: {data_file}"
 
         power_path = next(p for p in paths if p.acquisition == "Power")
-        raw = mne.io.read_raw_edf(power_path.fpath, preload=True, verbose=False)
-        readback_max = raw.get_data()[0].max() * 1e6  # undo mne's internal Volts assumption
+        raw = read_raw_ieeg(
+            power_path.copy().update(suffix="ieeg", extension=ieeg_header_ext).fpath, preload=True, verbose=False
+        )
+        # EDF mode pre-scales by 1e-6 before writing (to cancel mne/edfio's
+        # own internal x1e6) so reading back needs the inverse; BrainVision
+        # applies neither - see write_ieeg_recording's docstring.
+        readback_max = raw.get_data()[0].max() * (1e6 if IEEG_FORMAT == "EDF" else 1)
         assert 10000 < readback_max < 11000, (
-            f"Power-domain value round-tripped wrong: expected ~10831, got {readback_max} "
-            "- the EDF physical-range scale-cancellation bug is back"
+            f"Power-domain value round-tripped wrong: expected ~10831, got {readback_max}"
         )
 
         power_channels_path = str(power_path.copy().update(suffix="channels", extension=".tsv").fpath)
@@ -1931,29 +2019,53 @@ def demo():
             assert "impedance" not in fid.readline(), "electrodes.tsv should no longer carry an impedance column"
 
         chronic_path = next(p for p in paths if p.task == "ChronicLFP")
-        assert os.path.exists(chronic_path.fpath), "ChronicLFP ieeg.edf missing"
-        chronic_raw = mne.io.read_raw_edf(chronic_path.fpath, preload=False, verbose=False)
-        assert chronic_raw.info["sfreq"] == 1.0, (
-            f"ChronicLFP EDF should be declared at a nominal 1 Hz (real rate lives in ieeg.json's "
-            f"SamplingFrequency/SamplingFrequencyMultiplier, not the EDF header), got {chronic_raw.info['sfreq']}"
-        )
+        chronic_data_path = chronic_path.copy().update(suffix="ieeg", extension=ieeg_header_ext)
+        assert os.path.exists(chronic_data_path.fpath), f"ChronicLFP ieeg{ieeg_header_ext} missing"
+        chronic_raw = read_raw_ieeg(chronic_data_path.fpath, preload=False, verbose=False)
+        if IEEG_FORMAT == "EDF":
+            assert chronic_raw.info["sfreq"] == 1.0, (
+                f"EDF mode: ChronicLFP should be declared at a nominal 1 Hz (real rate lives in ieeg.json's "
+                f"SamplingFrequency/SamplingFrequencyMultiplier, not the EDF header), got {chronic_raw.info['sfreq']}"
+            )
+        else:
+            assert abs(chronic_raw.info["sfreq"] - 1 / 600) < 1e-9, (
+                f"BrainVision mode: ChronicLFP should be declared at its true 1/600 Hz rate directly (no "
+                f"EDF-style data-record-duration constraint forcing a nominal rate), got {chronic_raw.info['sfreq']}"
+            )
         with open(chronic_path.copy().update(suffix="ieeg", extension=".json").fpath) as fid:
             chronic_sidecar = json.load(fid)
         assert abs(chronic_sidecar["SamplingFrequency"] - 1 / 600) < 1e-9, (
             f"ieeg.json SamplingFrequency should report the true 1/600 Hz rate, got {chronic_sidecar['SamplingFrequency']}"
         )
-        assert chronic_sidecar["SamplingFrequencyMultiplier"] == 600, (
-            f"SamplingFrequencyMultiplier should be 600 (real seconds per EDF-declared 'second'), got {chronic_sidecar.get('SamplingFrequencyMultiplier')}"
-        )
+        if IEEG_FORMAT == "EDF":
+            assert chronic_sidecar.get("SamplingFrequencyMultiplier") == 600, (
+                f"EDF mode needs SamplingFrequencyMultiplier=600 (real seconds per EDF-declared 'second'), "
+                f"got {chronic_sidecar.get('SamplingFrequencyMultiplier')}"
+            )
+        else:
+            assert "SamplingFrequencyMultiplier" not in chronic_sidecar, (
+                "SamplingFrequencyMultiplier is an EDF-mode-only field - BrainVision writes the true rate "
+                "directly and doesn't need it"
+            )
         chronic_channels_path = str(chronic_path.copy().update(suffix="channels", extension=".tsv").fpath)
         chronic_channels_df = pd.read_csv(chronic_channels_path, sep="\t")
-        assert set(chronic_channels_df["name"]) == {"RH LFP", "RH Amp", "TimeError"}, (
-            f"ChronicLFP channel names should be word-abbreviated (RightHemisphere->RH, Amplitude->Amp) "
-            f"plus the shared TimeError channel, got {chronic_channels_df['name'].tolist()!r}"
-        )
-        assert set(chronic_channels_df["OriginalName"]) == {"RightHemisphere LFP", "RightHemisphere Amplitude", "TimeError"}, (
-            f"ChronicLFP channels.tsv OriginalName should hold the raw device spelling, got {chronic_channels_df['OriginalName'].tolist()!r}"
-        )
+        if IEEG_FORMAT == "EDF":
+            assert set(chronic_channels_df["name"]) == {"RH LFP", "RH Amp", "TimeError"}, (
+                f"EDF mode: channel names should be word-abbreviated (RightHemisphere->RH, Amplitude->Amp) "
+                f"plus the shared TimeError channel, got {chronic_channels_df['name'].tolist()!r}"
+            )
+            assert set(chronic_channels_df["OriginalName"]) == {"RightHemisphere LFP", "RightHemisphere Amplitude", "TimeError"}, (
+                f"EDF mode: OriginalName should hold the raw device spelling, got {chronic_channels_df['OriginalName'].tolist()!r}"
+            )
+        else:
+            assert set(chronic_channels_df["name"]) == {"RightHemisphere LFP", "RightHemisphere Amplitude", "TimeError"}, (
+                f"BrainVision mode has no channel-name length limit - name should be the real unabbreviated "
+                f"device spelling, not shortened, got {chronic_channels_df['name'].tolist()!r}"
+            )
+            assert "OriginalName" not in chronic_channels_df.columns, (
+                "OriginalName would just duplicate 'name' in BrainVision mode (nothing was shortened) - "
+                "should not be written"
+            )
         assert "ClinicalName" not in chronic_channels_df.columns, (
             "ChronicLFP channels.tsv should not have a ClinicalName column"
         )
@@ -1970,18 +2082,18 @@ def demo():
         # sample 10's own actual time), then 0 everywhere else - NOT a
         # lasting +4.5 offset propagating through the rest of the segment,
         # which is what the single-fixed-anchor version used to do.
-        assert abs(time_error_values[10] - 4.5) < 1e-6, (
+        # EDF's 16-bit digitization over TimeError's [-4.5, 4.5] range
+        # leaves a ~1e-4s quantization residual even at "true zero" -
+        # BrainVision's true float32 has no such fixed-range quantization.
+        near_zero_tol = 1e-3 if IEEG_FORMAT == "EDF" else 1e-5
+        assert abs(time_error_values[10] - 4.5) < near_zero_tol, (
             f"expected +4.5 at the nudged sample, got {time_error_values[10]}"
         )
-        assert abs(time_error_values[11] - (-4.5)) < 1e-6, (
+        assert abs(time_error_values[11] - (-4.5)) < near_zero_tol, (
             f"expected the NEXT reading to show -4.5 (back on the original grid, measured against sample "
             f"10's own actual +4.5 time) - got {time_error_values[11]}, drift didn't reset"
         )
-        # EDF stores physical values as 16-bit integers scaled to the
-        # channel's own physical range - with TimeError's range here
-        # spanning just [-4.5, 4.5], that digitization leaves a ~1e-4s
-        # quantization residual even at "true zero", not exact 0.0.
-        assert np.all(np.abs(time_error_values[12:]) < 1e-3), (
+        assert np.all(np.abs(time_error_values[12:]) < near_zero_tol), (
             "TimeError should return to ~0 after the single nudged reading - a lasting nonzero tail means "
             "the error is compounding again instead of being a local per-reading residual"
         )
@@ -2033,12 +2145,19 @@ def demo():
 
         td_channels_df = pd.read_csv(td_path.copy().update(suffix="channels", extension=".tsv").fpath, sep="\t")
         assert ieeg_sidecar["metadata"]["ChannelNames"] == td_channels_df["name"].tolist(), (
-            f"ieeg.json metadata.ChannelNames should be remapped to the shortened channels.tsv names, "
+            f"ieeg.json metadata.ChannelNames should match channels.tsv's names exactly (remapped through "
+            f"shortening in EDF mode, unchanged in BrainVision mode), "
             f"got {ieeg_sidecar['metadata']['ChannelNames']!r} vs channels.tsv names {td_channels_df['name'].tolist()!r}"
         )
-        assert ieeg_sidecar["metadata"]["ChannelNames"] != ["ZERO_AND_THREE_RIGHT_RING"], (
-            "metadata.ChannelNames still holds the raw >16-char name - shortening wasn't applied"
-        )
+        if IEEG_FORMAT == "EDF":
+            assert ieeg_sidecar["metadata"]["ChannelNames"] != ["ZERO_AND_THREE_RIGHT_RING"], (
+                "EDF mode: metadata.ChannelNames still holds the raw >16-char name - shortening wasn't applied"
+            )
+        else:
+            assert ieeg_sidecar["metadata"]["ChannelNames"] == ["ZERO_AND_THREE_RIGHT_RING"], (
+                f"BrainVision mode has no channel-name length limit - the raw >16-char name should pass "
+                f"through unchanged, got {ieeg_sidecar['metadata']['ChannelNames']!r}"
+            )
 
         td_events_path = td_path.copy().update(suffix="events", extension=".tsv").fpath
         assert os.path.exists(td_events_path), "TD run has a Missing gap - should have written an events.tsv"
@@ -2065,7 +2184,8 @@ def demo():
         dead_channel_channels_df = pd.read_csv(
             dead_channel_path.copy().update(suffix="channels", extension=".tsv").fpath, sep="\t"
         )
-        assert list(dead_channel_channels_df["name"]) == ["1_3_L"], (
+        expected_surviving_name = "1_3_L" if IEEG_FORMAT == "EDF" else "ONE_THREE_LEFT"
+        assert list(dead_channel_channels_df["name"]) == [expected_surviving_name], (
             f"the all-NaN ZERO_TWO_LEFT channel should have been dropped, not crashed or kept, "
             f"got {dead_channel_channels_df['name'].tolist()!r}"
         )
@@ -2074,7 +2194,7 @@ def demo():
         chronic_max = chronic_raw.get_data()[0].max()
         assert chronic_max < 1000, (
             f"the injected 143377008 device-glitch value should have been masked/ffilled, not written "
-            f"through to the EDF (chronic_max={chronic_max})"
+            f"through to the output file (chronic_max={chronic_max})"
         )
 
         empty_sessions_path = os.path.join(bids_root, "sub-EMPTYTEST", "sub-EMPTYTEST_sessions.tsv")

@@ -110,7 +110,9 @@ class GatherAndConvertTest(TestCase):
             bids_root = os.path.join(scratch_dataserver_path, "BIDS")
             ieeg_dir = os.path.join(bids_root, "sub-001", f"ses-{date_label}", "ieeg")
             self.assertTrue(os.path.isdir(ieeg_dir), f"expected session output at {ieeg_dir}")
-            self.assertTrue(any(f.endswith("_ieeg.edf") for f in os.listdir(ieeg_dir)))
+            from modules.BIDSExport.Convert import IEEG_FORMAT
+            data_ext = "_ieeg.edf" if IEEG_FORMAT == "EDF" else "_ieeg.eeg"
+            self.assertTrue(any(f.endswith(data_ext) for f in os.listdir(ieeg_dir)))
 
             sessions_tsv = os.path.join(bids_root, "sub-001", "sub-001_sessions.tsv")
             with open(sessions_tsv) as fid:
@@ -165,13 +167,18 @@ class GatherAndConvertTest(TestCase):
         same in-memory values Gather pulled from the DB - not just checking
         that files exist.
 
-        EDF itself is a lossy 16-bit format, so continuous recordings are
-        compared within one quantization step, not bit-exact. Everything
-        else (electrodes.tsv, TherapyHistory beh.tsv) is plain TSV/JSON with
-        no lossy encoding, so those are checked for exact equality."""
+        Compared against the tolerance appropriate for whichever format
+        IEEG_FORMAT selects: BrainVision (32-bit float, no fixed digital
+        range - the default) is effectively lossless for real-world
+        magnitudes, checked with a tight relative tolerance for float32
+        rounding; EDF (16-bit integer, fixed per-channel physical range)
+        needs a wider tolerance sized to that channel's own quantization
+        step. Everything else (electrodes.tsv, TherapyHistory beh.tsv) is
+        plain TSV/JSON with no lossy encoding, so those are checked for
+        exact equality regardless of IEEG_FORMAT."""
         import mne
 
-        from modules.BIDSExport.Convert import CONTINUOUS_TYPES, convert_participant
+        from modules.BIDSExport.Convert import CONTINUOUS_TYPES, IEEG_FORMAT, convert_participant
 
         source_file = self._ingest_sample()
         # Gather.gather_session() re-queries Recording rows with no explicit
@@ -191,33 +198,54 @@ class GatherAndConvertTest(TestCase):
             self.assertEqual(len(mapped_entries), len(written_paths))
 
             for entry, path in zip(mapped_entries, written_paths):
-                original = np.asarray(entry["recording"]["Data"], dtype=float) * 1e-6
+                original = np.asarray(entry["recording"]["Data"], dtype=float)
 
-                raw = mne.io.read_raw_edf(path.fpath, preload=True, verbose=False)
+                if IEEG_FORMAT == "EDF":
+                    # EDF mode pre-scales by 1e-6 before writing (cancels
+                    # mne/edfio's internal x1e6) - see write_ieeg_recording's
+                    # docstring.
+                    original = original * 1e-6
+                    raw = mne.io.read_raw_edf(
+                        path.copy().update(suffix="ieeg", extension=".edf").fpath, preload=True, verbose=False
+                    )
+                else:
+                    raw = mne.io.read_raw_brainvision(
+                        path.copy().update(suffix="ieeg", extension=".vhdr").fpath, preload=True, verbose=False
+                    )
                 readback = raw.get_data().T
-
-                # EDF pads the final data record up to a whole second by
-                # holding the last real sample constant - see the
-                # "EDF pads the tail" gotcha in docs/BIDS_MAPPING.md. Verify
-                # readback is only ever longer by less than one second, and
-                # check the real (unpadded) samples head-to-head.
                 n_original = original.shape[0]
-                self.assertGreaterEqual(readback.shape[0], n_original, f"real samples missing in {path.fpath}")
-                self.assertLess(readback.shape[0] - n_original, entry["recording"]["SamplingRate"],
-                                 f"more than one second of unexplained padding in {path.fpath}")
 
-                # EDF digitizes each channel to 16 bits over its own min/max range.
-                per_channel_step = (np.nanmax(original, axis=0) - np.nanmin(original, axis=0)) / 65535
-                atol = np.maximum(per_channel_step, 1e-12) * 2  # x2 safety margin for rounding
-                np.testing.assert_allclose(
-                    readback[:n_original], original, atol=atol.max(), rtol=0,
-                    err_msg=f"{entry['type']} values drifted past EDF quantization tolerance in {path.fpath}",
-                )
-                if readback.shape[0] > n_original:
-                    padding = readback[n_original:]
+                if IEEG_FORMAT == "EDF":
+                    # EDF pads the final data record up to a whole second by
+                    # holding the last real sample constant - see the
+                    # "EDF pads the tail" gotcha in docs/BIDS_MAPPING.md.
+                    self.assertGreaterEqual(readback.shape[0], n_original, f"real samples missing in {path.fpath}")
+                    self.assertLess(readback.shape[0] - n_original, entry["recording"]["SamplingRate"],
+                                     f"more than one second of unexplained padding in {path.fpath}")
+                    # EDF digitizes each channel to 16 bits over its own min/max range.
+                    per_channel_step = (np.nanmax(original, axis=0) - np.nanmin(original, axis=0)) / 65535
+                    atol = np.maximum(per_channel_step, 1e-12) * 2  # x2 safety margin for rounding
                     np.testing.assert_allclose(
-                        padding, np.broadcast_to(original[-1], padding.shape), atol=atol.max(), rtol=0,
-                        err_msg=f"EDF tail padding in {path.fpath} isn't a constant hold of the last real sample",
+                        readback[:n_original], original, atol=atol.max(), rtol=0,
+                        err_msg=f"{entry['type']} values drifted past EDF quantization tolerance in {path.fpath}",
+                    )
+                    if readback.shape[0] > n_original:
+                        padding = readback[n_original:]
+                        np.testing.assert_allclose(
+                            padding, np.broadcast_to(original[-1], padding.shape), atol=atol.max(), rtol=0,
+                            err_msg=f"EDF tail padding in {path.fpath} isn't a constant hold of the last real sample",
+                        )
+                else:
+                    # BrainVision has no EDF-style "data record" duration to
+                    # pad to - verified directly (777-sample write
+                    # round-trips to exactly 777) - so sample counts should
+                    # match exactly. float32 storage, no fixed digital
+                    # range - a tight relative tolerance is the right check,
+                    # not a per-channel quantization-step allowance.
+                    self.assertEqual(readback.shape[0], n_original, f"sample count mismatch in {path.fpath}")
+                    np.testing.assert_allclose(
+                        readback, original, rtol=1e-4, atol=1e-8,
+                        err_msg=f"{entry['type']} values drifted past float32 rounding tolerance in {path.fpath}",
                     )
 
             electrodes_path = next(
