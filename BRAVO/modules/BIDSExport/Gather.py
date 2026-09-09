@@ -313,7 +313,7 @@ def _subject_label(bids_root, participant_uid):
             mapping[participant_uid] = max(mapping.values(), default=0) + 1
             with open(map_path, "w") as fid:
                 json.dump(mapping, fid, indent=2)
-        return f"{mapping[participant_uid]:03d}"
+        return f"{mapping[participant_uid]:04d}"
 
 
 def gather_and_convert(bids_root, source_file, subject=None, session="01"):

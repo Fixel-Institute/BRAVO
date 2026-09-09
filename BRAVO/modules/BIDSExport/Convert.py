@@ -221,7 +221,11 @@ def upsert_participant(bids_root, subject, age, sex, diagnosis):
             df = df.reindex(columns=_PARTICIPANTS_COLUMNS)
         else:
             df = pd.DataFrame(columns=_PARTICIPANTS_COLUMNS)
-        df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+
+        data_list = df.to_dict(orient='records')
+        data_list.append(row)
+        df = pd.DataFrame(data_list).reindex(columns=_PARTICIPANTS_COLUMNS)
+        #df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
         df.to_csv(path, sep="\t", index=False, na_rep="n/a")
 
     json_path = path.replace(".tsv", ".json")
