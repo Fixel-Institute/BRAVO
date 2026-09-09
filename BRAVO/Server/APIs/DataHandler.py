@@ -111,7 +111,7 @@ class DataUploadHandler(RestViews.APIView):
                     source_file.metadata = {**source_file.metadata, **{"device_location": "", "infer_from_device": True}}
                     DataCurator.AlphaOmegaMPXDecoder(source_file, person=source_file.owner, name=request.data["File"].name)
                 elif source_file.pointer.endswith(".mdat"):
-                    DataCurator.UFMDATv2Decoder(source_file, person=source_file.owner)
+                    DataCurator.UFMDATv3Decoder(source_file, person=source_file.owner)
                 elif source_file.pointer.endswith(".mat"):
                     DataCurator.MATFileDecoder(source_file, person=source_file.owner)
                 else:
@@ -261,6 +261,24 @@ class DataUploadHandler(RestViews.APIView):
             
             try:
                 DataCurator.UFMDATv2Decoder(source_file, person)
+            except Exception as e:
+                print(request.data["File"].name)
+                print(traceback.format_exc())
+                source_file.delete()
+                return Response(status=400, data={"message": str(e)})
+
+        elif request.data["DataType"] == "UFMDATv3":
+            person = models.Participant.find(uid=request.data["ParticipantId"])
+            if not person:
+                return Response(status=400, data={"message": "Participant not found."})
+            
+            if not person.institute.uid == institute.uid:
+                return Response(status=403)
+            source_file.owner = person
+            source_file.save()
+            
+            try:
+                DataCurator.UFMDATv3Decoder(source_file, person)
             except Exception as e:
                 print(request.data["File"].name)
                 print(traceback.format_exc())
@@ -610,13 +628,18 @@ class RecordingTimeShiftHandler(RestViews.APIView):
             Recording = models.Recording.objects.filter(uid=request.data["RecordingId"]).first()
             if not Recording.source.owner.uid == request.data["ParticipantId"]:
                 return Response(status=403)
-            
-            try:
-                Recording.adjusted_alignment = float(request.data["Alignment"])
-                Recording.save()
-            except:
-                return Response(status=400, data={"message": "Time Alignment is not valid"})
 
+            if Recording.type in ["SynchronizedMDAT", "CustomizedStreamingData", "CustomizedTimelineData", "ExternalSensorStreaming"]:
+                related_recordings = models.Recording.find_all(source=Recording.source)
+            else:
+                related_recordings = [Recording]
+                
+            for rec in related_recordings:
+                try:
+                    rec.adjusted_alignment = float(request.data["Alignment"])
+                    rec.save()
+                except:
+                    return Response(status=400, data={"message": "Time Alignment is not valid"})
 
         return Response(status=200)
 

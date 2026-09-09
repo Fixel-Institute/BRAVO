@@ -37,7 +37,7 @@ from Server import models
 from modules.NeuroPace.PersystDecoder import parsePersystRecording
 from modules.MedtronicPercept.Session import decodeMedtronicJSON
 from modules.ExternalDevices.DelsysTrigno import decodeMDATData, decodeHPFCSVData
-from modules.ExternalDevices.BRAVOfflineWinUI import decodeMDATv2
+from modules.ExternalDevices.BRAVOfflineWinUI import decodeMDATv2, decodeMDATv3
 from modules.ExternalDevices.MATLAB import decodeMATLABFile
 from modules.ExternalDevices.BRAVORecordingStructure import decodebdata
 from modules.AlphaOmega.MPX import extractAlphaOmegaRecordings
@@ -654,6 +654,67 @@ def UFMDATDecoder(source_file, person):
 def UFMDATv2Decoder(source_file, person):
     rawBytes = loadCacheFile(source_file)
     TrignoData = decodeMDATv2(rawBytes)
+
+    def CommonName(nameList):
+        commonNames = []
+        allSubString = nameList[0].split(" ")
+        for i in range(len(allSubString)):
+            Found = True
+            for j in range(len(nameList)):
+                if not allSubString[i] in nameList[j].split(" "):
+                    Found = False
+            if Found:
+                commonNames.append(allSubString[i])
+        return commonNames
+    
+    try:
+        SourceFilename = source_file.name.replace(source_file.name[source_file.name.index("["):source_file.name.index("]")+1], "").replace(".mdat","")
+    except Exception as e:
+        SourceFilename = ""
+
+    for ProcessedData in TrignoData:
+        recording = models.Recording(**{
+            "name": SourceFilename, "type": "SynchronizedMDAT", "date": ProcessedData["StartTime"], "metadata": {
+                "SensorType": ("_".join(CommonName(ProcessedData["ChannelNames"]))),
+                "Duration": ProcessedData["Duration"],
+                "ChannelNames": ProcessedData["ChannelNames"]
+            }
+        }, source=source_file)
+        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__Uploader=source_file.metadata["Uploader"]):
+            recording.delete()
+            continue
+
+        filename = DATABASE_PATH + "recordings" + os.path.sep + person.uid + os.path.sep + recording.uid + ".bdat"
+        hashed = Database.saveSourceFile(ProcessedData, filename)
+        # TODO: Error handling
+        if not hashed:
+            print("Hashing Failed for Data Storage")
+            print(recording.__dict__)
+            continue 
+        if models.Recording.include(hashed=hashed, source__owner=person):
+            recording.delete()
+        else:
+            recording.pointer = filename
+            recording.hashed = hashed
+            recording.save()
+
+    os.makedirs(DATABASE_PATH + "raws" + os.path.sep + person.uid, exist_ok=True)
+    shutil.move(source_file.pointer, DATABASE_PATH + "raws" + os.path.sep + person.uid + os.path.sep + source_file.uid + ".mdat")
+    source_file.pointer = DATABASE_PATH + "raws" + os.path.sep + person.uid + os.path.sep + source_file.uid + ".mdat"
+    source_file.metadata["Timezone"] = ""
+    source_file.metadata["Device"] = ""
+    source_file.owner = person
+    source_file.save()
+
+    person.last_update = models.current_time()
+    person.save()
+    
+    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__Participant=person.uid)
+    return True
+
+def UFMDATv3Decoder(source_file, person):
+    rawBytes = loadCacheFile(source_file)
+    TrignoData = decodeMDATv3(rawBytes)
 
     def CommonName(nameList):
         commonNames = []
