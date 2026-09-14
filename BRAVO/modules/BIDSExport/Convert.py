@@ -1366,14 +1366,25 @@ def _clamp_onset(onset, onset_bounds):
     per-visit point-in-time readouts get clamped (therapy, impedance,
     events, annotations) - continuous device-timestamped trends
     (ChronicLFP) aren't duplicated per-visit the same way, so they're left
-    alone."""
+    alone.
+
+    An out-of-bound onset is squashed toward the bound with log1p rather
+    than pinned to it outright: log1p is strictly increasing, so distinct
+    raw onsets stay distinct and correctly ordered (just compressed close
+    to the bound) instead of collapsing onto one indistinguishable value
+    when a device reports many stale readouts predating the previous
+    visit. Being a pure function of one onset at a time, it also agrees
+    automatically between tables built from the same source rows at
+    different granularities (e.g. therapy_history_dataframe and
+    therapy_adaptive_dataframe both deriving onset from `therapies`),
+    which independently-ranking a batch would not."""
     if onset_bounds is None:
         return onset
     lower, upper = onset_bounds
     if upper is not None and onset > upper:
-        onset = upper
+        onset = upper + np.log1p(onset - upper)
     if lower is not None and onset < lower:
-        onset = lower
+        onset = lower - np.log1p(lower - onset)
     return onset
 
 

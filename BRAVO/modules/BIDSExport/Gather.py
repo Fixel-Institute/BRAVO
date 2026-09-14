@@ -340,6 +340,31 @@ def _local_date_and_time(timestamp, timezone_offset):
     return local.strftime("%Y%m%d"), local.strftime("%Y-%m-%dT%H:%M:%S")
 
 
+def _record_key(record):
+    """A device-reported therapy/event/impedance record re-sent on a later
+    upload carries a new source_id but is otherwise identical to the one
+    already exported for an earlier visit -- key on everything except
+    source_id so export_participant() recognizes the repeat and drops it,
+    rather than it re-appearing in every subsequent session."""
+    return json.dumps({k: v for k, v in record.items() if k != "source_id"}, sort_keys=True, default=str)
+
+
+def _dedupe(records, seen):
+    """Keep only records not already seen in an earlier session of this
+    same export run. `seen` is mutated with the surviving records' keys, so
+    passing the same set across consecutive calls (one per session, in
+    chronological order) also catches a duplicate re-sent two sessions
+    later, not just the immediately preceding one."""
+    kept = []
+    for record in records:
+        key = _record_key(record)
+        if key in seen:
+            continue
+        seen.add(key)
+        kept.append(record)
+    return kept
+
+
 def gather_day(source_files):
     """source_files: every SourceFile upload sharing one local calendar
     date for one participant (see export_participant()), oldest first.
@@ -520,13 +545,16 @@ def export_participant(participant_uid):
     exported = []
     session_rows = []
     device_rows = []
-    # Bounds each session's beh.tsv rows to [end of the previous session, end
-    # of this session] (see Convert.py's _clamp_onset()) - a device-reported
-    # "Past Therapy" readout gets re-included in every visit's upload, so
-    # without this a stale duplicate can land with a wildly-negative onset
-    # reaching back past the actual previous visit. None on the first
-    # iteration - there's no previous session to bound against, so the very
-    # first session's rows are left unclamped on the low end.
+    # A device-reported "Past Therapy"/impedance/event readout gets re-sent
+    # in full on every visit's upload, so the same real-world record would
+    # otherwise reappear in every subsequent session's beh.tsv too - `seen`
+    # (keyed by _record_key(), i.e. everything but source_id) is carried
+    # across the whole loop below so each record is kept only in the first
+    # session that actually reported it, and _dedupe()'d away afterwards.
+    # `prev_session_end`/_clamp_onset() still exist for what dedup can't
+    # catch: a record that's genuinely new to this visit but whose own
+    # `date` predates the previous visit's end anyway.
+    seen = {"therapies": set(), "events": set(), "impedance_measurements": set()}
     prev_session_end = None
     last_date_label, last_participant = None, None
     for date_label in sorted(set(by_day) | set(annotation_only_days)):
@@ -534,6 +562,8 @@ def export_participant(participant_uid):
         if date_label in by_day:
             day_source_files = by_day[date_label]
             kwargs = gather_day(day_source_files)
+            for key in ("therapies", "events", "impedance_measurements"):
+                kwargs[key] = _dedupe(kwargs[key], seen[key])
             earliest = min(source_file.date for source_file in day_source_files)
             latest = max(source_file.date for source_file in day_source_files)
             timezone = day_source_files[0].metadata.get("Timezone")
