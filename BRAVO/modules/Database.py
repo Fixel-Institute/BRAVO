@@ -179,7 +179,7 @@ def extractParticipantContext(participant_uid, check_files=[], deidentified=Fals
 
     DBSDevices = models.DBSDevice.find_all(owner=Participant)
     for device in DBSDevices:
-        SourceFiles = models.SourceFile.find_all(owner=Participant, type="MedtronicJSON", metadata__Device=device.uid)
+        SourceFiles = models.SourceFile.find_all(owner=Participant, type="MedtronicJSON", metadata__contains={"Device": device.uid})
         SourceFiles = sorted(SourceFiles, key=lambda x: -x.date)
 
         TherapyModificationList = list()
@@ -434,7 +434,7 @@ def assignSourceFile(old_device_uid, new_device_uid):
         if not new_device.electrodes.filter(uid=electrode.uid).exists():
             new_device.electrodes.add(electrode)
 
-    source_files = models.SourceFile.objects.filter(metadata__Device=old_device.uid).all()
+    source_files = models.SourceFile.objects.filter(metadata__contains={"Device": old_device.uid}).all()
     for file in source_files:
         file.metadata["Device"] = new_device.uid
         file.save()

@@ -89,7 +89,7 @@ def queryTherapyHistory(Participant):
 
         for i in range(len(DBSDeviceDict[key])):
             device = DBSDeviceDict[key][i]
-            SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__Device=device.uid)
+            SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__contains={"Device": device.uid})
             TherapyHistory["History"].extend([i.get_info() for i in models.ElectricalTherapy.find_all(therapy__source__in=SourceFiles)])
             DeviceTherapyModification["History"].extend([i.get_info() for i in models.TherapyModification.find_all(source__in=SourceFiles)])
 
@@ -177,7 +177,7 @@ def queryTherapyModification(Participant):
     DBSDevices = models.DBSDevice.find_all(owner=Participant)
     TherapyModifications = []
     for device in DBSDevices:
-        SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__Device=device.uid)
+        SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__contains={"Device": device.uid})
         TherapyModification = [{**i.get_info(), **{"Device": device.uid}} for i in models.TherapyModification.find_all(source__in=SourceFiles)]
         TherapyModifications.extend(TherapyModification)
     return TherapyModifications
@@ -186,7 +186,7 @@ def queryTherapyGroups(Participant):
     DBSDevices = models.DBSDevice.find_all(owner=Participant)
     TherapyGroups = []
     for device in DBSDevices:
-        SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__Device=device.uid)
+        SourceFiles = models.SourceFile.find_all(owner=Participant, metadata__contains={"Device": device.uid})
         if len(SourceFiles) > 0:
             TherapyGroup = [{**i.get_info(), **{"Device": device.uid}} for i in models.ElectricalTherapy.find_all(therapy__source__in=SourceFiles)]
             TherapySources = np.unique([group["SourceId"] for group in TherapyGroup])
@@ -452,9 +452,10 @@ def createTherapyTimeline(TherapyHistory):
                                     if TherapyTimeline[j]["DefinedTherapies"][m]["Device"]["Id"] == device["Id"]:
                                         if TherapyTimeline[j]["DefinedTherapies"][m]["GroupId"] == key:
                                             TherapyTimeline[j]["DefinedTherapies"][m]["PercentUsage"] = DutyCycleCalculation[key]
-                            
-    if TherapyTimeline[-1]["Date"] - TherapyTimeline[-2]["Date"] < 3600*12:
-        TherapyTimeline[-1] = copy.deepcopy(TherapyTimeline[-2])
+
+    if len(TherapyTimeline) > 1:
+        if TherapyTimeline[-1]["Date"] - TherapyTimeline[-2]["Date"] < 3600*12:
+            TherapyTimeline[-1] = copy.deepcopy(TherapyTimeline[-2])
 
     return TherapyTimeline
 
@@ -566,7 +567,7 @@ def findClosestAdaptiveTherapy(timestamp, ClosestTherapy):
     return None
 
 def checkDuplicate(device, electrode, therapy):
-    AllTherapies = models.Therapy.find_all(source__metadata__Device=device.uid, type=therapy["type"], date=therapy["date"])
+    AllTherapies = models.Therapy.find_all(source__metadata__contains={"Device": device.uid}, type=therapy["type"], date=therapy["date"])
     if len(AllTherapies) == 0:
         return False
     

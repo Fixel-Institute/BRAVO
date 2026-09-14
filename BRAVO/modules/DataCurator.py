@@ -243,7 +243,7 @@ def MedtronicPerceptJSONDecoder(source_file, device=None, person=None):
     
     AllEntries = []
     for log in DatabaseEntries["TherapyChangeHistory"]:
-        if models.TherapyModification.include(date=log["date"], type=log["type"], source__metadata__Device=device.uid, owner=person):
+        if models.TherapyModification.include(date=log["date"], type=log["type"], source__metadata__contains={"Device": device.uid}, owner=person):
             continue
         AllEntries.append(models.TherapyModification(**log, source=source_file, owner=person))
     models.TherapyModification.objects.bulk_create(AllEntries)

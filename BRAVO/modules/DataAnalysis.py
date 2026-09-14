@@ -2727,6 +2727,7 @@ def queryChronicTimeline(participant_uid, config):
                     SingleTimePoint = True
                     break
 
+            Data[key] = sorted(Data[key], key=lambda x: x["StartTime"])
             if SingleTimePoint:
                 Activity = {
                     "AnalysisType": "CustomizedTimelineData",

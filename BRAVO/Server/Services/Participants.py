@@ -292,7 +292,7 @@ class DeleteDeviceInformation(RestViews.APIView):
         if not DBSDevice:
             return Response(status=403)
         
-        models.SourceFile.find_all(owner=Participant, metadata__Device=DBSDevice.uid).delete()
+        models.SourceFile.find_all(owner=Participant, metadata__contains={"Device": DBSDevice.uid}).delete()
         DBSDevice.delete()
         ParticipantInfo = Database.extractParticipantInformation(request.data["ParticipantId"])
         return Response(status=200, data=ParticipantInfo)
