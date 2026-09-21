@@ -239,6 +239,30 @@ def computeBetaBurstMetrics(data, frequency_band=[20,30], threshold=75, fs=100):
     
     return metric
 
+def getBurst(data, freq=22.5, fs=250, threshold=75):
+    if freq > 3:
+        sos = signal.butter(4, [freq-3, freq+3], btype="bandpass", fs=fs, output="sos")
+    elif freq > fs/2 - 3:
+        sos = signal.butter(4, [freq-3, fs/2-1], btype="bandpass", fs=fs, output="sos")
+    else:
+        sos = signal.butter(4, [0.5, freq+3], btype="bandpass", fs=fs, output="sos")
+    amplitude_signal = signal.sosfiltfilt(sos, data)
+    envelope = np.abs(signal.hilbert(amplitude_signal))
+    threshold_level = np.percentile(envelope, threshold)
+    above_threshold = envelope > threshold_level
+    burst_period = getMaskGroup(above_threshold)
+    return burst_period, threshold_level
+
+def getBurstParams(data, freq=22.5):
+    BurstPeriods, threshold = getBurst(data, freq=freq)
+    burst_duration_mean = np.mean([period[1]-period[0] for period in BurstPeriods]) / 250
+    burst_duration_std = np.std([period[1]-period[0] for period in BurstPeriods]) / 250
+    burst_rate = len(BurstPeriods) / (len(data) / 250)
+    burst_amplitude_mean = np.mean([np.max(np.abs(data[period[0]:period[1]+1])) for period in BurstPeriods])
+    burst_amplitude_std = np.std([np.max(np.abs(data[period[0]:period[1]+1])) for period in BurstPeriods])
+    burst_threshold = threshold
+    return np.array([burst_duration_mean, burst_duration_std, burst_rate, burst_amplitude_mean, burst_amplitude_std, burst_threshold])
+
 # %% Adaptive Signal Processing
 def filtLMS(data, expected, order=10, step_size=0.001, regularizer=0.01, label=None):
     
@@ -406,11 +430,54 @@ def welchSpectrogram(data, window=2.0, overlap=1.0, frequency_resolution=0.5, ma
     
     spectrum = np.ndarray((len(frequency), len(epochs)))
     for index in range(len(epochs)):
-        _, p = signal.welch(data[epochs[index]:epochs[index]+window], fs=fs, nfft=NFFT)
+        _, p = signal.welch(data[epochs[index]:epochs[index]+window], fs=fs, nperseg=window, nfft=NFFT)
         spectrum[:,index] = p[frequency_mask]
     time = (epochs + window) / fs
     
     return dict({"Time": time, "Frequency": frequency, "Power": spectrum, "logPower": 10*np.log10(spectrum), "Config": configuration})
+
+def getMaskGroup(masks):
+    MaskPeriods = []
+    for index in range(len(masks)):
+        if masks[index]:
+            if len(MaskPeriods) == 0 or index > MaskPeriods[-1][1]+1:
+                MaskPeriods.append([index, index])
+            else:
+                MaskPeriods[-1][1] = index
+
+    return MaskPeriods
+
+def getAperiodicTrend(Frequency, PSDLists, freq_range=(2, 98)):
+    FrequencyOfInterest = (Frequency > freq_range[0]) & (Frequency < freq_range[1])
+    SmoothWindow = 2.5 / np.mean(np.diff(Frequency[FrequencyOfInterest]))
+    if SmoothWindow < 1: 
+        SmoothWindow = 1
+    else:
+        SmoothWindow = int(SmoothWindow)
+    MeanPSD = np.convolve(np.mean(PSDLists, axis=0), np.ones(SmoothWindow)/SmoothWindow, mode="same")
+    MaskedPeaks = np.zeros(len(Frequency), dtype=bool)
+    while True:
+        x = np.log10(Frequency[FrequencyOfInterest & ~MaskedPeaks])
+        y = np.log10(MeanPSD[FrequencyOfInterest & ~MaskedPeaks])
+        coe = np.polyfit(x, y, 1)
+        residual = y - np.polyval(coe, x)
+        MaskedPeak = stats.zscore(residual) > 3 
+        MaskedPeak = np.convolve(MaskedPeak, np.ones(SmoothWindow, dtype=bool), mode="same") > 0
+        MaskedPeaks[FrequencyOfInterest & ~MaskedPeaks] = MaskedPeak
+        if np.sum(MaskedPeak) == 0:
+            break
+
+    AperiodicPower = np.zeros(len(Frequency))
+    AperiodicPower[Frequency > 0] = np.power(10, np.polyval(coe, np.log10(Frequency[Frequency > 0])));
+    AperiodicPower[Frequency == 0] = AperiodicPower[Frequency > 0][0]
+
+    NormalizedPSDs = np.zeros(PSDLists.shape)
+    for j in range(PSDLists.shape[0]):
+        scale = np.median(PSDLists[j,FrequencyOfInterest] / AperiodicPower[FrequencyOfInterest])
+        NormalizedPSDs[j,:] = PSDLists[j,:] / AperiodicPower / scale
+
+    MaskPeriods = getMaskGroup(MaskedPeaks)
+    return dict({"MeanPSD": MeanPSD, "AperiodicPower": AperiodicPower, "NormalizedPSDs": NormalizedPSDs, "Coefficients": coe, "MaskedPeaks": MaskedPeaks, "MaskPeriods": MaskPeriods})
 
 def inertiaHilbertSpectrogram(data, frequency, freq_bandwidth=2, fs=100):
     spectrum = np.ndarray((len(frequency), len(data)))

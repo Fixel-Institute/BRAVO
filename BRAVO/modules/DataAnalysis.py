@@ -31,7 +31,7 @@ import time
 import zstandard as zstd
 
 import numpy as np
-from scipy import signal, stats, optimize
+from scipy import signal, stats, optimize, ndimage
 import pywt
 from specparam import SpectralModel
 
@@ -46,8 +46,8 @@ from modules.OURA import DataManager as OuraDataManager
 from modules.Empatica import DataManager as EmpaticaDataManager
 from modules.AnalysisPipelineScripts import ExtractSpectralFeaturesDuringStimulation
 from modules.SurveyForms import RedcapForm
-#from modules.AIModels.ContactSelection.ContactSelection import ContactPredictor
-#from modules.AIModels.ContactSelection_VerWong2026.ContactSelection import ContactPredictor as ContactPredictor_VerWong2026
+from modules.AIModels.ContactSelection.ContactSelection import ContactPredictor
+from modules.AIModels.ContactSelection_VerWong2026.ContactSelection import ContactPredictor as ContactPredictor_VerWong2026
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 HASH_KEY = os.environ.get('DATASERVER_HASHKEY')
@@ -2224,6 +2224,29 @@ def handleTimeFrequencyAnalysis(data, config, recording=None):
 
     return data
 
+def handleAperiodicTrendExtraction(data, config, recording=None):
+    if recording:
+        ProcessedData = models.Recording.find(original=recording, type="AperiodicNormalization", metadata=config)
+        if ProcessedData:
+            return Database.loadSourceFile(ProcessedData.pointer, ProcessedData.hashed)
+
+    if "Spectrum" not in data.keys() or len(data["Spectrum"]) == 0:
+        raise ValueError("Spectrum data is missing from the input Data.")
+
+    for i in range(len(data["Spectrum"])):
+        AperiodicTrend = SPU.getAperiodicTrend(data["Spectrum"][i]["Frequency"], data["Spectrum"][i]["Power"].T, freq_range=(2,98))
+        data["Spectrum"][i]["AperiodicPower"] = AperiodicTrend["AperiodicPower"]
+        data["Spectrum"][i]["OscillatoryMask"] = AperiodicTrend["MaskedPeaks"]
+    
+    if recording:
+        ProcessedData = models.Recording.create(recording, "AperiodicNormalization")
+        ProcessedData.pointer = DATABASE_PATH + "recordings" + os.path.sep + recording.source.owner.uid + os.path.sep + ProcessedData.uid + ".bdat"
+        ProcessedData.hashed = Database.saveSourceFile(data, ProcessedData.pointer)
+        ProcessedData.metadata = config
+        ProcessedData.save()
+
+    return data
+
 def processBurstAnalysis(participant_uid, recording_uid, config, centerFreq=22):
     recording = models.Recording.find(uid=recording_uid)
     AnalysisStruct = {"Signal": [], "Annotations": []}
@@ -2234,7 +2257,7 @@ def processBurstAnalysis(participant_uid, recording_uid, config, centerFreq=22):
     if recording.type in ["MedtronicBrainSenseSurvey", "MedtronicBaselineMontages", "MedtronicBrainSenseTimeDomain", "MedtronicIndefiniteStream"]:
         Data = Database.loadSourceFile(recording.pointer, recording.hashed)
         Data = processTimeDomainStreaming(recording, Data, config)
-        Data = handleBurstActivityPreprocessing(recording, Data, config)
+        Data = handleBurstActivityPreprocessing(Data, config, recording=recording)
         
         for i in range(len(Data["BurstEnvelop"])):
             WaveletIndex = np.argmin(np.abs(Data["BurstEnvelop"][i]["Frequency"] - centerFreq))
@@ -2262,7 +2285,7 @@ def processBurstAnalysis(participant_uid, recording_uid, config, centerFreq=22):
     elif recording.type in ["CustomizedStreamingData"]:
         Data = Database.loadSourceFile(recording.pointer, recording.hashed)
         Data = processTimeDomainStreaming(recording, Data, config)
-        Data = handleBurstActivityPreprocessing(recording, Data, config)
+        Data = handleBurstActivityPreprocessing(Data, config, recording=recording)
         
         for i in range(len(Data["BurstEnvelop"])):
             WaveletIndex = np.argmin(np.abs(Data["BurstEnvelop"][i]["Frequency"] - centerFreq))
@@ -2285,43 +2308,45 @@ def processBurstAnalysis(participant_uid, recording_uid, config, centerFreq=22):
 
     return AnalysisStruct
 
-def handleBurstActivityPreprocessing(recording, data, config, centerFreq=22):
-    ProcessedData = models.Recording.find(original=recording, type="BurstActivityPreprocessing", metadata=config)
-    if ProcessedData:
-        return Database.loadSourceFile(ProcessedData.pointer, ProcessedData.hashed)
-    
+def handleBurstActivityPreprocessing(data, config, recording=None):
+    if recording:
+        ProcessedData = models.Recording.find(original=recording, type="BurstActivityPreprocessing", metadata=config)
+        if ProcessedData:
+            return Database.loadSourceFile(ProcessedData.pointer, ProcessedData.hashed)
+
     data["BurstEnvelop"] = []
     if len(data["ChannelNames"]) == 1:
         data["Data"] = data["Data"].reshape(-1,1)
         data["Missing"] = data["Missing"].reshape(-1,1)
 
     for i in range(len(data["ChannelNames"])):
-        coefs, freqs = pywt.cwt(data["Data"][:,i], np.geomspace(1, data["SamplingRate"], num=100), "morl", sampling_period=1/data["SamplingRate"])
+        f_center = pywt.central_frequency("morl")
+        desired_freqs = np.geomspace(1, data["SamplingRate"] / 2, num=100)
+        scales = f_center * data["SamplingRate"] / desired_freqs
 
+        coefs, freqs = pywt.cwt(data["Data"][:,i], scales, "morl", sampling_period=1/data["SamplingRate"])
         averaging = int(data["SamplingRate"] * 0.2)
-        for j in range(coefs.shape[0]):
-            coefs[j,:] = np.abs(signal.hilbert(coefs[j,:]))
-            coefs[j,:] = SPU.smooth(coefs[j,:], averaging)
+        envelope = np.abs(coefs)
+        
+        if averaging > 1:
+            coefs = ndimage.uniform_filter1d(envelope, size=averaging, axis=1, mode="nearest")
+        else:
+            coefs = envelope
 
-        BurstEnvelop = {
+        data["BurstEnvelop"].append({
             "Wavelet": coefs,
             "Frequency": freqs, 
             "Method": "Morlet",
-        }
+            "Config": config
+        })
 
-        dropMissing = False
-        if dropMissing:
-            TimeSelection = data["Missing"][:,i] == 0
-            BurstEnvelop["Wavelet"] = BurstEnvelop["Wavelet"][:, TimeSelection]
-        
-        BurstEnvelop["Config"] = config
-        data["BurstEnvelop"].append(BurstEnvelop)
+    if recording:
+        ProcessedData = models.Recording.create(recording, "BurstActivityPreprocessing")
+        ProcessedData.pointer = DATABASE_PATH + "recordings" + os.path.sep + recording.source.owner.uid + os.path.sep + ProcessedData.uid + ".bdat"
+        ProcessedData.hashed = Database.saveSourceFile(data, ProcessedData.pointer)
+        ProcessedData.metadata = config
+        ProcessedData.save()
     
-    ProcessedData = models.Recording.create(recording, "BurstActivityPreprocessing")
-    ProcessedData.pointer = DATABASE_PATH + "recordings" + os.path.sep + recording.source.owner.uid + os.path.sep + ProcessedData.uid + ".bdat"
-    ProcessedData.hashed = Database.saveSourceFile(data, ProcessedData.pointer)
-    ProcessedData.metadata = config
-    ProcessedData.save()
     return data
 
 def calculateBurstParameters(envelop, fs):
@@ -3365,3 +3390,12 @@ def extractMedtronicPowerBands(participant_uid, recording_type, recording_uids=N
                 Recordings.append(RecordingInfo)
         
         return {"Recordings": Recordings, "PowerBands": PowerBands_Threshold}
+
+def computeTimeseriesFeatureAnalysis(participant_uid, recording_uid, type, config):
+    recording = models.Recording.find(uid=recording_uid)
+    if not recording.source.owner.pk == participant_uid:
+        raise Exception("Permission Denied. Accessing Denied Recordings")
+
+    if recording.type in ["MedtronicElectrodeIdentifier", "MedtronicBrainSenseSurvey", "MedtronicBaselineMontages", "MedtronicBrainSenseTimeDomain", "MedtronicIndefiniteStream"]:
+        Data = Database.loadSourceFile(recording.pointer, recording.hashed)
+        
