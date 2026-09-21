@@ -46,8 +46,8 @@ from modules.OURA import DataManager as OuraDataManager
 from modules.Empatica import DataManager as EmpaticaDataManager
 from modules.AnalysisPipelineScripts import ExtractSpectralFeaturesDuringStimulation
 from modules.SurveyForms import RedcapForm
-from modules.AIModels.ContactSelection.ContactSelection import ContactPredictor
-from modules.AIModels.ContactSelection_VerWong2026.ContactSelection import ContactPredictor as ContactPredictor_VerWong2026
+#from modules.AIModels.ContactSelection.ContactSelection import ContactPredictor
+#from modules.AIModels.ContactSelection_VerWong2026.ContactSelection import ContactPredictor as ContactPredictor_VerWong2026
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
 HASH_KEY = os.environ.get('DATASERVER_HASHKEY')
