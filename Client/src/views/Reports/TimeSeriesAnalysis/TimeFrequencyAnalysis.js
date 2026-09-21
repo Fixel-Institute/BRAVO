@@ -195,14 +195,14 @@ function TimeFrequencyAnalysis({dataToRender, activeChannels, handleAddEvent, ha
           if (annotations[k].Name === annotationOptions[i].label) {
             graphSeries.push({
               type: "shading",
-              x: [new Date(annotations[i].Date*1000), new Date((annotations[i].Date+annotations[i].Duration)*1000)], xDot: [new Date(annotations[i].Date*1000)],
+              x: [new Date(annotations[k].Date*1000), new Date((annotations[k].Date+annotations[k].Duration)*1000)], xDot: [new Date(annotations[k].Date*1000)],
               y: [-100,100], yDot: [0],
               options: {
                 size: 10,
                 color: annotationOptions[i].color,
                 alpha: 0.3, 
-                hovertemplate: ` ${annotations[i].Name}<br>  %{x} <extra></extra>`,
-                name: annotations[i].Name
+                hovertemplate: ` ${annotations[k].Name}<br>  %{x} <extra></extra>`,
+                name: annotations[k].Name
               }, 
               axName: activeChannels[j]
             })
