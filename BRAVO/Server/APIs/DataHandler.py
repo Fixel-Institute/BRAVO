@@ -614,7 +614,7 @@ class RecordingTimeShiftHandler(RestViews.APIView):
             rel = models.RecordingRel.find(analysis=Analysis, recording=Recording)
             if not rel:
                 return Response(status=403)
-            
+
             try:
                 Recording.adjusted_alignment = float(request.data["Alignment"])
                 Recording.save()
@@ -622,7 +622,7 @@ class RecordingTimeShiftHandler(RestViews.APIView):
                 return Response(status=400, data={"message": "Time Alignment is not valid"})
 
         elif request.data["RequestType"] == "Recording":
-            if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId", "RequestType", "RecordingId", "Alignment"]):
+            if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId", "RequestType", "RecordingId"]):
                 return Response(status=400, data={"message": "Malformed Input"})
             
             Recording = models.Recording.objects.filter(uid=request.data["RecordingId"]).first()
@@ -633,14 +633,23 @@ class RecordingTimeShiftHandler(RestViews.APIView):
                 related_recordings = models.Recording.find_all(source=Recording.source)
             else:
                 related_recordings = [Recording]
-                
-            for rec in related_recordings:
-                try:
-                    rec.adjusted_alignment = float(request.data["Alignment"])
-                    rec.save()
-                except:
-                    return Response(status=400, data={"message": "Time Alignment is not valid"})
 
+            if "Alignment" in request.data.keys():
+                for rec in related_recordings:
+                    try:
+                        rec.adjusted_alignment = float(request.data["Alignment"])
+                        rec.save()
+                    except:
+                        return Response(status=400, data={"message": "Time Alignment is not valid"})
+
+            if "Scale" in request.data.keys():
+                for rec in related_recordings:
+                    try:
+                        rec.fs_scaling_factor = float(request.data["Scale"])
+                        rec.save()
+                    except:
+                        return Response(status=400, data={"message": "Time Scale is not valid"})
+            
         return Response(status=200)
 
 class TimeSeriesRecordingHandler(RestViews.APIView):
