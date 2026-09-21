@@ -236,7 +236,7 @@ def queryAvailableAnalyses(participant_uid, request_type):
                                                               [recording for recording in Overview["Recordings"] if recording["Type"] == "MedtronicBrainSensePowerDomain"])
         
         for analysis in AnalysisList:
-            Analysis = models.Analysis.find(type=analysis["Type"], metadata__DataId=analysis["Metadata"]["DataId"])
+            Analysis = models.Analysis.find(type=analysis["Type"], metadata__contains={"DataId": analysis["Metadata"]["DataId"]})
             if not Analysis:
                 Analysis = models.Analysis.create(type=analysis["Type"], name=analysis["Name"], date=analysis["Date"], metadata=analysis["Metadata"])
                 for recordingId in analysis["Metadata"]["DataId"]:
@@ -245,7 +245,7 @@ def queryAvailableAnalyses(participant_uid, request_type):
             
             Overview["Analyses"].append(Analysis.get_info())
     
-        AnalysisList = models.Analysis.find_all(type=request_type, metadata__ParticipantId=participant_uid)
+        AnalysisList = models.Analysis.find_all(type=request_type, metadata__contains={"ParticipantId": participant_uid})
         for analysis in AnalysisList:
             AnalysisOverview = analysis.get_info()
             if AnalysisOverview:
@@ -357,7 +357,7 @@ def createAnalysis(participant_uid, type, recording_ids):
         if not recording.source.owner.uid == participant_uid:
             return None
 
-    Analysis = models.Analysis.find(type=type, metadata__DataId=recording_ids)
+    Analysis = models.Analysis.find(type=type, metadata__contains={"DataId": recording_ids})
     if Analysis:
         return Analysis
 
@@ -2484,7 +2484,7 @@ def queryNeuralActivitySnapshot(participant_uid, config):
             "PSDs": Data["PSD"],
         }})
     
-    Recordings = models.Recording.find_all(source__in=SourceFiles, type__in=["CustomizedStreamingData"], metadata__DataType="Scheduled Streams").order_by("date")
+    Recordings = models.Recording.find_all(source__in=SourceFiles, type__in=["CustomizedStreamingData"], metadata__contains={"DataType": "Scheduled Streams"}).order_by("date")
     for i in range(len(Recordings)):
         recording = Recordings[i]
         Description = recording.get_info()
@@ -2822,10 +2822,11 @@ def queryChronicTimeline(participant_uid, config):
                 DescriptorActivity["Data"] = np.array(DescriptorActivity["Data"]).T.tolist()
                 ChronicTimeline.append(DescriptorActivity)
 
-    if models.Recording.include(source__in=SourceFiles, type__in=["CustomizedStreamingData"], metadata__DataType="Scheduled Streams"):
+
+    if models.Recording.include(source__in=SourceFiles, type__in=["CustomizedStreamingData"], metadata__contains={"DataType": "Scheduled Streams"}):
         Recording = models.Recording.find(type="ProcessedCustomizedStreamingData", source__owner=Participant)
         if not Recording:
-            Recordings = models.Recording.find_all(source__in=SourceFiles, type__in=["CustomizedStreamingData"], metadata__DataType="Scheduled Streams").order_by("date")
+            Recordings = models.Recording.find_all(source__in=SourceFiles, type__in=["CustomizedStreamingData"], metadata__contains={"DataType": "Scheduled Streams"}).order_by("date")
             Activity = {
                 "AnalysisType": "ChronicSpectrum",
                 "Time": [],

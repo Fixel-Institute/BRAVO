@@ -1021,7 +1021,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             return Response(status=403)
         
         if request.data["RequestType"] == "RequestList":
-            analysis = models.Analysis.find_all(type="CustomizedAnalysis", metadata__ParticipantId= request.data["ParticipantId"])
+            analysis = models.Analysis.find_all(type="CustomizedAnalysis", metadata__contains={"ParticipantId": request.data["ParticipantId"]})
             return Response(status=200, data=[i.get_info() for i in analysis])
 
         elif request.data["RequestType"] == "ProcessingNodes":
@@ -1040,7 +1040,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId", "AnalysisId", "AnalysisName", "RequestType"]):
                 return Response(status=400, data={"message": "Malformed Input"})
             
-            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__ParticipantId=request.data["ParticipantId"])
+            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__contains={"ParticipantId": request.data["ParticipantId"]})
             if not analysis:
                 return Response(status=403)
 
@@ -1052,7 +1052,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId", "AnalysisId", "Nodes", "Edges", "StartProcessing", "RequestType"]):
                 return Response(status=400, data={"message": "Malformed Input"})
             
-            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__ParticipantId=request.data["ParticipantId"])
+            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__contains={"ParticipantId": request.data["ParticipantId"]})
             if not analysis:
                 return Response(status=403)
             
@@ -1087,7 +1087,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId", "AnalysisId", "RequestType"]):
                 return Response(status=400, data={"message": "Malformed Input"})
             
-            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__ParticipantId=request.data["ParticipantId"])
+            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__contains={"ParticipantId": request.data["ParticipantId"]})
             if not analysis:
                 return Response(status=403)
             
@@ -1101,7 +1101,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId", "AnalysisId", "RequestType"]):
                 return Response(status=400, data={"message": "Malformed Input"})
             
-            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__ParticipantId=request.data["ParticipantId"])
+            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__contains={"ParticipantId": request.data["ParticipantId"]})
             if not analysis:
                 return Response(status=403)
             
@@ -1112,7 +1112,7 @@ class QueryCustomizedAnalysis(RestViews.APIView):
             if not get_or_none(sanitize_input)(request.data, required_keys=["ParticipantId", "AnalysisId", "RequestType", "ResultId"]):
                 return Response(status=400, data={"message": "Malformed Input"})
             
-            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__ParticipantId=request.data["ParticipantId"])
+            analysis = models.Analysis.find(uid=request.data["AnalysisId"], type="CustomizedAnalysis", metadata__contains={"ParticipantId": request.data["ParticipantId"]})
             if not analysis:
                 return Response(status=403)
             

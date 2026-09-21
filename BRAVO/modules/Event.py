@@ -74,10 +74,10 @@ def addAnnotation(participant_uid, type, name, date, duration=0):
     Annotation = models.Annotation(name=name, date=date, duration=duration, type=type, owner=Participant)
     Annotation.save()
     if Annotation.type == "ChronicCustomEvent":
-        models.SourceFile.purge(type="CachedResult", metadata__URL="/queryChronicNeuralActivity", metadata__Participant=participant_uid)
+        models.SourceFile.purge(type="CachedResult", metadata__contains={"URL": "/queryChronicNeuralActivity", "Participant": participant_uid})
     elif Annotation.type == "RecordingCustomEvent":
-        models.SourceFile.purge(type="CachedResult", metadata__URL="/queryTimeseriesAnalysis", metadata__Participant=participant_uid)
-        models.SourceFile.purge(type="CachedResult", metadata__URL="/queryTherapeuticEffectAnalysis", metadata__Participant=participant_uid)
+        models.SourceFile.purge(type="CachedResult", metadata__contains={"URL": "/queryTimeseriesAnalysis", "Participant": participant_uid})
+        models.SourceFile.purge(type="CachedResult", metadata__contains={"URL": "/queryTherapeuticEffectAnalysis", "Participant": participant_uid})
     return Annotation
 
 def deleteAnnotation(participant_uid, annotation_uid):
@@ -85,8 +85,8 @@ def deleteAnnotation(participant_uid, annotation_uid):
     Annotation = models.Annotation.find(uid=annotation_uid, owner=Participant)
     if Annotation:
         if Annotation.type == "ChronicCustomEvent":
-            models.SourceFile.purge(type="CachedResult", metadata__URL="/queryChronicNeuralActivity", metadata__Participant=participant_uid)
+            models.SourceFile.purge(type="CachedResult", metadata__contains={"URL": "/queryChronicNeuralActivity", "Participant": participant_uid})
         elif Annotation.type == "RecordingCustomEvent":
-            models.SourceFile.purge(type="CachedResult", metadata__URL="/queryTimeseriesAnalysis", metadata__Participant=participant_uid)
-            models.SourceFile.purge(type="CachedResult", metadata__URL="/queryTherapeuticEffectAnalysis", metadata__Participant=participant_uid)
+            models.SourceFile.purge(type="CachedResult", metadata__contains={"URL": "/queryTimeseriesAnalysis", "Participant": participant_uid})
+            models.SourceFile.purge(type="CachedResult", metadata__contains={"URL": "/queryTherapeuticEffectAnalysis", "Participant": participant_uid})
         Annotation.delete()

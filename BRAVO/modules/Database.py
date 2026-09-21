@@ -837,11 +837,11 @@ def saveCachedResult(data, url, participant_uid, config):
 
 def deleteCachedResult(participant_uid=None, url=None):
     if participant_uid and url:
-        models.SourceFile.purge(type="CachedResult", metadata__Participant=participant_uid, metadata__URL=url)
+        models.SourceFile.purge(type="CachedResult", metadata__contains={"Participant": participant_uid, "URL": url})
     elif participant_uid:
-        models.SourceFile.purge(type="CachedResult", metadata__Participant=participant_uid)
+        models.SourceFile.purge(type="CachedResult", metadata__contains={"Participant": participant_uid})
     elif url:
-        models.SourceFile.purge(type="CachedResult", metadata__URL=url)
+        models.SourceFile.purge(type="CachedResult", metadata__contains={"URL": url})
     else:
         models.SourceFile.purge(type="CachedResult")
         

@@ -76,7 +76,7 @@ def processInput(argv):
             for i in range(len(participants)):
                 participant = participants[i]
                 print(f"Start Processing Participant {i}/{len(participants)}")
-                session_files = models.SourceFile.find_all(owner=participant, metadata__UploadType="MedtronicJSON")
+                session_files = models.SourceFile.find_all(owner=participant, metadata__contains={"UploadType": "MedtronicJSON"})
                 for session in session_files:
                     StartFiles = models.Recording.objects.filter(source=session).count()
                     device = models.DBSDevice.find(uid=session.metadata["Device"])

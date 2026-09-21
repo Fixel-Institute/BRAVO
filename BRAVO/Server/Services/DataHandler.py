@@ -57,7 +57,7 @@ class DataDownloadHandler(RestViews.APIView):
     def get(self, request):
         CacheType = self.request.query_params.get('CacheType')
         if CacheType == "ClearDataUpload":
-            models.SourceFile.objects.filter(metadata__Uploader=request.user.pk, owner=None).delete()
+            models.SourceFile.objects.filter(metadata__contains={"Uploader": request.user.pk}, owner=None).delete()
             return Response(status=200)
 
         ParticipantId = self.request.query_params.get('ParticipantId')

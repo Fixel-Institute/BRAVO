@@ -95,7 +95,7 @@ def NeuroPacePersystDatDecoder(source_file, person=None):
     Recordings = parsePersystRecording(rawBytes, source_file.metadata["layout"])
     for stream in Recordings:
         recording = models.Recording(**{key: stream[key] for key in stream.keys() if key in ["name", "type", "date", "metadata"]}, source=source_file)
-        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__owner=person, source__metadata__Uploader=source_file.metadata["Uploader"]):
+        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__owner=person, source__metadata__contains={"Uploader": source_file.metadata["Uploader"]}):
             recording.delete()
             continue
         filename = DATABASE_PATH + "recordings" + os.path.sep + person.uid + os.path.sep + recording.uid + ".bdat"
@@ -489,7 +489,7 @@ def MATFileDecoder(source_file, person, startTime=None):
     person.last_update = models.current_time()
     person.save()
     
-    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__Participant=person.uid)
+    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__contains={"Participant": person.uid})
     return True
 
 def HPFCSVDecoder(source_file, person, startTime=None):
@@ -548,7 +548,7 @@ def HPFCSVDecoder(source_file, person, startTime=None):
     person.last_update = models.current_time()
     person.save()
     
-    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__Participant=person.uid)
+    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__contains={"Participant": person.uid})
     return True
 
 def AlphaOmegaMPXDecoder(source_file, person, name=""):
@@ -575,7 +575,7 @@ def AlphaOmegaMPXDecoder(source_file, person, name=""):
                 "ChannelNames": ProcessedData["ChannelNames"]
             }
         }, source=source_file)
-        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__Uploader=source_file.metadata["Uploader"]):
+        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__contains={"Uploader": source_file.metadata["Uploader"]}):
             recording.delete()
             continue
 
@@ -604,7 +604,7 @@ def AlphaOmegaMPXDecoder(source_file, person, name=""):
     person.last_update = models.current_time()
     person.save()
     
-    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__Participant=person.uid)
+    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__contains={"Participant": person.uid})
     return True
 
 def UFMDATDecoder(source_file, person):
@@ -619,7 +619,7 @@ def UFMDATDecoder(source_file, person):
                 "ChannelNames": ProcessedData["ChannelNames"]
             }
         }, source=source_file)
-        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__Uploader=source_file.metadata["Uploader"]):
+        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__contains={"Uploader": source_file.metadata["Uploader"]}):
             recording.delete()
             continue
 
@@ -648,7 +648,7 @@ def UFMDATDecoder(source_file, person):
     person.last_update = models.current_time()
     person.save()
     
-    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__Participant=person.uid)
+    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__contains={"Participant": person.uid})
     return True
 
 def UFMDATv2Decoder(source_file, person):
@@ -680,7 +680,7 @@ def UFMDATv2Decoder(source_file, person):
                 "ChannelNames": ProcessedData["ChannelNames"]
             }
         }, source=source_file)
-        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__Uploader=source_file.metadata["Uploader"]):
+        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__contains={"Uploader": source_file.metadata["Uploader"]}):
             recording.delete()
             continue
 
@@ -709,7 +709,7 @@ def UFMDATv2Decoder(source_file, person):
     person.last_update = models.current_time()
     person.save()
     
-    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__Participant=person.uid)
+    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__contains={"Participant": person.uid})
     return True
 
 def UFMDATv3Decoder(source_file, person):
@@ -741,7 +741,7 @@ def UFMDATv3Decoder(source_file, person):
                 "ChannelNames": ProcessedData["ChannelNames"]
             }
         }, source=source_file)
-        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__Uploader=source_file.metadata["Uploader"]):
+        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__contains={"Uploader": source_file.metadata["Uploader"]}):
             recording.delete()
             continue
 
@@ -770,7 +770,7 @@ def UFMDATv3Decoder(source_file, person):
     person.last_update = models.current_time()
     person.save()
     
-    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__Participant=person.uid)
+    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__contains={"Participant": person.uid})
     return True
 
 def BRAVORecordingBinaryDecoder(source_file, person):
@@ -806,7 +806,7 @@ def BRAVORecordingBinaryDecoder(source_file, person):
                 "ChannelNames": ChannelNames
             }
         }, source=source_file)
-        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__Uploader=source_file.metadata["Uploader"]):
+        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__metadata__contains={"Uploader": source_file.metadata["Uploader"]}):
             recording.delete()
             continue
 
@@ -835,7 +835,7 @@ def BRAVORecordingBinaryDecoder(source_file, person):
     person.last_update = models.current_time()
     person.save()
     
-    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__Participant=person.uid)
+    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__contains={"Participant": person.uid})
     return True
 
 def ImportBRAVOExport(source_file):
@@ -883,7 +883,7 @@ def ImportBRAVOExport(source_file):
 
             json_file = saveCacheFile(person.uid + "_" + uuid.uuid4().hex + ".json", metadata, PacketContent)
             #lockFile = json_file.pointer + ".lock"
-            if models.SourceFile.objects.exclude(pk=json_file.pk).filter(metadata__Institute=metadata["Institute"], metadata__UniqueHashed=metadata["UniqueHashed"]).exists():
+            if models.SourceFile.objects.exclude(pk=json_file.pk).filter(metadata__contains={"Institute": metadata["Institute"], "UniqueHashed": metadata["UniqueHashed"]}).exists():
                 json_file.delete()
             else:
                 try:

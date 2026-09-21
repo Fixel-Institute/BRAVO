@@ -83,7 +83,7 @@ class DataUploadHandler(RestViews.APIView):
         source_file = DataCurator.saveCacheFile(request.data["File"].name, metadata, rawBytes)
         lock = FileLock(DATABASE_PATH + "SourceFileDuplicateCheck.lock")
         with lock.acquire(timeout=60):
-            if models.SourceFile.objects.exclude(pk=source_file.pk).filter(metadata__Institute=institute.pk, metadata__UniqueHashed=metadata["UniqueHashed"]).exists():
+            if models.SourceFile.objects.exclude(pk=source_file.pk).filter(metadata__contains={"Institute": institute.pk, "UniqueHashed": metadata["UniqueHashed"]}).exists():
                 print("Duplicate File Found")
                 source_file.delete()
                 return Response(status=301)
@@ -377,7 +377,7 @@ class DataDownloadHandler(RestViews.APIView):
     def get(self, request):
         CacheType = self.request.query_params.get('CacheType')
         if CacheType == "ClearDataUpload":
-            models.SourceFile.objects.filter(metadata__Uploader=request.user.pk, owner=None).delete()
+            models.SourceFile.objects.filter(metadata__contains={"Uploader": request.user.pk}, owner=None).delete()
             return Response(status=200)
 
         ParticipantId = self.request.query_params.get('ParticipantId')
