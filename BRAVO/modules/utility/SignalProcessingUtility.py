@@ -8,11 +8,8 @@
 import numpy as np
 from scipy.linalg import solve_toeplitz
 import scipy.signal as signal
-import pywt
 import scipy.stats as stats
 import copy
-
-from .PythonUtility import rangeSelection
 
 def valueMapping(data, vmin=0, vmax=1, method="linear"):
     if method == "power":
@@ -72,7 +69,14 @@ def addJitter(data, shift=0.1):
 
 def removeOutlier(data, method="zscore", zlim=3):
     if method == "zscore":
-        return data[rangeSelection(data, [np.mean(data)-np.std(data)*zlim,np.mean(data)+np.std(data)*zlim])]
+        return data[np.bitwise_and(data < np.mean(data)+np.std(data)*zlim, data > np.mean(data)-np.std(data)*zlim)]
+    elif method == "iqr":
+        q1 = np.percentile(data, 25)
+        q3 = np.percentile(data, 75)
+        iqr = q3 - q1
+        return data[np.bitwise_and(data < q3 + 1.5 * iqr, data > q1 - 1.5 * iqr)]
+    else:
+        raise ValueError("Method not recognized")
 
 def linearfit(x, y, x_new):
     coefficients = np.polyfit(x, y, 1)
@@ -474,8 +478,11 @@ def getAperiodicTrend(Frequency, PSDLists, freq_range=(2, 98)):
     NormalizedPSDs = np.zeros(PSDLists.shape)
     for j in range(PSDLists.shape[0]):
         scale = np.median(PSDLists[j,FrequencyOfInterest] / AperiodicPower[FrequencyOfInterest])
-        NormalizedPSDs[j,:] = PSDLists[j,:] / AperiodicPower / scale
-
+        if scale == 0 or np.any(AperiodicPower[FrequencyOfInterest] == 0):
+            NormalizedPSDs[j,:] = np.nan
+        else:
+            NormalizedPSDs[j,:] = PSDLists[j,:] / AperiodicPower / scale
+            
     MaskPeriods = getMaskGroup(MaskedPeaks)
     return dict({"MeanPSD": MeanPSD, "AperiodicPower": AperiodicPower, "NormalizedPSDs": NormalizedPSDs, "Coefficients": coe, "MaskedPeaks": MaskedPeaks, "MaskPeriods": MaskPeriods})
 
