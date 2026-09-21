@@ -18,7 +18,7 @@ import LoadingProgress from "components/LoadingProgress";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
-import { Autocomplete, Dialog, DialogContent, TextField, DialogActions, Grid, Menu, MenuItem } from "@mui/material";
+import { Autocomplete, Card, Dialog, DialogContent, TextField, DialogActions, Grid, Menu, MenuItem } from "@mui/material";
 import { createFilterOptions } from "@mui/material/Autocomplete";
 
 import * as Math from "mathjs"
@@ -38,6 +38,8 @@ function TimeFrequencyAnalysis({dataToRender, activeChannels, handleAddEvent, ha
   const [dataAlignment, setDataAlignment] = useState({ show: false, alignment: 0 });
   const [coloraxis, setColorAxis] = useState({ show: false, limit: [null, null], limit_temp: [-99, 99] });
 
+  const [annotationOptions, setAnnotationOptions] = useState([]);
+
   const [fig, setFig] = useState(null);
   const [renderData, setRenderData] = useState(null);
   const [refresh, setRefresh] = useState(0);
@@ -46,6 +48,17 @@ function TimeFrequencyAnalysis({dataToRender, activeChannels, handleAddEvent, ha
     const fig = new PlotlyRenderManager(figureTitle, language);
     setFig(fig);
   }, [figureTitle]);
+
+  const set1Color = ["#ff2233", "#ff7f00", "#ffff33", "#33ff33", "#33ffff", "#3333ff", "#7f00ff", "#ff33ff"];
+  useEffect(() => {
+    let uniqueAnnotations = [];
+    for (let i in annotations) {
+      if (!uniqueAnnotations.includes(annotations[i].Name)) {
+        uniqueAnnotations.push(annotations[i].Name);
+      }
+    }
+    setAnnotationOptions(uniqueAnnotations.map((a) => {return {label: a, show: true, color: set1Color[uniqueAnnotations.indexOf(a) % set1Color.length]}}));
+  }, [annotations]);
 
   useEffect(() => {
     if (!fig) return;
@@ -138,24 +151,6 @@ function TimeFrequencyAnalysis({dataToRender, activeChannels, handleAddEvent, ha
             }, 
             axName: activeChannels[i] + " " + "TimeFrequencyAnalysis"
           });
-          
-          if (dataToRender.Signal[trial].Alignment != 0) {
-            graphSeries.push({
-              type: "shading",
-              x: [new Date(dataToRender.Signal[trial].SignalSeries.StartTime*1000 + dataToRender.Signal[trial].Alignment*1000), new Date(dataToRender.Signal[trial].SignalSeries.StartTime*1000)],
-              xDot: [new Date(dataToRender.Signal[trial].SignalSeries.StartTime*1000)],
-              y: [-100,100],
-              yDot: [0],
-              options: {
-                size: 10,
-                color: "#00ff00", 
-                alpha: 0.3, 
-                hovertemplate: ` Shifted Alignment ${dataToRender.Signal[trial].Alignment*1000}ms <extra></extra>`,
-                name: "Shifted Alignment"
-              }, 
-              axName: activeChannels[i]
-            })
-          }
         }
       }
     }
@@ -173,7 +168,7 @@ function TimeFrequencyAnalysis({dataToRender, activeChannels, handleAddEvent, ha
       let stimulationLineColor = ["#253EF7", "#FCA503", "#8bc34a", "#9c27b0"]
       for (let trial in dataToRender.Therapy) {
         for (let chan in dataToRender.Therapy[trial].TherapySeries[0].TherapyOverview) {
-          const timeArray = dataToRender.Therapy[trial].TherapySeries.map((a) =>  (a.Time + dataToRender.Therapy[trial].Alignment)*1000);
+          const timeArray = dataToRender.Therapy[trial].TherapySeries.map((a) =>  (a.Time + dataToRender.Signal[trial].Alignment)*1000);
           graphSeries.push({
             type: "line",
             x: timeArray, y: dataToRender.Therapy[trial].TherapySeries.map((a) => {
@@ -181,7 +176,7 @@ function TimeFrequencyAnalysis({dataToRender, activeChannels, handleAddEvent, ha
             }),
             options: {
               id: dataToRender.Therapy[trial].RecordingId,
-              current_alignment: dataToRender.Therapy[trial].Alignment*1000,
+              current_alignment: dataToRender.Signal[trial].Alignment*1000,
               name: "Stimulation Waveform",
               linewidth: 3, line: {shape: "hv"}, color: stimulationLineColor[uniqueStimChannels.indexOf(dataToRender.Therapy[trial].TherapySeries[0].TherapyOverview[chan].ChannelName)],
               hovertemplate: ` ${dataToRender.Therapy[trial].TherapySeries[0].TherapyOverview[chan].ChannelName}<br>  %{y:.2f} ${dictionaryLookup(dictionary.FigureStandardUnit, "mA", language)}<br>  %{x} <extra></extra>`,
@@ -189,48 +184,35 @@ function TimeFrequencyAnalysis({dataToRender, activeChannels, handleAddEvent, ha
             }, 
             axName: "Stimulation"
           });
-          
-          if (dataToRender.Therapy[trial].Alignment != 0) {
+        }
+      }
+    }
+    
+    for (let j in activeChannels) {
+      for (let i in annotationOptions) {
+        if (!annotationOptions[i].show) continue;
+        for (let k in annotations) {
+          if (annotations[k].Name === annotationOptions[i].label) {
             graphSeries.push({
               type: "shading",
-              x: [new Date(dataToRender.Therapy[trial].TherapySeries[0].Time*1000 + dataToRender.Therapy[trial].Alignment*1000), new Date(dataToRender.Therapy[trial].TherapySeries[0].Time*1000)],
-              xDot: [new Date(dataToRender.Therapy[trial].TherapySeries[0].Time*1000)],
-              y: [-100,100],
-              yDot: [0],
+              x: [new Date(annotations[i].Date*1000), new Date((annotations[i].Date+annotations[i].Duration)*1000)], xDot: [new Date(annotations[i].Date*1000)],
+              y: [-100,100], yDot: [0],
               options: {
                 size: 10,
-                color: "#00ff00", 
+                color: annotationOptions[i].color,
                 alpha: 0.3, 
-                hovertemplate: ` Shifted Alignment ${dataToRender.Therapy[trial].Alignment*1000}ms <extra></extra>`,
-                name: "Shifted Alignment"
+                hovertemplate: ` ${annotations[i].Name}<br>  %{x} <extra></extra>`,
+                name: annotations[i].Name
               }, 
-            axName: "Stimulation"
+              axName: activeChannels[j]
             })
           }
         }
       }
     }
     
-    for (let j in activeChannels) {
-      for (let i in annotations) {
-        graphSeries.push({
-          type: "shading",
-          x: [new Date(annotations[i].Date*1000), new Date((annotations[i].Date+annotations[i].Duration)*1000)], xDot: [new Date(annotations[i].Date*1000)],
-          y: [-100,100], yDot: [0],
-          options: {
-            size: 10,
-            color: "#ff0000", 
-            alpha: 0.3, 
-            hovertemplate: ` ${annotations[i].Name}<br>  %{x} <extra></extra>`,
-            name: annotations[i].Name
-          }, 
-          axName: activeChannels[j]
-        })
-      }
-    }
-    
     setRenderData(graphSeries);
-  }, [fig, dataToRender, coloraxis.limit, annotations]);
+  }, [fig, dataToRender, coloraxis.limit, annotationOptions]);
 
   const refreshRender = () => {
     let caxis = fig.getColorAxis();
@@ -317,170 +299,193 @@ function TimeFrequencyAnalysis({dataToRender, activeChannels, handleAddEvent, ha
   };
 
   return useMemo(() => (
-    <MDBox ref={ref} id={figureTitle} onContextMenu={onContextMenu} 
-      style={{marginTop: 5, marginBottom: 10, height: dataToRender.Therapy ? (activeChannels.length * 400 + 300) : (activeChannels.length * 500), width: "100%", display: activeChannels.length > 0 ? "" : "none"}}
-    >
-      <Menu
-        open={contextMenu !== null}
-        onClose={() => setContextMenu(null)}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenu !== null
-            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-            : undefined
-        }
-        disableScrollLock={true}
+    <MDBox>
+      <MDBox sx={{display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 1, paddingLeft: 1, paddingRight: 1}}> 
+        {annotationOptions.map((annotation) => {
+          return <Card sx={{background: annotation.show ? "" : "darkgrey"}}>
+            <MDBox display={"flex"} flexDirection={"row"} alignItems={"center"} px={2} py={1}>
+              <img style={{background: annotation.color, padding: 8, borderRadius: "50%"}}/>
+              <MDTypography variant="h6" fontSize={15} color={"dark"} style={{cursor: "pointer"}} onClick={() => {
+                setAnnotationOptions((annotationOptions) => {
+                  for (let i in annotationOptions) {
+                    if (annotationOptions[i].label === annotation.label) {
+                      annotationOptions[i].show = !annotationOptions[i].show;
+                    }
+                  }
+                  return [...annotationOptions];
+                });
+              }}>
+                {annotation.label}
+              </MDTypography>
+            </MDBox>
+          </Card>
+        })}
+      </MDBox>
+      <MDBox ref={ref} id={figureTitle} onContextMenu={onContextMenu} 
+        style={{marginTop: 5, marginBottom: 10, height: dataToRender.Therapy ? (activeChannels.length * 400 + 300) : (activeChannels.length * 500), width: "100%", display: activeChannels.length > 0 ? "" : "none"}}
       >
-        <MenuItem onClick={() => {
-          setContextMenu(null);
-          if (eventInfo.time) setEventInfo({...eventInfo, name: "", show: true});
-        }}>{"Add New Event"}</MenuItem>
-        <MenuItem onClick={() => {
-          setContextMenu(null);
-          handleDeleteEvent(eventInfo);
-          }}>{"Delete Event"}</MenuItem>
-        <MenuItem onClick={() => {
-          setContextMenu(null);
-          setTimeseriesPlayback(() => {
-            for (let i in renderData) {
-              if (renderData[i].options.id === eventInfo.channel) {
-                return {data: renderData[i], playing: true};
+        <Menu
+          open={contextMenu !== null}
+          onClose={() => setContextMenu(null)}
+          anchorReference="anchorPosition"
+          anchorPosition={
+            contextMenu !== null
+              ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+              : undefined
+          }
+          disableScrollLock={true}
+        >
+          <MenuItem onClick={() => {
+            setContextMenu(null);
+            if (eventInfo.time) setEventInfo({...eventInfo, name: "", show: true});
+          }}>{"Add New Event"}</MenuItem>
+          <MenuItem onClick={() => {
+            setContextMenu(null);
+            handleDeleteEvent(eventInfo);
+            }}>{"Delete Event"}</MenuItem>
+          <MenuItem onClick={() => {
+            setContextMenu(null);
+            setTimeseriesPlayback(() => {
+              for (let i in renderData) {
+                if (renderData[i].options.id === eventInfo.channel) {
+                  return {data: renderData[i], playing: true};
+                }
               }
-            }
-            return {data: null, playing: false};
-          });
-          }}>{"Playback Signal"}</MenuItem>
-        <MenuItem onClick={() => {
-          setContextMenu(null);
-          if (eventInfo.channel) {
-            setDataAlignment({...dataAlignment, alignment: eventInfo.current_alignment, show: true})
-          };
-          }}>{"Adjust Alignment"}</MenuItem>
-        <MenuItem onClick={() => {
-          setContextMenu(null);
-          setColorAxis({...coloraxis, limit_temp: coloraxis.limit, show: true});
-          }}>{"Adjust Colormap"}</MenuItem>
-      </Menu>
-      <Dialog open={eventInfo.show} onClose={() => setEventInfo({...eventInfo, show: false})}>
-        <MDBox px={2} pt={2} sx={{minWidth: 500}}>
-          <MDTypography variant="h5">
-            {"New Custom Event"} 
-          </MDTypography>
-          <MDTypography variant="h6">
-            {"Time: "}{new Date(eventInfo.time).toLocaleString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              timeZoneName: "longGeneric"
-            })} 
-          </MDTypography>
-        </MDBox>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} style={{display: "flex", flexDirection: "column"}}>
-              <TextField
-                variant="standard"
-                margin="dense"
-                id={"event-annotation"}
-                type={"text"}
-                label="Annotation Name"
-                placeholder={"Annotation Name"}
-                value={eventInfo.name}
-                onChange={(event) => setEventInfo({...eventInfo, name: event.target.value})}
-              />
+              return {data: null, playing: false};
+            });
+            }}>{"Playback Signal"}</MenuItem>
+          <MenuItem onClick={() => {
+            setContextMenu(null);
+            if (eventInfo.channel) {
+              setDataAlignment({...dataAlignment, alignment: eventInfo.current_alignment, show: true})
+            };
+            }}>{"Adjust Alignment"}</MenuItem>
+          <MenuItem onClick={() => {
+            setContextMenu(null);
+            setColorAxis({...coloraxis, limit_temp: coloraxis.limit, show: true});
+            }}>{"Adjust Colormap"}</MenuItem>
+        </Menu>
+        <Dialog open={eventInfo.show} onClose={() => setEventInfo({...eventInfo, show: false})}>
+          <MDBox px={2} pt={2} sx={{minWidth: 500}}>
+            <MDTypography variant="h5">
+              {"New Custom Event"} 
+            </MDTypography>
+            <MDTypography variant="h6">
+              {"Time: "}{new Date(eventInfo.time).toLocaleString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                timeZoneName: "longGeneric"
+              })} 
+            </MDTypography>
+          </MDBox>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12} style={{display: "flex", flexDirection: "column"}}>
+                <TextField
+                  variant="standard"
+                  margin="dense"
+                  id={"event-annotation"}
+                  type={"text"}
+                  label="Annotation Name"
+                  placeholder={"Annotation Name"}
+                  value={eventInfo.name}
+                  onChange={(event) => setEventInfo({...eventInfo, name: event.target.value})}
+                />
+              </Grid>
+              <Grid item xs={12} style={{display: "flex", flexDirection: "column"}}>
+                <TextField
+                  variant="standard"
+                  margin="dense"
+                  type={"number"}
+                  label="Event Duration"
+                  placeholder={"0 for Instant Event"}
+                  value={eventInfo.duration}
+                  onChange={(event) => setEventInfo({...eventInfo, duration: event.target.value})}
+                />
+              </Grid>
             </Grid>
-            <Grid item xs={12} style={{display: "flex", flexDirection: "column"}}>
-              <TextField
-                variant="standard"
-                margin="dense"
-                type={"number"}
-                label="Event Duration"
-                placeholder={"0 for Instant Event"}
-                value={eventInfo.duration}
-                onChange={(event) => setEventInfo({...eventInfo, duration: event.target.value})}
-              />
+          </DialogContent>
+          <DialogActions>
+            <MDButton color="secondary" onClick={() => setEventInfo({...eventInfo, show: false})}>Cancel</MDButton>
+            <MDButton color="info" onClick={() => {
+              handleAddEvent(eventInfo);
+              setEventInfo({...eventInfo, show: false});
+            }}>Add</MDButton>
+          </DialogActions>
+        </Dialog>
+        
+        <Dialog open={coloraxis.show} onClose={() => setColorAxis({...coloraxis, show: false})}>
+          <MDBox px={2} pt={2} sx={{minWidth: 500}}>
+            <MDTypography variant="h5">
+              {"Set Colorbar Axis Range (View Only)"} 
+            </MDTypography>
+          </MDBox>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} style={{display: "flex", flexDirection: "column"}}>
+                <TextField
+                  variant="standard"
+                  margin="dense"
+                  id={"caxis-lowerlimit"}
+                  type={"number"}
+                  label="Lower Limit"
+                  placeholder={"Lower Limit"}
+                  value={coloraxis.limit_temp[0]}
+                  onChange={(event) => {
+                    setColorAxis({...coloraxis, limit_temp: [event.target.value, coloraxis.limit_temp[1]]})
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} style={{display: "flex", flexDirection: "column"}}>
+                <TextField
+                  variant="standard"
+                  margin="dense"
+                  id={"caxis-upperlimit"}
+                  type={"number"}
+                  label="Upper Limit"
+                  placeholder={"Upper Limit"}
+                  value={coloraxis.limit_temp[1]}
+                  onChange={(event) => setColorAxis({...coloraxis, limit_temp: [coloraxis.limit_temp[0], event.target.value]})}
+                />
+              </Grid>
             </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <MDButton color="secondary" onClick={() => setEventInfo({...eventInfo, show: false})}>Cancel</MDButton>
-          <MDButton color="info" onClick={() => {
-            handleAddEvent(eventInfo);
-            setEventInfo({...eventInfo, show: false});
-          }}>Add</MDButton>
-        </DialogActions>
-      </Dialog>
-      
-      <Dialog open={coloraxis.show} onClose={() => setColorAxis({...coloraxis, show: false})}>
-        <MDBox px={2} pt={2} sx={{minWidth: 500}}>
-          <MDTypography variant="h5">
-            {"Set Colorbar Axis Range (View Only)"} 
-          </MDTypography>
-        </MDBox>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} style={{display: "flex", flexDirection: "column"}}>
-              <TextField
-                variant="standard"
-                margin="dense"
-                id={"caxis-lowerlimit"}
-                type={"number"}
-                label="Lower Limit"
-                placeholder={"Lower Limit"}
-                value={coloraxis.limit_temp[0]}
-                onChange={(event) => {
-                  setColorAxis({...coloraxis, limit_temp: [event.target.value, coloraxis.limit_temp[1]]})
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} style={{display: "flex", flexDirection: "column"}}>
-              <TextField
-                variant="standard"
-                margin="dense"
-                id={"caxis-upperlimit"}
-                type={"number"}
-                label="Upper Limit"
-                placeholder={"Upper Limit"}
-                value={coloraxis.limit_temp[1]}
-                onChange={(event) => setColorAxis({...coloraxis, limit_temp: [coloraxis.limit_temp[0], event.target.value]})}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <MDButton color="secondary" onClick={() => setEventInfo({...eventInfo, show: false})}>Cancel</MDButton>
-          <MDButton color="info" onClick={() => {
-            setColorAxis({...coloraxis, limit: coloraxis.limit_temp, show: false});
-          }}>Set</MDButton>
-        </DialogActions>
-      </Dialog>
-      
-      <Dialog open={dataAlignment.show} onClose={() => setDataAlignment({show: false, alignment: 0})}>
-        <MDBox px={2} pt={2}>
-          <MDTypography variant="h5">
-            {"Shift Alignment for "}{eventInfo.channel_name} 
-          </MDTypography>
-        </MDBox>
-        <DialogContent>
-          <TextField
-            variant="standard"
-            margin="dense"
-            type={"number"}
-            label="Time Shift toward Right (ms)"
-            placeholder={"Enter Time Shift to be applied to " + eventInfo.channel_name}
-            value={dataAlignment.alignment}
-            onChange={(event) => setDataAlignment({...dataAlignment, alignment: event.target.value})}
-            fullWidth
-          />
-        </DialogContent>
-        <DialogActions>
-          <MDButton color="secondary" onClick={() => setDataAlignment({...dataAlignment, show: false})}>Cancel</MDButton>
-          <MDButton color="info" onClick={() => {
-            setDataAlignment({...dataAlignment, show: false})
-            handleAdjustAlignment(dataAlignment, eventInfo);
-          }}>Add</MDButton>
-        </DialogActions>
-      </Dialog>
+          </DialogContent>
+          <DialogActions>
+            <MDButton color="secondary" onClick={() => setEventInfo({...eventInfo, show: false})}>Cancel</MDButton>
+            <MDButton color="info" onClick={() => {
+              setColorAxis({...coloraxis, limit: coloraxis.limit_temp, show: false});
+            }}>Set</MDButton>
+          </DialogActions>
+        </Dialog>
+        
+        <Dialog open={dataAlignment.show} onClose={() => setDataAlignment({show: false, alignment: 0})}>
+          <MDBox px={2} pt={2}>
+            <MDTypography variant="h5">
+              {"Shift Alignment for "}{eventInfo.channel_name} 
+            </MDTypography>
+          </MDBox>
+          <DialogContent>
+            <TextField
+              variant="standard"
+              margin="dense"
+              type={"number"}
+              label="Time Shift toward Right (ms)"
+              placeholder={"Enter Time Shift to be applied to " + eventInfo.channel_name}
+              value={dataAlignment.alignment}
+              onChange={(event) => setDataAlignment({...dataAlignment, alignment: event.target.value})}
+              fullWidth
+            />
+          </DialogContent>
+          <DialogActions>
+            <MDButton color="secondary" onClick={() => setDataAlignment({...dataAlignment, show: false})}>Cancel</MDButton>
+            <MDButton color="info" onClick={() => {
+              setDataAlignment({...dataAlignment, show: false})
+              handleAdjustAlignment(dataAlignment, eventInfo);
+            }}>Add</MDButton>
+          </DialogActions>
+        </Dialog>
+      </MDBox>
     </MDBox>
   ), [renderData, activeChannels, coloraxis, eventInfo, dataAlignment, contextMenu]);
 }

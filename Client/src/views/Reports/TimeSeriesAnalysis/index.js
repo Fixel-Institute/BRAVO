@@ -487,27 +487,6 @@ function TimeSeriesAnalysis() {
                 </Card>
               </Grid>
             ) : null}
-            {!TimeSeriesAnalysisLayout.BurstDynamics && data ? (
-            <Grid item xs={12}>
-              <Card>
-                <MDBox display={"flex"} justifyContent={"space-between"} p={3}>
-                  <Grid container>
-                    <Grid item xs={12}>
-                      <MDBox display={"flex"} flexDirection={"column"}>
-                        <MDTypography variant="h5" fontWeight={"bold"} fontSize={24}>
-                          {"Burst Analysis"}
-                        </MDTypography>
-                      </MDBox>
-                    </Grid>
-                    <Grid item xs={12}>
-                      <BurstDynamics dataToRender={data} annotations={annotations} 
-                        participant_uid={participant_uid} figureTitle={"Burst Analysis"} />
-                    </Grid>
-                  </Grid>
-                </MDBox>
-              </Card>
-            </Grid>
-            ) : null}
             {!TimeSeriesAnalysisLayout.EventStatePSD && annotations.length > 0 ? (
               <Grid item xs={12} lg={6}>
                 <Card>
