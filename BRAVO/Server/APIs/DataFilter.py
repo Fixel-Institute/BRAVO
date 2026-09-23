@@ -176,7 +176,6 @@ def _recording_to_dataframe(recording, use_raw_names=False):
 
     elif recording.type == "MedtronicDeviceImpedance":
         df = pd.DataFrame(Data.get("Impedance", []))
-
     else:
         df = pd.DataFrame()
 
@@ -348,6 +347,8 @@ class QueryFilterData(RestViews.APIView):
 
         # ── DownloadAllData ───────────────────────────────────────────────────
         if request.data["RequestType"] == "DownloadAllData":
+            raise Exception("This endpoint is deprecated.")
+        
             participant_ids = request.data.get("ParticipantIds", [])
             type_filter = request.data.get("RecordingTypes") or None
             use_raw = request.data.get("ChannelFormat", "clean") == "raw"
@@ -355,8 +356,10 @@ class QueryFilterData(RestViews.APIView):
             all_dfs = []
 
             for participant in models.Participant.objects.filter(uid__in=participant_ids):
-                if not Database.checkAccessPermission(request.user, participant.uid, study_uid=study_uid):
+                Permission = Database.checkAccessPermission(request.user, participant.uid, study_uid=study_uid)
+                if not Permission:
                     continue
+
                 rec_qs = models.Recording.objects.filter(
                     source__owner=participant, type__in=ALLOWED_RECORDING_TYPES
                 )
@@ -372,7 +375,7 @@ class QueryFilterData(RestViews.APIView):
                         df.insert(0, "RecordingType", recording.type)
                         df.insert(0, "RecordingId", recording.uid)
                         df.insert(0, "ParticipantId", participant.uid)
-                        df.insert(0, "Participant", getattr(participant, "name", "") or participant.uid)
+                        df.insert(0, "ParticipantName", participant.name if not Permission["Deidentified"] else participant.uid)
                         all_dfs.append(df)
                     except Exception:
                         continue
