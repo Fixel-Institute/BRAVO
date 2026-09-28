@@ -309,6 +309,15 @@ function TherapyModificationHistory({therapyHistoryRaw, availableDevices, device
               {recordingConfiguration.Config.SensingSetup.FrequencyInHertz}{" Hz"} ({(recordingConfiguration.Config.SensingSetup.AveragingDurationInMilliSeconds / 1000).toFixed(1)}{" sec"})
             </MDTypography>
           </MDBox>
+          {getLFPThresholds(recordingConfiguration.Config.Thresholds.MeasuredLFP) && (
+            <MDBox sx={{ display: "flex", flexDirection: "row"}}>
+              <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
+                {"Medtronic-Suggested Threshold:"}
+              </MDTypography>
+              <MDTypography variant="caption" color="text" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap" }}>
+              {getLFPThresholds(recordingConfiguration.Config.Thresholds.MeasuredLFP)}
+            </MDTypography>
+          </MDBox>)}
           {getLFPThresholds(recordingConfiguration.Config.Thresholds.LFPThresholds) && (
             <MDBox sx={{ display: "flex", flexDirection: "row"}}>
               <MDTypography variant="caption" color="black" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
@@ -341,7 +350,7 @@ function TherapyModificationHistory({therapyHistoryRaw, availableDevices, device
         <MDBox sx={{ display: "flex", flexDirection: "column", width: "100%", mt: 2 }}>
           <MDBox sx={{ display: "flex", flexDirection: "row"}}>
             <MDTypography variant="caption" color="error" sx={{ fontSize: "12px", fontWeight: 800, textAlign: "start", width: "auto", whiteSpace: "nowrap", mr: 1 }}>
-              {"Adaptive Configuration:"}
+              {"Adaptive Configuration:"}{adaptiveConfiguration.Config.Bypass ? " (Bypass BrainSense)" : ""}
             </MDTypography>
           </MDBox>
           <MDBox sx={{ display: "flex", flexDirection: "row"}}>
