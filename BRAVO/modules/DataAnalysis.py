@@ -282,7 +282,9 @@ def queryAvailableAnalyses(participant_uid, request_type):
                                 if Overview["Recordings"][i]["Metadata"]["ContentHash"] == Hash:
                                     if Overview["Recordings"][i]["Name"] == "" and Description["Name"] != "":
                                         Overview["Recordings"][i]["Name"] = Description["Name"]
-                                        print("Renamed duplicate recording with hash: " + Hash)
+                                if "Tags" in Overview["Recordings"][i]["Metadata"]:
+                                    if len(Overview["Recordings"][i]["Metadata"]["Tags"]) == 0:
+                                        Overview["Recordings"][i]["Metadata"]["Tags"] = Description["Metadata"]["Tags"]
                         continue
                     
                 for device in DBSDevices:
