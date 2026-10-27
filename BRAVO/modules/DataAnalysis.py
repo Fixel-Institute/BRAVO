@@ -282,7 +282,7 @@ def queryAvailableAnalyses(participant_uid, request_type):
                                 if Overview["Recordings"][i]["Metadata"]["ContentHash"] == Hash:
                                     if Overview["Recordings"][i]["Name"] == "" and Description["Name"] != "":
                                         Overview["Recordings"][i]["Name"] = Description["Name"]
-                                if "Tags" in Overview["Recordings"][i]["Metadata"]:
+                                if "Tags" in Overview["Recordings"][i]["Metadata"] and "Tags" in Description["Metadata"]:
                                     if len(Overview["Recordings"][i]["Metadata"]["Tags"]) == 0:
                                         Overview["Recordings"][i]["Metadata"]["Tags"] = Description["Metadata"]["Tags"]
                         continue
