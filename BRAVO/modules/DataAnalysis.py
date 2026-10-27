@@ -277,6 +277,12 @@ def queryAvailableAnalyses(participant_uid, request_type):
                     if not Hash in ExistingHashed:
                         ExistingHashed.append(Hash)
                     else:
+                        for i in range(len(Overview["Recordings"])):
+                            if "ContentHash" in Overview["Recordings"][i]["Metadata"]:
+                                if Overview["Recordings"][i]["Metadata"]["ContentHash"] == Hash:
+                                    if Overview["Recordings"][i]["Name"] == "" and Description["Name"] != "":
+                                        Overview["Recordings"][i]["Name"] = Description["Name"]
+                                        print("Renamed duplicate recording with hash: " + Hash)
                         continue
                     
                 for device in DBSDevices:
