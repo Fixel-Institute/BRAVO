@@ -39,7 +39,7 @@ from modules.MedtronicPercept.Session import decodeMedtronicJSON
 from modules.ExternalDevices.DelsysTrigno import decodeMDATData, decodeHPFCSVData
 from modules.ExternalDevices.BRAVOfflineWinUI import decodeMDATv2, decodeMDATv3
 from modules.ExternalDevices.MATLAB import decodeMATLABFile
-from modules.ExternalDevices.BRAVORecordingStructure import decodebdata
+from modules.ExternalDevices.BRAVORecordingStructure import decodebdata, decodebdatv2
 from modules.AlphaOmega.MPX import extractAlphaOmegaRecordings
 from modules import Database, Therapy, Event
 
@@ -486,6 +486,68 @@ def MATFileDecoder(source_file, person, startTime=None):
     source_file.owner = person
     source_file.save()
 
+    person.last_update = models.current_time()
+    person.save()
+    
+    models.SourceFile.purge(type="CachedResult", date__lt=person.last_update, metadata__contains={"Participant": person.uid})
+    return True
+
+def BRAVOStructureDecoder(source_file, person, startTime=None):
+    rawBytes = loadCacheFile(source_file)
+    BDATFile = decodebdatv2(rawBytes)
+
+    if BDATFile["DataType"] == "CustomizedStreamingData":
+        Channel = {"ChannelNames": []}
+        Channel["Descriptor"] = BDATFile["Metadata"]
+        Channel["SamplingRate"] = BDATFile["SamplingRate"]
+        Channel["ChannelNames"] = BDATFile["ChannelNames"]
+        Channel["Data"] = np.array(BDATFile["Data"]).T
+        Channel["Time"] = np.arange(BDATFile["Data"].shape[1]) / Channel["SamplingRate"]
+        Channel["StartTime"] = Channel["Descriptor"]["StartTime"]
+        Channel["Missing"] = np.zeros(Channel["Data"].shape)
+        Channel["Duration"] = Channel["Time"][-1]
+        
+        if "RecordingName" in Channel["Descriptor"].keys():
+            name = Channel["Descriptor"]["RecordingName"]
+        else:
+            name = ""
+
+        recording = models.Recording(**{
+            "name": name, "type": "CustomizedStreamingData", "date": Channel["StartTime"], "metadata": {**{
+                "ChannelNames": Channel["ChannelNames"],
+                "Duration": Channel["Duration"]
+            }, **Channel["Descriptor"]}
+        }, source=source_file)
+        if models.Recording.include(date=recording.date, type=recording.type, metadata=recording.metadata, source__owner=person):
+            recording.delete()
+            raise Exception("Duplicate Recording Found. Please check the database for duplicate entries.")
+        
+        filename = DATABASE_PATH + "recordings" + os.path.sep + person.uid + os.path.sep + recording.uid + ".bdat"
+        hashed = Database.saveSourceFile(Channel, filename)
+        # TODO: Error handling
+        if not hashed:
+            print("Hashing Failed for Data Storage")
+            print(recording.__dict__)
+            raise Exception("Hashing Failed for Data Storage. Please check the database for duplicate entries.")
+        
+        if models.Recording.include(hashed=hashed, source__owner=person):
+            recording.delete()
+        else:
+            recording.pointer = filename
+            recording.hashed = hashed
+            recording.save()
+        
+    else:
+        raise Exception("BDAT File DataType Incorrect")
+
+    os.makedirs(DATABASE_PATH + "raws" + os.path.sep + person.uid, exist_ok=True)
+    shutil.move(source_file.pointer, DATABASE_PATH + "raws" + os.path.sep + person.uid + os.path.sep + source_file.uid + ".bdat")
+    source_file.pointer = DATABASE_PATH + "raws" + os.path.sep + person.uid + os.path.sep + source_file.uid + ".bdat"
+    source_file.metadata["Timezone"] = ""
+    if not "Device" in source_file.metadata.keys():
+        source_file.metadata["Device"] = ""
+    source_file.owner = person
+    source_file.save()
     person.last_update = models.current_time()
     person.save()
     

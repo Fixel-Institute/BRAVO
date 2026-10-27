@@ -80,7 +80,7 @@ def queryAllRecordings(participant_uid, request_type=None):
     if request_type == "Timeseries":
         SourceFiles = models.SourceFile.find_all(owner=Participant)
         DBSDevices = [device.get_info() for device in models.DBSDevice.find_all(owner=Participant)]
-        Recordings = models.Recording.find_all(source__in=SourceFiles, type__in=["MedtronicChronicBrainSense", "MedtronicBrainSenseSurvey", "MedtronicBaselineMontages", "MedtronicBrainSenseTimeDomain", "MedtronicBrainSensePowerDomain", "MedtronicIndefiniteStream", "DelsysMDAT", "HPFCSV", "AOMPX", "MATFile", "SynchronizedMDAT"])
+        Recordings = models.Recording.find_all(source__in=SourceFiles, type__in=["MedtronicChronicBrainSense", "MedtronicBrainSenseSurvey", "MedtronicElectrodeIdentifier", "MedtronicBaselineMontages", "MedtronicBrainSenseTimeDomain", "MedtronicBrainSensePowerDomain", "MedtronicIndefiniteStream", "BRAVOStructure", "DelsysMDAT", "HPFCSV", "AOMPX", "MATFile", "SynchronizedMDAT"])
         
         Overview["Recordings"] = []
         for recording in Recordings:
@@ -120,6 +120,9 @@ def queryAllRecordings(participant_uid, request_type=None):
 
             elif recording.type == "DelsysMDAT":
                 Description["Type"] = "Delsys MDT"
+
+            elif recording.type == "BRAVOStructure":
+                Description["Type"] = "BRAVO Structure"
 
             elif recording.type == "SynchronizedMDAT":
                 Description["Type"] = "Synchronized External Data"
@@ -261,7 +264,7 @@ def queryAvailableAnalyses(participant_uid, request_type):
                                                                                  "MedtronicBrainSenseTimeDomain", 
                                                                                  "MedtronicBrainSensePowerDomain", 
                                                                                  "MedtronicIndefiniteStream", 
-                                                                                 "DelsysMDAT", "SynchronizedMDAT", "HPFCSV", "AOMPX", "MATFile"])
+                                                                                 "DelsysMDAT", "SynchronizedMDAT", "BRAVOStructure", "HPFCSV", "AOMPX", "MATFile"])
         
         Overview["Recordings"] = []
         Recordings = Recordings.order_by("uid") # NOTE: SQL-Specific QuerySet

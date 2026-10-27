@@ -1,7 +1,7 @@
+import struct
 import numpy as np
 import pandas as pd
-from io import BytesIO
-import blosc2
+import zstandard as zstd
 import json
 
 def convertToBinaryFormat(Recordings):
@@ -100,3 +100,71 @@ def decodebdata(rawBytes):
         Recordings.append(Recording)
     
     return Recordings
+
+def decodebdatv2(rawBytes):
+    dctx = zstd.ZstdDecompressor()
+    decompressed_bytes = dctx.decompress(rawBytes)
+
+    if not decompressed_bytes.startswith(b"BRAVOStructure"):
+        raise ValueError("Invalid BRAVO Structure data format")
+
+    offset = 14  # len("BRAVOStructure")
+    
+    # Read DataType
+    dtype_len = struct.unpack_from("<i", decompressed_bytes, offset)[0]
+    offset += 4
+    DataType = decompressed_bytes[offset:offset + dtype_len].decode("utf-8")
+    offset += dtype_len
+    
+    # Read SamplingRate
+    SamplingRate = struct.unpack_from("<d", decompressed_bytes, offset)[0]
+    offset += 8
+    
+    # Read ChannelNames length
+    num_channels = struct.unpack_from("<i", decompressed_bytes, offset)[0]
+    offset += 4
+    
+    # Read length of each ChannelName
+    channel_name_lengths = struct.unpack_from(f"<{num_channels}i", decompressed_bytes, offset)
+    offset += num_channels * 4
+    
+    # Read channel names
+    ChannelNames = []
+    for length in channel_name_lengths:
+        ChannelName = decompressed_bytes[offset:offset + length].decode("utf-8")
+        ChannelNames.append(ChannelName)
+        offset += length
+    
+    # Read channel data
+    ChannelData = np.zeros((len(ChannelNames), 0))  # Initialize empty array for channel data
+    for i, channel_name in enumerate(ChannelNames):
+        # Read data size (number of samples)
+        data_size = struct.unpack_from("<i", decompressed_bytes, offset)[0]
+        offset += 4
+
+        if ChannelData.shape[1] < data_size:
+            # Resize ChannelData to accommodate the new data size
+            ChannelData = np.zeros((len(ChannelNames), data_size))
+            
+        # Read data as float64 array
+        data_bytes = decompressed_bytes[offset:offset + data_size * 8]
+        ChannelData[i, :data_size] = np.frombuffer(data_bytes, dtype=np.float64)
+        offset += data_size * 8
+    
+    # Read metadata
+    metadata_len = struct.unpack_from("<i", decompressed_bytes, offset)[0]
+    offset += 4
+    metadata = json.loads(decompressed_bytes[offset:offset + metadata_len].decode("utf-8"))
+    offset += metadata_len
+    
+    # Verify we've consumed all bytes
+    if offset != len(decompressed_bytes):
+        print(f"Warning: Not all bytes consumed. Expected {len(decompressed_bytes)}, consumed {offset}")
+    
+    return {
+        "DataType": DataType,
+        "SamplingRate": SamplingRate,
+        "ChannelNames": ChannelNames,
+        "Data": ChannelData,
+        "Metadata": metadata
+    }

@@ -662,6 +662,17 @@ def listSourceFiles(participant_uid, file_type=None):
                     SourceFile["SensorType"].append(AllRecordings[i].metadata["SensorType"])
             SourceFiles.append(SourceFile)
 
+        elif source.type == "BRAVOStructure":
+            SourceFile = {
+                "Id": source.uid,
+                "Name": source.name,
+                "Type": "MATFile",
+                "DateOfUpload": source.date,
+                "DateOfRecording": source.date,
+                "Timezone": source.metadata["Timezone"] if "Timezone" in source.metadata.keys() else ""
+            }
+            SourceFiles.append(SourceFile)
+
         else:
             SourceFile = {
                 "Id": source.uid,
