@@ -66,6 +66,7 @@ import EventCSVUploader from "./EventCSVUploader";
 import MATFileUploader from "./MATFileUploader";
 import NeuroPacePersystDatUploader from "./NeuroPacePersystDatUploader";
 import UFMDATv2Uploader from "./UFMDATv2Uploader";
+import UFMDATv3Uploader from "./UFMDATv3Uploader";
 
 const filter = createFilterOptions();
 
@@ -374,7 +375,7 @@ function UploadDeidentifiedDataView() {
                     renderOption={(props, option) => <li {...props}>{option}</li>}
                     value={uploadDataType}
                     options={["Medtronic JSON Files", "NeuroPace Persyst Data Format", "AlphaOmega MPX Files", "BRAVO Recording Structure (Binary)", 
-                      "BRAVO Offline Synchronized Recordings", "HDF CSV Format", "Event Annotation CSV", "UF MDAT Files", ".MAT Data File", "3D Images"]}
+                      "BRAVO Offline Synchronized Recordings (v2)", "BRAVO Offline Synchronized Recordings (v3)", "HDF CSV Format", "Event Annotation CSV", "UF MDAT Files", ".MAT Data File", "3D Images"]}
                     onChange={(event, newValue) => setUploadDataType(newValue)}
                   />
                   {uploadDataType === "Medtronic JSON Files" ? (
@@ -389,8 +390,11 @@ function UploadDeidentifiedDataView() {
                   {uploadDataType === "BRAVO Recording Structure (Binary)" ? (
                     <BRAVORecordingBinaryStructureUploader institute={user.Institute} participant={activeParticipant.value} version={""}/>
                   ) : null}
-                  {uploadDataType === "BRAVO Offline Synchronized Recordings" ? (
+                  {uploadDataType === "BRAVO Offline Synchronized Recordings (v2)" ? (
                     <UFMDATv2Uploader institute={user.Institute}  participant={activeParticipant.value}/>
+                  ) : null}
+                  {uploadDataType === "BRAVO Offline Synchronized Recordings (v3)" ? (
+                    <UFMDATv3Uploader institute={user.Institute}  participant={activeParticipant.value}/>
                   ) : null}
                   {uploadDataType === "HDF CSV Format" ? (
                     <HPFCSVUploader institute={user.Institute}  participant={activeParticipant.value}/>

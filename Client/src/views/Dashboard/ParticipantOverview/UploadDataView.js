@@ -40,6 +40,7 @@ import AlphaOmegaMPXUploader from "../UploadDataView/AlphaOmegaMPXUploader";
 import HPFCSVUploader from "../UploadDataView/HPFCSVUploader";
 import UFMDATUploader from "../UploadDataView/UFMDATUploader";
 import UFMDATv2Uploader from "../UploadDataView/UFMDATv2Uploader";
+import UFMDATv3Uploader from "../UploadDataView/UFMDATv3Uploader";
 import BRAVORecordingBinaryStructureUploader from "../UploadDataView/BRAVORecordingBinaryStructureUploader";
 import NeuroimageUploader from "../UploadDataView/NeuroimageUploader";
 import EventCSVUploader from "../UploadDataView/EventCSVUploader";
@@ -87,7 +88,7 @@ function UploadDataView({show, participant_uid, onCancel}) {
               renderOption={(props, option) => <li {...props}>{option}</li>}
               value={uploadDataType}
               options={["Default", "Medtronic JSON Files", "AlphaOmega MPX Files", "BRAVO Recording Structure (Binary)", 
-                "BRAVO Offline Synchronized Recordings", "HDF CSV Format", "Event Annotation CSV", "UF MDAT Files", ".MAT Data File", "3D Images"]}
+                "BRAVO Offline Synchronized Recordings (v2)", "BRAVO Offline Synchronized Recordings (v3)", "HDF CSV Format", "Event Annotation CSV", "UF MDAT Files", ".MAT Data File", "3D Images"]}
               onChange={(event, newValue) => setUploadDataType(newValue == "Default" ? "" : newValue)}
             />
           </Grid>
@@ -101,8 +102,11 @@ function UploadDataView({show, participant_uid, onCancel}) {
             {uploadDataType === "AlphaOmega MPX Files" ? (
               <AlphaOmegaMPXUploader institute={user.Institute}  participant={participant_uid}/>
             ) : null}
-            {uploadDataType === "BRAVO Offline Synchronized Recordings" ? (
+            {uploadDataType === "BRAVO Offline Synchronized Recordings (v2)" ? (
               <UFMDATv2Uploader institute={user.Institute}  participant={participant_uid}/>
+            ) : null}
+            {uploadDataType === "BRAVO Offline Synchronized Recordings (v3)" ? (
+              <UFMDATv3Uploader institute={user.Institute}  participant={participant_uid}/>
             ) : null}
             {uploadDataType === "BRAVO Recording Structure (Binary)" ? (
               <BRAVORecordingBinaryStructureUploader institute={user.Institute}  participant={participant_uid}/>
