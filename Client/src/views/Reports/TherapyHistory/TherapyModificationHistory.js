@@ -194,6 +194,12 @@ function TherapyModificationHistory({therapyHistoryRaw, availableDevices, device
   const sliderMin = 0;
   const sliderMax = Math.max(0, visitDates.length - 1);
   const selectedVisitDate = visitDates[sliderValue] ?? 0;
+  const firstVisitTimestamp = visitDates.length > 0 ? visitDates[0].Date || visitDates[0] : 0;
+  const lastVisitTimestamp = visitDates.length > 0 ? visitDates[visitDates.length - 1].Date || visitDates[visitDates.length - 1] : firstVisitTimestamp;
+  const sliderMarks = visitDates.map((visitDate) => {
+    const timestamp = visitDate.Date || visitDate;
+    return { value: lastVisitTimestamp === firstVisitTimestamp ? 0 : (timestamp - firstVisitTimestamp) / (lastVisitTimestamp - firstVisitTimestamp) };
+  });
 
   useEffect(() => {
     setTherapyGroups(therapyHistoryRaw.sort((a, b) => a.Date - b.Date).map((a) => {
@@ -206,8 +212,11 @@ function TherapyModificationHistory({therapyHistoryRaw, availableDevices, device
     if (therapyGroups.length == 0) return;
     setTimelineStart(therapyGroups.length > 0 ? therapyGroups[0].Date : new Date().getTime() / 1000);
     setTimelineEnd(therapyGroups.length > 0 ? therapyGroups[therapyGroups.length - 1].Date : new Date().getTime() / 1000);
-    setSliderValue(sliderMax);
   }, [therapyGroups]);
+
+  useEffect(() => {
+    setSliderValue(sliderMax);
+  }, [sliderMax]);
 
   useEffect(() => {
     const visitDate = getDateString(selectedVisitDate.Date);
@@ -483,6 +492,7 @@ function TherapyModificationHistory({therapyHistoryRaw, availableDevices, device
                 min={0}
                 max={1}
                 step={0.0001}
+                marks={sliderMarks}
                 value={(() => {
                   // normalize sliderValue to 0..1 based on visit date timestamp
                   if (!visitDates || visitDates.length === 0) return 0;
@@ -511,6 +521,15 @@ function TherapyModificationHistory({therapyHistoryRaw, availableDevices, device
                 }}
                 aria-label="Therapy history date slider (time-scaled)"
                 style={{ width: '100%', cursor: 'pointer' }}
+                sx={{
+                  '& .MuiSlider-mark, & .MuiSlider-markActive': {
+                    width: '2px',
+                    height: '14px',
+                    borderRadius: 0,
+                    backgroundColor: '#e53935',
+                    opacity: 1,
+                  },
+                }}
               />
             </MDBox>
             <MDBox sx={{
