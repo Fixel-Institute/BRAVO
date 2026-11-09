@@ -98,7 +98,7 @@ export default function DashboardOverview() {
   const [participantInformation, setParticipantInformation] = useState({});
   const [filteredParticipants, setFilteredParticipants] = useState([]);
   const [filterOptions, setFilterOptions] = useState({});
-  const [availableParticipants, setAvailableParticipants] = useState(false);
+  const [availableParticipants, setAvailableParticipants] = useState([]);
   const [uploadInterface, setUploadInterface] = useState({ show: false, uploadDataType: "Medtronic JSON Files" });
 
   const [showDecryptionPassword, setShowDecryptionPassword] = useState(false);
@@ -202,7 +202,7 @@ export default function DashboardOverview() {
                   </MDButton>
                 </MDBox>
               </Grid>
-              {availableParticipants ? (
+              {availableParticipants.length > 0 ? (
                 <Grid item xs={12} sx={{marginTop: 2}}>
                   <ParticipantTable data={filteredParticipants} />
                 </Grid>

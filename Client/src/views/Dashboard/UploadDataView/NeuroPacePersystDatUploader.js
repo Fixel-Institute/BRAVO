@@ -28,7 +28,7 @@ import {
 import { styled } from "@mui/material/styles";
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
-import { FilePond, File } from 'react-filepond';
+import { FilePond } from 'react-filepond';
 import 'filepond/dist/filepond.min.css'
 
 import MDBox from "components/MDBox";

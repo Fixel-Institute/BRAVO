@@ -43,7 +43,7 @@ import {
 import MDTypography from "components/MDTypography";
 import MDBox from "components/MDBox";
 
-import { FilePond, File } from 'react-filepond';
+import { FilePond } from 'react-filepond';
 import 'filepond/dist/filepond.min.css'
 
 import FullPageLayout from "layouts/FullPageLayout";

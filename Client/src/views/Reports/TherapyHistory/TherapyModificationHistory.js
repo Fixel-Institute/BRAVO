@@ -29,7 +29,6 @@ import {
 // core components
 import MDTypography from "components/MDTypography";
 import MDBox from "components/MDBox";
-import MDBadge from "components/MDBadge";
 
 import { SessionController } from "database/session-control";
 import { usePlatformContext, setContextState } from "context.js";

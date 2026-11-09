@@ -25,7 +25,7 @@ import {
   Divider,
 } from "@mui/material";
 
-import { FilePond, File } from 'react-filepond';
+import { FilePond } from 'react-filepond';
 import 'filepond/dist/filepond.min.css'
 
 import { v4 as uuidv4 } from 'uuid';
