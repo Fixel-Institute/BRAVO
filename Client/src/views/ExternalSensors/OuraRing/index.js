@@ -210,6 +210,10 @@ export default function OuraRingDashboard() {
                 <Grid item xs={12}>
                   <MDTypography variant="h5" fontWeight="regular" color={"black"} fontSize={15}>
                     {"Please use the button below to request data update. Each refresh (depending on the duration of data acquisition) takes about 20 Requests to complete. "}
+                    {"Note: Due to Oura API limitations, each date period should not exceed 30 days (as of Nov 2026). For longer periods, please create multiple time periods. "}
+                    <Link href="https://cloud.ouraring.com/v2/docs" target="_blank" style={{fontSize: 15}}>
+                      {"See Oura API documentation for current limits."}
+                    </Link>
                   </MDTypography>
                 </Grid>
                 <Grid item xs={12}>
