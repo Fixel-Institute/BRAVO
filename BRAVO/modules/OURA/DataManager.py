@@ -21,7 +21,7 @@ class OuraRingAPI:
                                 params=params)
         if self.attempts > 3:
             raise Exception("Too many failed attempts to query Oura API. Please check your token.")
-        
+
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 401:
@@ -29,10 +29,30 @@ class OuraRingAPI:
             self.refreshToken(refresh_token=self.refresh_token)
             self.attempts += 1
             return self.query(endpoint, params)
-        
+
         self.attempts = 0
         print(response.status_code)
         raise Exception(response.text)
+
+    def query_paginated(self, endpoint, params):
+        """Query an endpoint with pagination support using next_token."""
+        all_data = []
+        next_token = None
+
+        while True:
+            if next_token:
+                params["next_token"] = next_token
+
+            result = self.query(endpoint, params)
+
+            if "data" in result:
+                all_data.extend(result["data"])
+
+            next_token = result.get("next_token")
+            if not next_token:
+                break
+
+        return {"data": all_data}
     
     def refreshToken(self, auth_code="", refresh_token=""):
         token_url = "https://api.ouraring.com/oauth/token"
@@ -335,7 +355,7 @@ class OuraRingAPI:
             "start_datetime": start_date + "T00:00:00+00:00",
             "end_datetime": end_date + "T23:59:59+00:00"
         }
-        result = self.query("v2/usercollection/heartrate", params)
+        result = self.query_paginated("v2/usercollection/heartrate", params)
 
         DateTimeObj = datetime.datetime.fromisoformat(start_date + "T00:00:00+00:00")
         Metadata = {
